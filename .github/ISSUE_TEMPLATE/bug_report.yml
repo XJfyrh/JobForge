@@ -1,0 +1,84 @@
+name: Bug report
+description: 报告可复现的缺陷、可靠性问题或回归
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告问题。请移除凭据、Authorization header、个人信息和完整敏感 payload。安全漏洞请使用 GitHub Private Vulnerability Reporting，不要提交公开 Issue。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题摘要
+      description: 简洁说明发生了什么，以及它为何是缺陷。
+      placeholder: 一句话概括问题
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 严重程度
+      options:
+        - 数据丢失、安全或核心可靠性风险
+        - 主要功能不可用
+        - 功能受限但存在绕过方式
+        - 轻微行为或文档问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 提供 commit、操作系统、Go/Python/PostgreSQL 版本及相关配置。
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 给出最小、确定且可重复的步骤。
+      placeholder: |
+        1. 启动……
+        2. 提交……
+        3. 观察……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 已脱敏证据
+      description: 可提供日志、trace、查询结果或截图；不要包含秘密或完整业务 payload。
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，未发现相同报告。
+          required: true
+        - label: 我已移除凭据、个人信息和敏感 payload。
+          required: true
+        - label: 这不是需要私密报告的安全漏洞。
+          required: true

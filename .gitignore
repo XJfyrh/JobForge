@@ -1,0 +1,56 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+
+# Repository-local tools and caches
+.venv/
+.tools/
+.cache/
+.tmp/
+tmp/
+
+# Go build and test output
+bin/
+build/
+dist/
+*.exe
+*.test
+*.out
+coverage*.out
+coverage*.html
+*.prof
+*.pprof
+*.trace
+
+# Python build and test output
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local service and observability data
+.data/
+data/
+volumes/
+*.log
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini

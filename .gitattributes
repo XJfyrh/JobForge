@@ -1,0 +1,33 @@
+* text=auto eol=lf
+
+*.go text eol=lf
+*.py text eol=lf
+*.pyi text eol=lf
+*.proto text eol=lf
+*.sql text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Preserve intentional Markdown hard breaks and the original EOF in the frozen PRD.
+docs/product/JobForge_PRD_v0.1.md -whitespace
+
+*.pb.go linguist-generated=true
+*_pb2.py linguist-generated=true
+*_pb2_grpc.py linguist-generated=true
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
