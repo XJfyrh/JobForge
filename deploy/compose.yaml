@@ -1,0 +1,40 @@
+# JobForge local development environment.
+# Usage: docker compose -f deploy/compose.yaml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jobforge
+      POSTGRES_PASSWORD: jobforge
+      POSTGRES_DB: jobforge
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["api"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_HTTP_ADDR: ":8080"
+      JOBFORGE_API_KEYS: "dev-api-key=dev-tenant"
+      JOBFORGE_LEASE_TTL: "30s"
+      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
+      JOBFORGE_SCAN_INTERVAL: "1s"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

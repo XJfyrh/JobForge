@@ -44,11 +44,12 @@ data/
 volumes/
 *.log
 
-# Editors
+# Editors and IDE
 .idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+.qoder/
 
 # Operating systems
 .DS_Store

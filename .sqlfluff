@@ -3,6 +3,7 @@ dialect = postgres
 templater = raw
 max_line_length = 100
 sql_file_exts = .sql
+exclude_rules = PG01, RF04
 
 [sqlfluff:indentation]
 tab_space_size = 4

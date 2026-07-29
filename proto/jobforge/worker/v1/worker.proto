@@ -1,0 +1,225 @@
+// JobForge Worker API v1
+//
+// This proto defines the gRPC contract between the Go Worker Runtime and the
+// Worker Gateway. All RPCs are unary (ADR-0001). The Worker initiates all
+// calls; the Gateway never pushes to the Worker outside a Poll response.
+//
+// Package version: jobforge.worker.v1
+// Compatibility policy: backward-compatible additions only. Removed or
+// renumbered fields must be reserved. See docs/code-standards.md section 6.
+syntax = "proto3";
+
+package jobforge.worker.v1;
+
+option go_package = "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1;workerv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+// WorkerService is the gRPC contract for Worker-Gateway communication.
+// All RPCs must carry a deadline. Complete and Fail must be idempotent.
+service WorkerService {
+  // Register announces or refreshes a Worker's capabilities.
+  // The Gateway records supported queues, types and capacity.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Poll requests available job leases. The server waits (long-poll) until
+  // jobs are available or the RPC deadline expires. Returns an empty list
+  // on timeout. The Worker should immediately re-poll after processing.
+  rpc Poll(PollRequest) returns (PollResponse);
+
+  // Heartbeat extends the lease for a running job and receives control
+  // signals (continue/cancel). Only the current owner with a valid fencing
+  // token may heartbeat. Stale tokens receive FAILED_PRECONDITION.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // Complete reports successful job execution. Must be idempotent:
+  // repeated calls with the same token return success without side effects.
+  // A stale token returns FAILED_PRECONDITION with STALE_LEASE detail.
+  rpc Complete(CompleteRequest) returns (CompleteResponse);
+
+  // Fail reports job execution failure. Must be idempotent. The Gateway
+  // decides retry vs dead based on the retryable flag and attempt count.
+  rpc Fail(FailRequest) returns (FailResponse);
+}
+
+// RegisterRequest announces Worker identity and capabilities.
+message RegisterRequest {
+  // Unique Worker instance identifier (UUID). Assigned by the Worker process.
+  string worker_id = 1;
+
+  // Human-readable instance label for observability (e.g. hostname-pid).
+  string instance_id = 2;
+
+  // Queue names this Worker polls from.
+  repeated string queues = 3;
+
+  // Task types this Worker can execute (e.g. "demo.echo", "pagewise.reindex").
+  repeated string supported_types = 4;
+
+  // Maximum concurrent jobs this Worker can handle.
+  int32 capacity = 5;
+
+  // Worker software version for observability and rolling upgrades.
+  string version = 6;
+}
+
+// RegisterResponse confirms registration.
+message RegisterResponse {
+  // Server-assigned session identifier for correlation in logs.
+  string session_id = 1;
+
+  // Suggested heartbeat interval. Worker should respect this.
+  google.protobuf.Duration heartbeat_interval = 2;
+}
+
+// PollRequest asks the Gateway for available job leases.
+message PollRequest {
+  // The Worker's registered identifier.
+  string worker_id = 1;
+
+  // Maximum number of jobs to claim in this batch.
+  int32 max_jobs = 2;
+
+  // Current available capacity (capacity - inflight). Gateway uses this to
+  // avoid over-assigning.
+  int32 available_capacity = 3;
+
+  // Queue names to poll from. Must be a subset of registered queues.
+  repeated string queues = 4;
+
+  // Task types the Worker is willing to accept. Must be a subset of
+  // registered types.
+  repeated string types = 5;
+}
+
+// PollResponse returns claimed job leases.
+message PollResponse {
+  // Claimed jobs. Empty if no work available before deadline.
+  repeated ClaimedJob jobs = 1;
+}
+
+// ClaimedJob represents a single job lease granted to the Worker.
+message ClaimedJob {
+  // Job unique identifier.
+  string job_id = 1;
+
+  // Logical queue name.
+  string queue = 2;
+
+  // Registered task type (e.g. "demo.echo").
+  string type = 3;
+
+  // Task payload as JSON bytes. Max 256 KiB.
+  bytes payload = 4;
+
+  // Current attempt number (1-based).
+  int32 attempt = 5;
+
+  // Maximum allowed attempts for this job.
+  int32 max_attempts = 6;
+
+  // Fencing token for this lease. Must be included in Heartbeat/Complete/Fail.
+  int64 fencing_token = 7;
+
+  // Lease expiration time. Worker must complete or heartbeat before this.
+  google.protobuf.Timestamp lease_until = 8;
+
+  // Per-attempt execution timeout. Handler context deadline.
+  google.protobuf.Duration timeout = 9;
+
+  // Trace identifier for distributed tracing correlation.
+  string trace_id = 10;
+}
+
+// HeartbeatRequest extends the lease and reports progress.
+message HeartbeatRequest {
+  // Job being heartbeated.
+  string job_id = 1;
+
+  // Worker that owns the lease.
+  string worker_id = 2;
+
+  // Fencing token from the Poll response.
+  int64 fencing_token = 3;
+
+  // Optional progress percentage (0-100) for observability.
+  int32 progress_percent = 4;
+}
+
+// HeartbeatResponse returns the control signal from the Gateway.
+message HeartbeatResponse {
+  // Control action the Worker must take.
+  ControlSignal signal = 1;
+
+  // New lease expiration after extension.
+  google.protobuf.Timestamp lease_until = 2;
+}
+
+// ControlSignal instructs the Worker on what to do next.
+enum ControlSignal {
+  // Continue execution normally.
+  CONTROL_SIGNAL_CONTINUE = 0;
+
+  // Cancel execution as soon as possible. The job has a pending cancel
+  // request. Worker should stop work and call Fail or simply stop heartbeating.
+  CONTROL_SIGNAL_CANCEL = 1;
+}
+
+// CompleteRequest reports successful job completion.
+message CompleteRequest {
+  // Job identifier.
+  string job_id = 1;
+
+  // Worker that executed the job.
+  string worker_id = 2;
+
+  // Fencing token proving lease ownership.
+  int64 fencing_token = 3;
+
+  // Optional reference to the result (e.g. storage URI). Not stored inline.
+  string result_ref = 4;
+
+  // Actual execution duration for metrics.
+  google.protobuf.Duration duration = 5;
+}
+
+// CompleteResponse confirms completion.
+message CompleteResponse {
+  // Final job state (should be "succeeded").
+  string state = 1;
+}
+
+// FailRequest reports job execution failure.
+message FailRequest {
+  // Job identifier.
+  string job_id = 1;
+
+  // Worker that attempted the job.
+  string worker_id = 2;
+
+  // Fencing token proving lease ownership.
+  int64 fencing_token = 3;
+
+  // Machine-readable error code (e.g. "TIMEOUT", "DEPENDENCY_UNAVAILABLE").
+  string error_code = 4;
+
+  // Human-readable error message. Must not contain secrets or full payloads.
+  string error_message = 5;
+
+  // Whether the error is transient and the job should be retried.
+  // Non-retryable errors (bad input, unknown type) go directly to dead.
+  bool retryable = 6;
+
+  // Actual execution duration before failure.
+  google.protobuf.Duration duration = 7;
+}
+
+// FailResponse confirms failure processing.
+message FailResponse {
+  // Resulting job state: "retry_wait" or "dead".
+  string state = 1;
+
+  // If retry_wait, the earliest time the job will become ready again.
+  google.protobuf.Timestamp next_retry_at = 2;
+}
