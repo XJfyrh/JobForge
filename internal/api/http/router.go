@@ -34,6 +34,7 @@ func NewRouter(jobStore store.JobStore, cfg *config.Config, logger *slog.Logger)
 		r.Get("/", handler.ListJobs)
 		r.Get("/{job_id}", handler.GetJob)
 		r.Post("/{job_id}:cancel", handler.CancelJob)
+		r.Post("/{job_id}:retry", handler.RetryJob)
 	})
 
 	return r

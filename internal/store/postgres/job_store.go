@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,6 +34,8 @@ var _ store.JobStore = (*JobStore)(nil)
 
 // Enqueue persists a new job. If the idempotency key already exists for the
 // tenant, it returns deduplicated=true without creating a duplicate.
+// After a successful insert of a ready job, sends pg_notify to wake up
+// Gateway Poll listeners (ADR-0003).
 func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 	_, err := s.pool.Exec(ctx, enqueueInsert,
 		job.ID, job.TenantID, job.Queue, job.Type, job.Payload,
@@ -61,6 +64,11 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 			return true, nil
 		}
 		return false, fmt.Errorf("enqueue select: %w", err)
+	}
+
+	// Notify listeners if a new ready job was inserted.
+	if inserted && job.State == domain.StateReady {
+		_, _ = s.pool.Exec(ctx, "select pg_notify('jobforge_job_ready', $1)", job.Queue)
 	}
 
 	return !inserted, nil
@@ -281,8 +289,9 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 		}
 
 		if retryable && attempt < maxAttempts {
-			// Calculate backoff: base=1s, max=5min, full jitter.
-			backoff := domain.Backoff(attempt, time.Second, 5*time.Minute, time.Duration(0))
+			// Calculate backoff: base=1s, max=5min, full jitter (0–1s random).
+			jitter := time.Duration(rand.Int64N(int64(time.Second)))
+			backoff := domain.Backoff(attempt, time.Second, 5*time.Minute, jitter)
 			nextRetry := time.Now().Add(backoff)
 			tag, err = tx.Exec(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry)
 			if err != nil {

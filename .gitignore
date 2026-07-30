@@ -44,6 +44,11 @@ data/
 volumes/
 *.log
 
+# Temporary review and analysis files
+review_diff_*.txt
+*.diff
+*.patch
+
 # Editors and IDE
 .idea/
 .vscode/*

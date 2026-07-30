@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -174,11 +175,9 @@ func (h *JobHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if l := q.Get("limit"); l != "" {
-		var n int
-		if _, err := json.Number(l).Int64(); err == nil {
-			n = int(json.Number(l).String()[0]) // simplified
+		if n, err := strconv.Atoi(l); err == nil && n > 0 {
+			filter.Limit = n
 		}
-		_ = n
 	}
 
 	jobs, cursor, err := h.store.List(r.Context(), filter)
@@ -215,6 +214,67 @@ func (h *JobHandler) CancelJob(w http.ResponseWriter, r *http.Request) {
 	)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "cancel_requested"})
+}
+
+// RetryJob handles POST /v1/jobs/{job_id}:retry.
+// Creates a new job cloned from a dead/cancelled job (ADR-0001).
+func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
+	tenantID := TenantFromContext(r.Context())
+	jobID := chi.URLParam(r, "job_id")
+
+	// Fetch the original job.
+	origJob, err := h.store.GetByID(r.Context(), tenantID, jobID)
+	if err != nil {
+		h.writeDomainError(w, err)
+		return
+	}
+
+	// Only dead or cancelled jobs can be retried.
+	if origJob.State == domain.StateSucceeded {
+		h.writeDomainError(w, domain.NewError(domain.CodeAlreadyTerminal, domain.ErrAlreadyTerminal,
+			"succeeded jobs cannot be retried"))
+		return
+	}
+	if origJob.State != domain.StateDead && origJob.State != domain.StateCancelled {
+		h.writeDomainError(w, domain.NewError(domain.CodeInvalidTransition, domain.ErrInvalidTransition,
+			"only dead or cancelled jobs can be retried, current state: %s", origJob.State))
+		return
+	}
+
+	// Clone as new job.
+	now := time.Now()
+	newJob, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+		TenantID:       tenantID,
+		Queue:          origJob.Queue,
+		Type:           origJob.Type,
+		Payload:        origJob.Payload,
+		Priority:       origJob.Priority,
+		MaxAttempts:    origJob.MaxAttempts,
+		TimeoutSeconds: origJob.TimeoutSeconds,
+		RetryOfJobID:   &origJob.ID,
+	}, now)
+	if err != nil {
+		h.writeDomainError(w, err)
+		return
+	}
+
+	_, err = h.store.Enqueue(r.Context(), newJob)
+	if err != nil {
+		h.writeDomainError(w, err)
+		return
+	}
+
+	h.logger.Info("job retry created",
+		"new_job_id", newJob.ID,
+		"original_job_id", jobID,
+		"tenant_id", tenantID,
+	)
+
+	writeJSON(w, http.StatusAccepted, CreateJobResponse{
+		JobID:        newJob.ID,
+		State:        string(newJob.State),
+		Deduplicated: false,
+	})
 }
 
 // HealthLive handles GET /health/live.

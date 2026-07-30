@@ -18,6 +18,9 @@ type Config struct {
 	// HTTPAddr is the listen address for the HTTP API server.
 	HTTPAddr string
 
+	// GRPCAddr is the listen address for the gRPC Worker Gateway.
+	GRPCAddr string
+
 	// LeaseTTL is the duration of a job lease before it expires.
 	LeaseTTL time.Duration
 
@@ -43,6 +46,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		DatabaseURL:       getEnv("JOBFORGE_DATABASE_URL", "postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable"),
 		HTTPAddr:          getEnv("JOBFORGE_HTTP_ADDR", ":8080"),
+		GRPCAddr:          getEnv("JOBFORGE_GRPC_ADDR", ":9090"),
 		LeaseTTL:          getDurationEnv("JOBFORGE_LEASE_TTL", 30*time.Second),
 		HeartbeatInterval: getDurationEnv("JOBFORGE_HEARTBEAT_INTERVAL", 10*time.Second),
 		ScanInterval:      getDurationEnv("JOBFORGE_SCAN_INTERVAL", 1*time.Second),

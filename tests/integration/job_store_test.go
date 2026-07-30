@@ -15,14 +15,18 @@ import (
 )
 
 // createTestJob is a helper that enqueues a ready job and returns it.
+// RunAt is set 1 second in the past to avoid Docker/WSL2 clock drift issues
+// where the host clock may be slightly ahead of the PostgreSQL container clock.
 func createTestJob(t *testing.T, s store.JobStore, queue, jobType string) *domain.Job {
 	t.Helper()
 	id := uuid.New().String()
+	pastRunAt := time.Now().Add(-1 * time.Second)
 	job, err := domain.NewJob(id, domain.NewJobParams{
 		TenantID: "test-tenant",
 		Queue:    queue,
 		Type:     jobType,
 		Payload:  []byte(`{"key":"value"}`),
+		RunAt:    &pastRunAt,
 	}, time.Now())
 	if err != nil {
 		t.Fatalf("create job: %v", err)
@@ -310,12 +314,14 @@ func TestFailDead(t *testing.T) {
 
 	// Create a job with max_attempts=1 so first failure is terminal.
 	id := uuid.New().String()
+	pastRunAt := time.Now().Add(-1 * time.Second)
 	job, err := domain.NewJob(id, domain.NewJobParams{
 		TenantID:    "test-tenant",
 		Queue:       "dead-test",
 		Type:        "demo.fail",
 		Payload:     []byte(`{}`),
 		MaxAttempts: 1,
+		RunAt:       &pastRunAt,
 	}, time.Now())
 	if err != nil {
 		t.Fatalf("create job: %v", err)

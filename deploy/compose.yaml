@@ -36,5 +36,46 @@ services:
       postgres:
         condition: service_healthy
 
+  scheduler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["scheduler"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_SCAN_INTERVAL: "1s"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["gateway"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_GRPC_ADDR: ":9090"
+      JOBFORGE_LEASE_TTL: "30s"
+    ports:
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["worker"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_GATEWAY_ADDR: "gateway:9090"
+      JOBFORGE_WORKER_QUEUE: "default"
+      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
+    depends_on:
+      gateway:
+        condition: service_started
+
 volumes:
   pgdata:

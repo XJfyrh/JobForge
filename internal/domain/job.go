@@ -2,7 +2,14 @@ package domain
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// NewID generates a new UUID v4 string for use as entity identifiers.
+func NewID() string {
+	return uuid.New().String()
+}
 
 // Default configuration values per ADR-0001.
 const (
