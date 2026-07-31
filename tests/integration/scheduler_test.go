@@ -346,3 +346,146 @@ func TestSchedulerAdvisoryLock(t *testing.T) {
 	// Cleanup.
 	_ = ss2.ReleaseLock(ctx)
 }
+
+// TestSchedulerFailover verifies AT-09: Scheduler high-availability failover.
+//
+// AT-09 Requirements:
+//   - Start dual Schedulers (A and B)
+//   - Kill leader (Scheduler A)
+//   - Follower (Scheduler B) takes over within 2 × lock_retry_interval + 2s
+//   - Tasks are promoted exactly once (no duplicate promotion)
+//
+// NFR-004: Scheduler takeover time <= 2 × lock_retry_interval + 2s (default 6s)
+func TestSchedulerFailover(t *testing.T) {
+	ctx := context.Background()
+
+	// Create two scheduler stores with separate lock connections.
+	lockConnA, err := pgx.Connect(ctx, testEnv.dsn)
+	if err != nil {
+		t.Fatalf("connect lockConnA: %v", err)
+	}
+	defer func() { _ = lockConnA.Close(ctx) }()
+
+	lockConnB, err := pgx.Connect(ctx, testEnv.dsn)
+	if err != nil {
+		t.Fatalf("connect lockConnB: %v", err)
+	}
+	defer func() { _ = lockConnB.Close(ctx) }()
+
+	ssA := postgres.NewSchedulerStore(testEnv.pool, lockConnA)
+	ssB := postgres.NewSchedulerStore(testEnv.pool, lockConnB)
+	js := setupStore(t)
+
+	// Use short intervals for faster testing.
+	lockRetryInterval := 500 * time.Millisecond
+	maxTakeoverTime := 2*lockRetryInterval + 2*time.Second // NFR-004: 3s for test
+
+	// 1. Scheduler A acquires leadership.
+	acquired, err := ssA.TryAcquireLock(ctx)
+	if err != nil {
+		t.Fatalf("scheduler A acquire: %v", err)
+	}
+	if !acquired {
+		t.Fatal("scheduler A should acquire leadership")
+	}
+	t.Log("Scheduler A acquired leadership")
+
+	// 2. Create a scheduled job (run_at in past).
+	pastRunAt := time.Now().Add(-10 * time.Second)
+	job1 := createScheduledJob(t, js, "failover-test", "demo.echo", pastRunAt)
+
+	// 3. Scheduler A promotes the job.
+	promoted, err := ssA.PromoteReady(ctx, 100)
+	if err != nil {
+		t.Fatalf("scheduler A promote: %v", err)
+	}
+	if promoted < 1 {
+		t.Fatal("scheduler A should promote at least 1 job")
+	}
+
+	// Verify job1 is ready.
+	got, err := js.GetByID(ctx, "test-tenant", job1.ID)
+	if err != nil {
+		t.Fatalf("get job1: %v", err)
+	}
+	if got.State != domain.StateReady {
+		t.Fatalf("expected job1 ready, got %s", got.State)
+	}
+	stateVersionAfterA := got.StateVersion
+	t.Logf("Scheduler A promoted job1 (state_version=%d)", stateVersionAfterA)
+
+	// 4. Kill Scheduler A (release lock / simulate crash).
+	err = ssA.ReleaseLock(ctx)
+	if err != nil {
+		t.Fatalf("scheduler A release: %v", err)
+	}
+	t.Log("Scheduler A killed (lock released)")
+
+	// 5. Scheduler B attempts to acquire leadership.
+	// Measure takeover time.
+	start := time.Now()
+	var acquiredB bool
+	deadline := time.Now().Add(maxTakeoverTime)
+
+	for time.Now().Before(deadline) {
+		acquiredB, err = ssB.TryAcquireLock(ctx)
+		if err != nil {
+			t.Fatalf("scheduler B acquire: %v", err)
+		}
+		if acquiredB {
+			break
+		}
+		time.Sleep(100 * time.Millisecond) // Poll interval
+	}
+
+	takeoverTime := time.Since(start)
+	if !acquiredB {
+		t.Fatalf("AT-09 FAILED: scheduler B did not acquire leadership within %v", maxTakeoverTime)
+	}
+	t.Logf("Scheduler B acquired leadership (takeover time: %v)", takeoverTime)
+
+	// NFR-004 verification.
+	if takeoverTime > maxTakeoverTime {
+		t.Errorf("NFR-004 FAILED: takeover time %v exceeds limit %v", takeoverTime, maxTakeoverTime)
+	}
+
+	// 6. Create another scheduled job.
+	job2 := createScheduledJob(t, js, "failover-test", "demo.echo", pastRunAt)
+
+	// 7. Scheduler B promotes the new job.
+	promoted, err = ssB.PromoteReady(ctx, 100)
+	if err != nil {
+		t.Fatalf("scheduler B promote: %v", err)
+	}
+	if promoted < 1 {
+		t.Fatal("scheduler B should promote at least 1 job")
+	}
+
+	// Verify job2 is ready.
+	got, err = js.GetByID(ctx, "test-tenant", job2.ID)
+	if err != nil {
+		t.Fatalf("get job2: %v", err)
+	}
+	if got.State != domain.StateReady {
+		t.Fatalf("expected job2 ready, got %s", got.State)
+	}
+	t.Log("Scheduler B promoted job2")
+
+	// 8. CRITICAL: Verify job1 was NOT promoted again (no duplicate promotion).
+	got, err = js.GetByID(ctx, "test-tenant", job1.ID)
+	if err != nil {
+		t.Fatalf("get job1 final: %v", err)
+	}
+	if got.State != domain.StateReady {
+		t.Errorf("job1 state changed unexpectedly: %s", got.State)
+	}
+	if got.StateVersion != stateVersionAfterA {
+		t.Errorf("AT-09 FAILED: job1 promoted multiple times (state_version: %d -> %d)",
+			stateVersionAfterA, got.StateVersion)
+	} else {
+		t.Log("AT-09 PASSED: job1 promoted exactly once (no duplicate)")
+	}
+
+	// Cleanup.
+	_ = ssB.ReleaseLock(ctx)
+}
