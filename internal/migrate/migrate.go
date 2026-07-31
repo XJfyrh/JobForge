@@ -43,14 +43,22 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) *Migrator {
 // Each migration runs in its own transaction. A failed migration aborts the
 // process without marking the version as applied.
 func (m *Migrator) Up(ctx context.Context) error {
+	// Acquire a dedicated connection so the session-level advisory lock and
+	// its release are guaranteed to run on the same physical connection.
+	conn, err := m.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire conn for migration lock: %w", err)
+	}
+	defer conn.Release()
+
 	// Acquire advisory lock (blocks until available).
-	if _, err := m.pool.Exec(ctx, "select pg_advisory_lock($1)", advisoryLockID); err != nil {
+	if _, err := conn.Exec(ctx, "select pg_advisory_lock($1)", advisoryLockID); err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
 	defer func() {
-		// Release advisory lock. Use background context in case the original
-		// is cancelled during shutdown.
-		_, _ = m.pool.Exec(context.Background(), "select pg_advisory_unlock($1)", advisoryLockID)
+		// Release advisory lock on the same connection. Use background context
+		// in case the original is cancelled during shutdown.
+		_, _ = conn.Exec(context.Background(), "select pg_advisory_unlock($1)", advisoryLockID)
 	}()
 
 	// Ensure tracking table exists.

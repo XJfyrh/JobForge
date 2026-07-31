@@ -1,6 +1,6 @@
 // Command jobforge is the single-binary entry point for the JobForge platform.
-// It supports subcommands: api (HTTP control plane), scheduler (job promotion),
-// and worker (task execution). In W1, only the api subcommand is implemented.
+// It supports subcommands: migrate (database migration), api (HTTP control plane),
+// scheduler (job promotion), worker (task execution), and gateway (gRPC worker gateway).
 package main
 
 import (
@@ -34,11 +34,16 @@ func main() {
 	}))
 
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: jobforge <api|scheduler|worker>\n")
+		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker>\n")
 		os.Exit(1)
 	}
 
 	switch os.Args[1] {
+	case "migrate":
+		if err := runMigrate(logger); err != nil {
+			logger.Error("migrate failed", "error", err)
+			os.Exit(1)
+		}
 	case "api":
 		if err := runAPI(logger); err != nil {
 			logger.Error("api server failed", "error", err)
@@ -60,7 +65,7 @@ func main() {
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <api|scheduler|gateway|worker>\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker>\n", os.Args[1])
 		os.Exit(1)
 	}
 }
@@ -96,7 +101,7 @@ func runAPI(logger *slog.Logger) error {
 	}
 	logger.Info("connected to PostgreSQL", "max_conns", poolCfg.MaxConns)
 
-	// Run database migrations automatically.
+	// Run database migrations.
 	migrator := migrate.New(pool, logger)
 	if err := migrator.Up(ctx); err != nil {
 		return fmt.Errorf("run migrations: %w", err)
@@ -346,6 +351,44 @@ func runWorker(logger *slog.Logger) error {
 	}
 
 	logger.Info("worker stopped")
+	return nil
+}
+
+// runMigrate runs database migrations as a standalone subcommand.
+// migrator.Up acquires a PostgreSQL advisory lock to prevent concurrent migrations.
+func runMigrate(logger *slog.Logger) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("parse database url: %w", err)
+	}
+	poolCfg.MaxConns = 5
+	poolCfg.MinConns = 1
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return fmt.Errorf("create connection pool: %w", err)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("ping database: %w", err)
+	}
+	logger.Info("migrate connected to PostgreSQL")
+
+	migrator := migrate.New(pool, logger)
+	if err := migrator.Up(ctx); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+
+	logger.Info("migrations completed successfully")
 	return nil
 }
 
