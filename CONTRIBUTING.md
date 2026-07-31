@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢关注 JobForge。当前项目处于 S0，任何实现都必须先服从 [PRD](docs/product/JobForge_PRD_v0.1.md) 中已经冻结的可靠性边界。
+感谢关注 JobForge。当前项目已完成 S0+W1 及 W2-W3 MVP，任何实现都必须先服从 [PRD](docs/product/JobForge_PRD_v0.1.md) 中已经冻结的可靠性边界。
 
 ## 工作流
 

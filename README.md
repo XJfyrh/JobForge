@@ -2,7 +2,7 @@
 
 JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台，目标是提供可恢复、可观测、可隔离的可靠执行底座。
 
-> 当前状态：PRD v0.1（Draft），准备进入 S0 契约与状态机评审。仓库目前仅包含产品与工程规范，尚无可运行的产品代码。
+> 当前状态：S0+W1 及 W2-W3 MVP 已实现。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway 和 Worker Runtime 均已可用。
 
 ## 核心边界
 
@@ -12,13 +12,34 @@ JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编�
 - 先交付 lease、重试、DLQ、取消、崩溃恢复和故障验证，再考虑完整 UI 或事件扩展。
 - 只运行预注册 Handler，不允许上传或执行任意代码。
 
-## 计划中的组成
+## 已实现的组成
 
-- Go 控制面、Scheduler、Worker Gateway 与 Worker Runtime
-- PostgreSQL 队列内核与 versioned migrations
-- gRPC Worker 协议和 HTTP 控制面
+- **Go 控制面**：HTTP API（创建、查询、取消、手动重试任务）
+- **Scheduler**：扫描推进（scheduled/retry_wait → ready）与租约回收（过期 running → ready）
+- **gRPC Worker Gateway**：Register、Poll、Heartbeat、Complete、Fail RPC
+- **Worker Runtime**：并发任务执行、心跳维持、优雅关闭
+- **PostgreSQL 队列内核**：versioned migrations、FOR UPDATE SKIP LOCKED 领取、fencing token
+- **事件通知**：PostgreSQL LISTEN/NOTIFY fan-out 广播（ADR-0003）
+
+### 计划中
+
 - Python SDK 与真实 Agent/RAG 集成演示
 - OpenTelemetry、metrics、pprof、故障注入和 benchmark
+- 完整 UI 和事件扩展
+
+## 快速开始
+
+```sh
+# 启动 PostgreSQL
+docker compose -f deploy/docker-compose.yml up -d
+
+# 运行服务（自动执行 migrations）
+go run ./cmd/jobforge
+```
+
+服务默认监听：
+- HTTP API: `:8080`
+- gRPC Worker Gateway: `:9090`
 
 ## 文档导航
 

@@ -2,6 +2,20 @@
 
 本文件适用于整个 JobForge 仓库，供 Codex 等编码 Agent 使用。
 
+## 任务开始时必读
+
+Agent 在执行任何修改任务前，必须先读取以下关键文件以获取上下文：
+
+| 文件 | 用途 |
+|------|------|
+| `docs/product/JobForge_PRD_v0.1.md` | 产品需求与验收语义 |
+| `docs/adr/README.md` | 架构决策记录索引 |
+| `docs/code-standards.md` | 编码规范与风格要求 |
+| `CONTRIBUTING.md` | 贡献流程与协作约定 |
+| `docs/development.md` | 本地开发与构建指南 |
+
+若任务涉及特定领域，还需额外读取对应的 ADR 文件（`docs/adr/0NNN-*.md`）。
+
 ## 事实来源
 
 1. `docs/product/JobForge_PRD_v0.1.md` 定义产品边界与验收语义。

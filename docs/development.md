@@ -1,6 +1,27 @@
 # 开发环境与本地检查
 
-仓库当前只有文档和检查配置，没有产品代码、`go.mod` 或 Python package metadata。本页记录首次初始化实际验证过的工具；Go/Python 产品最低版本将在代码骨架确定时另行固定。
+本页记录 JobForge 的开发环境设置、常用检查命令和测试分层。项目使用 Go 1.26 和 PostgreSQL 16。
+
+## 项目结构
+
+```text
+jobforge/
+├── cmd/jobforge/       # 服务入口
+├── internal/
+│   ├── api/http/       # HTTP 控制面 API
+│   ├── config/         # 环境变量配置
+│   ├── domain/         # 领域模型与状态机
+│   ├── gateway/grpc/   # gRPC Worker Gateway
+│   ├── migrate/        # 自动迁移
+│   ├── notify/         # LISTEN/NOTIFY fan-out
+│   ├── scheduler/      # 调度器
+│   ├── store/postgres/ # PostgreSQL 存储层
+│   └── worker/         # Worker Runtime
+├── migrations/         # 版本化 SQL 迁移
+├── proto/              # Protobuf 契约
+├── tests/integration/  # 集成测试
+└── deploy/             # Docker Compose
+```
 
 ## 已验证环境
 
@@ -52,11 +73,22 @@ macOS/Linux：
 .tools/bin/buf lint
 ```
 
+## 本地 PostgreSQL
+
+集成测试需要真实 PostgreSQL。使用 Docker Compose 启动：
+
+```sh
+docker compose -f deploy/docker-compose.yml up -d
+```
+
+默认连接串：`postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`
+
 ## 常用检查
 
-产品目录存在后，提交前按改动范围运行：
+提交前按改动范围运行：
 
 ```text
+go build ./...
 go test -race ./...
 go vet ./...
 .tools/bin/golangci-lint run
@@ -69,6 +101,12 @@ go vet ./...
 ```
 
 Windows 将 `.venv/bin` 替换为 `.venv\Scripts`，将无扩展名工具替换为 `.exe`。目录尚未创建时应标记检查“未适用”，不能把“没有输入文件”报告成产品代码通过。
+
+集成测试需要 PostgreSQL 运行中：
+
+```sh
+go test -race ./tests/integration/...
+```
 
 ## 测试分层
 
