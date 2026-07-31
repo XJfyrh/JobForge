@@ -30,7 +30,7 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 	var sideEffectCount atomic.Int32
 
 	// Idempotent handler: only increments if not already done for this job.
-	idempotentExecute := func(jobID string) {
+	idempotentExecute := func(_ string) {
 		// In a real system, this would check a database table.
 		// For this test, we use compare-and-swap semantics.
 		if sideEffectCount.Load() == 0 {

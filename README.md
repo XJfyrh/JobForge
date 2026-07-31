@@ -2,7 +2,7 @@
 
 JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台，目标是提供可恢复、可观测、可隔离的可靠执行底座。
 
-> 当前状态：S0+W1 及 W2-W3 MVP 已实现。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway 和 Worker Runtime 均已可用。
+> 当前状态：S0+W1 及 W2-W3 MVP 已实现，W4 基线压测已完成。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway、Worker Runtime 和性能基准均已可用。
 
 ## 核心边界
 
@@ -31,7 +31,7 @@ JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编�
 
 ```sh
 # 启动 PostgreSQL
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/compose.yaml up -d
 
 # 运行服务（自动执行 migrations）
 go run ./cmd/jobforge
@@ -48,6 +48,7 @@ go run ./cmd/jobforge
 | [产品需求文档](docs/product/JobForge_PRD_v0.1.md) | 产品边界、状态机、接口、验收标准与里程碑 |
 | [代码与注释规范](docs/code-standards.md) | Go、Python、SQL、Proto、测试和注释约定 |
 | [开发环境](docs/development.md) | 本地检查工具、安装方式与验证命令 |
+| [性能基线](docs/benchmark.md) | W4 冻结的性能基准与复现命令 |
 | [ADR 说明](docs/adr/README.md) | 架构决策的创建、接受和取代流程 |
 | [贡献指南](CONTRIBUTING.md) | 分支、提交、评审与合并要求 |
 | [安全策略](SECURITY.md) | 漏洞报告方式与敏感信息要求 |
