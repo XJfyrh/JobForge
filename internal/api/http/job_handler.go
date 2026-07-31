@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -15,16 +16,23 @@ import (
 	"github.com/xjfyrh/jobforge/internal/store"
 )
 
+// Pinger checks connectivity to a backing store (e.g. PostgreSQL).
+// It is a minimal interface used exclusively by health-readiness probes.
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
+
 // JobHandler handles HTTP requests for job operations. It is a thin transport
 // layer: validate input, call store, map response. No domain logic here.
 type JobHandler struct {
 	store  store.JobStore
+	pinger Pinger
 	logger *slog.Logger
 }
 
 // NewJobHandler creates a new job handler.
-func NewJobHandler(s store.JobStore, logger *slog.Logger) *JobHandler {
-	return &JobHandler{store: s, logger: logger}
+func NewJobHandler(s store.JobStore, p Pinger, logger *slog.Logger) *JobHandler {
+	return &JobHandler{store: s, pinger: p, logger: logger}
 }
 
 // CreateJobRequest is the request body for POST /v1/jobs.
@@ -283,9 +291,17 @@ func (h *JobHandler) HealthLive(w http.ResponseWriter, _ *http.Request) {
 }
 
 // HealthReady handles GET /health/ready.
-func (h *JobHandler) HealthReady(w http.ResponseWriter, _ *http.Request) {
-	// Basic readiness: if we can reach here, the HTTP server is up.
-	// A full implementation would ping PostgreSQL.
+// It verifies PostgreSQL connectivity before reporting readiness.
+func (h *JobHandler) HealthReady(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	if err := h.pinger.Ping(ctx); err != nil {
+		h.logger.Warn("health ready check failed", "error", err)
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 

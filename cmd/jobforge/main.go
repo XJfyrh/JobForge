@@ -104,7 +104,7 @@ func runAPI(logger *slog.Logger) error {
 
 	// Create store and router.
 	jobStore := postgres.NewJobStore(pool)
-	router := apihttp.NewRouter(jobStore, cfg, logger)
+	router := apihttp.NewRouter(jobStore, jobStore, cfg, logger)
 
 	// Create HTTP server.
 	srv := &http.Server{

@@ -13,8 +13,8 @@ import (
 )
 
 // NewRouter creates the HTTP router with all middleware and routes configured.
-func NewRouter(jobStore store.JobStore, cfg *config.Config, logger *slog.Logger) http.Handler {
-	handler := NewJobHandler(jobStore, logger)
+func NewRouter(jobStore store.JobStore, pinger Pinger, cfg *config.Config, logger *slog.Logger) http.Handler {
+	handler := NewJobHandler(jobStore, pinger, logger)
 
 	r := chi.NewRouter()
 

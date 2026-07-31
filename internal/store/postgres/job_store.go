@@ -32,6 +32,12 @@ func NewJobStore(pool *pgxpool.Pool) *JobStore {
 // Ensure interface compliance at compile time.
 var _ store.JobStore = (*JobStore)(nil)
 
+// Ping performs a lightweight connectivity check against PostgreSQL.
+// It satisfies the http.Pinger interface for health-readiness probes.
+func (s *JobStore) Ping(ctx context.Context) error {
+	return s.pool.Ping(ctx)
+}
+
 // Enqueue persists a new job. If the idempotency key already exists for the
 // tenant, it returns deduplicated=true without creating a duplicate.
 // After a successful insert of a ready job, sends pg_notify to wake up
