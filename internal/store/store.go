@@ -58,6 +58,10 @@ type JobStore interface {
 	// Cancel requests cancellation of a job. Waiting-state jobs transition
 	// immediately; running jobs enter cancelling.
 	Cancel(ctx context.Context, tenantID, jobID string) error
+
+	// GetQueueDepth returns the number of pending jobs in a queue.
+	// Pending states: scheduled, ready, retry_wait.
+	GetQueueDepth(ctx context.Context, queue string) (int, error)
 }
 
 // ClaimParams holds the parameters for a claim operation.
@@ -67,6 +71,10 @@ type ClaimParams struct {
 	Types    []string
 	MaxJobs  int
 	LeaseTTL time.Duration
+
+	// TenantMaxInflight limits how many running jobs a tenant can have.
+	// If <= 0, no limit is enforced.
+	TenantMaxInflight int
 }
 
 // AttemptRecord represents a single execution attempt for audit purposes.

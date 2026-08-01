@@ -28,11 +28,27 @@ type JobHandler struct {
 	store  store.JobStore
 	pinger Pinger
 	logger *slog.Logger
+
+	// Queue backpressure limits (FR-303).
+	queueSoftLimit int
+	queueHardLimit int
 }
 
 // NewJobHandler creates a new job handler.
 func NewJobHandler(s store.JobStore, p Pinger, logger *slog.Logger) *JobHandler {
-	return &JobHandler{store: s, pinger: p, logger: logger}
+	return &JobHandler{
+		store:          s,
+		pinger:         p,
+		logger:         logger,
+		queueSoftLimit: 10000, // default, can be overridden
+		queueHardLimit: 50000, // default, can be overridden
+	}
+}
+
+// SetQueueLimits configures the queue backpressure thresholds.
+func (h *JobHandler) SetQueueLimits(soft, hard int) {
+	h.queueSoftLimit = soft
+	h.queueHardLimit = hard
 }
 
 // CreateJobRequest is the request body for POST /v1/jobs.
@@ -84,6 +100,12 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	jobID := uuid.New().String()
 	now := time.Now()
 
+	// Trace ID propagation (AT-12): use X-Trace-ID header or generate new.
+	traceID := r.Header.Get("X-Trace-ID")
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+
 	job, err := domain.NewJob(jobID, domain.NewJobParams{
 		TenantID:       tenantID,
 		Queue:          req.Queue,
@@ -94,10 +116,32 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		MaxAttempts:    req.MaxAttempts,
 		TimeoutSeconds: req.TimeoutSeconds,
 		IdempotencyKey: req.IdempotencyKey,
+		TraceID:        &traceID,
 	}, now)
 	if err != nil {
 		h.writeDomainError(w, err)
 		return
+	}
+
+	// Queue backpressure check (FR-303).
+	if h.queueHardLimit > 0 {
+		depth, err := h.store.GetQueueDepth(r.Context(), req.Queue)
+		if err != nil {
+			h.logger.Error("failed to get queue depth", "queue", req.Queue, "error", err)
+			// Continue anyway; backpressure is best-effort.
+		} else {
+			if depth >= h.queueHardLimit {
+				h.logger.Warn("queue hard limit exceeded, rejecting submission",
+					"queue", req.Queue, "depth", depth, "hard_limit", h.queueHardLimit)
+				writeError(w, http.StatusTooManyRequests, "QUEUE_OVERLOADED",
+					"queue is at capacity, please retry later")
+				return
+			}
+			if depth >= h.queueSoftLimit {
+				h.logger.Warn("queue soft limit exceeded",
+					"queue", req.Queue, "depth", depth, "soft_limit", h.queueSoftLimit)
+			}
+		}
 	}
 
 	deduplicated, err := h.store.Enqueue(r.Context(), job)
@@ -112,6 +156,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		"queue", job.Queue,
 		"type", job.Type,
 		"state", string(job.State),
+		"trace_id", traceID,
 		"deduplicated", deduplicated,
 	)
 

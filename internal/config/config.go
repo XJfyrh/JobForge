@@ -39,6 +39,10 @@ type Config struct {
 
 	// QueueHardLimit is the hard threshold above which submissions are rejected.
 	QueueHardLimit int
+
+	// TenantMaxInflight is the maximum number of running jobs per tenant.
+	// If <= 0, no limit is enforced.
+	TenantMaxInflight int
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -52,6 +56,7 @@ func Load() (*Config, error) {
 		ScanInterval:      getDurationEnv("JOBFORGE_SCAN_INTERVAL", 1*time.Second),
 		QueueSoftLimit:    getIntEnv("JOBFORGE_QUEUE_SOFT_LIMIT", 10000),
 		QueueHardLimit:    getIntEnv("JOBFORGE_QUEUE_HARD_LIMIT", 50000),
+		TenantMaxInflight: getIntEnv("JOBFORGE_TENANT_MAX_INFLIGHT", 100),
 		APIKeys:           make(map[string]string),
 	}
 

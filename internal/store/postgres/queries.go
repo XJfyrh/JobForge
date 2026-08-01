@@ -228,3 +228,11 @@ where tenant_id = $1
 order by created_at desc
 limit $6
 `
+
+// getQueueDepth counts pending jobs in a queue for backpressure (FR-303).
+// Pending states: scheduled, ready, retry_wait.
+const getQueueDepth = `
+select count(*) from jobs
+where queue = $1
+  and state in ('scheduled', 'ready', 'retry_wait')
+`

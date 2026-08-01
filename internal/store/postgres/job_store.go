@@ -186,6 +186,23 @@ func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) ([]*doma
 	claimed := make([]*domain.Job, 0, len(candidates))
 
 	for _, candidate := range candidates {
+		// Check tenant quota if limit is set (FR-302).
+		// The running count includes jobs claimed earlier in this transaction
+		// because PostgreSQL allows reading our own uncommitted changes.
+		if params.TenantMaxInflight > 0 {
+			var runningCount int
+			err := tx.QueryRow(ctx,
+				"select count(*) from jobs where tenant_id = $1 and state = 'running'",
+				candidate.TenantID).Scan(&runningCount)
+			if err != nil {
+				return nil, fmt.Errorf("check tenant quota: %w", err)
+			}
+			if runningCount >= params.TenantMaxInflight {
+				// Tenant quota full, skip this job.
+				continue
+			}
+		}
+
 		// Update lease fields atomically.
 		job, err := scanJob(tx.QueryRow(ctx, claimUpdate, candidate.ID, params.WorkerID, leaseUntil))
 		if err != nil {
@@ -442,4 +459,15 @@ func scanJobFromRows(rows pgx.Rows) (*domain.Job, error) {
 	}
 	j.State = domain.JobState(state)
 	return &j, nil
+}
+
+// GetQueueDepth returns the number of pending jobs in a queue.
+// Used for queue backpressure (FR-303).
+func (s *JobStore) GetQueueDepth(ctx context.Context, queue string) (int, error) {
+	var count int
+	err := s.pool.QueryRow(ctx, getQueueDepth, queue).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("get queue depth: %w", err)
+	}
+	return count, nil
 }
