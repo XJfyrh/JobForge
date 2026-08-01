@@ -9,7 +9,6 @@ from jobforge import (
     AlreadyTerminalError,
     JobForgeClient,
     NotFoundError,
-    QueueOverloadedError,
 )
 from jobforge.models import Job, JobState
 

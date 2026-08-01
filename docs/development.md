@@ -19,6 +19,7 @@ jobforge/
 │   └── worker/         # Worker Runtime
 ├── migrations/         # 版本化 SQL 迁移
 ├── proto/              # Protobuf 契约
+├── sdk/python/         # Python SDK
 ├── tests/integration/  # 集成测试
 └── deploy/             # Docker Compose
 ```
@@ -123,3 +124,28 @@ go test -race ./tests/integration/...
 - mypy：<https://mypy.readthedocs.io/en/stable/config_file.html>
 - SQLFluff：<https://docs.sqlfluff.com/en/latest/configuration/setting_configuration.html>
 - Buf：<https://buf.build/docs/configuration/v2/buf-yaml/>
+
+## Python SDK 开发
+
+Python SDK 位于 `sdk/python/`，使用 httpx 作为 HTTP 客户端。
+
+### 安装开发依赖
+
+```sh
+cd sdk/python
+pip install -e ".[dev]"
+```
+
+### 运行测试
+
+```sh
+cd sdk/python
+pytest tests/
+```
+
+### 代码检查
+
+```sh
+.venv/bin/ruff check sdk/python
+.venv/bin/mypy sdk/python
+```
