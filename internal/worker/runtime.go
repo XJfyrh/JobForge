@@ -255,7 +255,7 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 
 // executeJob runs a single job: handler execution + heartbeat + result reporting.
 func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
-	logger := r.logger.With("job_id", job.ID, "type", job.Type, "attempt", job.Attempt)
+	logger := r.logger.With("job_id", job.ID, "type", job.Type, "attempt", job.Attempt, "trace_id", job.TraceID)
 
 	// Look up handler.
 	handler := r.registry.Lookup(job.Type)
