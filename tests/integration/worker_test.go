@@ -86,8 +86,13 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 		}
 
 		// Worker stops heartbeating (grace period expired or shutdown forced).
-		// Wait for lease to expire.
-		time.Sleep(100 * time.Millisecond)
+		// Force lease expiry by setting lease_until in the past.
+		// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+		_, err = testEnv.pool.Exec(ctx,
+			"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+		if err != nil {
+			t.Fatalf("set lease_until past: %v", err)
+		}
 
 		// Scheduler recovers the abandoned job.
 		recovered, err := ss.RecoverExpiredLeases(ctx)

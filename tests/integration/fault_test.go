@@ -70,8 +70,13 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 	// (We simply don't call Complete; the lease will expire.)
 	t.Log("Worker A crashes before ACK (no Complete RPC sent)")
 
-	// 5. Wait for lease to expire.
-	time.Sleep(100 * time.Millisecond)
+	// 5. Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// 6. Scheduler recovers the expired lease.
 	recovered, err := ss.RecoverExpiredLeases(ctx)
@@ -176,8 +181,13 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 	// (We simply stop calling Heartbeat and wait for lease to expire.)
 	t.Log("Worker loses network connectivity (heartbeats stop)")
 
-	// 4. Wait for lease to expire.
-	time.Sleep(150 * time.Millisecond)
+	// 4. Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// 5. Scheduler recovers the expired lease.
 	recovered, err := ss.RecoverExpiredLeases(ctx)
@@ -261,8 +271,13 @@ func TestFaultAT03StaleWorkerLateComplete(t *testing.T) {
 	}
 	staleToken := claimed[0].FencingToken
 
-	// 2. Lease expires immediately.
-	time.Sleep(50 * time.Millisecond)
+	// 2. Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// 3. Scheduler recovers.
 	_, err = ss.RecoverExpiredLeases(ctx)

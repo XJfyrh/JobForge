@@ -209,8 +209,13 @@ func TestSchedulerRecoverExpiredLease(t *testing.T) {
 		t.Fatalf("expected running, got %s", got.State)
 	}
 
-	// Wait for lease to expire.
-	time.Sleep(50 * time.Millisecond)
+	// Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// Recover.
 	recovered, err := ss.RecoverExpiredLeases(ctx)
@@ -267,8 +272,13 @@ func TestSchedulerRecoverCancellingExpired(t *testing.T) {
 		t.Fatalf("expected cancelling, got %s", got.State)
 	}
 
-	// Wait for lease to expire.
-	time.Sleep(50 * time.Millisecond)
+	// Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// Recover.
 	recovered, err := ss.RecoverExpiredLeases(ctx)

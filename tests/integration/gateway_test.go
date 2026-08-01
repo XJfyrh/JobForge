@@ -378,8 +378,13 @@ func TestEndToEndLeaseExpiryRecovery(t *testing.T) {
 		t.Fatalf("claim: %v", err)
 	}
 
-	// 2. Wait for lease expiry.
-	time.Sleep(50 * time.Millisecond)
+	// 2. Force lease expiry by setting lease_until in the past.
+	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
+	_, err = testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
+	if err != nil {
+		t.Fatalf("set lease_until past: %v", err)
+	}
 
 	// 3. Scheduler recovers.
 	recovered, err := ss.RecoverExpiredLeases(ctx)
