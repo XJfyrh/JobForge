@@ -1,12 +1,15 @@
 // Package demo provides demonstration Handlers for testing and integration
 // demos. These handlers exercise various JobForge features: echo (connectivity),
-// sleep (timeout/cancel), fail (retry/DLQ), and idempotent_effect (dedup).
+// sleep (timeout/cancel), fail (retry/DLQ), idempotent_effect (dedup), and
+// http (external dependency integration).
 package demo
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -108,10 +111,72 @@ func (h *IdempotentEffectHandler) Execute(_ context.Context, job *worker.Claimed
 	return fmt.Sprintf("effect:%s", job.ID), nil
 }
 
+// HTTPHandler makes an HTTP request to an external endpoint.
+// Demonstrates external dependency integration and retryable errors.
+// 2xx → success; 5xx / network error → retryable; 4xx → non-retryable.
+type HTTPHandler struct {
+	client *http.Client
+}
+
+// NewHTTPHandler creates an HTTPHandler with a default HTTP client.
+func NewHTTPHandler() *HTTPHandler {
+	return &HTTPHandler{
+		client: &http.Client{Timeout: 30 * time.Second},
+	}
+}
+
+// httpPayload defines the expected payload for demo.http.
+type httpPayload struct {
+	URL    string `json:"url"`
+	Method string `json:"method"`
+}
+
+// Execute implements worker.Handler.
+func (h *HTTPHandler) Execute(ctx context.Context, job *worker.ClaimedJob) (string, error) {
+	var p httpPayload
+	if err := json.Unmarshal(job.Payload, &p); err != nil {
+		return "", fmt.Errorf("invalid http payload: %w", err)
+	}
+	if p.URL == "" {
+		return "", fmt.Errorf("url is required")
+	}
+	if p.Method == "" {
+		p.Method = http.MethodGet
+	}
+
+	req, err := http.NewRequestWithContext(ctx, p.Method, p.URL, nil)
+	if err != nil {
+		return "", fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := h.client.Do(req)
+	if err != nil {
+		// Network error → retryable.
+		return "", worker.NewRetryableError(fmt.Errorf("http request failed: %w", err))
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Read limited body for result reference.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return fmt.Sprintf("http:%d:%s", resp.StatusCode, string(body)), nil
+	}
+
+	if resp.StatusCode >= 500 {
+		// Server error → retryable.
+		return "", worker.NewRetryableError(fmt.Errorf("http %d: %s", resp.StatusCode, string(body)))
+	}
+
+	// Client error (4xx) → non-retryable.
+	return "", fmt.Errorf("http %d: %s", resp.StatusCode, string(body))
+}
+
 // RegisterAll registers all demo handlers with the given registry.
 func RegisterAll(reg *worker.Registry) {
 	reg.Register("demo.echo", &EchoHandler{})
 	reg.Register("demo.sleep", &SleepHandler{})
 	reg.Register("demo.fail", &FailHandler{})
 	reg.Register("demo.idempotent_effect", NewIdempotentEffectHandler())
+	reg.Register("demo.http", NewHTTPHandler())
 }
