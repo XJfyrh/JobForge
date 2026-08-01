@@ -2,7 +2,7 @@
 
 JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台，目标是提供可恢复、可观测、可隔离的可靠执行底座。
 
-> 当前状态：S0+W1 及 W2-W3 MVP 已实现，W4 基线压测已完成。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway、Worker Runtime 和性能基准均已可用。
+> 当前状态：S0–W5 MVP 已实现。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway、Worker Runtime、性能基准、租户隔离、Python SDK 和 Agent Demo 均已可用。
 
 ## 核心边界
 
@@ -20,12 +20,15 @@ JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编�
 - **Worker Runtime**：并发任务执行、心跳维持、优雅关闭
 - **PostgreSQL 队列内核**：versioned migrations、FOR UPDATE SKIP LOCKED 领取、fencing token
 - **事件通知**：PostgreSQL LISTEN/NOTIFY fan-out 广播（ADR-0003）
+- **租户隔离**：租户并发上限（FR-302）、队列背压（FR-303）
+- **Python SDK**：submit/get/cancel/retry（FR-401）
+- **Agent Demo**：demo.http、pagewise.reindex Handler（FR-402/403）
+- **Trace 传播**：trace_id 从 API → job → Worker 日志串联（AT-12）
 
 ### 计划中
 
-- Python SDK 与真实 Agent/RAG 集成演示
-- OpenTelemetry、metrics、pprof、故障注入和 benchmark
-- 完整 UI 和事件扩展
+- OpenTelemetry、metrics、pprof（W6）
+- 最终 benchmark、故障报告、演示脚本（W7）
 
 ## 快速开始
 
