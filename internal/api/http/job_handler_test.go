@@ -21,7 +21,7 @@ func (f *fakePinger) Ping(_ context.Context) error {
 
 func TestHealthReady_Success(t *testing.T) {
 	pinger := &fakePinger{err: nil}
-	handler := NewJobHandler(nil, pinger, slog.Default())
+	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -43,7 +43,7 @@ func TestHealthReady_Success(t *testing.T) {
 
 func TestHealthReady_PingFails_Returns503(t *testing.T) {
 	pinger := &fakePinger{err: errors.New("connection refused")}
-	handler := NewJobHandler(nil, pinger, slog.Default())
+	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func TestHealthReady_PingFails_Returns503(t *testing.T) {
 
 func TestHealthReady_ResponseStructureCompatible(t *testing.T) {
 	pinger := &fakePinger{err: nil}
-	handler := NewJobHandler(nil, pinger, slog.Default())
+	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestHealthReady_ResponseStructureCompatible(t *testing.T) {
 }
 
 func TestHealthLive_Unchanged(t *testing.T) {
-	handler := NewJobHandler(nil, &fakePinger{}, slog.Default())
+	handler := NewJobHandler(nil, &fakePinger{}, slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 	rec := httptest.NewRecorder()

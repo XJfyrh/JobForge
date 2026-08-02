@@ -8,10 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/xjfyrh/jobforge/internal/observability"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
@@ -52,6 +55,7 @@ type Runtime struct {
 	logger   *slog.Logger
 	client   workerv1.WorkerServiceClient
 	conn     *grpc.ClientConn
+	metrics  *observability.Metrics
 
 	mu       sync.Mutex
 	inflight int
@@ -60,7 +64,7 @@ type Runtime struct {
 }
 
 // NewRuntime creates a Worker Runtime with the given configuration and handlers.
-func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger) *Runtime {
+func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger, metrics *observability.Metrics) *Runtime {
 	if cfg.Capacity <= 0 {
 		cfg.Capacity = 5
 	}
@@ -77,6 +81,7 @@ func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger) *Run
 		cfg:      cfg,
 		registry: registry,
 		logger:   logger,
+		metrics:  metrics,
 	}
 }
 
@@ -257,10 +262,21 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	logger := r.logger.With("job_id", job.ID, "type", job.Type, "attempt", job.Attempt, "trace_id", job.TraceID)
 
+	// worker.execute span (PRD 12.2).
+	ctx, span := observability.Tracer("jobforge.worker").Start(ctx, "worker.execute")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("queue", job.Queue),
+		attribute.String("type", job.Type),
+		attribute.Int("attempt", job.Attempt),
+		attribute.String("worker_id", r.cfg.WorkerID),
+	)
+
 	// Look up handler.
 	handler := r.registry.Lookup(job.Type)
 	if handler == nil {
 		logger.Error("no handler registered for type", "type", job.Type)
+		span.SetStatus(otelcodes.Error, "no handler for type")
 		r.reportFail(ctx, job, "UNKNOWN_TYPE", fmt.Sprintf("no handler for type %q", job.Type), false, 0)
 		return
 	}
@@ -296,6 +312,8 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 			errCode = "CANCELLED"
 			retryable = false
 		}
+		span.SetStatus(otelcodes.Error, err.Error())
+		span.SetAttributes(attribute.String("error_code", errCode))
 		logger.Warn("job failed", "error", err, "retryable", retryable, "duration_ms", durationMs)
 		r.reportFail(ctx, job, errCode, err.Error(), retryable, durationMs)
 		return

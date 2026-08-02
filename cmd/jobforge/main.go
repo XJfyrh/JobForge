@@ -22,6 +22,7 @@ import (
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/migrate"
 	"github.com/xjfyrh/jobforge/internal/notify"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/scheduler"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
 	"github.com/xjfyrh/jobforge/internal/worker"
@@ -38,6 +39,46 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize observability (tracing + metrics) for all subcommands.
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("load config", "error", err)
+		os.Exit(1)
+	}
+
+	obsCfg := observability.Config{
+		ServiceName:    "jobforge",
+		ServiceVersion: "0.1.0",
+		Environment:    "development",
+		ExporterType:   cfg.OTelExporterType,
+		SampleRatio:    cfg.OTelSampleRatio,
+		MetricsAddr:    cfg.MetricsAddr,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	traceShutdown, err := observability.SetupTracing(ctx, obsCfg)
+	if err != nil {
+		logger.Error("setup tracing", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = traceShutdown(context.Background()) }()
+
+	metrics, metricsShutdown, err := observability.SetupMetrics(ctx, nil)
+	if err != nil {
+		logger.Error("setup metrics", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = metricsShutdown(context.Background()) }()
+
+	// Start debug server (pprof + /metrics) in background.
+	go func() {
+		if err := observability.StartDebugServer(ctx, obsCfg.MetricsAddr, logger); err != nil {
+			logger.Error("debug server failed", "error", err)
+		}
+	}()
+
 	switch os.Args[1] {
 	case "migrate":
 		if err := runMigrate(logger); err != nil {
@@ -45,22 +86,22 @@ func main() {
 			os.Exit(1)
 		}
 	case "api":
-		if err := runAPI(logger); err != nil {
+		if err := runAPI(ctx, logger, cfg, metrics); err != nil {
 			logger.Error("api server failed", "error", err)
 			os.Exit(1)
 		}
 	case "scheduler":
-		if err := runScheduler(logger); err != nil {
+		if err := runScheduler(ctx, logger, cfg, metrics); err != nil {
 			logger.Error("scheduler failed", "error", err)
 			os.Exit(1)
 		}
 	case "worker":
-		if err := runWorker(logger); err != nil {
+		if err := runWorker(ctx, logger, cfg, metrics); err != nil {
 			logger.Error("worker failed", "error", err)
 			os.Exit(1)
 		}
 	case "gateway":
-		if err := runGateway(logger); err != nil {
+		if err := runGateway(ctx, logger, cfg, metrics); err != nil {
 			logger.Error("gateway failed", "error", err)
 			os.Exit(1)
 		}
@@ -70,12 +111,7 @@ func main() {
 	}
 }
 
-func runAPI(logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
+func runAPI(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
 	// Create PostgreSQL connection pool.
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
@@ -85,9 +121,6 @@ func runAPI(logger *slog.Logger) error {
 	poolCfg.MinConns = 2
 	poolCfg.MaxConnLifetime = time.Hour
 	poolCfg.MaxConnIdleTime = 30 * time.Minute
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
@@ -109,7 +142,7 @@ func runAPI(logger *slog.Logger) error {
 
 	// Create store and router.
 	jobStore := postgres.NewJobStore(pool)
-	router := apihttp.NewRouter(jobStore, jobStore, cfg, logger)
+	router := apihttp.NewRouter(jobStore, jobStore, cfg, logger, metrics)
 
 	// Create HTTP server.
 	srv := &http.Server{
@@ -120,7 +153,7 @@ func runAPI(logger *slog.Logger) error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Graceful shutdown on SIGINT/SIGTERM.
+	// Graceful shutdown on signal.
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("starting HTTP server", "addr", cfg.HTTPAddr)
@@ -129,14 +162,11 @@ func runAPI(logger *slog.Logger) error {
 		}
 	}()
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
 	select {
 	case err := <-errCh:
 		return fmt.Errorf("server error: %w", err)
-	case sig := <-sigCh:
-		logger.Info("shutting down", "signal", sig.String())
+	case <-ctx.Done():
+		logger.Info("shutting down")
 	}
 
 	// Graceful shutdown with timeout.
@@ -151,15 +181,7 @@ func runAPI(logger *slog.Logger) error {
 	return nil
 }
 
-func runScheduler(logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func runScheduler(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
 	// Create PostgreSQL connection pool.
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
@@ -207,12 +229,9 @@ func runScheduler(logger *slog.Logger) error {
 		LockRetryInterval: 2 * time.Second,
 	}
 
-	sched := scheduler.New(schedStore, notifier, listener, schedCfg, logger)
+	sched := scheduler.New(schedStore, notifier, listener, schedCfg, logger, metrics)
 
-	// Graceful shutdown on SIGINT/SIGTERM.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
+	// Run scheduler until context cancelled.
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- sched.Run(ctx)
@@ -223,9 +242,8 @@ func runScheduler(logger *slog.Logger) error {
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("scheduler error: %w", err)
 		}
-	case sig := <-sigCh:
-		logger.Info("scheduler shutting down", "signal", sig.String())
-		cancel()
+	case <-ctx.Done():
+		logger.Info("scheduler shutting down")
 		<-errCh
 	}
 
@@ -233,15 +251,7 @@ func runScheduler(logger *slog.Logger) error {
 	return nil
 }
 
-func runGateway(logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
 	// Create PostgreSQL connection pool.
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
@@ -276,13 +286,10 @@ func runGateway(logger *slog.Logger) error {
 	defer listener.Close()
 
 	// Create gRPC service and server.
-	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, logger)
+	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
-	// Graceful shutdown on SIGINT/SIGTERM.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
+	// Run gateway until context cancelled.
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- server.Serve(cfg.GRPCAddr)
@@ -291,8 +298,8 @@ func runGateway(logger *slog.Logger) error {
 	select {
 	case err := <-errCh:
 		return fmt.Errorf("gateway server error: %w", err)
-	case sig := <-sigCh:
-		logger.Info("gateway shutting down", "signal", sig.String())
+	case <-ctx.Done():
+		logger.Info("gateway shutting down")
 		server.GracefulStop()
 	}
 
@@ -300,15 +307,7 @@ func runGateway(logger *slog.Logger) error {
 	return nil
 }
 
-func runWorker(logger *slog.Logger) error {
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
 	// Register demo handlers.
 	registry := worker.NewRegistry()
 	demo.RegisterAll(registry)
@@ -328,12 +327,9 @@ func runWorker(logger *slog.Logger) error {
 		Version:           "0.1.0",
 	}
 
-	rt := worker.NewRuntime(workerCfg, registry, logger)
+	rt := worker.NewRuntime(workerCfg, registry, logger, metrics)
 
-	// Graceful shutdown on SIGINT/SIGTERM.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
+	// Run worker until context cancelled.
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- rt.Run(ctx)
@@ -344,9 +340,8 @@ func runWorker(logger *slog.Logger) error {
 		if err != nil && err != context.Canceled {
 			return fmt.Errorf("worker error: %w", err)
 		}
-	case sig := <-sigCh:
-		logger.Info("worker shutting down", "signal", sig.String())
-		cancel()
+	case <-ctx.Done():
+		logger.Info("worker shutting down")
 		<-errCh
 	}
 

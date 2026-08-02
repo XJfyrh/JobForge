@@ -6,12 +6,16 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/store"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
@@ -43,15 +47,17 @@ type WorkerService struct {
 	waiter   PollWaiter
 	logger   *slog.Logger
 	leaseTTL time.Duration
+	metrics  *observability.Metrics
 }
 
 // NewWorkerService creates a WorkerService.
-func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, logger *slog.Logger) *WorkerService {
+func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
 	return &WorkerService{
 		store:    s,
 		waiter:   waiter,
 		logger:   logger,
 		leaseTTL: leaseTTL,
+		metrics:  metrics,
 	}
 }
 
@@ -88,6 +94,14 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		return nil, status.Error(codes.InvalidArgument, "worker_id is required")
 	}
 
+	// gateway.claim_jobs span (PRD 12.2).
+	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.claim_jobs")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("worker_id", req.WorkerId),
+		attribute.Int("max_jobs", int(req.MaxJobs)),
+	)
+
 	maxJobs := int(req.MaxJobs)
 	if maxJobs <= 0 {
 		maxJobs = 1
@@ -111,8 +125,10 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 	}
 
 	// Try immediate claim.
+	start := time.Now()
 	jobs, err := svc.store.Claim(ctx, claimParams)
 	if err != nil {
+		span.SetStatus(otelcodes.Error, err.Error())
 		return nil, mapError(err)
 	}
 
@@ -129,9 +145,19 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 
 		jobs, err = svc.store.Claim(ctx, claimParams)
 		if err != nil {
+			span.SetStatus(otelcodes.Error, err.Error())
 			return nil, mapError(err)
 		}
 	}
+
+	// Record claim duration metric (PRD 12.1).
+	claimDuration := time.Since(start).Seconds()
+	if svc.metrics != nil {
+		svc.metrics.ClaimDurationSeconds.Record(ctx, claimDuration,
+			metric.WithAttributes(attribute.String("queue", queue)))
+	}
+
+	span.SetAttributes(attribute.Int("jobs.claimed", len(jobs)))
 
 	return &workerv1.PollResponse{
 		Jobs: toClaimedJobs(jobs),
@@ -169,6 +195,13 @@ func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRe
 		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
 	}
 
+	// gateway.complete_job span (PRD 12.2).
+	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.complete_job")
+	defer span.End()
+	span.SetAttributes(
+		attribute.String("worker_id", req.WorkerId),
+	)
+
 	var durationMs int64
 	if req.Duration != nil {
 		durationMs = req.Duration.AsDuration().Milliseconds()
@@ -180,7 +213,26 @@ func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRe
 		if isIdempotentComplete(ctx, err, svc.store, req) {
 			return &workerv1.CompleteResponse{State: "succeeded"}, nil
 		}
+		span.SetStatus(otelcodes.Error, err.Error())
 		return nil, mapError(err)
+	}
+
+	// Record job attempt and latency metrics (PRD 12.1).
+	if svc.metrics != nil {
+		svc.metrics.JobAttemptsTotal.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("queue", ""),
+				attribute.String("type", ""),
+				attribute.String("outcome", "succeeded"),
+			))
+		if durationMs > 0 {
+			svc.metrics.JobLatencySeconds.Record(ctx, float64(durationMs)/1000.0,
+				metric.WithAttributes(
+					attribute.String("queue", ""),
+					attribute.String("type", ""),
+					attribute.String("outcome", "succeeded"),
+				))
+		}
 	}
 
 	return &workerv1.CompleteResponse{State: "succeeded"}, nil
@@ -209,12 +261,39 @@ func (svc *WorkerService) Fail(ctx context.Context, req *workerv1.FailRequest) (
 		return nil, mapError(err)
 	}
 
+	// Record failure metrics (PRD 12.1).
+	if svc.metrics != nil {
+		svc.metrics.JobAttemptsTotal.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("queue", ""),
+				attribute.String("type", ""),
+				attribute.String("outcome", "failed"),
+			))
+		if req.Retryable {
+			svc.metrics.RetriesTotal.Add(ctx, 1,
+				metric.WithAttributes(
+					attribute.String("queue", ""),
+					attribute.String("error_code", req.ErrorCode),
+				))
+		}
+	}
+
 	// Determine resulting state.
 	state, _ := svc.store.GetJobState(ctx, req.JobId)
 	resp := &workerv1.FailResponse{State: string(state)}
-	if state == domain.StateRetryWait {
+	switch state {
+	case domain.StateRetryWait:
 		if runAt, err := svc.store.GetJobRunAt(ctx, req.JobId); err == nil && runAt != nil {
 			resp.NextRetryAt = timestamppb.New(*runAt)
+		}
+	case domain.StateDead:
+		// Record DLQ metric (PRD 12.1).
+		if svc.metrics != nil {
+			svc.metrics.DLQTotal.Add(ctx, 1,
+				metric.WithAttributes(
+					attribute.String("queue", ""),
+					attribute.String("type", ""),
+				))
 		}
 	}
 	return resp, nil

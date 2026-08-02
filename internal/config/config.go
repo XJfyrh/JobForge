@@ -43,6 +43,16 @@ type Config struct {
 	// TenantMaxInflight is the maximum number of running jobs per tenant.
 	// If <= 0, no limit is enforced.
 	TenantMaxInflight int
+
+	// OTelExporterType selects the trace exporter: "stdout" or "none".
+	OTelExporterType string
+
+	// OTelSampleRatio is the trace sampling ratio in [0.0, 1.0].
+	OTelSampleRatio float64
+
+	// MetricsAddr is the listen address for pprof + Prometheus /metrics.
+	// Defaults to 127.0.0.1:6060 (localhost only, PRD 11.4).
+	MetricsAddr string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -57,6 +67,9 @@ func Load() (*Config, error) {
 		QueueSoftLimit:    getIntEnv("JOBFORGE_QUEUE_SOFT_LIMIT", 10000),
 		QueueHardLimit:    getIntEnv("JOBFORGE_QUEUE_HARD_LIMIT", 50000),
 		TenantMaxInflight: getIntEnv("JOBFORGE_TENANT_MAX_INFLIGHT", 100),
+		OTelExporterType:  getEnv("JOBFORGE_OTEL_EXPORTER", "stdout"),
+		OTelSampleRatio:   getFloatEnv("JOBFORGE_OTEL_SAMPLE_RATIO", 1.0),
+		MetricsAddr:       getEnv("JOBFORGE_METRICS_ADDR", "127.0.0.1:6060"),
 		APIKeys:           make(map[string]string),
 	}
 
@@ -108,6 +121,15 @@ func getIntEnv(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return fallback
+}
+
+func getFloatEnv(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
 		}
 	}
 	return fallback

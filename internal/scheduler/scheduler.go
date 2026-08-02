@@ -12,6 +12,11 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
+	"github.com/xjfyrh/jobforge/internal/observability"
 )
 
 // Store defines the persistence operations required by the Scheduler.
@@ -77,16 +82,18 @@ type Scheduler struct {
 	listener Listener
 	cfg      Config
 	logger   *slog.Logger
+	metrics  *observability.Metrics
 }
 
 // New creates a Scheduler with the given dependencies.
-func New(store Store, notifier Notifier, listener Listener, cfg Config, logger *slog.Logger) *Scheduler {
+func New(store Store, notifier Notifier, listener Listener, cfg Config, logger *slog.Logger, metrics *observability.Metrics) *Scheduler {
 	return &Scheduler{
 		store:    store,
 		notifier: notifier,
 		listener: listener,
 		cfg:      cfg,
 		logger:   logger,
+		metrics:  metrics,
 	}
 }
 
@@ -186,6 +193,10 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 		return
 	}
 
+	// scheduler.promote_jobs span (PRD 12.2).
+	ctx, span := observability.Tracer("jobforge.scheduler").Start(ctx, "scheduler.promote_jobs")
+	defer span.End()
+
 	// Promote scheduled/retry_wait → ready.
 	promoted, err := s.store.PromoteReady(ctx, s.cfg.PromoteBatchSize)
 	if err != nil {
@@ -194,6 +205,7 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 		}
 		s.logger.Error("promote failed", "error", err)
 	} else if promoted > 0 {
+		span.SetAttributes(attribute.Int("jobs.promoted", promoted))
 		s.logger.Info("promoted jobs to ready", "count", promoted)
 		// Notify gateway that new jobs are available.
 		if s.notifier != nil {
@@ -209,7 +221,13 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 		}
 		s.logger.Error("lease recovery failed", "error", err)
 	} else if recovered > 0 {
+		span.SetAttributes(attribute.Int("jobs.recovered", recovered))
 		s.logger.Info("recovered expired leases", "count", recovered)
+		// Record lease expired metric (PRD 12.1).
+		if s.metrics != nil {
+			s.metrics.LeaseExpiredTotal.Add(ctx, int64(recovered),
+				metric.WithAttributes(attribute.String("queue", "")))
+		}
 		// Notify gateway that recovered jobs are available.
 		if s.notifier != nil {
 			_ = s.notifier.NotifyJobReady(ctx, "")

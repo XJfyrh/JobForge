@@ -11,8 +11,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
 
@@ -25,9 +28,10 @@ type Pinger interface {
 // JobHandler handles HTTP requests for job operations. It is a thin transport
 // layer: validate input, call store, map response. No domain logic here.
 type JobHandler struct {
-	store  store.JobStore
-	pinger Pinger
-	logger *slog.Logger
+	store   store.JobStore
+	pinger  Pinger
+	logger  *slog.Logger
+	metrics *observability.Metrics
 
 	// Queue backpressure limits (FR-303).
 	queueSoftLimit int
@@ -35,11 +39,12 @@ type JobHandler struct {
 }
 
 // NewJobHandler creates a new job handler.
-func NewJobHandler(s store.JobStore, p Pinger, logger *slog.Logger) *JobHandler {
+func NewJobHandler(s store.JobStore, p Pinger, logger *slog.Logger, metrics *observability.Metrics) *JobHandler {
 	return &JobHandler{
 		store:          s,
 		pinger:         p,
 		logger:         logger,
+		metrics:        metrics,
 		queueSoftLimit: 10000, // default, can be overridden
 		queueHardLimit: 50000, // default, can be overridden
 	}
@@ -78,6 +83,11 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// http.submit_job span (PRD 12.2).
+	ctx, span := observability.Tracer("jobforge.api").Start(r.Context(), "http.submit_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("tenant_id", tenantID))
+
 	var req CreateJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "invalid JSON body")
@@ -96,6 +106,11 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "payload exceeds 256 KiB limit")
 		return
 	}
+
+	span.SetAttributes(
+		attribute.String("queue", req.Queue),
+		attribute.String("type", req.Type),
+	)
 
 	jobID := uuid.New().String()
 	now := time.Now()
@@ -125,7 +140,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 
 	// Queue backpressure check (FR-303).
 	if h.queueHardLimit > 0 {
-		depth, err := h.store.GetQueueDepth(r.Context(), req.Queue)
+		depth, err := h.store.GetQueueDepth(ctx, req.Queue)
 		if err != nil {
 			h.logger.Error("failed to get queue depth", "queue", req.Queue, "error", err)
 			// Continue anyway; backpressure is best-effort.
@@ -133,6 +148,14 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 			if depth >= h.queueHardLimit {
 				h.logger.Warn("queue hard limit exceeded, rejecting submission",
 					"queue", req.Queue, "depth", depth, "hard_limit", h.queueHardLimit)
+				// Record tenant throttled metric (PRD 12.1).
+				if h.metrics != nil {
+					h.metrics.TenantThrottledTotal.Add(ctx, 1,
+						metric.WithAttributes(
+							attribute.String("tenant", tenantID),
+							attribute.String("reason", "queue_overloaded"),
+						))
+				}
 				writeError(w, http.StatusTooManyRequests, "QUEUE_OVERLOADED",
 					"queue is at capacity, please retry later")
 				return
@@ -144,10 +167,20 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	deduplicated, err := h.store.Enqueue(r.Context(), job)
+	deduplicated, err := h.store.Enqueue(ctx, job)
 	if err != nil {
 		h.writeDomainError(w, err)
 		return
+	}
+
+	// Record jobs submitted metric (PRD 12.1).
+	if h.metrics != nil {
+		h.metrics.JobsSubmittedTotal.Add(ctx, 1,
+			metric.WithAttributes(
+				attribute.String("tenant", tenantID),
+				attribute.String("queue", req.Queue),
+				attribute.String("type", req.Type),
+			))
 	}
 
 	h.logger.Info("job created",

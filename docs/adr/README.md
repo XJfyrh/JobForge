@@ -37,3 +37,4 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 | [ADR-0001](0001-implementation-parameters.md) | 实现参数与通道模式 | Accepted | 2026-07-29 |
 | [ADR-0002](0002-error-classification.md) | 错误分类与 HTTP/gRPC 映射 | Accepted | 2026-07-29 |
 | [ADR-0003](0003-event-notification.md) | 事件通知机制（PostgreSQL LISTEN/NOTIFY） | Accepted | 2026-07-29 |
+| [ADR-0004](0004-observability-stack.md) | 可观测性技术选型（OTel + Prometheus + pprof） | Accepted | 2026-07-29 |

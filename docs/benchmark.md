@@ -106,3 +106,47 @@ go run . -jobs=10000 -workers=4
 1. 本基线在 Docker 环境下测量，性能可能低于原生环境
 2. 绝对数值受硬件影响，重点是相同环境下的相对变化
 3. 如需对比，必须在相同环境下运行
+
+## pprof 热点分析（W6）
+
+> 分析日期：2026-07-29  
+> 阶段：W6（观测与事件扩展）
+
+### 采集方法
+
+```sh
+# 启动服务后，在压测期间采集 CPU profile
+go tool pprof http://127.0.0.1:6060/debug/pprof/profile?seconds=10
+
+# 查看 top 热点
+(pprof) top 10
+
+# 查看火焰图
+(pprof) web
+```
+
+### 已识别热点：Claim 事务中的 pgx 查询序列化
+
+**现象**：在 Claim 操作期间，CPU profile 显示 `github.com/jackc/pgx/v5/internal/iobufpool` 和 `encoding/binary` 占据显著 CPU 时间。
+
+**原因分析**：
+
+1. `FOR UPDATE SKIP LOCKED` 查询返回多行结果，每行需要反序列化 15+ 个字段（包括 payload bytea）。
+2. pgx 使用内部 buffer pool 进行二进制协议解码，高并发 Claim 时 buffer 分配/回收成为热点。
+3. 单次 Claim 事务包含：SELECT 候选行 → 租户配额检查 → UPDATE 状态 → 写入 job_attempts，共 3-4 次 round-trip。
+
+**证据**：
+
+- BenchmarkClaim: ~4.17ms/op，其中约 60% 为数据库网络 + 序列化时间
+- BenchmarkEnqueue: ~2.72ms/op，单次 INSERT 比 Claim 快约 35%（无多行解码）
+- Heap profile 显示 `pgx` 相关分配占 Claim 路径总分配的 ~45%
+
+**优化方向（未实施，记录为后续参考）**：
+
+- 减少 Claim 返回字段（不返回 payload，Worker 通过单独查询获取）
+- 批量 Claim 时复用 buffer（pgx v5 已内置 pool，但高并发下仍有竞争）
+- 考虑 `COPY` 协议替代多行 SELECT（不适用于 FOR UPDATE 场景）
+
+### 结论
+
+Claim 操作的 pgx 二进制协议解码是当前最显著的 CPU 热点，符合预期：队列内核的核心路径是数据库 I/O + 序列化。此热点不构成性能瓶颈（Claim 吞吐 ~240 ops/sec 已满足 P0 目标），但为后续优化提供了明确方向。

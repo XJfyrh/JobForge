@@ -14,6 +14,7 @@ jobforge/
 │   ├── gateway/grpc/   # gRPC Worker Gateway
 │   ├── migrate/        # 自动迁移
 │   ├── notify/         # LISTEN/NOTIFY fan-out
+│   ├── observability/  # OTel tracing + Prometheus metrics + pprof
 │   ├── scheduler/      # 调度器
 │   ├── store/postgres/ # PostgreSQL 存储层
 │   └── worker/         # Worker Runtime
@@ -149,3 +150,52 @@ pytest tests/
 .venv/bin/ruff check sdk/python
 .venv/bin/mypy sdk/python
 ```
+
+## 可观测性开发（W6）
+
+JobForge 使用 OpenTelemetry + Prometheus + pprof 提供完整可观测性（ADR-0004）。
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `JOBFORGE_OTEL_EXPORTER` | `stdout` | Trace exporter 类型（stdout / none） |
+| `JOBFORGE_OTEL_SAMPLE_RATIO` | `1.0` | Trace 采样率 [0.0, 1.0] |
+| `JOBFORGE_METRICS_ADDR` | `127.0.0.1:6060` | pprof + /metrics 监听地址 |
+
+### Trace 查看
+
+开发环境默认将 span JSON 输出到 stderr。生产可切换 OTLP：
+
+```sh
+JOBFORGE_OTEL_EXPORTER=stdout go run ./cmd/jobforge api
+```
+
+### Metrics 查看
+
+```sh
+curl http://127.0.0.1:6060/metrics
+```
+
+### pprof 剖析
+
+```sh
+# CPU profile (5秒)
+go tool pprof http://127.0.0.1:6060/debug/pprof/profile?seconds=5
+
+# Heap profile
+go tool pprof http://127.0.0.1:6060/debug/pprof/heap
+
+# Goroutine
+go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
+```
+
+### Span 列表（PRD 12.2）
+
+| Span | 组件 | 属性 |
+|---|---|---|
+| `http.submit_job` | API | tenant_id, queue, type |
+| `scheduler.promote_jobs` | Scheduler | jobs.promoted, jobs.recovered |
+| `gateway.claim_jobs` | Gateway | worker_id, max_jobs, jobs.claimed |
+| `worker.execute` | Worker | queue, type, attempt, worker_id |
+| `gateway.complete_job` | Gateway | worker_id |

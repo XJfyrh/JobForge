@@ -9,12 +9,13 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/xjfyrh/jobforge/internal/config"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
 
 // NewRouter creates the HTTP router with all middleware and routes configured.
-func NewRouter(jobStore store.JobStore, pinger Pinger, cfg *config.Config, logger *slog.Logger) http.Handler {
-	handler := NewJobHandler(jobStore, pinger, logger)
+func NewRouter(jobStore store.JobStore, pinger Pinger, cfg *config.Config, logger *slog.Logger, metrics *observability.Metrics) http.Handler {
+	handler := NewJobHandler(jobStore, pinger, logger, metrics)
 
 	r := chi.NewRouter()
 
