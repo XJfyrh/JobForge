@@ -104,9 +104,8 @@ func SetupTracingWithWriter(ctx context.Context, cfg Config, w io.Writer) (shutd
 }
 
 func buildResource(_ context.Context, cfg Config) (*resource.Resource, error) {
-	return resource.Merge(resource.Default(), resource.NewWithAttributes(
-		semconv.SchemaURL,
+	return resource.NewSchemaless(
 		semconv.ServiceName(cfg.ServiceName),
 		semconv.ServiceVersion(cfg.ServiceVersion),
-	))
+	), nil
 }

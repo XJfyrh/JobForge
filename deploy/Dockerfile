@@ -19,7 +19,7 @@ RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /bin/jobforge /usr/local/bin/jobforge
 COPY migrations /app/migrations
 
-EXPOSE 8080
+EXPOSE 8080 9090 6060
 
 ENTRYPOINT ["jobforge"]
 CMD ["api"]

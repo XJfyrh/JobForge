@@ -1,5 +1,8 @@
-# JobForge local development environment.
+# JobForge local development and demo environment.
 # Usage: docker compose -f deploy/compose.yaml up -d
+#
+# Services: PostgreSQL, API, Scheduler, Gateway, 2 Workers.
+# Two workers enable kill/recovery demonstrations (PRD 18 steps 3-4).
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,8 +33,11 @@ services:
       JOBFORGE_LEASE_TTL: "30s"
       JOBFORGE_HEARTBEAT_INTERVAL: "10s"
       JOBFORGE_SCAN_INTERVAL: "1s"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "8080:8080"
+      - "6060:6060"
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +50,8 @@ services:
     environment:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_SCAN_INTERVAL: "1s"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,13 +65,15 @@ services:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_GRPC_ADDR: ":9090"
       JOBFORGE_LEASE_TTL: "30s"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "9090:9090"
     depends_on:
       postgres:
         condition: service_healthy
 
-  worker:
+  worker-1:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -71,8 +81,28 @@ services:
     environment:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_GATEWAY_ADDR: "gateway:9090"
+      JOBFORGE_WORKER_ID: "worker-1"
       JOBFORGE_WORKER_QUEUE: "default"
       JOBFORGE_HEARTBEAT_INTERVAL: "10s"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
+    depends_on:
+      gateway:
+        condition: service_started
+
+  worker-2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["worker"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_GATEWAY_ADDR: "gateway:9090"
+      JOBFORGE_WORKER_ID: "worker-2"
+      JOBFORGE_WORKER_QUEUE: "default"
+      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       gateway:
         condition: service_started

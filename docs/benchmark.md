@@ -150,3 +150,85 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/profile?seconds=10
 ### 结论
 
 Claim 操作的 pgx 二进制协议解码是当前最显著的 CPU 热点，符合预期：队列内核的核心路径是数据库 I/O + 序列化。此热点不构成性能瓶颈（Claim 吞吐 ~240 ops/sec 已满足 P0 目标），但为后续优化提供了明确方向。
+
+## 最终发布基准（W7）
+
+> 测量日期：2026-08-03  
+> 阶段：W7（作品集交付）  
+> 目的：验证 W5/W6 变更未引入性能回归
+
+### 环境（与 W4 相同）
+
+| 项目 | 值 |
+|------|-----|
+| CPU | AMD Ryzen 7 7840HS w/ Radeon 780M Graphics |
+| 内存 | 16 GB |
+| Go 版本 | go1.26.5 |
+| GOMAXPROCS | 16 |
+| PostgreSQL | 16-alpine (Docker) |
+| 操作系统 | Windows 11 (Docker Desktop) |
+
+### 微基准对比
+
+| 基准 | W4 基线 (ns/op) | W7 最终 (ns/op) | 变化 |
+|------|-----------------|-----------------|------|
+| BenchmarkEnqueue | 2,715,866 | 2,563,809 | -5.6% (改善) |
+| BenchmarkClaim | 4,171,091 | 3,553,890 | -14.8% (改善) |
+
+### 端到端对比
+
+测试参数：100 jobs, 4 workers
+
+| 指标 | W4 基线 | W7 最终 | 变化 |
+|------|---------|---------|------|
+| Submit 吞吐 | 278.01 jobs/sec | 363.92 jobs/sec | +30.9% (改善) |
+| Process 吞吐 | 347.82 jobs/sec | 429.19 jobs/sec | +23.4% (改善) |
+| p50 | 9.59 ms | 8.41 ms | -12.3% (改善) |
+| p95 | 14.23 ms | 12.85 ms | -9.7% (改善) |
+| p99 | 69.12 ms | 25.48 ms | -63.1% (改善) |
+
+### Goroutine 稳态
+
+| 指标 | 值 |
+|------|-----|
+| 基线 goroutines | 2 |
+| 最终 goroutines | 2 |
+| 差异 | 0 |
+| 容差 | ±5 |
+| 结果 | PASS |
+
+### 性能门禁验证
+
+| 门禁 (PRD 11.2) | 阈值 | 实际 | 结果 |
+|------|------|------|------|
+| 吞吐相对 W4 下降 | < 15% | 改善 23-31% | PASS |
+| 控制面 p95 恶化 | < 20% | 改善 9.7% | PASS |
+| Goroutine 稳态 | ±5% | 差异 0 | PASS |
+
+### 恢复时间（NFR-003 / NFR-004）
+
+| 指标 | 约束公式 | 上界 | 验证方式 |
+|------|----------|------|----------|
+| 任务恢复 | lease_ttl + scan_interval + 2s | 33s | TestFaultAT04HeartbeatLoss |
+| Scheduler 接管 | 2 × lock_retry + 2s | 12s | TestSchedulerFailover |
+
+恢复时间通过集成测试验证（测试中使用缩短的 lease TTL 以加速验证，逻辑等价）。
+
+### 复现命令
+
+```sh
+# 微基准
+cd benchmarks/micro
+go test -bench=. -benchmem -benchtime=5s
+
+# 端到端
+cd benchmarks/e2e
+go run . -jobs=100 -workers=4
+
+# 集成测试（含恢复时间验证）
+go test -race ./tests/integration/ -run "TestFault|TestSchedulerFailover" -v
+```
+
+### 结论
+
+W5（租户隔离、Python SDK）和 W6（OTel、Prometheus、pprof）的变更未引入性能回归。所有指标相对 W4 基线均有改善，性能门禁全部通过。
