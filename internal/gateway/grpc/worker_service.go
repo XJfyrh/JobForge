@@ -33,6 +33,10 @@ type WorkerStore interface {
 
 	// GetJobRunAt returns the run_at timestamp of a job (for next_retry_at).
 	GetJobRunAt(ctx context.Context, jobID string) (*time.Time, error)
+
+	// WorkerCounts samples registered workers per (version, status) for the
+	// jobforge_workers_active gauge (PRD 12.1).
+	WorkerCounts(ctx context.Context) ([]store.WorkerCountRow, error)
 }
 
 // PollWaiter provides notification-based wakeup for Poll long-polling.
@@ -80,6 +84,19 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 	sessionID := domain.NewID()
 	if err := svc.store.RegisterWorker(ctx, req, sessionID); err != nil {
 		return nil, mapError(err)
+	}
+
+	// Emit the jobforge_workers_active gauge (PRD 12.1). Best-effort.
+	if svc.metrics != nil {
+		if counts, err := svc.store.WorkerCounts(ctx); err == nil {
+			for _, c := range counts {
+				svc.metrics.WorkersActive.Record(ctx, c.Count,
+					metric.WithAttributes(
+						attribute.String("version", c.Version),
+						attribute.String("status", c.Status),
+					))
+			}
+		}
 	}
 
 	svc.logger.Info("worker registered",

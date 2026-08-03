@@ -106,3 +106,13 @@ const insertRecoveryOutbox = `
 insert into outbox_events (aggregate_id, event_type, payload)
 values ($1, 'job.lease_expired', $2)
 `
+
+// queueDepthMetrics samples pending jobs per (tenant, queue, state) for the
+// jobforge_queue_depth gauge (PRD 12.1 / FR-502). Pending states match the
+// backpressure definition: scheduled, ready, retry_wait.
+const queueDepthMetrics = `
+select tenant_id, queue, state, count(*)
+from jobs
+where state in ('scheduled', 'ready', 'retry_wait')
+group by tenant_id, queue, state
+`

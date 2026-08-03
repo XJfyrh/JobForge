@@ -95,3 +95,20 @@ type AttemptRecord struct {
 	DurationMs   *int64
 	TraceID      *string
 }
+
+// QueueDepthRow is one gauge sample for jobforge_queue_depth (PRD 12.1):
+// the number of pending jobs for a (tenant, queue, state) combination.
+type QueueDepthRow struct {
+	TenantID string
+	Queue    string
+	State    string
+	Count    int64
+}
+
+// WorkerCountRow is one gauge sample for jobforge_workers_active (PRD 12.1):
+// the number of registered workers for a (version, status) combination.
+type WorkerCountRow struct {
+	Version string
+	Status  string
+	Count   int64
+}

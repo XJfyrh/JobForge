@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/xjfyrh/jobforge/internal/observability"
+	"github.com/xjfyrh/jobforge/internal/store"
 )
 
 // Store defines the persistence operations required by the Scheduler.
@@ -37,6 +38,10 @@ type Store interface {
 	// (back to ready) and cancelling jobs with expired leases (to cancelled).
 	// Returns the total number of jobs recovered.
 	RecoverExpiredLeases(ctx context.Context) (int, error)
+
+	// QueueDepthMetrics samples pending jobs per (tenant, queue, state) for
+	// the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
+	QueueDepthMetrics(ctx context.Context) ([]store.QueueDepthRow, error)
 }
 
 // Notifier sends pg_notify signals to wake up waiting consumers.
@@ -232,6 +237,33 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 		if s.notifier != nil {
 			_ = s.notifier.NotifyJobReady(ctx, "")
 		}
+	}
+
+	// Emit the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
+	s.recordQueueDepth(ctx)
+}
+
+// recordQueueDepth samples pending jobs per (tenant, queue, state) and
+// records the jobforge_queue_depth gauge. Best-effort: errors are logged
+// but never break the scan loop.
+func (s *Scheduler) recordQueueDepth(ctx context.Context) {
+	if s.metrics == nil || ctx.Err() != nil {
+		return
+	}
+	rows, err := s.store.QueueDepthMetrics(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			s.logger.Error("queue depth metrics sample failed", "error", err)
+		}
+		return
+	}
+	for _, r := range rows {
+		s.metrics.QueueDepth.Record(ctx, r.Count,
+			metric.WithAttributes(
+				attribute.String("tenant", r.TenantID),
+				attribute.String("queue", r.Queue),
+				attribute.String("state", r.State),
+			))
 	}
 }
 

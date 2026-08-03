@@ -69,6 +69,13 @@
 
 高基数字段 `job_id`、`trace_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
 
+### Gauge 发射点
+
+| 指标 | 发射位置 | 触发时机 |
+|---|---|---|
+| `jobforge_queue_depth` | Scheduler `scanCycle` | 每次扫描周期按 (tenant, queue, state) 采样 pending 任务数 |
+| `jobforge_workers_active` | Gateway `Register` | Worker 注册/刷新后按 (version, status) 采样注册表 |
+
 ## pprof 诊断
 
 pprof 端点与 /metrics 共享 debug 端口（默认 `127.0.0.1:6060`）：

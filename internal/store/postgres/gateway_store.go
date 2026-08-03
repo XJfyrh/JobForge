@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/store"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
@@ -31,6 +32,14 @@ select state from jobs where id = $1
 
 const getJobRunAt = `
 select run_at from jobs where id = $1
+`
+
+// workerCounts samples registered workers per (version, status) for the
+// jobforge_workers_active gauge (PRD 12.1).
+const workerCounts = `
+select coalesce(version, ''), status, count(*)
+from workers
+group by version, status
 `
 
 // RegisterWorker upserts a worker registration record.
@@ -68,4 +77,28 @@ func (s *JobStore) GetJobRunAt(ctx context.Context, jobID string) (*time.Time, e
 		return nil, fmt.Errorf("get job run_at %s: %w", jobID, err)
 	}
 	return &runAt, nil
+}
+
+// WorkerCounts samples registered workers per (version, status) so the
+// Gateway can emit the jobforge_workers_active gauge (PRD 12.1).
+func (s *JobStore) WorkerCounts(ctx context.Context) ([]store.WorkerCountRow, error) {
+	rows, err := s.pool.Query(ctx, workerCounts)
+	if err != nil {
+		return nil, fmt.Errorf("worker counts: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.WorkerCountRow
+	for rows.Next() {
+		var r store.WorkerCountRow
+		var status *string
+		if err := rows.Scan(&r.Version, &status, &r.Count); err != nil {
+			return nil, fmt.Errorf("scan worker count row: %w", err)
+		}
+		if status != nil {
+			r.Status = *status
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
 }

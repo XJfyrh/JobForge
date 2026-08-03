@@ -7,6 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/xjfyrh/jobforge/internal/store"
 )
 
 // SchedulerStore implements the scheduler.Store interface using PostgreSQL.
@@ -159,4 +161,24 @@ func (s *SchedulerStore) writeRecoveryAudit(ctx context.Context, tx pgx.Tx, j re
 		return fmt.Errorf("insert recovery outbox for job %s: %w", j.ID, err)
 	}
 	return nil
+}
+
+// QueueDepthMetrics samples pending jobs per (tenant, queue, state) so the
+// Scheduler can emit the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
+func (s *SchedulerStore) QueueDepthMetrics(ctx context.Context) ([]store.QueueDepthRow, error) {
+	rows, err := s.pool.Query(ctx, queueDepthMetrics)
+	if err != nil {
+		return nil, fmt.Errorf("queue depth metrics: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.QueueDepthRow
+	for rows.Next() {
+		var r store.QueueDepthRow
+		if err := rows.Scan(&r.TenantID, &r.Queue, &r.State, &r.Count); err != nil {
+			return nil, fmt.Errorf("scan queue depth row: %w", err)
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
 }
