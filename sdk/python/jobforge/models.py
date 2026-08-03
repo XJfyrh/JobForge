@@ -50,6 +50,7 @@ class Job:
         retry_of_job_id: Original job ID (if this is a retry clone).
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
+        attempts: Execution timeline (one entry per attempt, FR-002).
     """
 
     id: str
@@ -71,6 +72,7 @@ class Job:
     retry_of_job_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    attempts: list[Attempt] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Job:
@@ -95,6 +97,49 @@ class Job:
             retry_of_job_id=data.get("retry_of_job_id"),
             created_at=_parse_datetime(data.get("created_at")),
             updated_at=_parse_datetime(data.get("updated_at")),
+            attempts=[Attempt.from_dict(a) for a in data.get("attempts") or []],
+        )
+
+
+@dataclass
+class Attempt:
+    """One entry of a job's attempt timeline (PRD 6.2 / FR-002).
+
+    Attributes:
+        attempt_no: 1-based attempt number.
+        worker_id: Worker that executed the attempt.
+        fencing_token: Lease fencing token of the attempt.
+        started_at: Attempt start timestamp.
+        finished_at: Attempt finish timestamp (None while running).
+        outcome: succeeded, failed_retry, failed_dead, cancelled or lease_expired.
+        error_code: Machine-readable error code (if failed).
+        error_message: Human-readable error message (if failed).
+        duration_ms: Execution duration in milliseconds (if finished).
+    """
+
+    attempt_no: int
+    worker_id: str = ""
+    fencing_token: int = 0
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    outcome: str = ""
+    error_code: str | None = None
+    error_message: str | None = None
+    duration_ms: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Attempt:
+        """Create an Attempt from an API response dictionary."""
+        return cls(
+            attempt_no=data.get("attempt_no", 0),
+            worker_id=data.get("worker_id", ""),
+            fencing_token=data.get("fencing_token", 0),
+            started_at=_parse_datetime(data.get("started_at")),
+            finished_at=_parse_datetime(data.get("finished_at")),
+            outcome=data.get("outcome", ""),
+            error_code=data.get("error_code"),
+            error_message=data.get("error_message"),
+            duration_ms=data.get("duration_ms"),
         )
 
 

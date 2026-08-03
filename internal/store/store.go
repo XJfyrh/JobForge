@@ -62,6 +62,10 @@ type JobStore interface {
 	// GetQueueDepth returns the number of pending jobs in a queue.
 	// Pending states: scheduled, ready, retry_wait.
 	GetQueueDepth(ctx context.Context, queue string) (int, error)
+
+	// ListAttempts returns the attempt timeline of a job scoped to a tenant,
+	// ordered by attempt_no ascending (FR-002).
+	ListAttempts(ctx context.Context, tenantID, jobID string) ([]AttemptRecord, error)
 }
 
 // ClaimParams holds the parameters for a claim operation.

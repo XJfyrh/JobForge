@@ -471,3 +471,40 @@ func (s *JobStore) GetQueueDepth(ctx context.Context, queue string) (int, error)
 	}
 	return count, nil
 }
+
+// ListAttempts returns the attempt timeline of a job scoped to the given
+// tenant, ordered by attempt_no ascending (FR-002). Returns NOT_FOUND when
+// the job does not exist for the tenant.
+func (s *JobStore) ListAttempts(ctx context.Context, tenantID, jobID string) ([]store.AttemptRecord, error) {
+	// Tenant scoping: reject unknown / foreign jobs first.
+	if _, err := s.GetByID(ctx, tenantID, jobID); err != nil {
+		return nil, err
+	}
+
+	rows, err := s.pool.Query(ctx, listAttempts, jobID, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("list attempts: %w", err)
+	}
+	defer rows.Close()
+
+	attempts := make([]store.AttemptRecord, 0)
+	for rows.Next() {
+		var a store.AttemptRecord
+		a.JobID = jobID
+		var outcome *string
+		if err := rows.Scan(
+			&a.AttemptNo, &a.WorkerID, &a.FencingToken, &a.StartedAt, &a.FinishedAt,
+			&outcome, &a.ErrorCode, &a.ErrorMessage, &a.DurationMs, &a.TraceID,
+		); err != nil {
+			return nil, fmt.Errorf("scan attempt: %w", err)
+		}
+		if outcome != nil {
+			a.Outcome = *outcome
+		}
+		attempts = append(attempts, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("attempts rows: %w", err)
+	}
+	return attempts, nil
+}

@@ -229,9 +229,26 @@ type JobResponse struct {
 	RetryOfJobID   *string         `json:"retry_of_job_id"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+	// Attempts is the execution timeline (FR-002). Populated by GetJob only;
+	// omitted in list responses.
+	Attempts []AttemptResponse `json:"attempts,omitempty"`
+}
+
+// AttemptResponse is one entry of the attempt timeline (PRD 6.2 / FR-002).
+type AttemptResponse struct {
+	AttemptNo    int        `json:"attempt_no"`
+	WorkerID     string     `json:"worker_id"`
+	FencingToken int64      `json:"fencing_token"`
+	StartedAt    time.Time  `json:"started_at"`
+	FinishedAt   *time.Time `json:"finished_at,omitempty"`
+	Outcome      string     `json:"outcome"`
+	ErrorCode    *string    `json:"error_code,omitempty"`
+	ErrorMessage *string    `json:"error_message,omitempty"`
+	DurationMs   *int64     `json:"duration_ms,omitempty"`
 }
 
 // GetJob handles GET /v1/jobs/{job_id}.
+// Returns job details together with the full attempt timeline (FR-002).
 func (h *JobHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 	tenantID := TenantFromContext(r.Context())
 	jobID := chi.URLParam(r, "job_id")
@@ -242,7 +259,29 @@ func (h *JobHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toJobResponse(job))
+	attempts, err := h.store.ListAttempts(r.Context(), tenantID, jobID)
+	if err != nil {
+		h.writeDomainError(w, err)
+		return
+	}
+
+	resp := toJobResponse(job)
+	resp.Attempts = make([]AttemptResponse, 0, len(attempts))
+	for _, a := range attempts {
+		resp.Attempts = append(resp.Attempts, AttemptResponse{
+			AttemptNo:    a.AttemptNo,
+			WorkerID:     a.WorkerID,
+			FencingToken: a.FencingToken,
+			StartedAt:    a.StartedAt,
+			FinishedAt:   a.FinishedAt,
+			Outcome:      a.Outcome,
+			ErrorCode:    a.ErrorCode,
+			ErrorMessage: a.ErrorMessage,
+			DurationMs:   a.DurationMs,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // ListJobsResponse is the response for GET /v1/jobs.

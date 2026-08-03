@@ -236,3 +236,15 @@ select count(*) from jobs
 where queue = $1
   and state in ('scheduled', 'ready', 'retry_wait')
 `
+
+// listAttempts returns the attempt timeline of a job (FR-002). The join on
+// jobs scopes the query to the owning tenant; other tenants' requests see no
+// rows and are mapped to NOT_FOUND by the caller.
+const listAttempts = `
+select a.attempt_no, a.worker_id, a.fencing_token, a.started_at, a.finished_at,
+       a.outcome, a.error_code, a.error_message, a.duration_ms, a.trace_id
+from job_attempts a
+join jobs j on j.id = a.job_id and j.tenant_id = $2
+where a.job_id = $1
+order by a.attempt_no asc
+`
