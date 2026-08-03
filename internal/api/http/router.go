@@ -16,6 +16,8 @@ import (
 // NewRouter creates the HTTP router with all middleware and routes configured.
 func NewRouter(jobStore store.JobStore, pinger Pinger, cfg *config.Config, logger *slog.Logger, metrics *observability.Metrics) http.Handler {
 	handler := NewJobHandler(jobStore, pinger, logger, metrics)
+	// Apply configured queue backpressure thresholds (FR-303).
+	handler.SetQueueLimits(cfg.QueueSoftLimit, cfg.QueueHardLimit)
 
 	r := chi.NewRouter()
 
