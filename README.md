@@ -1,5 +1,7 @@
 # JobForge
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台，目标是提供可恢复、可观测、可隔离的可靠执行底座。
 
 > 当前状态：S0–W7 全部完成。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway、Worker Runtime、性能基准、租户隔离、Python SDK、Agent Demo、OpenTelemetry 全链路 Trace、Prometheus 指标、pprof 诊断、故障注入测试和演示脚本均已可用。
@@ -90,4 +92,10 @@ curl -s http://localhost:6060/metrics | grep jobforge_
 
 ## 许可证
 
-本仓库当前未提供开源许可证。除适用法律另有规定或权利人另行书面授权外，保留全部权利，不授予复制、修改、分发或使用本项目的许可。
+本项目基于 [Apache License 2.0](LICENSE) 开源。选择 Apache-2.0 的原因：
+
+- 与核心依赖生态一致：Go、gRPC/protobuf、OpenTelemetry、Prometheus、chi、pgx 均为 Apache-2.0；
+- 相比 MIT 额外提供明示的专利授权，更适合基础设施类项目；
+- 是云原生/任务队列领域的主流许可证，便于他人阅读与二次使用。
+
+`go.mod` 不包含许可证字段（Go 模块规范无此字段），许可声明以本 README 与根目录 LICENSE 文件为准，两者保持一致。
