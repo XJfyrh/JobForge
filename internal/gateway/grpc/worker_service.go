@@ -48,16 +48,22 @@ type WorkerService struct {
 	logger   *slog.Logger
 	leaseTTL time.Duration
 	metrics  *observability.Metrics
+
+	// tenantMaxInflight limits how many running jobs a tenant may have.
+	// Claim skips jobs of tenants at their quota (FR-302). <= 0 disables it.
+	tenantMaxInflight int
 }
 
-// NewWorkerService creates a WorkerService.
-func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
+// NewWorkerService creates a WorkerService. tenantMaxInflight is the per-tenant
+// running-job quota enforced during claim (FR-302); <= 0 disables the limit.
+func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, tenantMaxInflight int, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
 	return &WorkerService{
-		store:    s,
-		waiter:   waiter,
-		logger:   logger,
-		leaseTTL: leaseTTL,
-		metrics:  metrics,
+		store:             s,
+		waiter:            waiter,
+		logger:            logger,
+		leaseTTL:          leaseTTL,
+		metrics:           metrics,
+		tenantMaxInflight: tenantMaxInflight,
 	}
 }
 
@@ -117,11 +123,12 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 	}
 
 	claimParams := store.ClaimParams{
-		Queue:    queue,
-		WorkerID: req.WorkerId,
-		Types:    req.Types,
-		MaxJobs:  maxJobs,
-		LeaseTTL: svc.leaseTTL,
+		Queue:             queue,
+		WorkerID:          req.WorkerId,
+		Types:             req.Types,
+		MaxJobs:           maxJobs,
+		LeaseTTL:          svc.leaseTTL,
+		TenantMaxInflight: svc.tenantMaxInflight, // FR-302 tenant quota.
 	}
 
 	// Try immediate claim.

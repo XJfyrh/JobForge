@@ -2,13 +2,17 @@ package integration
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
+	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/store"
+	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
 // TestTenantAT10Isolation verifies AT-10: Tenant isolation.
@@ -176,6 +180,95 @@ func TestTenantQuotaRelease(t *testing.T) {
 	}
 
 	_ = job1 // used above
+}
+
+// blockingWaiter is a PollWaiter stub that blocks until ctx expires and
+// never reports a notification.
+type blockingWaiter struct{}
+
+// WaitForNotification implements gatewaygrpc.PollWaiter.
+func (blockingWaiter) WaitForNotification(ctx context.Context) bool {
+	<-ctx.Done()
+	return false
+}
+
+// TestTenantQuotaViaGatewayPoll verifies FR-302 through the Gateway Poll RPC
+// path: the tenant quota configured on the WorkerService must be enforced
+// during claim. This is a wiring regression test (the store-level quota check
+// alone does not prove the Gateway passes TenantMaxInflight).
+func TestTenantQuotaViaGatewayPoll(t *testing.T) {
+	js := setupStore(t)
+	ctx := context.Background()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 1, logger, nil)
+
+	tenantA := "tenant-gw-A-" + uuid.New().String()[:8]
+	tenantB := "tenant-gw-B-" + uuid.New().String()[:8]
+	queue := "gw-quota-queue"
+
+	// Tenant A submits 2 jobs; the WorkerService quota is 1.
+	_ = createTestJobForTenant(t, js, tenantA, queue, "demo.echo")
+	jobA2 := createTestJobForTenant(t, js, tenantA, queue, "demo.echo")
+
+	// 1. First Poll claims exactly 1 job (tenant quota).
+	resp, err := svc.Poll(ctx, &workerv1.PollRequest{
+		WorkerId: "gw-poll-worker",
+		MaxJobs:  5,
+		Queues:   []string{queue},
+	})
+	if err != nil {
+		t.Fatalf("first poll: %v", err)
+	}
+	if len(resp.Jobs) != 1 {
+		t.Fatalf("expected 1 claimed job (tenant quota), got %d", len(resp.Jobs))
+	}
+
+	// 2. Quota full: a second Poll must not claim tenant A's remaining job
+	// before the short deadline expires.
+	pollCtx, cancel := context.WithTimeout(ctx, 800*time.Millisecond)
+	defer cancel()
+	resp2, err := svc.Poll(pollCtx, &workerv1.PollRequest{
+		WorkerId: "gw-poll-worker-2",
+		MaxJobs:  5,
+		Queues:   []string{queue},
+	})
+	if err != nil {
+		t.Fatalf("second poll: %v", err)
+	}
+	if len(resp2.Jobs) != 0 {
+		t.Fatalf("expected 0 claimed jobs (tenant quota full), got %d", len(resp2.Jobs))
+	}
+
+	// 3. Tenant B is unaffected by tenant A's quota.
+	jobB := createTestJobForTenant(t, js, tenantB, queue, "demo.echo")
+	resp3, err := svc.Poll(ctx, &workerv1.PollRequest{
+		WorkerId: "gw-poll-worker-3",
+		MaxJobs:  5,
+		Queues:   []string{queue},
+	})
+	if err != nil {
+		t.Fatalf("third poll: %v", err)
+	}
+	foundB := false
+	for _, j := range resp3.Jobs {
+		if j.JobId == jobB.ID {
+			foundB = true
+			break
+		}
+	}
+	if !foundB {
+		t.Error("expected tenant B job to be claimable while tenant A quota is full")
+	}
+
+	// 4. Tenant A's second job must still be ready (unclaimed).
+	gotA2, err := js.GetByID(ctx, tenantA, jobA2.ID)
+	if err != nil {
+		t.Fatalf("get tenant A job 2: %v", err)
+	}
+	if gotA2.State != domain.StateReady {
+		t.Errorf("expected tenant A job 2 to still be ready, got %s", gotA2.State)
+	}
 }
 
 // createTestJobForTenant creates a ready job for a specific tenant.

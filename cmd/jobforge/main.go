@@ -286,7 +286,7 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	defer listener.Close()
 
 	// Create gRPC service and server.
-	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, logger, metrics)
+	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.TenantMaxInflight, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
 	// Run gateway until context cancelled.
@@ -311,6 +311,8 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 	// Register demo handlers.
 	registry := worker.NewRegistry()
 	demo.RegisterAll(registry)
+	// PageWise reindex demo handler (FR-403 / Appendix A).
+	demo.RegisterPagewise(registry)
 
 	// Determine gateway address.
 	gatewayAddr := getEnvDefault("JOBFORGE_GATEWAY_ADDR", "localhost:9090")
