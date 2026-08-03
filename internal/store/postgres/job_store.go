@@ -47,7 +47,7 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 		job.ID, job.TenantID, job.Queue, job.Type, job.Payload,
 		job.Priority, string(job.State), job.RunAt, job.Attempt,
 		job.MaxAttempts, job.TimeoutSeconds, job.IdempotencyKey,
-		job.FencingToken, job.TraceID, job.StateVersion,
+		job.FencingToken, job.TraceID, job.TraceContext, job.StateVersion,
 		job.RetryOfJobID, job.CreatedAt, job.UpdatedAt,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 		&job.Priority, &job.State, &job.RunAt, &job.Attempt,
 		&job.MaxAttempts, &job.TimeoutSeconds, &job.IdempotencyKey,
 		&job.LeaseOwner, &job.LeaseUntil, &job.FencingToken,
-		&job.CancelRequestedAt, &job.TraceID, &job.StateVersion,
+		&job.CancelRequestedAt, &job.TraceID, &job.TraceContext, &job.StateVersion,
 		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &inserted,
 	)
 	if err != nil {
@@ -432,7 +432,7 @@ func scanJob(row pgx.Row) (*domain.Job, error) {
 		&j.Priority, &state, &j.RunAt, &j.Attempt,
 		&j.MaxAttempts, &j.TimeoutSeconds, &j.IdempotencyKey,
 		&j.LeaseOwner, &j.LeaseUntil, &j.FencingToken,
-		&j.CancelRequestedAt, &j.TraceID, &j.StateVersion,
+		&j.CancelRequestedAt, &j.TraceID, &j.TraceContext, &j.StateVersion,
 		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt,
 	)
 	if err != nil {
@@ -451,7 +451,7 @@ func scanJobFromRows(rows pgx.Rows) (*domain.Job, error) {
 		&j.Priority, &state, &j.RunAt, &j.Attempt,
 		&j.MaxAttempts, &j.TimeoutSeconds, &j.IdempotencyKey,
 		&j.LeaseOwner, &j.LeaseUntil, &j.FencingToken,
-		&j.CancelRequestedAt, &j.TraceID, &j.StateVersion,
+		&j.CancelRequestedAt, &j.TraceID, &j.TraceContext, &j.StateVersion,
 		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt,
 	)
 	if err != nil {

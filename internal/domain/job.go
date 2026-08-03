@@ -43,10 +43,14 @@ type Job struct {
 	FencingToken      int64
 	CancelRequestedAt *time.Time
 	TraceID           *string
-	StateVersion      int64
-	RetryOfJobID      *string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	// TraceContext holds the serialized W3C TraceContext (traceparent value)
+	// captured at submission, used to restore the submit span context in the
+	// Gateway/Worker (FR-503). Nullable for legacy jobs.
+	TraceContext *string
+	StateVersion int64
+	RetryOfJobID *string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // NewJobParams holds the parameters for creating a new job.
@@ -61,6 +65,7 @@ type NewJobParams struct {
 	TimeoutSeconds int
 	IdempotencyKey *string
 	TraceID        *string
+	TraceContext   *string
 	RetryOfJobID   *string
 }
 
@@ -136,6 +141,7 @@ func NewJob(id string, params NewJobParams, now time.Time) (*Job, error) {
 		IdempotencyKey: params.IdempotencyKey,
 		FencingToken:   0,
 		TraceID:        params.TraceID,
+		TraceContext:   params.TraceContext,
 		RetryOfJobID:   params.RetryOfJobID,
 		StateVersion:   1,
 		CreatedAt:      now,

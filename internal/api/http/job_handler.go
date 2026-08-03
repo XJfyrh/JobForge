@@ -121,6 +121,13 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		traceID = uuid.New().String()
 	}
 
+	// W3C TraceContext propagation (FR-503): serialize the current submit
+	// span context so the Gateway/Worker can restore it as a parent span.
+	var traceContext *string
+	if tp := observability.InjectTraceParent(ctx); tp != "" {
+		traceContext = &tp
+	}
+
 	job, err := domain.NewJob(jobID, domain.NewJobParams{
 		TenantID:       tenantID,
 		Queue:          req.Queue,
@@ -132,6 +139,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		TimeoutSeconds: req.TimeoutSeconds,
 		IdempotencyKey: req.IdempotencyKey,
 		TraceID:        &traceID,
+		TraceContext:   traceContext,
 	}, now)
 	if err != nil {
 		h.writeDomainError(w, err)

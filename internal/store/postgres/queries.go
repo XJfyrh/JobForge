@@ -10,13 +10,13 @@ const enqueueInsert = `
 insert into jobs (
     id, tenant_id, queue, type, payload, priority, state,
     run_at, attempt, max_attempts, timeout_seconds,
-    idempotency_key, fencing_token, trace_id, state_version,
+    idempotency_key, fencing_token, trace_id, trace_context, state_version,
     retry_of_job_id, created_at, updated_at
 ) values (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11,
-    $12, $13, $14, $15,
-    $16, $17, $18
+    $12, $13, $14, $15, $16,
+    $17, $18, $19
 )
 on conflict (tenant_id, idempotency_key) where idempotency_key is not null
 do nothing
@@ -27,7 +27,7 @@ const enqueueSelectByID = `
 select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
-       cancel_requested_at, trace_id, state_version, retry_of_job_id,
+       cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
        created_at, updated_at,
        (xmax = 0) as inserted
 from jobs
@@ -39,7 +39,7 @@ const getByID = `
 select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
-       cancel_requested_at, trace_id, state_version, retry_of_job_id,
+       cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
        created_at, updated_at
 from jobs
 where id = $1 and tenant_id = $2
@@ -55,7 +55,7 @@ const claimSelect = `
 select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
-       cancel_requested_at, trace_id, state_version, retry_of_job_id,
+       cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
        created_at, updated_at
 from jobs
 where queue = $1
@@ -82,7 +82,7 @@ where id = $1
 returning id, tenant_id, queue, type, payload, priority, state,
           run_at, attempt, max_attempts, timeout_seconds,
           idempotency_key, lease_owner, lease_until, fencing_token,
-          cancel_requested_at, trace_id, state_version, retry_of_job_id,
+          cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
           created_at, updated_at
 `
 
@@ -217,7 +217,7 @@ const listJobs = `
 select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
-       cancel_requested_at, trace_id, state_version, retry_of_job_id,
+       cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
        created_at, updated_at
 from jobs
 where tenant_id = $1

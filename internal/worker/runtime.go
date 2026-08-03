@@ -12,6 +12,7 @@ import (
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/xjfyrh/jobforge/internal/observability"
@@ -246,6 +247,7 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 			MaxAttempts:  int(cj.MaxAttempts),
 			FencingToken: cj.FencingToken,
 			TraceID:      cj.TraceId,
+			TraceContext: cj.TraceContext,
 		}
 		if cj.LeaseUntil != nil {
 			job.LeaseUntil = cj.LeaseUntil.AsTime()
@@ -261,6 +263,12 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 // executeJob runs a single job: handler execution + heartbeat + result reporting.
 func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	logger := r.logger.With("job_id", job.ID, "type", job.Type, "attempt", job.Attempt, "trace_id", job.TraceID)
+
+	// Restore the submit span context from the job's W3C TraceContext so
+	// worker.execute joins the original API trace (FR-503 / AT-12).
+	if job.TraceContext != "" {
+		ctx = observability.ContextWithTraceParent(ctx, job.TraceContext)
+	}
 
 	// worker.execute span (PRD 12.2).
 	ctx, span := observability.Tracer("jobforge.worker").Start(ctx, "worker.execute")
@@ -359,6 +367,7 @@ func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel
 func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef string, durationMs int64) {
 	rpcCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	rpcCtx = withJobTraceParent(rpcCtx, job)
 
 	_, err := r.client.Complete(rpcCtx, &workerv1.CompleteRequest{
 		JobId:        job.ID,
@@ -376,6 +385,7 @@ func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef
 func (r *Runtime) reportFail(ctx context.Context, job *ClaimedJob, errCode, errMsg string, retryable bool, durationMs int64) {
 	rpcCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	rpcCtx = withJobTraceParent(rpcCtx, job)
 
 	_, err := r.client.Fail(rpcCtx, &workerv1.FailRequest{
 		JobId:        job.ID,
@@ -389,4 +399,14 @@ func (r *Runtime) reportFail(ctx context.Context, job *ClaimedJob, errCode, errM
 	if err != nil {
 		r.logger.Error("fail rpc failed", "job_id", job.ID, "error", err)
 	}
+}
+
+// withJobTraceParent attaches the job's W3C traceparent to outgoing gRPC
+// metadata so the Gateway can join its spans to the original submit trace
+// (FR-503). Returns ctx unchanged when the job carries no trace context.
+func withJobTraceParent(ctx context.Context, job *ClaimedJob) context.Context {
+	if job.TraceContext == "" {
+		return ctx
+	}
+	return metadata.AppendToOutgoingContext(ctx, observability.TraceParentKey, job.TraceContext)
 }

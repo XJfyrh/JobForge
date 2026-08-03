@@ -10,6 +10,7 @@ import (
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -202,6 +203,10 @@ func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRe
 		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
 	}
 
+	// Restore the job's trace from incoming gRPC metadata so the
+	// gateway.complete_job span joins the original submit trace (FR-503).
+	ctx = traceContextFromMetadata(ctx)
+
 	// gateway.complete_job span (PRD 12.2).
 	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.complete_job")
 	defer span.End()
@@ -355,9 +360,28 @@ func toClaimedJobs(jobs []*domain.Job) []*workerv1.ClaimedJob {
 		if j.TraceID != nil {
 			cj.TraceId = *j.TraceID
 		}
+		if j.TraceContext != nil {
+			cj.TraceContext = *j.TraceContext
+		}
 		result = append(result, cj)
 	}
 	return result
+}
+
+// traceContextFromMetadata extracts the W3C traceparent from incoming gRPC
+// metadata and returns a context carrying the remote span context (FR-503).
+// Workers attach the job's traceparent to Complete/Fail RPCs so gateway
+// spans join the original submit trace.
+func traceContextFromMetadata(ctx context.Context) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ctx
+	}
+	vals := md.Get(observability.TraceParentKey)
+	if len(vals) == 0 {
+		return ctx
+	}
+	return observability.ContextWithTraceParent(ctx, vals[0])
 }
 
 // mapError converts domain errors to gRPC status errors per ADR-0002.

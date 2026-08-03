@@ -130,6 +130,11 @@ message ClaimedJob {
 
   // Trace identifier for distributed tracing correlation.
   string trace_id = 10;
+
+  // Serialized W3C TraceContext (traceparent header value) captured at job
+  // submission. Workers extract it to attach worker.execute spans to the
+  // original submit trace (FR-503 / AT-12). Empty for legacy jobs.
+  string trace_context = 11;
 }
 
 // HeartbeatRequest extends the lease and reports progress.

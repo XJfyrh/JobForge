@@ -381,7 +381,11 @@ type ClaimedJob struct {
 	// Per-attempt execution timeout. Handler context deadline.
 	Timeout *durationpb.Duration `protobuf:"bytes,9,opt,name=timeout,proto3" json:"timeout,omitempty"`
 	// Trace identifier for distributed tracing correlation.
-	TraceId       string `protobuf:"bytes,10,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	TraceId string `protobuf:"bytes,10,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	// Serialized W3C TraceContext (traceparent header value) captured at job
+	// submission. Workers extract it to attach worker.execute spans to the
+	// original submit trace (FR-503 / AT-12). Empty for legacy jobs.
+	TraceContext  string `protobuf:"bytes,11,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -482,6 +486,13 @@ func (x *ClaimedJob) GetTimeout() *durationpb.Duration {
 func (x *ClaimedJob) GetTraceId() string {
 	if x != nil {
 		return x.TraceId
+	}
+	return ""
+}
+
+func (x *ClaimedJob) GetTraceContext() string {
+	if x != nil {
+		return x.TraceContext
 	}
 	return ""
 }
@@ -922,7 +933,7 @@ const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"\x06queues\x18\x04 \x03(\tR\x06queues\x12\x14\n" +
 	"\x05types\x18\x05 \x03(\tR\x05types\"B\n" +
 	"\fPollResponse\x122\n" +
-	"\x04jobs\x18\x01 \x03(\v2\x1e.jobforge.worker.v1.ClaimedJobR\x04jobs\"\xd6\x02\n" +
+	"\x04jobs\x18\x01 \x03(\v2\x1e.jobforge.worker.v1.ClaimedJobR\x04jobs\"\xfb\x02\n" +
 	"\n" +
 	"ClaimedJob\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x14\n" +
@@ -936,7 +947,8 @@ const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"leaseUntil\x123\n" +
 	"\atimeout\x18\t \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x19\n" +
 	"\btrace_id\x18\n" +
-	" \x01(\tR\atraceId\"\x96\x01\n" +
+	" \x01(\tR\atraceId\x12#\n" +
+	"\rtrace_context\x18\v \x01(\tR\ftraceContext\"\x96\x01\n" +
 	"\x10HeartbeatRequest\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1b\n" +
 	"\tworker_id\x18\x02 \x01(\tR\bworkerId\x12#\n" +

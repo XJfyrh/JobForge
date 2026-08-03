@@ -24,6 +24,9 @@ type ClaimedJob struct {
 	LeaseUntil   time.Time
 	Timeout      time.Duration
 	TraceID      string
+	// TraceContext is the serialized W3C TraceContext (traceparent) captured
+	// at submission. Used to attach worker.execute spans to the submit trace.
+	TraceContext string
 }
 
 // Handler executes a specific task type. Implementations must be safe for

@@ -45,9 +45,10 @@
 ### 传播机制
 
 1. **HTTP 入口**：OTel 自动从 `traceparent` header 提取 parent context
-2. **API → DB**：trace_id 写入 jobs 表（W5 兼容）；trace_context 列存储 W3C TraceContext
-3. **DB → Worker**：Poll 响应携带 trace_id，Worker 创建 child span
-4. **向后兼容**：`X-Trace-ID` header 继续支持；job.TraceID 字段保留
+2. **API → DB**：`http.submit_job` span 的 W3C TraceContext 序列化后写入 `jobs.trace_context` 列；`trace_id` 列保留兼容性标识（`X-Trace-ID` 或自动生成）
+3. **DB → Worker**：Poll 响应的 `ClaimedJob.trace_context` 携带 traceparent，Worker 提取后以 submit span 为 parent 创建 `worker.execute` child span
+4. **Worker → Gateway**：Complete/Fail RPC 通过 gRPC metadata 携带 `traceparent`，Gateway 提取后使 `gateway.complete_job` span 加入同一 trace
+5. **向后兼容**：`X-Trace-ID` header 继续支持；job.TraceID 字段保留；无 `trace_context` 的历史任务按原逻辑运行
 
 ## Prometheus 指标（PRD 12.1）
 
