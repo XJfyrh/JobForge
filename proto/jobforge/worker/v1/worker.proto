@@ -163,7 +163,9 @@ message HeartbeatResponse {
 
 // ControlSignal instructs the Worker on what to do next.
 enum ControlSignal {
-  // Continue execution normally.
+  // Continue execution normally. The zero value deliberately means continue
+  // so that an absent signal never interrupts a running job.
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
   CONTROL_SIGNAL_CONTINUE = 0;
 
   // Cancel execution as soon as possible. The job has a pending cancel

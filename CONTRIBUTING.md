@@ -70,6 +70,8 @@ go vet ./...
 .tools/bin/buf lint
 ```
 
+其中 golangci-lint、`go test -race ./...`、ruff（check + format）、mypy、buf lint 同时由 [CI 工作流](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行（见 [开发环境](docs/development.md) 的 “CI 质量门禁” 一节），本地清单与 PR 门禁保持一致；sqlfluff 目前仅作为本地检查。
+
 Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具位于 `.tools\bin`。可靠性集成测试必须使用真实 PostgreSQL，核心行为不能只由 mock 验证。
 
 Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
