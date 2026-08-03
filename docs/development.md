@@ -36,6 +36,8 @@ jobforge/
 | Ruff | 0.16.0 | `.venv`，由 `tools/requirements-lint.txt` 锁定 |
 | mypy | 2.3.0 | `.venv`，由 `tools/requirements-lint.txt` 锁定 |
 | SQLFluff | 4.2.2 | `.venv`，由 `tools/requirements-lint.txt` 锁定 |
+| httpx | 0.28.1 | `.venv`，由 `tools/requirements-lint.txt` 锁定，供 mypy 解析 SDK 依赖 |
+| pytest | 9.1.1 | `.venv`，由 `tools/requirements-lint.txt` 锁定，供 mypy 解析 SDK 测试 |
 
 `.venv` 和 `.tools` 都被 Git 忽略。本地安装不会写入系统 PATH，也不应被提交。
 
@@ -115,6 +117,19 @@ Windows 将 `.venv/bin` 替换为 `.venv\Scripts`，将无扩展名工具替换�
 ```sh
 go test -race ./tests/integration/...
 ```
+
+## CI 质量门禁
+
+[CI 工作流](../.github/workflows/ci.yml) 在每个 Pull Request（以及合入 `main` 的 push）上运行上一节“常用检查”中的机械检查子集，与 [CONTRIBUTING.md](../CONTRIBUTING.md) 的验证要求互相引用：
+
+| CI Job | 检查 | 本地等价命令 |
+|---|---|---|
+| `go-lint` | `go build ./...`、`go vet ./...`、golangci-lint v2.12.2 | `go build ./...`、`go vet ./...`、`.tools/bin/golangci-lint run` |
+| `go-test` | `go test -race -count=1 ./...`（真实 PostgreSQL 16 service，覆盖单元、集成与故障测试） | `go test -race ./...` |
+| `python-lint` | `ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
+| `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
+
+该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`sqlfluff lint migrations` 与 `buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表与 CONTRIBUTING.md。
 
 ## 测试分层
 

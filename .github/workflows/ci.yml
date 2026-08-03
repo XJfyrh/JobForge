@@ -1,0 +1,110 @@
+# Mechanical quality gate for JobForge.
+#
+# This workflow runs the checks declared in docs/development.md and
+# CONTRIBUTING.md ("验证要求") on every pull request, so the local
+# pre-commit checklist and the PR gate stay in sync. The check list maps to
+# AGENTS.md "验证与汇报": format/lint/unit/integration/fault/race.
+#
+# Local equivalents (see docs/development.md):
+#   go build ./... && go vet ./...
+#   .tools/bin/golangci-lint run
+#   go test -race ./...   (real PostgreSQL)
+#   .venv/bin/ruff check . && .venv/bin/ruff format --check .
+#   .venv/bin/mypy sdk/python
+#   .tools/bin/buf lint
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-lint:
+    name: Go build, vet & golangci-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build
+        run: go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12.2
+
+  go-test:
+    name: Go test (race, real PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jobforge
+          POSTGRES_PASSWORD: jobforge
+          POSTGRES_DB: jobforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jobforge -d jobforge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Credentials mirror deploy/compose.yaml local development values only.
+      JOBFORGE_TEST_DSN: postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test with race detector
+        run: go test -race -count=1 ./...
+
+  python-lint:
+    name: Python ruff & mypy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned lint toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --requirement tools/requirements-lint.txt
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Mypy
+        run: mypy sdk/python
+
+  proto-lint:
+    name: Buf lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: 1.72.0
+      - name: Buf lint
+        run: buf lint

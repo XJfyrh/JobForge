@@ -5,6 +5,8 @@ Error hierarchy mirrors the server-side error codes from ADR-0002.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 
 class JobForgeError(Exception):
     """Base exception for all JobForge SDK errors.
@@ -83,8 +85,10 @@ class InternalError(JobForgeError):
         super().__init__("INTERNAL", message)
 
 
-# Mapping from error code to exception class.
-_ERROR_MAP: dict[str, type[JobForgeError]] = {
+# Mapping from error code to exception factory. Mapped subclasses accept a
+# single message argument and pin their own code, so the map is typed as a
+# callable instead of type[JobForgeError].
+_ERROR_MAP: dict[str, Callable[[str], JobForgeError]] = {
     "INVALID_ARGUMENT": InvalidArgumentError,
     "UNAUTHORIZED": UnauthorizedError,
     "FORBIDDEN": ForbiddenError,
@@ -99,7 +103,7 @@ _ERROR_MAP: dict[str, type[JobForgeError]] = {
 
 def from_response(code: str, message: str) -> JobForgeError:
     """Create the appropriate exception from an error code and message."""
-    exc_class = _ERROR_MAP.get(code, JobForgeError)
-    if exc_class is JobForgeError:
+    exc_factory = _ERROR_MAP.get(code)
+    if exc_factory is None:
         return JobForgeError(code, message)
-    return exc_class(message)
+    return exc_factory(message)
