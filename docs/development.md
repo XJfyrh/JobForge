@@ -80,10 +80,16 @@ macOS/Linux：
 集成测试需要真实 PostgreSQL。使用 Docker Compose 启动：
 
 ```sh
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/compose.yaml up -d
 ```
 
-默认连接串：`postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`
+Compose 将宿主机端口 `5433` 映射到容器内 PostgreSQL 的 `5432`，因此从宿主机运行测试时使用：
+
+```text
+postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
+```
+
+以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
 
 ## 常用检查
 

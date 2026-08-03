@@ -66,7 +66,7 @@ curl -s http://localhost:6060/metrics | grep jobforge_
 服务默认监听：
 - HTTP API: `:8080`
 - gRPC Worker Gateway: `:9090`
-- pprof + /metrics: `:6060`（仅 localhost）
+- pprof + /metrics: `:6060`（进程默认仅绑定 localhost；Compose 演示环境为方便观察映射到宿主机，生产部署不应暴露到公网）
 
 完整演示流程见 [三分钟演示脚本](docs/demo-script.md)。
 

@@ -2,11 +2,11 @@
 
 ## 支持状态
 
-JobForge 尚未发布可运行版本，因此当前没有受支持的发布分支或安全补丁承诺。首个公开版本发布时，本文件必须同步更新支持范围。
+JobForge 尚未发布正式版本，因此当前没有受支持的发布分支或安全补丁承诺。首个正式版本发布时，本文件将同步更新支持范围。
 
 ## 私密报告漏洞
 
-建立 GitHub 远程仓库后，请通过仓库 **Security** 页面中的 Private Vulnerability Reporting 私密提交漏洞，不要创建公开 Issue、Discussion 或 Pull Request。
+请通过仓库 **Security** 页面中的 Private Vulnerability Reporting 私密提交漏洞，不要创建公开 Issue、Discussion 或 Pull Request。
 
 报告应尽量包含：
 

@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢关注 JobForge。当前项目已完成 S0+W1 及 W2-W3 MVP，任何实现都必须先服从 [PRD](docs/product/JobForge_PRD_v0.1.md) 中已经冻结的可靠性边界。
+感谢关注 JobForge。项目已完成 PRD v0.1 规划的全部范围（S0–W7），任何实现都必须先服从 [PRD](docs/product/JobForge_PRD_v0.1.md) 中已经冻结的可靠性边界。
 
 ## 工作流
 
@@ -10,7 +10,7 @@
 4. 发起 Pull Request，关联 Issue 或 ADR，说明风险、兼容性影响和验证证据。
 5. 所有评审意见和必需检查通过后，使用 squash merge；合并后的提交仍须符合 Conventional Commits。
 
-初始化仓库的 root commit 是直接提交到 `main` 的唯一例外。建立远程仓库后应保护 `main`，禁止日常直接推送。
+初始化仓库的 root commit 是直接提交到 `main` 的唯一历史例外。`main` 应保持受保护状态，禁止日常直接推送。
 
 ## 提交规范
 
@@ -57,7 +57,7 @@ docs(adr): 记录 dead 任务人工重试决策
 
 ## 验证要求
 
-仅运行与当前仓库内容相关的检查；目录尚未创建时不伪造通过结果。产品代码加入后，至少执行：
+仅运行与当前改动范围相关的检查，不伪造通过结果。提交前至少执行：
 
 ```text
 go test -race ./...
