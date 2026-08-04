@@ -1,53 +1,61 @@
 # JobForge
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8.svg)](https://go.dev)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1.svg)](https://www.postgresql.org)
 
-JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台，目标是提供可恢复、可观测、可隔离的可靠执行底座。
+**一句话定位：JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台——以 PostgreSQL 为唯一事实源，提供可恢复、可观测、可隔离的 at-least-once 可靠执行底座。**
 
-> 当前状态：S0–W7 全部完成。核心任务生命周期、租约领取、HTTP API、Scheduler、gRPC Worker Gateway、Worker Runtime、性能基准、租户隔离、Python SDK、Agent Demo、OpenTelemetry 全链路 Trace、Prometheus 指标、pprof 诊断、故障注入测试和演示脚本均已可用。
+## 系统架构
 
-## 项目亮点
+```mermaid
+flowchart LR
+    Client[应用 / Python SDK] -->|HTTP| API[API Server]
+    API --> PG[(PostgreSQL)]
+    Scheduler[Scheduler] --> PG
+    Worker1[Worker 1] -->|gRPC| Gateway[Worker Gateway]
+    Worker2[Worker N] -->|gRPC| Gateway
+    Gateway --> PG
+    Scheduler -.->|LISTEN/NOTIFY| Gateway
+    Publisher[Outbox Publisher] --> PG
+    PG -.->|NOTIFY jobforge_outbox| Consumers[事件消费方]
+```
 
-| 实现证据 | 可证明的能力 |
-|---|---|
-| goroutine pool、context、race、泄漏测试 | Go 并发与资源生命周期 |
-| `SKIP LOCKED`、lease、索引与事务测试 | PostgreSQL 并发控制与队列设计 |
-| gRPC Worker 协议与 fencing token | 跨进程协议、超时与陈旧写保护 |
-| 重试、DLQ、幂等、故障注入 | 分布式系统可靠性与工程判断 |
-| advisory-lock Scheduler 切换 | 高可用调度与边界控制 |
-| 租户配额、限流、背压 | 平台治理与故障隔离 |
-| OTel、pprof、benchmark | 可观测性与性能分析 |
-| PageWise/Agent 真实接入 | Go 后端能力与 Agent 应用场景结合 |
+- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令，按需独立部署、水平扩展。
+- **Worker**：独立进程，通过 gRPC 会话接入，可任意扩缩。
+- **PostgreSQL**：唯一强依赖外部服务，任务状态、租约、attempt 与事件 outbox 均在数据库事务中保持一致。
 
-## 核心边界
+## 核心技术亮点
 
-- 交付语义是 **at-least-once**，不宣称 exactly-once；外部副作用由业务幂等保护。
-- PostgreSQL 是 P0 的唯一事实源，任务状态、租约和 attempt 必须在数据库事务中保持一致。
-- Worker 的 Heartbeat、Complete 与 Fail 必须校验 owner 和 fencing token，拒绝陈旧写入。
-- 先交付 lease、重试、DLQ、取消、崩溃恢复和故障验证，再考虑完整 UI 或事件扩展。
-- 只运行预注册 Handler，不允许上传或执行任意代码。
+- **单事务原子 Claim**：`FOR UPDATE SKIP LOCKED` 领取，一个事务内原子更新 owner、lease、attempt、fencing token 与 state，并发下零重复领取。
+- **Fencing Token 防陈旧写入**：Heartbeat / Complete / Fail 均校验 owner 与 fencing token，崩溃后"复活"的旧 Worker 写入一律返回 `STALE_LEASE`，绝不覆盖新状态。
+- **崩溃自愈**：租约过期由 Scheduler 自动回收重投；Scheduler 自身通过 PostgreSQL advisory lock 单活，leader 故障秒级切换。
+- **Outbox 可靠事件**：任务终态与事件写入同一事务，Outbox Publisher 以 at-least-once 语义对外发布，发布故障不影响任务状态。
+- **租户隔离与背压**：租户级并发配额（SQL 层强制）+ 队列深度背压，单租户打满不影响他人。
+- **全链路可观测**：OpenTelemetry Trace 贯穿 API → Gateway → Worker；10 个 Prometheus 核心指标；pprof 在线诊断。
+- **故障注入全覆盖**：AT-01～AT-12 故障场景（并发领取、ACK 前崩溃、陈旧写入、心跳丢失、调度切换等）全部以真实 PostgreSQL + `go test -race` 验证。
+- **只运行预注册 Handler**：无任意代码执行入口，安全边界清晰。
 
-## 已实现的组成
+## 量化证据
 
-- **Go 控制面**：HTTP API（创建、查询、取消、手动重试任务）
-- **Scheduler**：扫描推进（scheduled/retry_wait → ready）与租约回收（过期 running → ready）
-- **gRPC Worker Gateway**：Register、Poll、Heartbeat、Complete、Fail RPC
-- **Worker Runtime**：并发任务执行、心跳维持、优雅关闭
-- **PostgreSQL 队列内核**：versioned migrations、FOR UPDATE SKIP LOCKED 领取、fencing token
-- **事件通知**：PostgreSQL LISTEN/NOTIFY fan-out 广播（ADR-0003）
-- **租户隔离**：租户并发上限（FR-302）、队列背压（FR-303）
-- **Python SDK**：submit/get/cancel/retry（FR-401）
-- **Agent Demo**：demo.echo/sleep/fail/http/idempotent_effect、pagewise.reindex Handler
-- **OpenTelemetry Trace**：http.submit_job / gateway.claim_jobs / worker.execute / gateway.complete_job 全链路 span
-- **Prometheus 指标**：10 个核心指标（PRD 12.1），通过 /metrics 端点暴露
-- **pprof 诊断**：CPU/heap/goroutine 剖析，绑定 localhost:6060
-- **故障注入测试**：AT-01～AT-12 全覆盖（崩溃恢复、STALE_LEASE、Scheduler 切换、租户隔离）
-- **性能基准**：微基准 + 端到端，W4 冻结基线 + W7 最终验证
+| 指标 | 数值 | 说明 |
+|---|---|---|
+| Submit 吞吐 | **364 jobs/sec** | 端到端基准，W7 发布数据 |
+| Process 吞吐 | **429 jobs/sec** | 100 jobs × 4 workers |
+| 控制面延迟 p50 / p95 / p99 | **8.4 / 12.9 / 25.5 ms** | 提交到领取全链路 |
+| Claim 微基准 | ~3.55 ms/op | 含租户配额检查与 fencing 更新 |
+| 任务崩溃恢复 | **≤ 33 s** | lease TTL 30s + 扫描周期 + 余量，集成测试验证 |
+| Scheduler 故障接管 | **≤ 12 s** | advisory lock 切换，双实例故障测试验证 |
+| Goroutine 稳态 | 差异 **0**（容差 ±5） | 万级任务后无泄漏 |
+| 故障注入场景 | **AT-01 ～ AT-12 全通过** | 真实 PostgreSQL + race 检测 |
+| 性能回归门禁 | 吞吐 -15% / p95 -20% 即失败 | 基线已冻结，持续守护 |
+
+完整数据与复现命令见[性能基线报告](docs/benchmark.md)。
 
 ## 快速开始
 
 ```sh
-# 一条命令启动全栈（PostgreSQL + API + Scheduler + Gateway + 2 Worker）
+# 一条命令启动全栈：PostgreSQL + API + Scheduler + Gateway + 2 Worker
 docker compose -f deploy/compose.yaml up -d --build
 
 # 提交第一个任务
@@ -58,44 +66,33 @@ curl -s -X POST http://localhost:8080/v1/jobs \
 
 # 查询任务状态
 curl -s http://localhost:8080/v1/jobs/{job_id} -H "X-API-Key: dev-api-key"
-
-# 查看指标
-curl -s http://localhost:6060/metrics | grep jobforge_
 ```
 
-服务默认监听：
-- HTTP API: `:8080`
-- gRPC Worker Gateway: `:9090`
-- pprof + /metrics: `:6060`（进程默认仅绑定 localhost；Compose 演示环境为方便观察映射到宿主机，生产部署不应暴露到公网）
+默认端口：HTTP API `:8080` · gRPC Gateway `:9090` · `/metrics` + pprof `:6060`（进程默认仅绑定 localhost，生产环境不应暴露）。
 
-完整演示流程见 [三分钟演示脚本](docs/demo-script.md)。
+三分钟完整演示见 [demo-script.md](docs/demo-script.md)。
 
 ## 文档导航
 
 | 文档 | 用途 |
 |---|---|
-| [产品需求文档](docs/product/JobForge_PRD_v0.1.md) | 产品边界、状态机、接口、验收标准与里程碑 |
-| [系统架构](docs/architecture.md) | 架构图、组件职责、状态机、部署拓扑 |
-| [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵、恢复路径与测试证据 |
-| [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用说明 |
-| [性能基线](docs/benchmark.md) | W4 冻结基线 + W7 最终发布数据 |
-| [演示脚本](docs/demo-script.md) | 3 分钟可复现演示（PRD 18） |
-| [代码与注释规范](docs/code-standards.md) | Go、Python、SQL、Proto、测试和注释约定 |
-| [开发环境](docs/development.md) | 本地检查工具、安装方式与验证命令 |
-| [ADR 说明](docs/adr/README.md) | 架构决策的创建、接受和取代流程 |
-| [贡献指南](CONTRIBUTING.md) | 分支、提交、评审与合并要求 |
-| [安全策略](SECURITY.md) | 漏洞报告方式与敏感信息要求 |
+| [产品需求文档](docs/product/JobForge_PRD_v0.1.md) | 产品边界、状态机、接口与验收标准 |
+| [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
+| [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
+| [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
+| [性能基线](docs/benchmark.md) | 冻结基线、发布数据与复现命令 |
+| [开发环境](docs/development.md) | 本地构建、测试与检查命令 |
+| [ADR 索引](docs/adr/README.md) | 架构决策记录 |
+| [贡献指南](CONTRIBUTING.md) | 分支、提交与评审要求 |
+| [安全策略](SECURITY.md) | 漏洞报告方式 |
 
 ## 协作方式
 
-仓库采用 GitHub Flow 与 Conventional Commits。开始修改前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；改变可靠性语义、公开接口或关键技术边界时，必须先提交 ADR，并同步更新 PRD、测试和相关文档。
+- 采用 **GitHub Flow** 分支模型与 **Conventional Commits** 提交规范，详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 修改前请先阅读相关 PRD 与 ADR；改变可靠性语义、公开接口或关键技术边界时，须先提交 ADR 并同步更新文档与测试。
+- 数据库变更只允许新增 versioned migration，不改写历史。
+- 安全漏洞请勿公开 issue，按 [SECURITY.md](SECURITY.md) 私密报告。
 
 ## 许可证
 
-本项目基于 [Apache License 2.0](LICENSE) 开源。选择 Apache-2.0 的原因：
-
-- 与核心依赖生态一致：Go、gRPC/protobuf、OpenTelemetry、Prometheus、chi、pgx 均为 Apache-2.0；
-- 相比 MIT 额外提供明示的专利授权，更适合基础设施类项目；
-- 是云原生/任务队列领域的主流许可证，便于他人阅读与二次使用。
-
-`go.mod` 不包含许可证字段（Go 模块规范无此字段），许可声明以本 README 与根目录 LICENSE 文件为准，两者保持一致。
+本项目基于 [Apache License 2.0](LICENSE) 开源——与 Go、gRPC、OpenTelemetry、Prometheus 等核心依赖生态一致，并提供明示的专利授权，便于二次使用。
