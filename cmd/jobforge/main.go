@@ -1,6 +1,7 @@
 // Command jobforge is the single-binary entry point for the JobForge platform.
 // It supports subcommands: migrate (database migration), api (HTTP control plane),
-// scheduler (job promotion), worker (task execution), and gateway (gRPC worker gateway).
+// scheduler (job promotion), worker (task execution), gateway (gRPC worker gateway),
+// and publisher (outbox event publisher).
 package main
 
 import (
@@ -23,6 +24,7 @@ import (
 	"github.com/xjfyrh/jobforge/internal/migrate"
 	"github.com/xjfyrh/jobforge/internal/notify"
 	"github.com/xjfyrh/jobforge/internal/observability"
+	"github.com/xjfyrh/jobforge/internal/outbox"
 	"github.com/xjfyrh/jobforge/internal/scheduler"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
 	"github.com/xjfyrh/jobforge/internal/worker"
@@ -35,7 +37,7 @@ func main() {
 	}))
 
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker>\n")
+		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker|publisher>\n")
 		os.Exit(1)
 	}
 
@@ -105,8 +107,13 @@ func main() {
 			logger.Error("gateway failed", "error", err)
 			os.Exit(1)
 		}
+	case "publisher":
+		if err := runPublisher(ctx, logger, cfg, metrics); err != nil {
+			logger.Error("publisher failed", "error", err)
+			os.Exit(1)
+		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker>\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker|publisher>\n", os.Args[1])
 		os.Exit(1)
 	}
 }
@@ -304,6 +311,69 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	}
 
 	logger.Info("gateway stopped")
+	return nil
+}
+
+// runPublisher starts the outbox publisher: it polls outbox_events for
+// unpublished rows and publishes them via PostgreSQL LISTEN/NOTIFY
+// (PRD v0.2 FR-610~613, ADR-0003). Multiple instances are safe: batches are
+// claimed with FOR UPDATE SKIP LOCKED.
+func runPublisher(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
+	// Create PostgreSQL connection pool.
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("parse database url: %w", err)
+	}
+	poolCfg.MaxConns = 5
+	poolCfg.MinConns = 1
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return fmt.Errorf("create connection pool: %w", err)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("ping database: %w", err)
+	}
+	logger.Info("publisher connected to PostgreSQL", "channel", cfg.OutboxChannel)
+
+	// Run migrations.
+	migrator := migrate.New(pool, logger)
+	if err := migrator.Up(ctx); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+
+	outboxStore := postgres.NewOutboxStore(pool)
+	channel := outbox.NewNotifyChannel(pool, cfg.OutboxChannel, logger)
+
+	pubCfg := outbox.Config{
+		PollInterval:    cfg.OutboxPollInterval,
+		MaxIdleInterval: 30 * time.Second,
+		BatchSize:       cfg.OutboxBatchSize,
+		Retention:       cfg.OutboxRetention,
+		CleanupInterval: time.Hour,
+	}
+
+	pub := outbox.New(outboxStore, channel, pubCfg, logger, metrics)
+
+	// Run publisher until context cancelled.
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- pub.Run(ctx)
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil && err != context.Canceled {
+			return fmt.Errorf("publisher error: %w", err)
+		}
+	case <-ctx.Done():
+		logger.Info("publisher shutting down")
+		<-errCh
+	}
+
+	logger.Info("publisher stopped")
 	return nil
 }
 

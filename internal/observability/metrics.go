@@ -53,6 +53,18 @@ type Metrics struct {
 	// TenantThrottledTotal counts tenant throttling events (PRD 12.1).
 	// Labels: tenant, reason.
 	TenantThrottledTotal metric.Int64Counter
+
+	// OutboxPending tracks unpublished outbox events (PRD v0.2 §8).
+	// Labels: none.
+	OutboxPending metric.Int64Gauge
+
+	// OutboxPublishedTotal counts successfully published outbox events
+	// (PRD v0.2 §8). Labels: event_type.
+	OutboxPublishedTotal metric.Int64Counter
+
+	// OutboxPublishFailuresTotal counts outbox publish failures
+	// (PRD v0.2 §8). Labels: event_type, reason.
+	OutboxPublishFailuresTotal metric.Int64Counter
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -138,6 +150,24 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Total number of tenant throttling events"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create tenant_throttled_total: %w", err)
+	}
+
+	m.OutboxPending, err = meter.Int64Gauge("jobforge_outbox_pending",
+		metric.WithDescription("Number of unpublished outbox events (sampled)"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create outbox_pending: %w", err)
+	}
+
+	m.OutboxPublishedTotal, err = meter.Int64Counter("jobforge_outbox_published_total",
+		metric.WithDescription("Total number of outbox events successfully published"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create outbox_published_total: %w", err)
+	}
+
+	m.OutboxPublishFailuresTotal, err = meter.Int64Counter("jobforge_outbox_publish_failures_total",
+		metric.WithDescription("Total number of outbox publish failures"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create outbox_publish_failures_total: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

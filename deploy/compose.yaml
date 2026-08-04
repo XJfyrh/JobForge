@@ -1,7 +1,7 @@
 # JobForge local development and demo environment.
 # Usage: docker compose -f deploy/compose.yaml up -d
 #
-# Services: PostgreSQL, API, Scheduler, Gateway, 2 Workers.
+# Services: PostgreSQL, API, Scheduler, Gateway, Outbox Publisher, 2 Workers.
 # Two workers enable kill/recovery demonstrations (PRD 18 steps 3-4).
 services:
   postgres:
@@ -69,6 +69,23 @@ services:
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  publisher:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["publisher"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_OUTBOX_POLL_INTERVAL: "1s"
+      JOBFORGE_OUTBOX_BATCH_SIZE: "100"
+      JOBFORGE_OUTBOX_RETENTION: "168h"
+      JOBFORGE_OUTBOX_CHANNEL: "jobforge_outbox"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       postgres:
         condition: service_healthy

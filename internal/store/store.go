@@ -81,6 +81,43 @@ type ClaimParams struct {
 	TenantMaxInflight int
 }
 
+// OutboxEvent represents one row of the outbox_events table. Events are
+// written within job state transactions and published asynchronously by the
+// outbox publisher (PRD v0.2 FR-610~612).
+type OutboxEvent struct {
+	EventID         int64
+	AggregateID     string
+	EventType       string
+	Payload         []byte
+	CreatedAt       time.Time
+	PublishedAt     *time.Time
+	PublishAttempts int
+}
+
+// OutboxStore defines the persistence operations consumed by the outbox
+// publisher. All operations run outside job state transactions and never
+// modify job core state.
+type OutboxStore interface {
+	// FetchUnpublished claims up to batch unpublished events ordered by
+	// created_at. Concurrent publishers are safe via FOR UPDATE SKIP LOCKED.
+	FetchUnpublished(ctx context.Context, batch int) ([]*OutboxEvent, error)
+
+	// MarkPublished records successful publication. Returns true if this call
+	// performed the transition (published_at was still NULL).
+	MarkPublished(ctx context.Context, eventID int64) (bool, error)
+
+	// MarkPublishFailed increments publish_attempts; the event remains
+	// unpublished and eligible for retry.
+	MarkPublishFailed(ctx context.Context, eventID int64) error
+
+	// CountPending returns the number of unpublished events.
+	CountPending(ctx context.Context) (int64, error)
+
+	// CleanupPublished deletes published events older than the retention
+	// period. Unpublished events are never removed. Returns rows deleted.
+	CleanupPublished(ctx context.Context, retention time.Duration) (int64, error)
+}
+
 // AttemptRecord represents a single execution attempt for audit purposes.
 type AttemptRecord struct {
 	JobID        string
