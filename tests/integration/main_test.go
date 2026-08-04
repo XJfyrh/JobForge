@@ -55,6 +55,24 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	} else {
+		// Windows: testcontainers-go cannot drive Docker Desktop's
+		// rootless/WSL2 backend, so fail fast with explicit bootstrap
+		// instructions instead of surfacing a cryptic container error.
+		if runtime.GOOS == "windows" {
+			const msg = `JOBFORGE_TEST_DSN is not set and testcontainers mode is not supported on Windows:
+
+testcontainers-go cannot drive Docker Desktop's rootless/WSL2 backend.
+Bootstrap a local PostgreSQL first, then point the tests at it:
+
+    docker compose -f deploy/compose.yaml up -d postgres
+    set JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
+    go test ./tests/integration/...
+
+See docs/development.md for details.`
+			fmt.Fprintln(os.Stderr, msg)
+			os.Exit(1)
+		}
+
 		// Testcontainers mode (Linux CI).
 		var err error
 		pgContainer, err = tcpostgres.Run(ctx,
