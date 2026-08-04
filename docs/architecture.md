@@ -14,6 +14,8 @@ flowchart LR
     Gateway --> PG
     Scheduler -.->|LISTEN/NOTIFY| Gateway
     API -.->|LISTEN/NOTIFY| Gateway
+    Publisher[Outbox Publisher] --> PG
+    PG -.->|NOTIFY jobforge_outbox| Consumers[事件消费方]
 ```
 
 **核心约束**：
@@ -31,6 +33,7 @@ flowchart LR
 | Worker Gateway | gRPC Worker 会话管理；Poll/Heartbeat/Complete/Fail 事务；fencing 验证 | 运行用户 Handler |
 | Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态 |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
+| Outbox Publisher | 轮询发布 outbox_events（at-least-once，LISTEN/NOTIFY）；进度追踪与 retention 清理 | 改写任务核心状态 |
 | Observability | OTel tracing；Prometheus metrics；pprof 诊断 | 业务逻辑 |
 
 ## 数据流
@@ -48,6 +51,18 @@ flowchart LR
 8. Worker → Heartbeat RPC (周期性) → Gateway → UPDATE lease_until
 9. Worker → Complete/Fail RPC → Gateway → UPDATE state + INSERT job_attempts
 ```
+
+### Outbox 事件发布（PRD v0.2）
+
+```text
+1. 任务终态事务 → INSERT outbox_events (published_at NULL) → PostgreSQL
+2. Publisher → 轮询 published_at IS NULL (FOR UPDATE SKIP LOCKED)
+3. Publisher → pg_notify('jobforge_outbox', event_id) → 消费方收到 hint
+4. Publisher → UPDATE published_at = now()（独立短事务，不进入任务状态事务）
+5. Cleaner → 周期清理 published_at 非空且超过保留期的行
+```
+
+发布语义为 at-least-once：消费方按 event_id 幂等去重；发布失败/publisher 崩溃不影响任务状态。
 
 ### 故障恢复流
 
@@ -107,7 +122,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 └─────────────────────────────────────────────────────────┘
 ```
 
-- **API / Scheduler / Gateway**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`）。
+- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`、`jobforge publisher`）。
 - **Worker**：独立进程，通过 gRPC 连接 Gateway，可启动多个实例。
 - **PostgreSQL**：唯一强依赖外部服务。
 - **观测**：pprof + /metrics 绑定 `127.0.0.1:6060`（PRD 11.4）；OTel stdout exporter 默认零外部依赖。
@@ -125,7 +140,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 
 ```text
 jobforge/
-├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/migrate 子命令）
+├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/publisher/migrate 子命令）
 ├── internal/
 │   ├── api/http/           # HTTP 控制面 API（chi router）
 │   ├── config/             # 环境变量配置
@@ -134,6 +149,7 @@ jobforge/
 │   ├── migrate/            # 自动迁移（embed SQL）
 │   ├── notify/             # LISTEN/NOTIFY fan-out
 │   ├── observability/      # OTel tracing + Prometheus metrics + pprof
+│   ├── outbox/             # Outbox publisher（at-least-once 发布 + retention 清理）
 │   ├── scheduler/          # 调度器（promote + recover 循环）
 │   ├── store/postgres/     # PostgreSQL 存储层（pgx v5）
 │   └── worker/             # Worker Runtime + demo handlers

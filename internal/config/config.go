@@ -53,6 +53,21 @@ type Config struct {
 	// MetricsAddr is the listen address for pprof + Prometheus /metrics.
 	// Defaults to 127.0.0.1:6060 (localhost only, PRD 11.4).
 	MetricsAddr string
+
+	// OutboxPollInterval is the minimum interval between outbox publish
+	// rounds while there is backlog (PRD v0.2 FR-610 / §11.4).
+	OutboxPollInterval time.Duration
+
+	// OutboxBatchSize bounds how many events one publish round claims.
+	OutboxBatchSize int
+
+	// OutboxRetention is how long published outbox events are kept before
+	// cleanup (PRD v0.2 FR-613).
+	OutboxRetention time.Duration
+
+	// OutboxChannel is the PostgreSQL NOTIFY channel used to deliver outbox
+	// event hints (PRD v0.2 FR-611, ADR-0003).
+	OutboxChannel string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -70,7 +85,13 @@ func Load() (*Config, error) {
 		OTelExporterType:  getEnv("JOBFORGE_OTEL_EXPORTER", "stdout"),
 		OTelSampleRatio:   getFloatEnv("JOBFORGE_OTEL_SAMPLE_RATIO", 1.0),
 		MetricsAddr:       getEnv("JOBFORGE_METRICS_ADDR", "127.0.0.1:6060"),
-		APIKeys:           make(map[string]string),
+
+		OutboxPollInterval: getDurationEnv("JOBFORGE_OUTBOX_POLL_INTERVAL", 1*time.Second),
+		OutboxBatchSize:    getIntEnv("JOBFORGE_OUTBOX_BATCH_SIZE", 100),
+		OutboxRetention:    getDurationEnv("JOBFORGE_OUTBOX_RETENTION", 7*24*time.Hour),
+		OutboxChannel:      getEnv("JOBFORGE_OUTBOX_CHANNEL", "jobforge_outbox"),
+
+		APIKeys: make(map[string]string),
 	}
 
 	// Parse API keys from environment.

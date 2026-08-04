@@ -36,6 +36,7 @@
 | `gateway.claim_jobs` | Gateway | worker_id, max_jobs, jobs.claimed | `internal/gateway/grpc/worker_service.go` |
 | `worker.execute` | Worker | queue, type, attempt, worker_id | `internal/worker/runtime.go` |
 | `gateway.complete_job` | Gateway | worker_id | `internal/gateway/grpc/worker_service.go` |
+| `outbox.publish` | Publisher | event_id, event_type, aggregate_id（不含 payload） | `internal/outbox/publisher.go` |
 
 ### Span 属性约束
 
@@ -65,6 +66,16 @@
 | `jobforge_workers_active` | Gauge | version, status |
 | `jobforge_tenant_throttled_total` | Counter | tenant, reason |
 
+### Outbox 发布指标（PRD v0.2 §8）
+
+| 指标名 | 类型 | 标签 |
+|---|---|---|
+| `jobforge_outbox_pending` | Gauge | — |
+| `jobforge_outbox_published_total` | Counter | event_type |
+| `jobforge_outbox_publish_failures_total` | Counter | event_type, reason |
+
+`jobforge_outbox_pending` 为采样值：publisher 每轮发布后统计 `published_at IS NULL` 的事件数。事件发布是 at-least-once，发布失败/重复发布不影响任务状态（详见[故障语义](failure-semantics.md)的 outbox 事件发布语义）。
+
 ### 标签约束
 
 高基数字段 `job_id`、`trace_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
@@ -75,6 +86,7 @@
 |---|---|---|
 | `jobforge_queue_depth` | Scheduler `scanCycle` | 每次扫描周期按 (tenant, queue, state) 采样 pending 任务数 |
 | `jobforge_workers_active` | Gateway `Register` | Worker 注册/刷新后按 (version, status) 采样注册表 |
+| `jobforge_outbox_pending` | Publisher `Run` | 每轮发布结束后采样未发布事件数 |
 
 ## pprof 诊断
 

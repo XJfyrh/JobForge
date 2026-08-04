@@ -94,6 +94,27 @@ cancelling 状态下：
 - 原任务终态（dead/cancelled）不可变
 - 新任务继承原 type/queue/payload，attempt 重置为 0
 
+## Outbox 事件发布语义（PRD v0.2）
+
+任务终态转换（succeeded/dead/cancelled/cancelling→cancelled）与 lease 回收均在任务事务内写入 `outbox_events`；`publisher` 子命令异步发布这些事件，维持 ADR-0003（PostgreSQL LISTEN/NOTIFY，不引入外部 MQ）。
+
+**发布保证**：
+
+- **at-least-once**：事件可能重复发布；消费方必须按 `event_id` 幂等去重。
+- NOTIFY 仅作 hint：payload 只携带 `event_id`（通道 `jobforge_outbox`），消费方回查 `outbox_events` 获取完整事件。
+- 发布在任务状态事务之外异步进行：发布失败、重复发布或 publisher 崩溃均**不得**改变任务状态。
+- publisher 不持有内存进度：崩溃重启后仅从 `published_at IS NULL` 恢复。
+
+**故障恢复路径**：
+
+| 故障 | 表现 | 恢复 |
+|---|---|---|
+| 发布通道失败 | `publish_attempts` 递增，`published_at` 保持 NULL | 退避后下一轮重试 |
+| publisher 崩溃（NOTIFY 已发、未标记） | 重启后重复发布同一事件 | 消费方按 event_id 去重；任务状态不受影响 |
+| 事件积压 | `jobforge_outbox_pending` 上升 | 增加 publisher 实例（FOR UPDATE SKIP LOCKED 并发安全） |
+
+**Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件；未发布事件永不被清理。
+
 ## 测试证据索引
 
 | 文件 | 覆盖场景 |
@@ -105,6 +126,7 @@ cancelling 状态下：
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | Claim 并发, 幂等键, 状态转换 |
+| `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界 |
 
 ## 相关文档
 
