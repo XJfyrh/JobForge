@@ -1,11 +1,12 @@
 // Command jobforge is the single-binary entry point for the JobForge platform.
 // It supports subcommands: migrate (database migration), api (HTTP control plane),
 // scheduler (job promotion), worker (task execution), gateway (gRPC worker gateway),
-// and publisher (outbox event publisher).
+// publisher (outbox event publisher), and ctl (operational CLI client).
 package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 
 	apihttp "github.com/xjfyrh/jobforge/internal/api/http"
 	"github.com/xjfyrh/jobforge/internal/config"
+	"github.com/xjfyrh/jobforge/internal/ctl"
 	"github.com/xjfyrh/jobforge/internal/domain"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/migrate"
@@ -37,7 +39,7 @@ func main() {
 	}))
 
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker|publisher>\n")
+		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker|publisher|ctl>\n")
 		os.Exit(1)
 	}
 
@@ -112,8 +114,13 @@ func main() {
 			logger.Error("publisher failed", "error", err)
 			os.Exit(1)
 		}
+	case "ctl":
+		if err := runCtl(ctx, cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "ctl: %v\n", err)
+			os.Exit(1)
+		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker|publisher>\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker|publisher|ctl>\n", os.Args[1])
 		os.Exit(1)
 	}
 }
@@ -419,6 +426,109 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 
 	logger.Info("worker stopped")
 	return nil
+}
+
+// runCtl executes the operational CLI client (PRD v0.2 FR-620/621). It is a
+// pure client of the existing HTTP API: list/get/cancel/retry use Bearer API
+// key auth; outbox-status performs a read-only database query. The API key
+// is never logged (NFR-205).
+func runCtl(ctx context.Context, cfg *config.Config) error {
+	args := os.Args[2:]
+	if len(args) == 0 {
+		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status> [flags]")
+	}
+	command := args[0]
+
+	fs := flag.NewFlagSet("ctl", flag.ContinueOnError)
+	apiURL := fs.String("api-url", getEnvDefault("JOBFORGE_API_URL", "http://localhost:8080"),
+		"control plane base URL (env JOBFORGE_API_URL)")
+	apiKey := fs.String("api-key", os.Getenv("JOBFORGE_API_KEY"),
+		"API key for Bearer auth (env JOBFORGE_API_KEY)")
+	output := fs.String("output", ctl.OutputTable, "output format: table|json")
+	// List filters.
+	state := fs.String("state", "", "list filter: job state")
+	queue := fs.String("queue", "", "list filter: queue name")
+	jobType := fs.String("type", "", "list filter: job type")
+	limit := fs.Int("limit", 20, "list page size")
+	cursor := fs.String("cursor", "", "list pagination cursor")
+
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	if *output != ctl.OutputTable && *output != ctl.OutputJSON {
+		return fmt.Errorf("invalid --output %q (expected table|json)", *output)
+	}
+
+	out := os.Stdout
+
+	switch command {
+	case "outbox-status":
+		// Read-only backlog query (FR-621); needs database credentials,
+		// not the HTTP API.
+		status, err := ctl.QueryOutboxStatus(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return err
+		}
+		return ctl.RenderOutboxStatus(out, *output, status)
+	}
+
+	// All remaining commands talk to the HTTP control plane.
+	if *apiKey == "" {
+		return fmt.Errorf("missing API key: set --api-key or JOBFORGE_API_KEY")
+	}
+	client := ctl.NewClient(*apiURL, *apiKey)
+
+	switch command {
+	case "list":
+		res, err := client.List(ctx, ctl.ListOptions{
+			State:  *state,
+			Queue:  *queue,
+			Type:   *jobType,
+			Limit:  *limit,
+			Cursor: *cursor,
+		})
+		if err != nil {
+			return err
+		}
+		return ctl.RenderList(out, *output, res)
+
+	case "get":
+		if fs.NArg() != 1 {
+			return fmt.Errorf("usage: jobforge ctl get <job_id> [flags]")
+		}
+		job, err := client.Get(ctx, fs.Arg(0))
+		if err != nil {
+			return err
+		}
+		return ctl.RenderJob(out, *output, job)
+
+	case "cancel":
+		if fs.NArg() != 1 {
+			return fmt.Errorf("usage: jobforge ctl cancel <job_id> [flags]")
+		}
+		if err := client.Cancel(ctx, fs.Arg(0)); err != nil {
+			return err
+		}
+		if *output == ctl.OutputJSON {
+			_, _ = fmt.Fprintf(out, "{\n  \"status\": \"cancel_requested\"\n}\n")
+		} else {
+			_, _ = fmt.Fprintf(out, "cancel requested: job_id=%s\n", fs.Arg(0))
+		}
+		return nil
+
+	case "retry":
+		if fs.NArg() != 1 {
+			return fmt.Errorf("usage: jobforge ctl retry <job_id> [flags]")
+		}
+		res, err := client.Retry(ctx, fs.Arg(0))
+		if err != nil {
+			return err
+		}
+		return ctl.RenderSubmitResult(out, *output, "retry", res)
+
+	default:
+		return fmt.Errorf("unknown ctl command: %s (expected list|get|cancel|retry|outbox-status)", command)
+	}
 }
 
 // runMigrate runs database migrations as a standalone subcommand.

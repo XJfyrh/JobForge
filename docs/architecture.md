@@ -34,6 +34,7 @@ flowchart LR
 | Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态 |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
 | Outbox Publisher | 轮询发布 outbox_events（at-least-once，LISTEN/NOTIFY）；进度追踪与 retention 清理 | 改写任务核心状态 |
+| 运维 CLI（jobforge ctl） | 纯客户端查询与 DLQ 人工恢复（list/get/cancel/retry）；outbox 只读积压视图 | 引入服务端特权路径 |
 | Observability | OTel tracing；Prometheus metrics；pprof 诊断 | 业务逻辑 |
 
 ## 数据流
@@ -122,7 +123,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 └─────────────────────────────────────────────────────────┘
 ```
 
-- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`、`jobforge publisher`）。
+- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`、`jobforge publisher`）；`jobforge ctl` 为纯客户端运维子命令，复用 HTTP API 与 API key 鉴权。
 - **Worker**：独立进程，通过 gRPC 连接 Gateway，可启动多个实例。
 - **PostgreSQL**：唯一强依赖外部服务。
 - **观测**：pprof + /metrics 绑定 `127.0.0.1:6060`（PRD 11.4）；OTel stdout exporter 默认零外部依赖。
@@ -140,10 +141,11 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 
 ```text
 jobforge/
-├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/publisher/migrate 子命令）
+├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/publisher/ctl/migrate 子命令）
 ├── internal/
 │   ├── api/http/           # HTTP 控制面 API（chi router）
 │   ├── config/             # 环境变量配置
+│   ├── ctl/                # 运维 CLI 客户端（HTTP API + outbox 只读查询）
 │   ├── domain/             # 领域模型、状态机、错误定义
 │   ├── gateway/grpc/       # gRPC Worker Gateway
 │   ├── migrate/            # 自动迁移（embed SQL）

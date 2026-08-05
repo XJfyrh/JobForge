@@ -127,6 +127,7 @@ cancelling 状态下：
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | Claim 并发, 幂等键, 状态转换 |
 | `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界 |
+| `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 
 ## 相关文档
 

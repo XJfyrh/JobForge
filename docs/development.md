@@ -93,6 +93,32 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 
 以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
 
+## 运维 CLI（jobforge ctl）
+
+`jobforge ctl` 是纯客户端运维入口（PRD v0.2 FR-620/621），复用 HTTP API 与 Bearer API key 鉴权，不新增服务端特权路径：
+
+```sh
+# 任务查询与操作（需 API URL + key）
+jobforge ctl list --state dead --queue default --limit 20 --output table
+jobforge ctl get <job_id>            # 详情 + attempt 时间线
+jobforge ctl cancel <job_id>
+jobforge ctl retry <job_id>          # dead/cancelled 人工重试（克隆新 job_id）
+
+# outbox 积压视图（只读，需数据库连接串，不走 HTTP API）
+jobforge ctl outbox-status
+```
+
+凭据与连接参数：
+
+| 参数 | 环境变量 | 默认值 | 适用命令 |
+|---|---|---|---|
+| `--api-url` | `JOBFORGE_API_URL` | `http://localhost:8080` | list/get/cancel/retry |
+| `--api-key` | `JOBFORGE_API_KEY` | 无（必填） | list/get/cancel/retry |
+| `--output` | — | `table`（可选 `json`） | 全部 |
+| — | `JOBFORGE_DATABASE_URL` | 本地开发库 | outbox-status |
+
+table 视图不输出完整 payload；CLI 日志不记录 API key、Authorization header（PRD v0.2 NFR-205）。`retry` 克隆新 job_id 并记录 `retry_of_job_id`，原任务终态不可变（AT-16）。
+
 ## 常用检查
 
 提交前按改动范围运行：
