@@ -116,9 +116,11 @@ jobforge ctl outbox-status
 | `--api-url` | `JOBFORGE_API_URL` | `http://localhost:8080` | list/get/cancel/retry |
 | `--api-key` | `JOBFORGE_API_KEY` | 无（必填） | list/get/cancel/retry |
 | `--output` | — | `table`（可选 `json`） | 全部 |
-| — | `JOBFORGE_DATABASE_URL` | 本地开发库 | outbox-status |
+| — | `JOBFORGE_DATABASE_URL` | `postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`（代码默认值） | outbox-status |
 
 table 视图不输出完整 payload；CLI 日志不记录 API key、Authorization header（PRD v0.2 NFR-205）。`retry` 克隆新 job_id 并记录 `retry_of_job_id`，原任务终态不可变（AT-16）。
+
+注意：Compose 将宿主机端口映射为 `5433`（见上文“本地 PostgreSQL”），因此对本地 Compose 库运行 `outbox-status` 时需显式设置 `JOBFORGE_DATABASE_URL=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable`（与集成测试的 `JOBFORGE_TEST_DSN` 相同连接串）。
 
 ## 可选观测 profile（Compose obs）
 

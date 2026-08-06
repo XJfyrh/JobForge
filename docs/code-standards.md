@@ -19,7 +19,7 @@
 - 状态、错误码、RPC 和指标名称必须与 PRD/ADR 使用同一词汇。
 - 布尔值使用可直接判断真假的名称，例如 `retryable`、`cancelRequested`，避免否定套否定。
 - 单个文件聚焦一个职责；跨层共享只通过明确 contract，不建立通用“杂物包”。
-- 测试文件靠近被测 Go/Python 代码；需要真实服务编排的测试放入计划中的 `tests/integration` 或 `tests/fault`。
+- 测试文件靠近被测 Go/Python 代码；需要真实服务编排的测试放入 `tests/integration`（含故障注入用例），大规模可靠性套件位于 `tests/scale`（`-tags scale` 隔离，见 PRD v0.2 附录 B.1）。
 
 ## 3. Go
 

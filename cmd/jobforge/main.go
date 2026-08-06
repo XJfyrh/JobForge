@@ -394,8 +394,11 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 	// Determine gateway address.
 	gatewayAddr := getEnvDefault("JOBFORGE_GATEWAY_ADDR", "localhost:9090")
 
+	// Worker ID: prefer the JOBFORGE_WORKER_ID environment variable (set by
+	// deploy/compose.yaml for stable, identifiable worker-1/worker-2 labels
+	// in logs, metrics and the workers table); fall back to a random UUID.
 	workerCfg := worker.RuntimeConfig{
-		WorkerID:          domain.NewID(),
+		WorkerID:          getEnvDefault("JOBFORGE_WORKER_ID", domain.NewID()),
 		InstanceID:        fmt.Sprintf("%s-%d", hostname(), os.Getpid()),
 		Queues:            []string{getEnvDefault("JOBFORGE_WORKER_QUEUE", "default")},
 		Capacity:          5,
@@ -435,9 +438,16 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 func runCtl(ctx context.Context, cfg *config.Config) error {
 	args := os.Args[2:]
 	if len(args) == 0 {
-		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status> [flags]")
+		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status> [flags] (outbox status also accepted)")
 	}
 	command := args[0]
+	rest := args[1:]
+	// PRD v0.2 FR-621 spells the subcommand "outbox status"; accept both the
+	// literal two-word form and the hyphenated CLI form "outbox-status".
+	if command == "outbox" && len(rest) > 0 && rest[0] == "status" {
+		command = "outbox-status"
+		rest = rest[1:]
+	}
 
 	fs := flag.NewFlagSet("ctl", flag.ContinueOnError)
 	apiURL := fs.String("api-url", getEnvDefault("JOBFORGE_API_URL", "http://localhost:8080"),
@@ -452,7 +462,7 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 	limit := fs.Int("limit", 20, "list page size")
 	cursor := fs.String("cursor", "", "list pagination cursor")
 
-	if err := fs.Parse(args[1:]); err != nil {
+	if err := fs.Parse(rest); err != nil {
 		return err
 	}
 	if *output != ctl.OutputTable && *output != ctl.OutputJSON {

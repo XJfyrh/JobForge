@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢关注 JobForge。项目已完成 PRD v0.1 规划的全部范围（S0–W7），任何实现都必须先服从 [PRD](docs/product/JobForge_PRD_v0.1.md) 中已经冻结的可靠性边界。
+感谢关注 JobForge。项目已完成 [PRD v0.1](docs/product/JobForge_PRD_v0.1.md) 规划的全部范围（S0–W7）与 [PRD v0.2](docs/product/JobForge_PRD_v0.2.md) 的增量范围（scale 可靠性套件、outbox publisher、运维 CLI 与可选观测 profile），任何实现都必须先服从 PRD 中已经冻结的可靠性边界。
 
 ## 工作流
 

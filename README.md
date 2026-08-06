@@ -48,6 +48,7 @@ flowchart LR
 | Scheduler 故障接管 | **≤ 12 s** | advisory lock 切换，双实例故障测试验证 |
 | Goroutine 稳态 | 差异 **0**（容差 ±5） | 万级任务后无泄漏 |
 | 故障注入场景 | **AT-01 ～ AT-12 全通过** | 真实 PostgreSQL + race 检测 |
+| 规模化可靠性（AT-13/14） | **100 轮 Worker kill 零丢失 / 万级重复投递零副作用** | `-tags scale` 套件，见[可靠性报告](docs/reliability-report.md) |
 | 性能回归门禁 | 吞吐 -15% / p95 -20% 即失败 | 基线已冻结，持续守护 |
 
 完整数据与复现命令见[性能基线报告](docs/benchmark.md)。
@@ -55,7 +56,7 @@ flowchart LR
 ## 快速开始
 
 ```sh
-# 一条命令启动全栈：PostgreSQL + API + Scheduler + Gateway + 2 Worker
+# 一条命令启动全栈：PostgreSQL + API + Scheduler + Gateway + Outbox Publisher + 2 Worker
 docker compose -f deploy/compose.yaml up -d --build
 
 # 提交第一个任务
@@ -81,6 +82,7 @@ curl -s http://localhost:8080/v1/jobs/{job_id} -H "X-API-Key: dev-api-key"
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
 | [性能基线](docs/benchmark.md) | 冻结基线、发布数据与复现命令 |
+| [可靠性报告](docs/reliability-report.md) | scale 套件（AT-13/AT-14）运行结果与复现命令 |
 | [开发环境](docs/development.md) | 本地构建、测试与检查命令 |
 | [ADR 索引](docs/adr/README.md) | 架构决策记录 |
 | [贡献指南](CONTRIBUTING.md) | 分支、提交与评审要求 |
