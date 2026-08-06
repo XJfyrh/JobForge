@@ -310,3 +310,28 @@ Trace 要求：publisher 发布动作产生独立 span（如 `outbox.publish`）
 | §4.2 P1 JetStream | 不实施；由 FR-610/611 的轻量 publisher 替代；Q2 已确认（2026-08-04） |
 | §4.2 P1 运维界面 | 由 FR-620 CLI 裁剪替代；Q5 已确认（2026-08-04） |
 | §4.2 P1 cron、mTLS、加权公平、令牌桶 | 推迟到 v0.3 评估，不在本版 |
+
+---
+
+## 附录 B：对 PRD v0.1 的取代条款（FR-630）
+
+以下条款以本附录为准；v0.1 原文不改写历史结论（FR-630 验收口径，2026-08-05 生效）。
+
+### B.1 取代 v0.1 §17 交付清单
+
+v0.1 §17 列举的 `cmd/api`、`cmd/scheduler`、`cmd/worker`、`tests/fault` 与实际交付结构不一致。实际交付采用**单二进制多子命令**模式（与 v0.1 §5.2 “可先部署为一个 Go 二进制的不同子命令”的允许一致），取代后的交付清单为：
+
+- `cmd/jobforge`：单二进制入口，子命令 `migrate` / `api` / `scheduler` / `gateway` / `worker` / `publisher` / `ctl`；
+- `internal/domain`、`internal/store/postgres`、`internal/gateway/grpc`、`internal/api/http`、`internal/scheduler`、`internal/worker`、`internal/outbox`、`internal/ctl`、`internal/observability`；
+- `proto/jobforge/worker/v1`；`sdk/python`；`migrations/0001~0007`；
+- 故障注入测试位于 `tests/integration/fault_test.go`（AT-02~04），不单独设 `tests/fault` 目录；
+- `deploy/compose.yaml`；`docs/architecture.md`、`docs/failure-semantics.md`、`docs/benchmark.md`；README、架构图、状态机、故障矩阵与演示脚本。
+
+### B.2 取代 v0.1 §3.2 发布成功标准中的观测组件表述
+
+v0.1 §3.2 要求“Docker Compose 一条命令启动……观测组件”。按 Q3 决策（2026-08-04）与 ADR-0004（零外部依赖默认），取代为：
+
+- 默认 `docker compose up` 仅启动核心服务（PostgreSQL、API、Scheduler、Gateway、Publisher、2 Workers），观测以 pprof + `/metrics`（localhost:6060）与 OTel stdout exporter 提供，无外部观测依赖；
+- Prometheus + Grafana 通过**可选 obs profile** 提供：`docker compose --profile obs up -d` 拉起并抓取各服务 `:6060/metrics`（FR-632 落地，配置见 `deploy/prometheus/` 与 `deploy/grafana/`）。
+
+其余 v0.1 §3.2 成功标准（P0 功能验收、race、故障测试、benchmark 数据、README/演示脚本等）维持原文有效。
