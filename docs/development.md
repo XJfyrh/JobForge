@@ -22,6 +22,7 @@ jobforge/
 ├── proto/              # Protobuf 契约
 ├── sdk/python/         # Python SDK
 ├── tests/integration/  # 集成测试
+├── tests/scale/        # scale 可靠性套件（-tags scale，AT-13/AT-14）
 └── deploy/             # Docker Compose
 ```
 
@@ -161,6 +162,22 @@ Windows 将 `.venv/bin` 替换为 `.venv\Scripts`，将无扩展名工具替换�
 go test -race ./tests/integration/...
 ```
 
+## Scale 可靠性套件（-tags scale）
+
+`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，AT-13/AT-14）：AT-13 为 100 轮 Worker kill 零静默丢失，AT-14 为 10,000 任务重复投递零重复副作用。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
+
+```sh
+# 字面规模运行（需 PostgreSQL；Windows 先设 JOBFORGE_TEST_DSN，见上文）
+go test -tags scale -count=1 -timeout 60m ./tests/scale/
+
+# 降采样冒烟（开发反馈循环）
+set JOBFORGE_SCALE_KILL_ROUNDS=5
+set JOBFORGE_SCALE_IDEMPOTENT_JOBS=200
+go test -tags scale -count=1 ./tests/scale/
+```
+
+规模参数：`JOBFORGE_SCALE_KILL_ROUNDS`（默认 100）、`JOBFORGE_SCALE_KILL_JOBS_PER_ROUND`（默认 10）、`JOBFORGE_SCALE_IDEMPOTENT_JOBS`（默认 10000）、`JOBFORGE_SCALE_WORKERS`（默认 8）。运行前仅保留 postgres 服务（停止 compose 应用服务，避免争用）；运行结果与 race 抽样归档于 [可靠性报告](reliability-report.md)。
+
 ## CI 质量门禁
 
 [CI 工作流](../.github/workflows/ci.yml) 在每个 Pull Request（以及合入 `main` 的 push）上运行上一节“常用检查”中的机械检查子集，与 [CONTRIBUTING.md](../CONTRIBUTING.md) 的验证要求互相引用：
@@ -180,6 +197,7 @@ go test -race ./tests/integration/...
 - 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、幂等与 outbox。
 - 契约测试：验证 HTTP/gRPC 错误映射、deadline、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。
+- scale 可靠性测试（`-tags scale`）：100 轮故障注入与万级幂等的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
 - 性能测试：固定环境后报告吞吐、延迟、CPU、heap 与 goroutine 稳态。
 
 ## 配置来源

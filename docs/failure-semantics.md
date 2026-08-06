@@ -35,6 +35,8 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | AT-10 | 租户隔离 | 租户 A 填满并发配额 | Claim 时检查 tenant running count | 租户 B 仍可在自身配额内执行 | 配额互不影响 | `TestTenantAT10Isolation` |
 | AT-11 | 优雅退出 | Worker 收到 SIGTERM | context 取消 | 停止领取；进行中任务完成或释放 | 无 goroutine 泄漏 | `TestWorkerAT11GracefulShutdown` |
 | AT-12 | Trace 串联 | 提交一个真实任务 | OTel span recorder | API/Gateway/Worker span 同一 trace | trace_id 一致 | `TestObservabilityAT12FullSpans` |
+| AT-13 | 循环故障注入（scale） | 100 轮 Worker kill / lease 过期 | lease 过期 → Scheduler 回收 | 每轮全部任务重领并完成 | 非终态任务零静默丢失；恢复时间符合 NFR-003 | `TestScaleAT13WorkerKillRounds`（`-tags scale`） |
+| AT-14 | 万级幂等（scale） | 10,000 任务 ACK 前崩溃后重复投递 | lease 过期 → 重投 → Handler 去重 | `demo.idempotent_effect` 按 job_id 幂等 | 重复业务副作用计数为 0 | `TestScaleAT14IdempotentTenThousand`（`-tags scale`） |
 
 ## 恢复时间保证
 
@@ -128,9 +130,14 @@ cancelling 状态下：
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
 | `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界 |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
+| `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |
+| `tests/scale/idempotent_test.go` | AT-14：10,000 任务重复投递零重复副作用（`-tags scale`） |
+
+scale 套件的规模参数、运行命令与结果归档见 [可靠性报告](reliability-report.md)。
 
 ## 相关文档
 
 - [系统架构](architecture.md) — 组件职责与数据流
 - [性能基线](benchmark.md) — 恢复时间实测数据
+- [可靠性报告](reliability-report.md) — scale 套件（AT-13/AT-14）运行结果与复现命令
 - [演示脚本](demo-script.md) — 故障演示步骤

@@ -232,3 +232,82 @@ go test -race ./tests/integration/ -run "TestFault|TestSchedulerFailover" -v
 ### 结论
 
 W5（租户隔离、Python SDK）和 W6（OTel、Prometheus、pprof）的变更未引入性能回归。所有指标相对 W4 基线均有改善，性能门禁全部通过。
+
+## v0.2 收官复测（W11）
+
+> 测量日期：2026-08-04  
+> 阶段：W11（scale 可靠性套件，PRD v0.2 NFR-201 / M3 退出条件）  
+> 目的：验证 W8（outbox publisher）/ W9（ctl CLI）/ W10（obs profile）变更未引入性能回归
+
+### 环境（与 W4 相同）
+
+| 项目 | 值 |
+|------|-----|
+| CPU | AMD Ryzen 7 7840HS w/ Radeon 780M Graphics |
+| 内存 | 16 GB |
+| Go 版本 | go1.26.5 |
+| GOMAXPROCS | 16 |
+| PostgreSQL | 16 (Docker, compose postgres-only) |
+| 操作系统 | Windows 11 (Docker Desktop) |
+
+复测前仅保留 postgres 服务（停止全部应用服务），并清空 jobs/job_attempts/outbox_events/workers 表，与基线环境对齐。
+
+### 微基准对比（-benchtime 10s）
+
+| 基准 | W4 基线 (ns/op) | W11 复测 (ns/op) | 变化 | 门禁（吞吐下降 < 15%） |
+|------|-----------------|------------------|------|------|
+| BenchmarkEnqueue | 2,715,866 | 2,735,009 | +0.7%（噪声范围） | PASS |
+| BenchmarkEnqueueParallel | 286,119 | 290,193 | +1.4%（噪声范围） | PASS |
+| BenchmarkClaim | 4,171,091 | 4,020,165 | -3.6%（改善） | PASS |
+| BenchmarkClaimBatch/batch1 | 4,096,612 | 3,956,092 | -3.4%（改善） | PASS |
+| BenchmarkClaimBatch/batch10 | 15,300,833 | 13,987,615 | -8.6%（改善） | PASS |
+| BenchmarkClaimBatch/batch20 | 25,480,186 | 24,773,400 | -2.8%（改善） | PASS |
+
+### 端到端对比
+
+测试参数：100 jobs, 4 workers（与 W4/W7 基线参数一致）
+
+| 指标 | W4 基线 | W11 复测 | 变化 | 门禁 |
+|------|---------|----------|------|------|
+| Submit 吞吐 | 278.01 jobs/sec | 288.10 jobs/sec | +3.6%（改善） | PASS |
+| Process 吞吐 | 347.82 jobs/sec | 366.53 jobs/sec | +5.4%（改善） | PASS |
+| p50 | 9.59 ms | 10.07 ms | +5.0%（噪声范围） | — |
+| p95 | 14.23 ms | 13.20 ms | -7.2%（改善） | PASS（恶化 < 20%） |
+| p99 | 69.12 ms | 27.12 ms | -60.8%（改善） | — |
+
+### Goroutine 稳态
+
+| 指标 | 值 |
+|------|-----|
+| 基线 goroutines | 2 |
+| 最终 goroutines | 2 |
+| 差异 | 0 |
+| 容差 | ±5 |
+| 结果 | PASS |
+
+### 性能门禁结论（NFR-201）
+
+| 门禁（PRD 11.2） | 阈值 | 实际 | 结果 |
+|------|------|------|------|
+| 吞吐相对 W4 下降 | < 15% | 改善 3.6%~5.4%（微基准最大 +1.4% 噪声） | PASS |
+| 控制面 p95 恶化 | < 20% | 改善 7.2% | PASS |
+| Goroutine 稳态 | ±5% | 差异 0 | PASS |
+
+### 复现命令
+
+```sh
+# 仅保留 postgres 并清空基线数据
+docker compose -f deploy/compose.yaml up -d postgres
+
+# 微基准
+cd benchmarks/micro
+go test -bench Benchmark -benchmem -benchtime 10s
+
+# 端到端（与基线同参数）
+cd benchmarks/e2e
+go run . -jobs 100 -workers 4
+```
+
+### 结论
+
+W8~W10（outbox publisher、ctl CLI、obs profile 与文档对齐）未引入性能回归；全部指标相对 W4 基线满足 PRD §11.2 门禁，e2e p95/p99 与 Claim 路径持续改善。NFR-203 亦间接验证：outbox 发布在任务状态事务外异步进行，enqueue/claim 热路径无可测量回退。
