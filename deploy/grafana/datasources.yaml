@@ -1,0 +1,17 @@
+# Grafana datasource provisioning for the JobForge optional obs profile
+# (PRD v0.2 FR-632). Mounted read-only at
+# /etc/grafana/provisioning/datasources inside the grafana container.
+#
+# Registers the compose-internal Prometheus instance automatically so the
+# jobforge_* metrics can be explored without manual setup. No dashboard JSON
+# is provisioned: Grafana Explore is sufficient for curve inspection.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: jobforge-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

@@ -23,7 +23,7 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 
 | AT ID | 场景 | 故障注入 | 检测机制 | 恢复路径 | 一致性保证 | 测试 |
 |---|---|---|---|---|---|---|
-| AT-01 | 并发领取 | 两个 Worker 同时 claim 同一批任务 | FOR UPDATE SKIP LOCKED | 每个 fencing token 只有一个 owner | 无重复领取 | `TestGatewayRegisterWorker` |
+| AT-01 | 并发领取 | 两个 Worker 同时 claim 同一批任务 | FOR UPDATE SKIP LOCKED | 每个 fencing token 只有一个 owner | 无重复领取 | `TestConcurrentClaim` |
 | AT-02 | ACK 前崩溃 | Handler 执行后 kill Worker | lease 过期 | 任务重投；幂等 Handler 跳过重复 | 业务副作用仅一次 | `TestFaultAT02CrashBeforeACK` |
 | AT-03 | 旧 Worker 晚到 | lease 过期后旧 Worker 发 Complete | fencing token 不匹配 | 返回 STALE_LEASE；新状态不被覆盖 | 新 owner 状态不变 | `TestFaultAT03StaleWorkerLateComplete` |
 | AT-04 | Heartbeat 丢失 | 阻断 Worker 网络直到 lease 过期 | lease_until < now() | Scheduler 回收 → 新 Worker 领取 | 旧 Worker 后续写入被拒 | `TestFaultAT04HeartbeatLoss` |
@@ -120,12 +120,12 @@ cancelling 状态下：
 | 文件 | 覆盖场景 |
 |---|---|
 | `tests/integration/fault_test.go` | AT-02, AT-03, AT-04 |
-| `tests/integration/gateway_test.go` | AT-01, AT-05, AT-06, AT-07, AT-08 |
+| `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
 | `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock |
 | `tests/integration/tenant_test.go` | AT-10 |
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
-| `tests/integration/job_store_test.go` | Claim 并发, 幂等键, 状态转换 |
+| `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
 | `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界 |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 

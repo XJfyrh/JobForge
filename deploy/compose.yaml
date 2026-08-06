@@ -3,6 +3,11 @@
 #
 # Services: PostgreSQL, API, Scheduler, Gateway, Outbox Publisher, 2 Workers.
 # Two workers enable kill/recovery demonstrations (PRD 18 steps 3-4).
+#
+# Optional observability profile (PRD v0.2 FR-632, opt-in per Q3):
+#   docker compose -f deploy/compose.yaml --profile obs up -d
+# adds Prometheus + Grafana scraping each service's :6060/metrics.
+# The default `up` behavior is unchanged: no observability dependency.
 services:
   postgres:
     image: postgres:16-alpine
@@ -123,6 +128,36 @@ services:
     depends_on:
       gateway:
         condition: service_started
+
+  # Optional observability stack (PRD v0.2 FR-632): only started with
+  # --profile obs. Prometheus scrapes each service's debug-server metrics;
+  # Grafana is provisioned with the Prometheus datasource.
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["obs"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      # Host port 9091: 9090 is already used by the gateway gRPC mapping.
+      - "9091:9090"
+    depends_on:
+      - api
+      - scheduler
+      - gateway
+      - publisher
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["obs"]
+    environment:
+      # Local demo credentials only; not for any real environment.
+      GF_SECURITY_ADMIN_PASSWORD: "jobforge"
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/jobforge.yaml:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:

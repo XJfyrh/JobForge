@@ -1,0 +1,34 @@
+# Prometheus scrape configuration for the JobForge optional obs profile
+# (PRD v0.2 FR-632, Q3 decision: opt-in, not a default dependency).
+#
+# Every JobForge process exposes Prometheus metrics on its debug server
+# (ADR-0004). In deploy/compose.yaml all services bind 0.0.0.0:6060 inside
+# the compose network, so they are scraped by service name.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: jobforge-api
+    static_configs:
+      - targets: ["api:6060"]
+
+  - job_name: jobforge-scheduler
+    static_configs:
+      - targets: ["scheduler:6060"]
+
+  - job_name: jobforge-gateway
+    static_configs:
+      - targets: ["gateway:6060"]
+
+  - job_name: jobforge-publisher
+    static_configs:
+      - targets: ["publisher:6060"]
+
+  - job_name: jobforge-worker-1
+    static_configs:
+      - targets: ["worker-1:6060"]
+
+  - job_name: jobforge-worker-2
+    static_configs:
+      - targets: ["worker-2:6060"]

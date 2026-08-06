@@ -119,6 +119,23 @@ jobforge ctl outbox-status
 
 table 视图不输出完整 payload；CLI 日志不记录 API key、Authorization header（PRD v0.2 NFR-205）。`retry` 克隆新 job_id 并记录 `retry_of_job_id`，原任务终态不可变（AT-16）。
 
+## 可选观测 profile（Compose obs）
+
+默认 `docker compose up` 不启动观测组件（ADR-0004 零外部依赖默认，行为不变）。如需在 Compose 环境查看 jobforge_* 指标曲线（PRD v0.2 FR-632），使用可选 obs profile：
+
+```sh
+docker compose -f deploy/compose.yaml --profile obs up -d
+```
+
+obs profile 额外拉起：
+
+| 服务 | 宿主机端口 | 说明 |
+|---|---|---|
+| prometheus | 9091（容器内 9090；9090 已被 gateway gRPC 占用） | 抓取六个服务的 `:6060/metrics`，配置见 `deploy/prometheus/prometheus.yml` |
+| grafana | 3000 | 自动 provision Prometheus 数据源（admin/jobforge，仅本地演示），通过 Explore 查询 jobforge_* 指标 |
+
+验证：Prometheus targets 页（http://localhost:9091/targets）六个 jobforge-* 目标应为 UP；PromQL 示例 `jobforge_jobs_submitted_total`、`jobforge_outbox_pending`。仅停止观测组件：`docker compose -f deploy/compose.yaml --profile obs stop prometheus grafana`。
+
 ## 常用检查
 
 提交前按改动范围运行：
