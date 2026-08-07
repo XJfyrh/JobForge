@@ -1,6 +1,10 @@
 package domain
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,18 +30,22 @@ const (
 // All state mutations go through domain methods that enforce the state machine
 // invariants defined in state.go.
 type Job struct {
-	ID                string
-	TenantID          string
-	Queue             string
-	Type              string
-	Payload           []byte
-	Priority          int16
-	State             JobState
-	RunAt             time.Time
-	Attempt           int
-	MaxAttempts       int
-	TimeoutSeconds    int
-	IdempotencyKey    *string
+	ID             string
+	TenantID       string
+	Queue          string
+	Type           string
+	Payload        []byte
+	Priority       int16
+	State          JobState
+	RunAt          time.Time
+	Attempt        int
+	MaxAttempts    int
+	TimeoutSeconds int
+	IdempotencyKey *string
+	// RequestHash is the sha256 over the canonicalized submit request, used
+	// to detect idempotency key conflicts (ADR-0002 CONFLICT). Empty for
+	// legacy rows created before migration 0008.
+	RequestHash       string
 	LeaseOwner        *string
 	LeaseUntil        *time.Time
 	FencingToken      int64
@@ -139,6 +147,7 @@ func NewJob(id string, params NewJobParams, now time.Time) (*Job, error) {
 		MaxAttempts:    maxAttempts,
 		TimeoutSeconds: timeoutSeconds,
 		IdempotencyKey: params.IdempotencyKey,
+		RequestHash:    RequestHash(params),
 		FencingToken:   0,
 		TraceID:        params.TraceID,
 		TraceContext:   params.TraceContext,
@@ -147,6 +156,61 @@ func NewJob(id string, params NewJobParams, now time.Time) (*Job, error) {
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}, nil
+}
+
+// RequestHash computes a stable sha256 hex digest over the canonicalized
+// submission parameters. It detects idempotency key conflicts (ADR-0002
+// CONFLICT): two submissions sharing an idempotency key but producing
+// different hashes are rejected with CONFLICT instead of being silently
+// deduplicated.
+//
+// Canonicalization rules:
+//   - payload is re-marshaled from its parsed JSON form so semantically equal
+//     payloads (differing only in key order or whitespace) hash identically;
+//     payloads that are not valid JSON are hashed as raw bytes.
+//   - max_attempts and timeout_seconds use the defaulted values, so omitting
+//     a field and passing its default hash identically.
+//   - run_at hashes the client-provided value (UTC RFC3339Nano) when set, or
+//     a sentinel when omitted; the server-side now() default must not leak
+//     into the hash, otherwise a legitimate resubmission would conflict.
+func RequestHash(params NewJobParams) string {
+	maxAttempts := params.MaxAttempts
+	if maxAttempts == 0 {
+		maxAttempts = DefaultMaxAttempts
+	}
+	timeoutSeconds := params.TimeoutSeconds
+	if timeoutSeconds == 0 {
+		timeoutSeconds = int(DefaultTimeout.Seconds())
+	}
+
+	runAt := "server-default"
+	if params.RunAt != nil {
+		runAt = params.RunAt.UTC().Format(time.RFC3339Nano)
+	}
+
+	h := sha256.New()
+	_, _ = fmt.Fprintf(h, "queue=%s\ntype=%s\npriority=%d\nmax_attempts=%d\ntimeout_seconds=%d\nrun_at=%s\npayload=",
+		params.Queue, params.Type, params.Priority, maxAttempts, timeoutSeconds, runAt)
+	h.Write(canonicalPayload(params.Payload))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// canonicalPayload returns the canonical form of a JSON payload: parsed and
+// re-marshaled so object keys are sorted and insignificant whitespace is
+// removed. Payloads that are not valid JSON are returned unchanged.
+func canonicalPayload(payload []byte) []byte {
+	if len(payload) == 0 {
+		return nil
+	}
+	var decoded any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		return payload
+	}
+	canonical, err := json.Marshal(decoded)
+	if err != nil {
+		return payload
+	}
+	return canonical
 }
 
 // Claim attempts to assign this job to a worker. It enforces that the job must

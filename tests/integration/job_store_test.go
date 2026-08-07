@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -152,6 +153,99 @@ func TestIdempotentEnqueue(t *testing.T) {
 	}
 	if !dedup {
 		t.Fatal("second enqueue with same idempotency key should be deduplicated")
+	}
+
+	// The deduplicated submission must report the existing job: job2 is
+	// replaced with the original row so the caller receives the real job_id
+	// (PRD v0.1: "相同幂等键返回同一任务").
+	if job2.ID != id1 {
+		t.Fatalf("deduplicated job must be replaced with the existing row: got %s, want %s", job2.ID, id1)
+	}
+	if job2.State != domain.StateReady {
+		t.Fatalf("expected the existing job's state ready, got %s", job2.State)
+	}
+}
+
+// TestIdempotencyKeyConflict verifies ADR-0002 CONFLICT: reusing an
+// idempotency key with different parameters is rejected with CONFLICT
+// (HTTP 409) carrying the existing job id, and the original job stays
+// untouched.
+func TestIdempotencyKeyConflict(t *testing.T) {
+	s := setupStore(t)
+	ctx := context.Background()
+
+	key := "conflict-key-" + uuid.New().String()
+
+	orig, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+		TenantID:       "test-tenant",
+		Queue:          "conflict-test",
+		Type:           "demo.echo",
+		Payload:        []byte(`{"version":1}`),
+		IdempotencyKey: &key,
+	}, time.Now())
+	if err != nil {
+		t.Fatalf("create original job: %v", err)
+	}
+	dedup, err := s.Enqueue(ctx, orig)
+	if err != nil || dedup {
+		t.Fatalf("first enqueue: dedup=%v, err=%v", dedup, err)
+	}
+
+	// Same key, different payload → CONFLICT.
+	diffPayload, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+		TenantID:       "test-tenant",
+		Queue:          "conflict-test",
+		Type:           "demo.echo",
+		Payload:        []byte(`{"version":2}`),
+		IdempotencyKey: &key,
+	}, time.Now())
+	if err != nil {
+		t.Fatalf("create conflicting job: %v", err)
+	}
+	dedup, err = s.Enqueue(ctx, diffPayload)
+	assertConflict(t, dedup, err, orig.ID)
+
+	// Same key, same payload, different priority → CONFLICT.
+	diffPriority, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+		TenantID:       "test-tenant",
+		Queue:          "conflict-test",
+		Type:           "demo.echo",
+		Payload:        []byte(`{"version":1}`),
+		Priority:       5,
+		IdempotencyKey: &key,
+	}, time.Now())
+	if err != nil {
+		t.Fatalf("create priority-conflicting job: %v", err)
+	}
+	dedup, err = s.Enqueue(ctx, diffPriority)
+	assertConflict(t, dedup, err, orig.ID)
+
+	// The original job remains untouched.
+	got, err := s.GetByID(ctx, "test-tenant", orig.ID)
+	if err != nil {
+		t.Fatalf("get original job: %v", err)
+	}
+	if got.State != domain.StateReady {
+		t.Fatalf("original job must stay ready, got %s", got.State)
+	}
+	if got.Priority != 0 {
+		t.Fatalf("original job priority must not be overwritten, got %d", got.Priority)
+	}
+}
+
+// assertConflict verifies that Enqueue returned a CONFLICT domain error whose
+// message carries the existing job id.
+func assertConflict(t *testing.T, dedup bool, err error, existingID string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("same key with different parameters must be rejected, got dedup=%v", dedup)
+	}
+	de, ok := errors.AsType[*domain.Error](err)
+	if !ok || de.Code != domain.CodeConflict {
+		t.Fatalf("expected CONFLICT domain error, got %v", err)
+	}
+	if !strings.Contains(de.Message, existingID) {
+		t.Fatalf("conflict message must carry the existing job id %s, got %q", existingID, de.Message)
 	}
 }
 

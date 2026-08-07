@@ -11,15 +11,29 @@ insert into jobs (
     id, tenant_id, queue, type, payload, priority, state,
     run_at, attempt, max_attempts, timeout_seconds,
     idempotency_key, fencing_token, trace_id, trace_context, state_version,
-    retry_of_job_id, created_at, updated_at
+    retry_of_job_id, created_at, updated_at, request_hash
 ) values (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11,
     $12, $13, $14, $15, $16,
-    $17, $18, $19
+    $17, $18, $19, $20
 )
 on conflict (tenant_id, idempotency_key) where idempotency_key is not null
 do nothing
+`
+
+// enqueueSelectByKey fetches the existing job owning (tenant_id,
+// idempotency_key) together with its stored request_hash. Used by Enqueue on
+// conflict to distinguish identical resubmissions from same-key-different-
+// parameter conflicts (ADR-0002 CONFLICT).
+const enqueueSelectByKey = `
+select id, tenant_id, queue, type, payload, priority, state,
+       run_at, attempt, max_attempts, timeout_seconds,
+       idempotency_key, lease_owner, lease_until, fencing_token,
+       cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
+       created_at, updated_at, request_hash
+from jobs
+where tenant_id = $1 and idempotency_key = $2
 `
 
 // enqueueSelectByID fetches a job by ID after insert (or conflict).

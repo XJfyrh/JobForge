@@ -23,8 +23,10 @@ type ListFilter struct {
 // JobStore defines the persistence operations for jobs. The PostgreSQL
 // implementation guarantees atomicity of state transitions within transactions.
 type JobStore interface {
-	// Enqueue persists a new job. If an idempotency key conflict occurs within
-	// the same tenant, it returns the existing job with deduplicated=true.
+	// Enqueue persists a new job. If the idempotency key already exists for
+	// the tenant with identical parameters, it returns the existing job with
+	// deduplicated=true; a same-key submission with different parameters
+	// fails with a CONFLICT domain error (ADR-0002).
 	Enqueue(ctx context.Context, job *domain.Job) (deduplicated bool, err error)
 
 	// GetByID retrieves a job by ID scoped to the given tenant.

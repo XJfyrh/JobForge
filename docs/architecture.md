@@ -53,6 +53,18 @@ flowchart LR
 9. Worker → Complete/Fail RPC → Gateway → UPDATE state + INSERT job_attempts
 ```
 
+### 提交幂等与冲突检测
+
+带 `idempotency_key` 的提交在 `(tenant_id, idempotency_key)` 部分唯一索引上去重；`jobs.request_hash`（migration 0008）存储提交请求的规范化 sha256，覆盖 queue、type、payload（JSON 规范化：键排序、去空白）、priority、run_at、max_attempts、timeout_seconds：
+
+| 冲突场景 | 行为 |
+|---|---|
+| 同键同参数（哈希一致） | 202 + `deduplicated=true`，返回**已有** job_id 与当前状态（PRD FR-001） |
+| 同键异参（哈希不一致） | 409 + `CONFLICT`，错误消息携带已有 job id（ADR-0002） |
+| 存量行 request_hash 为 NULL（migration 0008 前创建） | 保持旧语义：直接去重返回已有任务 |
+
+规范化要点：省略 `run_at` 时哈希使用哨兵值而非服务端 `now()` 填充值，否则合法重试会被误判冲突；省略 `max_attempts`/`timeout_seconds` 与显式传默认值哈希一致。
+
 ### Outbox 事件发布（PRD v0.2）
 
 ```text

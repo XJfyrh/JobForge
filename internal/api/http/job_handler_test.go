@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
@@ -189,5 +190,100 @@ func TestCreateJob_BelowLimits_Accepted(t *testing.T) {
 	}
 	if !fs.enqueued {
 		t.Error("expected the job to be enqueued below the hard limit")
+	}
+}
+
+// idempotencyStore is a partial store.JobStore fake for idempotency tests.
+// Only GetQueueDepth and Enqueue are exercised; enqueue is scriptable.
+type idempotencyStore struct {
+	store.JobStore // embedded nil; any other call indicates a test bug
+	enqueue        func(ctx context.Context, job *domain.Job) (bool, error)
+}
+
+func (f *idempotencyStore) GetQueueDepth(_ context.Context, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *idempotencyStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
+	return f.enqueue(ctx, job)
+}
+
+func newIdempotentSubmitRequest(t *testing.T, body string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/jobs", bytes.NewBufferString(body))
+	ctx := context.WithValue(req.Context(), TenantIDKey, "idem-tenant")
+	return req.WithContext(ctx)
+}
+
+// TestCreateJob_IdempotentResubmit_ReturnsExistingJob verifies that an
+// identical resubmission returns 202 with deduplicated=true and the real
+// job_id of the existing job (PRD v0.1 FR-001).
+func TestCreateJob_IdempotentResubmit_ReturnsExistingJob(t *testing.T) {
+	const existingID = "existing-job-id"
+	fs := &idempotencyStore{
+		enqueue: func(_ context.Context, job *domain.Job) (bool, error) {
+			// Mirror the store contract: on dedup the passed job is replaced
+			// with the existing row.
+			job.ID = existingID
+			job.State = domain.StateRunning
+			return true, nil
+		},
+	}
+	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+
+	rec := httptest.NewRecorder()
+	body := `{"queue":"idem-queue","type":"demo.echo","payload":{"k":"v"},"idempotency_key":"k1"}`
+	handler.CreateJob(rec, newIdempotentSubmitRequest(t, body))
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp CreateJobResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !resp.Deduplicated {
+		t.Fatal("expected deduplicated=true for an identical resubmission")
+	}
+	if resp.JobID != existingID {
+		t.Fatalf("expected the existing job id %q, got %q", existingID, resp.JobID)
+	}
+}
+
+// TestCreateJob_IdempotencyConflict_Returns409 verifies ADR-0002: reusing an
+// idempotency key with different parameters is rejected with 409 CONFLICT,
+// and the error message carries the existing job id.
+func TestCreateJob_IdempotencyConflict_Returns409(t *testing.T) {
+	fs := &idempotencyStore{
+		enqueue: func(_ context.Context, _ *domain.Job) (bool, error) {
+			return false, domain.NewError(domain.CodeConflict, domain.ErrConflict,
+				"idempotency key conflict: existing job orig-job-id was submitted with different parameters")
+		},
+	}
+	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+
+	rec := httptest.NewRecorder()
+	body := `{"queue":"idem-queue","type":"demo.echo","payload":{"k":"other"},"idempotency_key":"k1"}`
+	handler.CreateJob(rec, newIdempotentSubmitRequest(t, body))
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var env struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&env); err != nil {
+		t.Fatalf("decode error response: %v", err)
+	}
+	if env.Error.Code != "CONFLICT" {
+		t.Fatalf("expected error code CONFLICT, got %q", env.Error.Code)
+	}
+	if !strings.Contains(env.Error.Message, "orig-job-id") {
+		t.Fatalf("conflict message must carry the existing job id, got %q", env.Error.Message)
 	}
 }
