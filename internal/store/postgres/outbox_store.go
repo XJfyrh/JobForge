@@ -26,16 +26,32 @@ func NewOutboxStore(pool *pgxpool.Pool) *OutboxStore {
 // Ensure interface compliance at compile time.
 var _ store.OutboxStore = (*OutboxStore)(nil)
 
-// fetchUnpublished claims a batch of unpublished events for publishing.
-// FOR UPDATE SKIP LOCKED makes concurrent publisher instances safe without
-// an advisory lock: each event is processed by exactly one publisher round.
+// OutboxClaimTTL bounds how long a publisher claim stays exclusive. Events
+// claimed but still unpublished past this TTL (the claiming publisher
+// crashed between claim and mark) become eligible for reclaim by any
+// publisher. Hardcoded like the publisher's backoff parameters.
+const OutboxClaimTTL = 5 * time.Minute
+
+// fetchUnpublished atomically claims a batch of unpublished events in one
+// statement: the UPDATE sets claimed_at for the rows selected by the inner
+// FOR UPDATE SKIP LOCKED query, so concurrent publishers can never claim the
+// same event. Rows claimed but not published within OutboxClaimTTL are
+// reclaimable, which recovers events left behind by a crashed publisher.
+// Delivery remains at-least-once: a crash between NOTIFY and marking still
+// duplicates the event, and consumers deduplicate by event_id.
 const fetchUnpublished = `
-select event_id, aggregate_id, event_type, payload, created_at, published_at, publish_attempts
-from outbox_events
-where published_at is null
-order by created_at
-limit $1
-for update skip locked`
+update outbox_events
+set claimed_at = now()
+where event_id in (
+    select event_id
+    from outbox_events
+    where published_at is null
+      and (claimed_at is null or claimed_at < now() - $1::interval)
+    order by created_at
+    limit $2
+    for update skip locked
+)
+returning event_id, aggregate_id, event_type, payload, created_at, published_at, publish_attempts`
 
 // markPublished records successful publication. Guarded by published_at IS
 // NULL so concurrent publishers cannot double-mark.
@@ -51,6 +67,16 @@ update outbox_events
 set publish_attempts = publish_attempts + 1
 where event_id = $1 and published_at is null`
 
+// resetClaim releases an atomic claim (claimed_at back to NULL) without
+// touching publication state. Used when a claimed event failed to publish or
+// was left unprocessed (graceful shutdown), so it becomes immediately
+// reclaimable instead of waiting out the claim TTL. Guarded by
+// published_at IS NULL so a stale reset can never revive a published row.
+const resetClaim = `
+update outbox_events
+set claimed_at = null
+where event_id = $1 and published_at is null`
+
 // countPending reports the unpublished backlog for the jobforge_outbox_pending
 // gauge (PRD v0.2 §8).
 const countPending = `
@@ -63,11 +89,11 @@ const cleanupPublished = `
 delete from outbox_events
 where published_at is not null and published_at < now() - $1::interval`
 
-// FetchUnpublished claims up to batch unpublished events ordered by
-// created_at. Rows are locked with FOR UPDATE SKIP LOCKED for the duration
-// of the caller's publishing round.
+// FetchUnpublished atomically claims up to batch unpublished events ordered
+// by created_at (see fetchUnpublished). Events claimed but not published
+// within OutboxClaimTTL are reclaimable.
 func (s *OutboxStore) FetchUnpublished(ctx context.Context, batch int) ([]*store.OutboxEvent, error) {
-	rows, err := s.pool.Query(ctx, fetchUnpublished, batch)
+	rows, err := s.pool.Query(ctx, fetchUnpublished, OutboxClaimTTL, batch)
 	if err != nil {
 		return nil, fmt.Errorf("fetch unpublished: %w", err)
 	}
@@ -106,6 +132,15 @@ func (s *OutboxStore) MarkPublished(ctx context.Context, eventID int64) (bool, e
 func (s *OutboxStore) MarkPublishFailed(ctx context.Context, eventID int64) error {
 	if _, err := s.pool.Exec(ctx, markPublishFailed, eventID); err != nil {
 		return fmt.Errorf("mark publish failed: %w", err)
+	}
+	return nil
+}
+
+// ResetClaim releases the atomic claim on the event (see resetClaim), making
+// it immediately reclaimable again.
+func (s *OutboxStore) ResetClaim(ctx context.Context, eventID int64) error {
+	if _, err := s.pool.Exec(ctx, resetClaim, eventID); err != nil {
+		return fmt.Errorf("reset claim: %w", err)
 	}
 	return nil
 }

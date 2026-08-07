@@ -69,11 +69,14 @@ flowchart LR
 
 ```text
 1. 任务终态事务 → INSERT outbox_events (published_at NULL) → PostgreSQL
-2. Publisher → 轮询 published_at IS NULL (FOR UPDATE SKIP LOCKED)
+2. Publisher → 原子领取：UPDATE outbox_events SET claimed_at = now()
+   WHERE ... published_at IS NULL ... FOR UPDATE SKIP LOCKED ... RETURNING
 3. Publisher → pg_notify('jobforge_outbox', event_id) → 消费方收到 hint
 4. Publisher → UPDATE published_at = now()（独立短事务，不进入任务状态事务）
 5. Cleaner → 周期清理 published_at 非空且超过保留期的行
 ```
+
+领取为单语句原子操作（migration 0009 的 `claimed_at` 列），并发 publisher 不会领到同一事件；发布失败与优雅关停会即时释放领取，仅硬崩溃留下领取标记，已领取但超过 5 分钟未发布的行在下一轮自动重领。
 
 发布语义为 at-least-once：消费方按 event_id 幂等去重；发布失败/publisher 崩溃不影响任务状态。
 

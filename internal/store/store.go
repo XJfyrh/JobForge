@@ -103,8 +103,11 @@ type OutboxEvent struct {
 // publisher. All operations run outside job state transactions and never
 // modify job core state.
 type OutboxStore interface {
-	// FetchUnpublished claims up to batch unpublished events ordered by
-	// created_at. Concurrent publishers are safe via FOR UPDATE SKIP LOCKED.
+	// FetchUnpublished atomically claims up to batch unpublished events
+	// ordered by created_at: a single UPDATE...FOR UPDATE SKIP LOCKED
+	// statement stamps claimed_at, so concurrent publishers never claim the
+	// same event. Events claimed but not published within the claim TTL are
+	// reclaimable (crashed-publisher recovery).
 	FetchUnpublished(ctx context.Context, batch int) ([]*OutboxEvent, error)
 
 	// MarkPublished records successful publication. Returns true if this call
@@ -114,6 +117,11 @@ type OutboxStore interface {
 	// MarkPublishFailed increments publish_attempts; the event remains
 	// unpublished and eligible for retry.
 	MarkPublishFailed(ctx context.Context, eventID int64) error
+
+	// ResetClaim releases the atomic claim (claimed_at back to NULL) so an
+	// unpublished event becomes immediately reclaimable again: used after a
+	// failed publish or when a claimed event was left unprocessed.
+	ResetClaim(ctx context.Context, eventID int64) error
 
 	// CountPending returns the number of unpublished events.
 	CountPending(ctx context.Context) (int64, error)

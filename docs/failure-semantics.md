@@ -120,6 +120,7 @@ cancelling 状态下：
 **发布保证**：
 
 - **at-least-once**：事件可能重复发布；消费方必须按 `event_id` 幂等去重。
+- 领取为单语句原子操作：`UPDATE outbox_events SET claimed_at = now() WHERE ... FOR UPDATE SKIP LOCKED RETURNING`，并发 publisher 不会领到同一事件，避免重复 NOTIFY；发布失败与优雅关停即时释放领取，仅硬崩溃的领取标记留存至过期（5 分钟）后重领。
 - NOTIFY 仅作 hint：payload 只携带 `event_id`（通道 `jobforge_outbox`），消费方回查 `outbox_events` 获取完整事件。
 - 发布在任务状态事务之外异步进行：发布失败、重复发布或 publisher 崩溃均**不得**改变任务状态。
 - publisher 不持有内存进度：崩溃重启后仅从 `published_at IS NULL` 恢复。
@@ -130,7 +131,8 @@ cancelling 状态下：
 |---|---|---|
 | 发布通道失败 | `publish_attempts` 递增，`published_at` 保持 NULL | 退避后下一轮重试 |
 | publisher 崩溃（NOTIFY 已发、未标记） | 重启后重复发布同一事件 | 消费方按 event_id 去重；任务状态不受影响 |
-| 事件积压 | `jobforge_outbox_pending` 上升 | 增加 publisher 实例（FOR UPDATE SKIP LOCKED 并发安全） |
+| publisher 领取后崩溃（`claimed_at` 已置、未发布） | 事件暂停参与领取 | 领取过期（5 分钟）后下一轮自动重领；at-least-once 下可能重复发布 |
+| 事件积压 | `jobforge_outbox_pending` 上升 | 增加 publisher 实例（单语句原子领取，并发不重复） |
 
 **Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件；未发布事件永不被清理。
 
@@ -145,7 +147,7 @@ cancelling 状态下：
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
-| `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界 |
+| `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界；双 publisher 并发零重复 NOTIFY、僵尸领取回收（`TestOutboxConcurrentPublishersNoDuplicateNotify`、`TestOutboxStaleClaimReclaimed`） |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 | `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |
 | `tests/scale/idempotent_test.go` | AT-14：10,000 任务重复投递零重复副作用（`-tags scale`） |
