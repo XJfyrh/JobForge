@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
@@ -79,7 +81,7 @@ func TestGatewayGetJobState(t *testing.T) {
 
 	// Claim → running.
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "gw-state",
+		Queues:   []string{"gw-state"},
 		WorkerID: "gw-worker-state",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -106,7 +108,7 @@ func TestGatewayHeartbeatCancelSignal(t *testing.T) {
 	job := createTestJob(t, s, "gw-hb-cancel", "demo.echo")
 
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "gw-hb-cancel",
+		Queues:   []string{"gw-hb-cancel"},
 		WorkerID: "gw-worker-hb",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -147,7 +149,7 @@ func TestGatewayCompleteIdempotent(t *testing.T) {
 	job := createTestJob(t, s, "gw-idem", "demo.echo")
 
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "gw-idem",
+		Queues:   []string{"gw-idem"},
 		WorkerID: "gw-worker-idem",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -218,7 +220,7 @@ func TestEndToEndSubmitExecuteComplete(t *testing.T) {
 
 	// 3. Worker claims (Poll equivalent).
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "e2e",
+		Queues:   []string{"e2e"},
 		WorkerID: "e2e-worker",
 		Types:    []string{"demo.echo"},
 		MaxJobs:  1,
@@ -281,7 +283,7 @@ func TestEndToEndFailRetryRecover(t *testing.T) {
 
 	// 2. Claim.
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "e2e-retry",
+		Queues:   []string{"e2e-retry"},
 		WorkerID: "e2e-worker-r",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -325,7 +327,7 @@ func TestEndToEndFailRetryRecover(t *testing.T) {
 
 	// 5. Re-claim (attempt 2).
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "e2e-retry",
+		Queues:   []string{"e2e-retry"},
 		WorkerID: "e2e-worker-r2",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -372,7 +374,7 @@ func TestEndToEndLeaseExpiryRecovery(t *testing.T) {
 	// 1. Create and claim with very short lease.
 	job := createTestJob(t, js, "e2e-lease", "demo.sleep")
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "e2e-lease",
+		Queues:   []string{"e2e-lease"},
 		WorkerID: "e2e-dead-worker",
 		MaxJobs:  1,
 		LeaseTTL: 1 * time.Millisecond,
@@ -408,7 +410,7 @@ func TestEndToEndLeaseExpiryRecovery(t *testing.T) {
 
 	// 4. New worker claims.
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "e2e-lease",
+		Queues:   []string{"e2e-lease"},
 		WorkerID: "e2e-new-worker",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -467,7 +469,7 @@ func TestEndToEndManualRetry(t *testing.T) {
 		}
 
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "manual-retry",
+			Queues:   []string{"manual-retry"},
 			WorkerID: "retry-worker",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -531,7 +533,7 @@ func TestEndToEndManualRetry(t *testing.T) {
 
 		// 4. Clone can be claimed and completed (full lifecycle).
 		claimed2, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "manual-retry",
+			Queues:   []string{"manual-retry"},
 			WorkerID: "retry-worker-2",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -557,7 +559,7 @@ func TestEndToEndManualRetry(t *testing.T) {
 		// Create and complete a job.
 		job := createTestJob(t, js, "retry-reject", "demo.echo")
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "retry-reject",
+			Queues:   []string{"retry-reject"},
 			WorkerID: "retry-reject-worker",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -640,7 +642,7 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	job := createTestJob(t, js, "liveness-hb", "demo.echo")
 	reanchorRunAt(t, job.ID)
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "liveness-hb",
+		Queues:   []string{"liveness-hb"},
 		WorkerID: workerID,
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -787,5 +789,72 @@ func TestGatewayStaleWorkers(t *testing.T) {
 	}
 	if foundFresh {
 		t.Error("fresh worker must not appear in the stale list")
+	}
+}
+
+// TestGatewayPollMultiQueue verifies that Poll claims from every declared
+// queue (previously only req.Queues[0] was polled), and that missing or
+// malformed queue lists are rejected fail-loud.
+func TestGatewayPollMultiQueue(t *testing.T) {
+	js := setupStore(t)
+	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, logger, nil)
+
+	queueA := "poll-mq-a-" + uuid.New().String()[:8]
+	queueB := "poll-mq-b-" + uuid.New().String()[:8]
+	jobA := createTestJob(t, js, queueA, "demo.echo")
+	jobB := createTestJob(t, js, queueB, "demo.echo")
+
+	workerID := "poll-mq-worker-" + uuid.New().String()[:8]
+	if _, err := svc.Register(ctx, &workerv1.RegisterRequest{
+		WorkerId:       workerID,
+		InstanceId:     "instance-poll-mq",
+		SupportedTypes: []string{"demo.echo"},
+		Queues:         []string{queueA, queueB},
+		Capacity:       2,
+		Version:        "1.0.0-poll-mq",
+	}); err != nil {
+		t.Fatalf("register multi-queue worker: %v", err)
+	}
+
+	// A single Poll must claim jobs from both declared queues.
+	pollCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	resp, err := svc.Poll(pollCtx, &workerv1.PollRequest{
+		WorkerId: workerID,
+		MaxJobs:  2,
+		Queues:   []string{queueA, queueB},
+		Types:    []string{"demo.echo"},
+	})
+	if err != nil {
+		t.Fatalf("poll: %v", err)
+	}
+	if len(resp.Jobs) != 2 {
+		t.Fatalf("expected jobs from both queues, got %d", len(resp.Jobs))
+	}
+	claimedIDs := map[string]string{}
+	for _, j := range resp.Jobs {
+		claimedIDs[j.JobId] = j.Queue
+	}
+	if claimedIDs[jobA.ID] != queueA {
+		t.Fatalf("expected jobA claimed from %s, got %v", queueA, claimedIDs)
+	}
+	if claimedIDs[jobB.ID] != queueB {
+		t.Fatalf("expected jobB claimed from %s, got %v", queueB, claimedIDs)
+	}
+
+	// Fail loud: no queues, or an empty entry, must be rejected.
+	if _, err := svc.Poll(ctx, &workerv1.PollRequest{WorkerId: workerID, MaxJobs: 1}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for missing queues, got %v", err)
+	}
+	if _, err := svc.Poll(ctx, &workerv1.PollRequest{WorkerId: workerID, MaxJobs: 1, Queues: []string{queueA, ""}}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty queue entry, got %v", err)
+	}
+	if _, err := svc.Register(ctx, &workerv1.RegisterRequest{
+		WorkerId: "poll-mq-noqueues-" + uuid.New().String()[:8],
+		Capacity: 1,
+	}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for register without queues, got %v", err)
 	}
 }

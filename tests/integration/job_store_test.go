@@ -68,7 +68,7 @@ func TestConcurrentClaim(t *testing.T) {
 			defer wg.Done()
 			workerID := fmt.Sprintf("worker-%d", workerIdx)
 			jobs, err := s.Claim(ctx, store.ClaimParams{
-				Queue:    "claim-test",
+				Queues:   []string{"claim-test"},
 				WorkerID: workerID,
 				MaxJobs:  numJobs, // each tries to grab all
 				LeaseTTL: 30 * time.Second,
@@ -259,7 +259,7 @@ func TestCompleteStaleToken(t *testing.T) {
 
 	// Worker-1 claims the job.
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "stale-test",
+		Queues:   []string{"stale-test"},
 		WorkerID: "worker-1",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -308,7 +308,7 @@ func TestCancelStates(t *testing.T) {
 	// Cancel a running job -> should become cancelling.
 	runJob := createTestJob(t, s, "cancel-test", "demo.echo")
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "cancel-test",
+		Queues:   []string{"cancel-test"},
 		WorkerID: "worker-cancel",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -341,7 +341,7 @@ func TestCancelTerminal(t *testing.T) {
 
 	// Claim and complete.
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "cancel-terminal",
+		Queues:   []string{"cancel-terminal"},
 		WorkerID: "worker-t",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -373,7 +373,7 @@ func TestFailRetry(t *testing.T) {
 	job := createTestJob(t, s, "retry-test", "demo.fail")
 
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "retry-test",
+		Queues:   []string{"retry-test"},
 		WorkerID: "worker-retry",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -426,7 +426,7 @@ func TestFailDead(t *testing.T) {
 	}
 
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "dead-test",
+		Queues:   []string{"dead-test"},
 		WorkerID: "worker-dead",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -461,7 +461,7 @@ func TestCompleteCancelRace(t *testing.T) {
 		job := createTestJob(t, s, "race-test", "demo.echo")
 
 		claimed, err := s.Claim(ctx, store.ClaimParams{
-			Queue:    "race-test",
+			Queues:   []string{"race-test"},
 			WorkerID: "worker-race",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -522,7 +522,7 @@ func TestHeartbeatStaleToken(t *testing.T) {
 	job := createTestJob(t, s, "hb-test", "demo.echo")
 
 	claimed, err := s.Claim(ctx, store.ClaimParams{
-		Queue:    "hb-test",
+		Queues:   []string{"hb-test"},
 		WorkerID: "worker-hb",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -551,5 +551,91 @@ func TestHeartbeatStaleToken(t *testing.T) {
 	err = s.Heartbeat(ctx, job.ID, "wrong-worker", token, 30*time.Second)
 	if err == nil {
 		t.Fatal("expected error for wrong worker heartbeat")
+	}
+}
+
+// createPriorityJob enqueues a ready job with an explicit priority.
+func createPriorityJob(t *testing.T, s store.JobStore, queue string, priority int16) *domain.Job {
+	t.Helper()
+	pastRunAt := time.Now().Add(-1 * time.Second)
+	job, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+		TenantID: "test-tenant",
+		Queue:    queue,
+		Type:     "demo.echo",
+		Payload:  []byte(`{"key":"value"}`),
+		Priority: priority,
+		RunAt:    &pastRunAt,
+	}, time.Now())
+	if err != nil {
+		t.Fatalf("create job: %v", err)
+	}
+	if _, err = s.Enqueue(context.Background(), job); err != nil {
+		t.Fatalf("enqueue job: %v", err)
+	}
+	return job
+}
+
+// TestClaimMultiQueue verifies multi-queue claims: every declared queue
+// participates, earlier-declared queues are claimed first, and within a queue
+// the priority/created_at ordering still applies.
+func TestClaimMultiQueue(t *testing.T) {
+	s := setupStore(t)
+	ctx := context.Background()
+
+	queueA := "mq-a-" + uuid.New().String()[:8]
+	queueB := "mq-b-" + uuid.New().String()[:8]
+
+	// queueA: two jobs, higher priority first within the queue.
+	aHigh := createPriorityJob(t, s, queueA, 9)
+	aLow := createPriorityJob(t, s, queueA, 1)
+	// queueB: one job whose priority (5) exceeds queueA's low job, proving
+	// that declaration order dominates over cross-queue priority.
+	bMid := createPriorityJob(t, s, queueB, 5)
+
+	claimed, err := s.Claim(ctx, store.ClaimParams{
+		Queues:   []string{queueA, queueB},
+		WorkerID: "mq-worker",
+		MaxJobs:  10,
+		LeaseTTL: 30 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	if len(claimed) != 3 {
+		t.Fatalf("expected 3 claimed jobs across both queues, got %d", len(claimed))
+	}
+
+	var gotIDs []string
+	for _, j := range claimed {
+		gotIDs = append(gotIDs, j.ID)
+	}
+	wantIDs := []string{aHigh.ID, aLow.ID, bMid.ID}
+	for i, want := range wantIDs {
+		if gotIDs[i] != want {
+			t.Fatalf("claim order mismatch at %d: want %s, got %s (order %v)", i, want, gotIDs[i], gotIDs)
+		}
+	}
+
+	// Both queues must be represented in the claim result.
+	seen := map[string]bool{}
+	for _, j := range claimed {
+		seen[j.Queue] = true
+	}
+	if !seen[queueA] || !seen[queueB] {
+		t.Fatalf("expected jobs from both queues, got queues %v", seen)
+	}
+
+	// Single-queue claim still works and does not touch the other queue.
+	leftover, err := s.Claim(ctx, store.ClaimParams{
+		Queues:   []string{queueA},
+		WorkerID: "mq-worker-2",
+		MaxJobs:  10,
+		LeaseTTL: 30 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("single-queue claim: %v", err)
+	}
+	if len(leftover) != 0 {
+		t.Fatalf("expected no remaining queueA jobs, got %d", len(leftover))
 	}
 }
