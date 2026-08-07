@@ -39,7 +39,14 @@ func (s *JobStore) Ping(ctx context.Context) error {
 }
 
 // Enqueue persists a new job. If the idempotency key already exists for the
-// tenant, it returns deduplicated=true without creating a duplicate.
+// tenant, the existing row is compared against the incoming request hash
+// (ADR-0002 CONFLICT):
+//   - identical parameters (or a legacy row without a stored hash) →
+//     deduplicated=true, and job is replaced with the existing row so the
+//     caller receives the real job_id and current state;
+//   - different parameters → a CONFLICT domain error carrying the existing
+//     job id.
+//
 // After a successful insert of a ready job, sends pg_notify to wake up
 // Gateway Poll listeners (ADR-0003).
 func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
@@ -48,7 +55,7 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 		job.Priority, string(job.State), job.RunAt, job.Attempt,
 		job.MaxAttempts, job.TimeoutSeconds, job.IdempotencyKey,
 		job.FencingToken, job.TraceID, job.TraceContext, job.StateVersion,
-		job.RetryOfJobID, job.CreatedAt, job.UpdatedAt,
+		job.RetryOfJobID, job.CreatedAt, job.UpdatedAt, job.RequestHash,
 	)
 	if err != nil {
 		return false, fmt.Errorf("enqueue insert: %w", err)
@@ -64,20 +71,64 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 		&job.CancelRequestedAt, &job.TraceID, &job.TraceContext, &job.StateVersion,
 		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &inserted,
 	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			// Conflict path: our insert did nothing, fetch by idempotency key.
-			return true, nil
+	if err == nil {
+		// Notify listeners if a new ready job was inserted.
+		if inserted && job.State == domain.StateReady {
+			_, _ = s.pool.Exec(ctx, "select pg_notify('jobforge_job_ready', $1)", job.Queue)
 		}
+		return !inserted, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return false, fmt.Errorf("enqueue select: %w", err)
 	}
 
-	// Notify listeners if a new ready job was inserted.
-	if inserted && job.State == domain.StateReady {
-		_, _ = s.pool.Exec(ctx, "select pg_notify('jobforge_job_ready', $1)", job.Queue)
+	// Conflict path: the insert did nothing because the idempotency key is
+	// already taken. Fetch the existing row to compare request hashes.
+	if job.IdempotencyKey == nil {
+		return false, fmt.Errorf("enqueue: insert skipped but no idempotency key present")
+	}
+	existing, err := s.selectByIdempotencyKey(ctx, job.TenantID, *job.IdempotencyKey)
+	if err != nil {
+		return false, fmt.Errorf("enqueue select by idempotency key: %w", err)
 	}
 
-	return !inserted, nil
+	// Same-key submissions with different parameters are rejected per
+	// ADR-0002 (CONFLICT). Legacy rows created before migration 0008 have no
+	// stored hash and keep the previous deduplicate behavior.
+	if existing.RequestHash != "" && existing.RequestHash != job.RequestHash {
+		return false, domain.NewError(domain.CodeConflict, domain.ErrConflict,
+			"idempotency key conflict: existing job %s was submitted with different parameters", existing.ID)
+	}
+
+	// Identical resubmission: report the existing job so the caller receives
+	// the real job_id and current state instead of the discarded request.
+	*job = *existing
+	return true, nil
+}
+
+// selectByIdempotencyKey fetches the job owning (tenant_id, idempotency_key).
+// The stored request_hash (nullable for legacy rows) is surfaced via
+// Job.RequestHash; an empty value means "hash unknown".
+func (s *JobStore) selectByIdempotencyKey(ctx context.Context, tenantID, key string) (*domain.Job, error) {
+	var (
+		job  domain.Job
+		hash *string
+	)
+	err := s.pool.QueryRow(ctx, enqueueSelectByKey, tenantID, key).Scan(
+		&job.ID, &job.TenantID, &job.Queue, &job.Type, &job.Payload,
+		&job.Priority, &job.State, &job.RunAt, &job.Attempt,
+		&job.MaxAttempts, &job.TimeoutSeconds, &job.IdempotencyKey,
+		&job.LeaseOwner, &job.LeaseUntil, &job.FencingToken,
+		&job.CancelRequestedAt, &job.TraceID, &job.TraceContext, &job.StateVersion,
+		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &hash,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if hash != nil {
+		job.RequestHash = *hash
+	}
+	return &job, nil
 }
 
 // GetByID retrieves a job by ID scoped to the given tenant.
