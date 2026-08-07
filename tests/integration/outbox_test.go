@@ -29,6 +29,18 @@ func setupOutboxStore(t *testing.T) *postgres.OutboxStore {
 	return postgres.NewOutboxStore(testEnv.pool)
 }
 
+// truncateOutboxEvents removes all outbox rows so publisher-loop tests are
+// isolated from leftovers of earlier tests or previous runs: with batch
+// claims ordered by created_at, stale unpublished rows would starve or
+// inflate the delivery assertions of the events this test inserts. Outbox
+// rows are side-effect hints only (consumers re-query), never job state.
+func truncateOutboxEvents(t *testing.T) {
+	t.Helper()
+	if _, err := testEnv.pool.Exec(context.Background(), `truncate outbox_events`); err != nil {
+		t.Fatalf("truncate outbox_events: %v", err)
+	}
+}
+
 // insertOutboxEvent inserts an outbox event directly (as job state
 // transactions do) and returns its event_id.
 func insertOutboxEvent(t *testing.T, aggregateID, eventType string) int64 {
@@ -164,6 +176,7 @@ func fastPublisherConfig() outbox.Config {
 // published via NOTIFY, published_at is set, and the NOTIFY payload carries
 // the event_id so consumers can re-query the full event.
 func TestOutboxAT15NormalPublish(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -198,6 +211,9 @@ func TestOutboxAT15NormalPublish(t *testing.T) {
 		_ = pub.Run(runCtx)
 		close(done)
 	}()
+	// Safety net: if an assertion below fails, the publisher must still be
+	// stopped so it cannot leak into later tests and publish their events.
+	defer func() { cancel(); <-done }()
 
 	// Wait until both events are marked published.
 	waitFor(t, 10*time.Second, func() bool {
@@ -238,6 +254,7 @@ func TestOutboxAT15NormalPublish(t *testing.T) {
 // increment publish_attempts, keep the event unpublished, and are retried
 // with backoff until success. Job state must never be affected.
 func TestOutboxAT15PublishFailureRetry(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -254,6 +271,7 @@ func TestOutboxAT15PublishFailureRetry(t *testing.T) {
 		_ = pub.Run(runCtx)
 		close(done)
 	}()
+	defer func() { cancel(); <-done }()
 
 	// Wait until the event is eventually published after forced failures.
 	waitFor(t, 10*time.Second, func() bool {
@@ -283,6 +301,7 @@ func TestOutboxAT15PublishFailureRetry(t *testing.T) {
 // publisher resumes from the table and no event is silently lost. Duplicate
 // deliveries are tolerated and collapse under event_id dedup.
 func TestOutboxAT15CrashRecovery(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -329,6 +348,7 @@ func TestOutboxAT15CrashRecovery(t *testing.T) {
 		_ = pub2.Run(runCtx)
 		close(done2)
 	}()
+	defer func() { cancel(); <-done2 }()
 
 	waitFor(t, 10*time.Second, func() bool {
 		for _, id := range ids {
@@ -380,6 +400,7 @@ func (c *cancelOnDelivery) Publish(ctx context.Context, ev *store.OutboxEvent) e
 // already-published event (simulating a crash between NOTIFY and marking
 // published) does not change consumer effects and never touches job state.
 func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -414,6 +435,7 @@ func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
 		_ = pub.Run(runCtx)
 		close(done)
 	}()
+	defer func() { cancel(); <-done }()
 
 	// Find the event for this job and wait for publication.
 	var eventID int64
@@ -428,10 +450,14 @@ func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
 		return publishedAt != nil
 	})
 
-	// Simulate crash between NOTIFY and marking: reset published_at and let
-	// the publisher re-publish (duplicate delivery).
+	// Simulate crash between NOTIFY and marking: reset the publication
+	// state. A real crash also leaves claimed_at stamped; such claims become
+	// reclaimable only after the claim TTL (covered by
+	// TestOutboxStaleClaimReclaimed), so reset both columns to jump
+	// directly to the reclaimable state and let the publisher re-publish
+	// (duplicate delivery).
 	if _, err := testEnv.pool.Exec(ctx,
-		`update outbox_events set published_at = null where event_id = $1`, eventID); err != nil {
+		`update outbox_events set published_at = null, claimed_at = null where event_id = $1`, eventID); err != nil {
 		t.Fatalf("reset published_at: %v", err)
 	}
 	waitFor(t, 10*time.Second, func() bool {
@@ -463,6 +489,7 @@ func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
 // events older than the retention period; unpublished events are never
 // removed regardless of age.
 func TestOutboxRetentionBoundary(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -520,6 +547,7 @@ func TestOutboxRetentionBoundary(t *testing.T) {
 // TestOutboxCountPending verifies FR-612 progress observability at the store
 // level: the pending count reflects unpublished events only.
 func TestOutboxCountPending(t *testing.T) {
+	truncateOutboxEvents(t)
 	os := setupOutboxStore(t)
 	ctx := context.Background()
 
@@ -540,5 +568,138 @@ func TestOutboxCountPending(t *testing.T) {
 	}
 	if after != before-1 {
 		t.Fatalf("expected pending to drop by 1 (%d -> %d)", before, after)
+	}
+}
+
+// TestOutboxConcurrentPublishersNoDuplicateNotify stress-tests the atomic
+// claim: two publishers run concurrently against the same backlog, and every
+// event must be delivered exactly once across both channels (zero duplicate
+// NOTIFY). Before the atomic claim, FETCH released its SKIP LOCKED rows at
+// statement end, letting both publishers pick up the same events.
+func TestOutboxConcurrentPublishersNoDuplicateNotify(t *testing.T) {
+	truncateOutboxEvents(t)
+	os := setupOutboxStore(t)
+	ctx := context.Background()
+
+	const n = 100
+	ids := make([]int64, 0, n)
+	for i := 0; i < n; i++ {
+		ids = append(ids, insertOutboxEvent(t, uuid.New().String(), "job.succeeded"))
+	}
+
+	chA := newRecordingChannel()
+	chB := newRecordingChannel()
+	cfg := fastPublisherConfig()
+	pubA := outbox.New(os, chA, cfg, testLogger(t), nil)
+	pubB := outbox.New(os, chB, cfg, testLogger(t), nil)
+
+	runCtx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	for _, pub := range []*outbox.Publisher{pubA, pubB} {
+		wg.Add(1)
+		go func(p *outbox.Publisher) {
+			defer wg.Done()
+			_ = p.Run(runCtx)
+		}(pub)
+	}
+	// Safety net: stop both publishers even if an assertion below fails.
+	defer func() { cancel(); wg.Wait() }()
+
+	waitFor(t, 30*time.Second, func() bool {
+		for _, id := range ids {
+			if publishedAt, _ := getOutboxRow(t, id); publishedAt == nil {
+				return false
+			}
+		}
+		return true
+	})
+	cancel()
+	wg.Wait()
+
+	// Zero duplicate NOTIFY: each test event was delivered exactly once
+	// across both publishers combined.
+	for _, id := range ids {
+		got := chA.deliveryCount(id) + chB.deliveryCount(id)
+		if got != 1 {
+			t.Fatalf("event %d: expected exactly 1 delivery across both publishers, got %d", id, got)
+		}
+		if chA.effectCount(id)+chB.effectCount(id) != 1 {
+			t.Fatalf("event %d: expected dedup effect 1", id)
+		}
+	}
+}
+
+// TestOutboxStaleClaimReclaimed verifies crashed-publisher recovery: an event
+// claimed but never published (claimed_at older than the claim TTL) is
+// reclaimable, both at the store level and end-to-end through a publisher.
+func TestOutboxStaleClaimReclaimed(t *testing.T) {
+	truncateOutboxEvents(t)
+	os := setupOutboxStore(t)
+	ctx := context.Background()
+
+	// Store level: a claim older than the TTL must be reclaimable.
+	staleID := insertOutboxEvent(t, uuid.New().String(), "job.succeeded")
+	if _, err := testEnv.pool.Exec(ctx,
+		`update outbox_events set claimed_at = now() - interval '6 minutes' where event_id = $1`, staleID); err != nil {
+		t.Fatalf("backdate claimed_at: %v", err)
+	}
+	events, err := os.FetchUnpublished(ctx, 200)
+	if err != nil {
+		t.Fatalf("fetch unpublished: %v", err)
+	}
+	found := false
+	for _, ev := range events {
+		if ev.EventID == staleID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("stale-claimed event %d was not reclaimed by FetchUnpublished", staleID)
+	}
+	// Mark it published so it does not interfere with the publisher below.
+	if _, err := os.MarkPublished(ctx, staleID); err != nil {
+		t.Fatalf("mark stale event published: %v", err)
+	}
+
+	// A fresh claim (within the TTL) must NOT be reclaimable yet.
+	freshID := insertOutboxEvent(t, uuid.New().String(), "job.succeeded")
+	if _, err := testEnv.pool.Exec(ctx,
+		`update outbox_events set claimed_at = now() where event_id = $1`, freshID); err != nil {
+		t.Fatalf("set fresh claimed_at: %v", err)
+	}
+	events, err = os.FetchUnpublished(ctx, 200)
+	if err != nil {
+		t.Fatalf("fetch unpublished: %v", err)
+	}
+	for _, ev := range events {
+		if ev.EventID == freshID {
+			t.Fatalf("freshly claimed event %d must not be reclaimable within the TTL", freshID)
+		}
+	}
+	// Release the fresh claim, then verify end-to-end publication.
+	if _, err := testEnv.pool.Exec(ctx,
+		`update outbox_events set claimed_at = now() - interval '6 minutes' where event_id = $1`, freshID); err != nil {
+		t.Fatalf("expire fresh claim: %v", err)
+	}
+
+	channel := newRecordingChannel()
+	pub := outbox.New(os, channel, fastPublisherConfig(), testLogger(t), nil)
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		_ = pub.Run(runCtx)
+		close(done)
+	}()
+	defer func() { cancel(); <-done }()
+	waitFor(t, 10*time.Second, func() bool {
+		publishedAt, _ := getOutboxRow(t, freshID)
+		return publishedAt != nil
+	})
+	cancel()
+	<-done
+
+	if got := channel.deliveryCount(freshID); got != 1 {
+		t.Fatalf("expected 1 delivery of the reclaimed event, got %d", got)
 	}
 }
