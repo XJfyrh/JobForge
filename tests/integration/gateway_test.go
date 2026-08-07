@@ -2,12 +2,15 @@ package integration
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
+	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/store"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
@@ -582,4 +585,207 @@ func TestEndToEndManualRetry(t *testing.T) {
 		}
 		t.Error("succeeded job should not pass the dead/cancelled gate")
 	})
+}
+
+// getWorkerLastHeartbeat reads workers.last_heartbeat_at for a worker.
+func getWorkerLastHeartbeat(t *testing.T, workerID string) time.Time {
+	t.Helper()
+	var ts time.Time
+	if err := testEnv.pool.QueryRow(context.Background(),
+		"select last_heartbeat_at from workers where worker_id = $1", workerID,
+	).Scan(&ts); err != nil {
+		t.Fatalf("read last_heartbeat_at: %v", err)
+	}
+	return ts
+}
+
+// backdateWorkerHeartbeat ages a worker's liveness timestamp using the
+// PostgreSQL clock so comparisons are immune to host/container drift.
+func backdateWorkerHeartbeat(t *testing.T, workerID, interval string) {
+	t.Helper()
+	if _, err := testEnv.pool.Exec(context.Background(),
+		"update workers set last_heartbeat_at = now() - interval '"+interval+"' where worker_id = $1",
+		workerID); err != nil {
+		t.Fatalf("backdate last_heartbeat_at: %v", err)
+	}
+}
+
+// TestGatewayLivenessRefreshOnRPCs verifies that Heartbeat and Poll RPCs
+// advance workers.last_heartbeat_at (the fix for the gauge that never
+// decayed), and that the SQL-layer throttle bounds write amplification:
+// a second RPC inside the throttle window leaves the row untouched.
+func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
+	js := setupStore(t)
+	ctx := context.Background()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, logger, nil)
+
+	workerID := "liveness-worker-" + uuid.New().String()[:8]
+	_, err := svc.Register(ctx, &workerv1.RegisterRequest{
+		WorkerId:       workerID,
+		InstanceId:     "instance-liveness",
+		SupportedTypes: []string{"demo.echo"},
+		Queues:         []string{"liveness-hb"},
+		Capacity:       2,
+		Version:        "1.0.0-liveness",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Crash simulation: the stored heartbeat is ancient.
+	backdateWorkerHeartbeat(t, workerID, "1 hour")
+
+	// Heartbeat RPC must refresh the worker's liveness timestamp.
+	job := createTestJob(t, js, "liveness-hb", "demo.echo")
+	reanchorRunAt(t, job.ID)
+	claimed, err := js.Claim(ctx, store.ClaimParams{
+		Queue:    "liveness-hb",
+		WorkerID: workerID,
+		MaxJobs:  1,
+		LeaseTTL: 30 * time.Second,
+	})
+	if err != nil || len(claimed) == 0 {
+		t.Fatalf("claim: %v", err)
+	}
+	if _, err := svc.Heartbeat(ctx, &workerv1.HeartbeatRequest{
+		JobId:        job.ID,
+		WorkerId:     workerID,
+		FencingToken: claimed[0].FencingToken,
+	}); err != nil {
+		t.Fatalf("heartbeat: %v", err)
+	}
+	ts1 := getWorkerLastHeartbeat(t, workerID)
+	if time.Since(ts1) > time.Minute {
+		t.Fatalf("Heartbeat RPC did not refresh last_heartbeat_at: %s", ts1)
+	}
+
+	// Throttle: an immediate Poll must not rewrite the row (RowsAffected=0
+	// semantics). Timestamps are compared exactly; both come from the DB.
+	pollCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	_, _ = svc.Poll(pollCtx, &workerv1.PollRequest{
+		WorkerId: workerID,
+		MaxJobs:  1,
+		Queues:   []string{"liveness-hb"},
+		Types:    []string{"demo.echo"},
+	})
+	cancel()
+	if ts2 := getWorkerLastHeartbeat(t, workerID); !ts2.Equal(ts1) {
+		t.Fatalf("throttled Poll rewrote last_heartbeat_at: %s -> %s", ts1, ts2)
+	}
+
+	// After aging past the throttle window, Poll refreshes again (idle
+	// workers only touch the Gateway through Poll).
+	backdateWorkerHeartbeat(t, workerID, "1 hour")
+	pollCtx, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
+	_, _ = svc.Poll(pollCtx, &workerv1.PollRequest{
+		WorkerId: workerID,
+		MaxJobs:  1,
+		Queues:   []string{"liveness-hb"},
+		Types:    []string{"demo.echo"},
+	})
+	cancel()
+	if ts3 := getWorkerLastHeartbeat(t, workerID); time.Since(ts3) > time.Minute {
+		t.Fatalf("Poll RPC did not refresh last_heartbeat_at: %s", ts3)
+	}
+}
+
+// TestGatewayWorkerCountsFreshnessFilter verifies that WorkerCounts only
+// includes workers whose heartbeat is fresher than the given window, so a
+// crashed worker drops out of the workers_active data source.
+func TestGatewayWorkerCountsFreshnessFilter(t *testing.T) {
+	js := setupStore(t)
+	ctx := context.Background()
+
+	freshVersion := "3.3.3-fresh-" + uuid.New().String()[:8]
+	staleVersion := "3.3.3-stale-" + uuid.New().String()[:8]
+	freshID := "fresh-worker-" + uuid.New().String()[:8]
+	staleID := "stale-worker-" + uuid.New().String()[:8]
+
+	for _, w := range []struct{ id, version string }{
+		{freshID, freshVersion},
+		{staleID, staleVersion},
+	} {
+		err := js.RegisterWorker(ctx, &workerv1.RegisterRequest{
+			WorkerId:       w.id,
+			InstanceId:     "instance-freshness",
+			SupportedTypes: []string{"demo.echo"},
+			Queues:         []string{"default"},
+			Capacity:       1,
+			Version:        w.version,
+		}, uuid.New().String())
+		if err != nil {
+			t.Fatalf("register %s: %v", w.id, err)
+		}
+	}
+	backdateWorkerHeartbeat(t, staleID, "2 hours")
+
+	counts, err := js.WorkerCounts(ctx, time.Hour)
+	if err != nil {
+		t.Fatalf("worker counts: %v", err)
+	}
+
+	var freshCount, staleCount int64
+	for _, c := range counts {
+		switch c.Version {
+		case freshVersion:
+			freshCount += c.Count
+		case staleVersion:
+			staleCount += c.Count
+		}
+	}
+	if freshCount != 1 {
+		t.Errorf("fresh worker must be counted, got %d", freshCount)
+	}
+	if staleCount != 0 {
+		t.Errorf("stale worker must be filtered out, got %d", staleCount)
+	}
+}
+
+// TestGatewayStaleWorkers verifies the operational query that surfaces
+// workers whose heartbeat is older than the threshold.
+func TestGatewayStaleWorkers(t *testing.T) {
+	js := setupStore(t)
+	ctx := context.Background()
+
+	freshID := "staleq-fresh-" + uuid.New().String()[:8]
+	staleID := "staleq-stale-" + uuid.New().String()[:8]
+	for _, id := range []string{freshID, staleID} {
+		err := js.RegisterWorker(ctx, &workerv1.RegisterRequest{
+			WorkerId:       id,
+			InstanceId:     "instance-staleq",
+			SupportedTypes: []string{"demo.echo"},
+			Queues:         []string{"default"},
+			Capacity:       1,
+			Version:        "1.0.0-staleq",
+		}, uuid.New().String())
+		if err != nil {
+			t.Fatalf("register %s: %v", id, err)
+		}
+	}
+	backdateWorkerHeartbeat(t, staleID, "2 hours")
+
+	stale, err := js.StaleWorkers(ctx, time.Hour)
+	if err != nil {
+		t.Fatalf("stale workers: %v", err)
+	}
+
+	var foundStale, foundFresh bool
+	for _, w := range stale {
+		switch w.WorkerID {
+		case staleID:
+			foundStale = true
+			if w.LastHeartbeatAt == nil {
+				t.Error("stale row must carry its last heartbeat timestamp")
+			}
+		case freshID:
+			foundFresh = true
+		}
+	}
+	if !foundStale {
+		t.Error("expected the backdated worker in the stale list")
+	}
+	if foundFresh {
+		t.Error("fresh worker must not appear in the stale list")
+	}
 }
