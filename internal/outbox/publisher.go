@@ -8,6 +8,11 @@
 // Recovery model: the publisher holds no in-memory progress. After a crash
 // it resumes purely from the outbox table (published_at IS NULL), so any
 // number of restarts is safe. Consumers must deduplicate by event_id.
+// Fetching is an atomic claim (claimed_at stamped in the same statement as
+// FOR UPDATE SKIP LOCKED), so concurrent publishers never pick up the same
+// event. Claims are released explicitly on publish failure and for events
+// left unprocessed at graceful shutdown; only a hard crash leaves the claim
+// stamped, and such claims become reclaimable after the claim TTL.
 package outbox
 
 import (
@@ -172,15 +177,33 @@ func (p *Publisher) publishRound(ctx context.Context) (hadWork, failed bool) {
 
 	for _, ev := range events {
 		if ctx.Err() != nil {
-			// Graceful shutdown: leave remaining events unpublished; the
-			// next publisher run resumes from the table.
-			return true, false
+			// Graceful shutdown: release the claims on every event not yet
+			// processed so a fresh publisher can pick them up immediately
+			// instead of waiting out the claim TTL.
+			p.releaseClaim(ctx, ev.EventID)
+			continue
 		}
 		if !p.publishOne(ctx, ev) {
 			failed = true
 		}
 	}
 	return true, failed
+}
+
+// releaseClaim drops the atomic claim so the event becomes immediately
+// reclaimable. Best-effort: a failure only delays recovery to the claim TTL.
+// Uses a background context: the caller's ctx may already be cancelled
+// (graceful shutdown) while the release itself is still worthwhile.
+func (p *Publisher) releaseClaim(ctx context.Context, eventID int64) {
+	if ctx.Err() != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+	}
+	if err := p.store.ResetClaim(ctx, eventID); err != nil {
+		p.logger.Warn("reset outbox claim failed",
+			"event_id", eventID, "error", err)
+	}
 }
 
 // publishOne publishes a single event and records the outcome. Returns true
@@ -200,6 +223,10 @@ func (p *Publisher) publishOne(ctx context.Context, ev *store.OutboxEvent) bool 
 		if markErr := p.store.MarkPublishFailed(ctx, ev.EventID); markErr != nil {
 			p.logger.Warn("mark publish failed", "event_id", ev.EventID, "error", markErr)
 		}
+		// Release the claim so the retry path (next rounds with backoff)
+		// stays available; without this the event would sit claimed until
+		// the claim TTL.
+		p.releaseClaim(ctx, ev.EventID)
 		p.logger.Warn("publish event failed",
 			"event_id", ev.EventID, "event_type", ev.EventType, "error", err)
 		return false
@@ -209,6 +236,8 @@ func (p *Publisher) publishOne(ctx context.Context, ev *store.OutboxEvent) bool 
 	if err != nil {
 		span.RecordError(err)
 		p.observeFailure(ev.EventType, "mark_error")
+		// Same reasoning as above: keep the event reclaimable on error.
+		p.releaseClaim(ctx, ev.EventID)
 		p.logger.Warn("mark published failed", "event_id", ev.EventID, "error", err)
 		return false
 	}
