@@ -393,7 +393,7 @@ func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
 		t.Fatalf("re-anchor run_at: %v", err)
 	}
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "outbox-at15",
+		Queues:   []string{"outbox-at15"},
 		WorkerID: "outbox-at15-worker",
 		MaxJobs:  1,
 		LeaseTTL: time.Minute,

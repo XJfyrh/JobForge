@@ -131,7 +131,7 @@ func TestSchedulerPromoteRetryWait(t *testing.T) {
 	// Create a ready job, claim it, then fail it (retryable) to get retry_wait.
 	job := createTestJob(t, js, "sched-retry", "demo.fail")
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "sched-retry",
+		Queues:   []string{"sched-retry"},
 		WorkerID: "worker-sched-retry",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -191,7 +191,7 @@ func TestSchedulerRecoverExpiredLease(t *testing.T) {
 	// Create and claim a job with a very short lease.
 	job := createTestJob(t, js, "sched-recover", "demo.echo")
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "sched-recover",
+		Queues:   []string{"sched-recover"},
 		WorkerID: "worker-dead",
 		MaxJobs:  1,
 		LeaseTTL: 1 * time.Millisecond, // expires almost immediately
@@ -249,7 +249,7 @@ func TestSchedulerRecoverCancellingExpired(t *testing.T) {
 	// Create, claim, then cancel a job (running → cancelling).
 	job := createTestJob(t, js, "sched-cancel-recover", "demo.echo")
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "sched-cancel-recover",
+		Queues:   []string{"sched-cancel-recover"},
 		WorkerID: "worker-cr",
 		MaxJobs:  1,
 		LeaseTTL: 1 * time.Millisecond,

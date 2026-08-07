@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -417,10 +418,16 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 	// Worker ID: prefer the JOBFORGE_WORKER_ID environment variable (set by
 	// deploy/compose.yaml for stable, identifiable worker-1/worker-2 labels
 	// in logs, metrics and the workers table); fall back to a random UUID.
+	// JOBFORGE_WORKER_QUEUE accepts a comma-separated queue list; declaration
+	// order is the queue priority for claims.
+	queues := parseQueues(getEnvDefault("JOBFORGE_WORKER_QUEUE", "default"))
+	if len(queues) == 0 {
+		return fmt.Errorf("JOBFORGE_WORKER_QUEUE must contain at least one non-empty queue name")
+	}
 	workerCfg := worker.RuntimeConfig{
 		WorkerID:          getEnvDefault("JOBFORGE_WORKER_ID", domain.NewID()),
 		InstanceID:        fmt.Sprintf("%s-%d", hostname(), os.Getpid()),
-		Queues:            []string{getEnvDefault("JOBFORGE_WORKER_QUEUE", "default")},
+		Queues:            queues,
 		Capacity:          5,
 		GatewayAddr:       gatewayAddr,
 		HeartbeatInterval: cfg.HeartbeatInterval,
@@ -624,4 +631,16 @@ func getEnvDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// parseQueues splits a comma-separated queue list, trimming whitespace and
+// dropping empty entries.
+func parseQueues(raw string) []string {
+	var queues []string
+	for _, q := range strings.Split(raw, ",") {
+		if q = strings.TrimSpace(q); q != "" {
+			queues = append(queues, q)
+		}
+	}
+	return queues
 }

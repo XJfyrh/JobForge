@@ -59,12 +59,18 @@ from jobs
 where id = $1 and tenant_id = $2
 `
 
-// claimSelect locks up to N ready jobs for a queue using SKIP LOCKED.
-// This prevents concurrent Workers from claiming the same job.
+// claimSelect locks up to N ready jobs from the declared queues using SKIP
+// LOCKED. This prevents concurrent Workers from claiming the same job.
+//
+// Queues are honored in declaration order: array_position sorts earlier-
+// declared queues first, then the usual priority/created_at ordering applies
+// within each queue. The partial index idx_jobs_claim (queue, priority desc,
+// created_at asc) WHERE state='ready' still serves the queue = any($1)
+// predicate via per-queue index scans; the declaration-order sort runs only
+// over the index-filtered candidates.
 //
 // Invariant: FOR UPDATE SKIP LOCKED ensures each row is locked by at most one
-// transaction. The partial index on (queue, state, run_at, priority DESC,
-// created_at) WHERE state='ready' supports this query efficiently.
+// transaction.
 const claimSelect = `
 select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
@@ -72,11 +78,11 @@ select id, tenant_id, queue, type, payload, priority, state,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
        created_at, updated_at
 from jobs
-where queue = $1
+where queue = any($1::text[])
   and state = 'ready'
   and run_at <= now()
   and ($2::text[] is null or type = any($2))
-order by priority desc, created_at asc
+order by array_position($1::text[], queue) asc, priority desc, created_at asc
 limit $3
 for update skip locked
 `

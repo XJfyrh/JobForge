@@ -68,7 +68,7 @@ func TestTraceAT12Propagation(t *testing.T) {
 
 	// 3. Claim the job and verify trace_id is returned.
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "trace-test",
+		Queues:   []string{"trace-test"},
 		WorkerID: "trace-worker",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -190,7 +190,7 @@ func TestTraceContextEndToEnd(t *testing.T) {
 
 	// 4. Claim returns the trace context to the Worker.
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "tctx-queue",
+		Queues:   []string{"tctx-queue"},
 		WorkerID: "tctx-worker",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,

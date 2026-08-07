@@ -209,8 +209,9 @@ func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) ([]*doma
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Select ready jobs with row-level locking.
-	rows, err := tx.Query(ctx, claimSelect, params.Queue, params.Types, params.MaxJobs)
+	// Select ready jobs with row-level locking. Queues are claimed in
+	// declaration order (see claimSelect).
+	rows, err := tx.Query(ctx, claimSelect, params.Queues, params.Types, params.MaxJobs)
 	if err != nil {
 		return nil, fmt.Errorf("claim select: %w", err)
 	}

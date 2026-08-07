@@ -50,7 +50,7 @@ func BenchmarkClaim(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    queue,
+			Queues:   []string{queue},
 			WorkerID: "bench-worker-single",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -80,7 +80,7 @@ func BenchmarkClaimBatch(b *testing.B) {
 
 			for i := 0; i < b.N; i++ {
 				_, err := js.Claim(ctx, store.ClaimParams{
-					Queue:    queue,
+					Queues:   []string{queue},
 					WorkerID: "bench-worker-batch",
 					MaxJobs:  batchSize,
 					LeaseTTL: 30 * time.Second,
@@ -109,7 +109,7 @@ func BenchmarkClaimParallel(b *testing.B) {
 		workerID := fmt.Sprintf("bench-worker-%s", uuid.New().String()[:8])
 		for pb.Next() {
 			_, err := js.Claim(ctx, store.ClaimParams{
-				Queue:    queue,
+				Queues:   []string{queue},
 				WorkerID: workerID,
 				MaxJobs:  1,
 				LeaseTTL: 30 * time.Second,
@@ -140,7 +140,7 @@ func BenchmarkClaimContention(b *testing.B) {
 		workerID := fmt.Sprintf("bench-worker-%s", uuid.New().String()[:8])
 		for pb.Next() {
 			jobs, err := js.Claim(ctx, store.ClaimParams{
-				Queue:    queue,
+				Queues:   []string{queue},
 				WorkerID: workerID,
 				MaxJobs:  1,
 				LeaseTTL: 30 * time.Second,

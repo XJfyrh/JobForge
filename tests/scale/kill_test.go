@@ -152,7 +152,7 @@ func TestScaleAT13WorkerKillRounds(t *testing.T) {
 
 		// 2. Worker A claims all jobs, then crashes before ACK.
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    queue,
+			Queues:   []string{queue},
 			WorkerID: fmt.Sprintf("killer-A-r%d", r),
 			MaxJobs:  jobsPerRound,
 			LeaseTTL: 30 * time.Second,
@@ -178,7 +178,7 @@ func TestScaleAT13WorkerKillRounds(t *testing.T) {
 
 		// 5. Worker B re-claims and completes every job.
 		reclaimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    queue,
+			Queues:   []string{queue},
 			WorkerID: fmt.Sprintf("recovery-B-r%d", r),
 			MaxJobs:  jobsPerRound,
 			LeaseTTL: 30 * time.Second,

@@ -37,7 +37,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 		job := createTestJob(t, js, "at11-complete", "demo.echo")
 
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "at11-complete",
+			Queues:   []string{"at11-complete"},
 			WorkerID: "worker-graceful",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -76,7 +76,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 		job := createTestJob(t, js, "at11-release", "demo.sleep")
 
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "at11-release",
+			Queues:   []string{"at11-release"},
 			WorkerID: "worker-timeout",
 			MaxJobs:  1,
 			LeaseTTL: 50 * time.Millisecond, // Short lease simulates grace period expiry
@@ -113,7 +113,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 
 		// Another worker can now claim and complete the job.
 		claimed2, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "at11-release",
+			Queues:   []string{"at11-release"},
 			WorkerID: "worker-replacement",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
@@ -141,7 +141,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 		// Worker A is shutting down (does not claim).
 		// Worker B (active) claims all available jobs.
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "at11-no-claim",
+			Queues:   []string{"at11-no-claim"},
 			WorkerID: "worker-active",
 			MaxJobs:  10,
 			LeaseTTL: 30 * time.Second,
@@ -175,7 +175,7 @@ func TestWorkerGoroutineStability(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		job := createTestJob(t, js, "goroutine-stability", "demo.echo")
 		claimed, err := js.Claim(ctx, store.ClaimParams{
-			Queue:    "goroutine-stability",
+			Queues:   []string{"goroutine-stability"},
 			WorkerID: "worker-stability",
 			MaxJobs:  1,
 			LeaseTTL: 30 * time.Second,
