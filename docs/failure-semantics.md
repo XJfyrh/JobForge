@@ -12,7 +12,7 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 
 | 故障类型 | 描述 | 检测机制 |
 |---|---|---|
-| Worker 崩溃 | Worker 进程异常终止（kill -9、OOM） | 心跳停止 → lease 过期 |
+| Worker 崩溃 | Worker 进程异常终止（kill -9、OOM） | 心跳停止 → lease 过期；`workers.last_heartbeat_at` 老化 → `jobforge_workers_active` 在 ~2×TTL 后不再计入该 worker（见[可观测性](observability.md)的 Worker 存活判定） |
 | 网络分区 | Worker 与 Gateway 之间网络中断 | 心跳指数退避重试；超过 lease 仍未续租成功 → lease 过期 |
 | Scheduler 宕机 | Scheduler 进程终止 | Advisory lock 释放 → follower 接管 |
 | PostgreSQL 短暂不可用 | 数据库连接中断 | 连接池重试；事务回滚 |
