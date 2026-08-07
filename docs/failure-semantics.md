@@ -13,7 +13,7 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | 故障类型 | 描述 | 检测机制 |
 |---|---|---|
 | Worker 崩溃 | Worker 进程异常终止（kill -9、OOM） | 心跳停止 → lease 过期 |
-| 网络分区 | Worker 与 Gateway 之间网络中断 | 心跳超时 → lease 过期 |
+| 网络分区 | Worker 与 Gateway 之间网络中断 | 心跳指数退避重试；超过 lease 仍未续租成功 → lease 过期 |
 | Scheduler 宕机 | Scheduler 进程终止 | Advisory lock 释放 → follower 接管 |
 | PostgreSQL 短暂不可用 | 数据库连接中断 | 连接池重试；事务回滚 |
 | 重复投递 | 相同任务被多次执行 | 幂等键 / fencing token |
@@ -72,6 +72,23 @@ WHERE id = $job_id
 
 若 WHERE 不匹配（旧 token、错误 owner、状态已变更），返回 `STALE_LEASE` 错误，不修改任何数据。
 
+## Worker 侧续租与结果上报韧性
+
+fencing token 只拦截陈旧的**结果提交**，无法阻止陈旧 Worker 继续**执行**。为缩小双执行窗口，Worker Runtime 在客户端实施以下策略：
+
+**心跳续租**：
+
+- 心跳瞬时失败（`Unavailable` / `DeadlineExceeded` / `Unknown` 等）**不**停止续租：按指数退避（1s/2s/4s…上限 10s）持续重试。
+- 租约截止时刻以 Gateway 返回的 `lease_until`（服务端时钟）为准，避免本地 TTL 估算的时钟漂移。
+- 仅当重试持续到 `lease_until` 仍无法续租时才放弃：取消执行上下文（让 Handler 收尾）并标记租约丢失，最小化双执行窗口。
+- 心跳被拒 `STALE_LEASE`（租约已被新 Worker 持有）时立即放弃，不做重试。
+
+**租约丢失后的结果处理**：租约丢失后 Worker **丢弃**执行结果，不上报 Complete/Fail——陈旧 Worker 不得覆盖新租约状态，任务由 Scheduler 正常重投。
+
+**结果上报**：Complete/Fail RPC 对瞬时故障最多重试 3 次（退避 1s/2s）；Gateway 对同一租约的重复上报幂等吸收（`isIdempotentComplete` / `isIdempotentFail`）。`STALE_LEASE` 等永久性错误不重试。
+
+**语义边界**：上述机制缩小但不能消除双执行窗口（lease 过期即可能重投），at-least-once 交付保证与业务幂等要求不变。
+
 ## 取消竞争规则
 
 Complete 与 Cancel 同时到达时，采用"事务先提交者生效"：
@@ -121,7 +138,7 @@ cancelling 状态下：
 
 | 文件 | 覆盖场景 |
 |---|---|
-| `tests/integration/fault_test.go` | AT-02, AT-03, AT-04 |
+| `tests/integration/fault_test.go` | AT-02, AT-03, AT-04；Gateway 抖动（TTL 内恢复）零重投、租约丢失取消执行并丢弃结果（`TestFaultGatewayBlipWithinTTLNoRedelivery`、`TestFaultLeaseLostCancelsExecutionAndDiscardsResult`） |
 | `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
 | `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock |
 | `tests/integration/tenant_test.go` | AT-10 |

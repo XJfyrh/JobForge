@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/xjfyrh/jobforge/internal/observability"
@@ -49,6 +52,14 @@ type RuntimeConfig struct {
 	Version string
 }
 
+const (
+	// reportAttempts bounds how many times a Complete/Fail RPC is attempted.
+	reportAttempts = 3
+
+	// reportAttemptTimeout bounds each individual reporting RPC attempt.
+	reportAttemptTimeout = 5 * time.Second
+)
+
 // Runtime manages the Worker lifecycle: register, poll, execute, heartbeat.
 type Runtime struct {
 	cfg      RuntimeConfig
@@ -62,6 +73,11 @@ type Runtime struct {
 	inflight int
 	wg       sync.WaitGroup
 	stopping bool
+
+	// Heartbeat retry tuning (unexported so tests can shrink them).
+	hbBackoffInitial     time.Duration
+	hbBackoffMax         time.Duration
+	reportBackoffInitial time.Duration
 }
 
 // NewRuntime creates a Worker Runtime with the given configuration and handlers.
@@ -79,10 +95,13 @@ func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger, metr
 		cfg.ShutdownGrace = 30 * time.Second
 	}
 	return &Runtime{
-		cfg:      cfg,
-		registry: registry,
-		logger:   logger,
-		metrics:  metrics,
+		cfg:                  cfg,
+		registry:             registry,
+		logger:               logger,
+		metrics:              metrics,
+		hbBackoffInitial:     1 * time.Second,
+		hbBackoffMax:         10 * time.Second,
+		reportBackoffInitial: 1 * time.Second,
 	}
 }
 
@@ -298,9 +317,10 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	defer execCancel()
 
 	// Start heartbeat goroutine.
+	var leaseLost atomic.Bool
 	hbCtx, hbCancel := context.WithCancel(ctx)
 	defer hbCancel()
-	go r.heartbeatLoop(hbCtx, job, execCancel)
+	go r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost)
 
 	// Execute handler.
 	start := time.Now()
@@ -309,6 +329,16 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 
 	// Stop heartbeat before reporting result.
 	hbCancel()
+
+	// If the heartbeat loop lost the lease, the job may already be
+	// redelivered to another Worker. Discard the result: a stale Worker must
+	// never overwrite state owned by a new lease; the scheduler redelivers.
+	if leaseLost.Load() {
+		span.SetStatus(otelcodes.Error, "lease lost during execution")
+		span.SetAttributes(attribute.Bool("lease_lost", true))
+		logger.Warn("lease lost during execution, discarding result", "duration_ms", durationMs)
+		return
+	}
 
 	if err != nil {
 		retryable := IsRetryable(err)
@@ -331,73 +361,174 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	r.reportComplete(ctx, job, resultRef, durationMs)
 }
 
-// heartbeatLoop sends periodic heartbeats and cancels execution on CANCEL signal.
-func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel context.CancelFunc) {
-	ticker := time.NewTicker(r.cfg.HeartbeatInterval)
-	defer ticker.Stop()
+// heartbeatLoop sends periodic heartbeats, retries transient failures with
+// exponential backoff, and cancels execution when the lease is lost.
+//
+// Transient errors (e.g. a Gateway restart or network jitter) do not stop
+// renewal: the loop keeps retrying until the lease deadline last reported by
+// the Gateway passes. Once the lease is lost (deadline exceeded or a
+// STALE_LEASE rejection), execution is cancelled and leaseLost is set so the
+// result is discarded — a stale Worker must not overwrite the new lease.
+func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel context.CancelFunc, leaseLost *atomic.Bool) {
+	// Track the lease deadline as reported by the Gateway (server clock),
+	// avoiding local TTL/clock drift estimates.
+	leaseUntil := job.LeaseUntil
+	if leaseUntil.IsZero() {
+		leaseUntil = time.Now().Add(3 * r.cfg.HeartbeatInterval)
+	}
+
+	wait := r.cfg.HeartbeatInterval
+	backoff := r.hbBackoffInitial
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			hbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			resp, err := r.client.Heartbeat(hbCtx, &workerv1.HeartbeatRequest{
-				JobId:        job.ID,
-				WorkerId:     r.cfg.WorkerID,
-				FencingToken: job.FencingToken,
-			})
-			cancel()
+		case <-time.After(wait):
+		}
 
-			if err != nil {
-				r.logger.Warn("heartbeat failed", "job_id", job.ID, "error", err)
-				return
+		hbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		resp, err := r.client.Heartbeat(hbCtx, &workerv1.HeartbeatRequest{
+			JobId:        job.ID,
+			WorkerId:     r.cfg.WorkerID,
+			FencingToken: job.FencingToken,
+		})
+		cancel()
+
+		if err == nil {
+			// Lease renewed: reset backoff and adopt the server's deadline.
+			backoff = r.hbBackoffInitial
+			if resp.LeaseUntil != nil {
+				leaseUntil = resp.LeaseUntil.AsTime()
 			}
-
 			if resp.Signal == workerv1.ControlSignal_CONTROL_SIGNAL_CANCEL {
 				r.logger.Info("cancel signal received", "job_id", job.ID)
 				execCancel()
 				return
 			}
+			wait = r.cfg.HeartbeatInterval
+			continue
 		}
+
+		// STALE_LEASE (or another precondition failure) means the lease is
+		// already gone: abandon execution immediately.
+		if status.Code(err) == codes.FailedPrecondition {
+			r.logger.Warn("heartbeat rejected, lease lost", "job_id", job.ID, "error", err)
+			r.abandonLease(job, execCancel, leaseLost)
+			return
+		}
+
+		r.logger.Warn("heartbeat failed, will retry", "job_id", job.ID, "error", err)
+
+		// Give up once the lease deadline has passed: the job may already be
+		// redelivered, so continuing only widens the double-execution window.
+		remaining := time.Until(leaseUntil)
+		if remaining <= 0 {
+			r.logger.Warn("lease expired during heartbeat retries", "job_id", job.ID)
+			r.abandonLease(job, execCancel, leaseLost)
+			return
+		}
+
+		wait = backoff
+		if remaining < wait {
+			wait = remaining
+		}
+		backoff = min(backoff*2, r.hbBackoffMax)
 	}
 }
 
-// reportComplete sends a Complete RPC to the Gateway.
-func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef string, durationMs int64) {
-	rpcCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	rpcCtx = withJobTraceParent(rpcCtx, job)
+// abandonLease marks the lease as lost and cancels job execution so the
+// handler winds down and the double-execution window is minimised.
+func (r *Runtime) abandonLease(job *ClaimedJob, execCancel context.CancelFunc, leaseLost *atomic.Bool) {
+	leaseLost.Store(true)
+	execCancel()
+	r.logger.Warn("lease lost, cancelling execution", "job_id", job.ID)
+}
 
-	_, err := r.client.Complete(rpcCtx, &workerv1.CompleteRequest{
-		JobId:        job.ID,
-		WorkerId:     r.cfg.WorkerID,
-		FencingToken: job.FencingToken,
-		ResultRef:    resultRef,
-		Duration:     durationpb.New(time.Duration(durationMs) * time.Millisecond),
+// reportComplete sends a Complete RPC to the Gateway, retrying transient
+// failures. The Gateway absorbs duplicate Completes for the same lease
+// (isIdempotentComplete), so retries are safe.
+func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef string, durationMs int64) {
+	ctx = withJobTraceParent(ctx, job)
+
+	err := r.retryRPC(ctx, "complete", func(attemptCtx context.Context) error {
+		_, rpcErr := r.client.Complete(attemptCtx, &workerv1.CompleteRequest{
+			JobId:        job.ID,
+			WorkerId:     r.cfg.WorkerID,
+			FencingToken: job.FencingToken,
+			ResultRef:    resultRef,
+			Duration:     durationpb.New(time.Duration(durationMs) * time.Millisecond),
+		})
+		return rpcErr
 	})
 	if err != nil {
 		r.logger.Error("complete rpc failed", "job_id", job.ID, "error", err)
 	}
 }
 
-// reportFail sends a Fail RPC to the Gateway.
+// reportFail sends a Fail RPC to the Gateway, retrying transient failures.
+// The Gateway absorbs duplicate Fails for the same lease (isIdempotentFail),
+// so retries are safe.
 func (r *Runtime) reportFail(ctx context.Context, job *ClaimedJob, errCode, errMsg string, retryable bool, durationMs int64) {
-	rpcCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	rpcCtx = withJobTraceParent(rpcCtx, job)
+	ctx = withJobTraceParent(ctx, job)
 
-	_, err := r.client.Fail(rpcCtx, &workerv1.FailRequest{
-		JobId:        job.ID,
-		WorkerId:     r.cfg.WorkerID,
-		FencingToken: job.FencingToken,
-		ErrorCode:    errCode,
-		ErrorMessage: errMsg,
-		Retryable:    retryable,
-		Duration:     durationpb.New(time.Duration(durationMs) * time.Millisecond),
+	err := r.retryRPC(ctx, "fail", func(attemptCtx context.Context) error {
+		_, rpcErr := r.client.Fail(attemptCtx, &workerv1.FailRequest{
+			JobId:        job.ID,
+			WorkerId:     r.cfg.WorkerID,
+			FencingToken: job.FencingToken,
+			ErrorCode:    errCode,
+			ErrorMessage: errMsg,
+			Retryable:    retryable,
+			Duration:     durationpb.New(time.Duration(durationMs) * time.Millisecond),
+		})
+		return rpcErr
 	})
 	if err != nil {
 		r.logger.Error("fail rpc failed", "job_id", job.ID, "error", err)
+	}
+}
+
+// retryRPC runs fn with up to reportAttempts attempts, retrying only
+// transient gRPC errors with exponential backoff. Permanent errors (e.g.
+// STALE_LEASE) are returned immediately: stale results must never overwrite
+// newer state.
+func (r *Runtime) retryRPC(ctx context.Context, rpcName string, fn func(attemptCtx context.Context) error) error {
+	backoff := r.reportBackoffInitial
+	var lastErr error
+	for attempt := 1; attempt <= reportAttempts; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		attemptCtx, cancel := context.WithTimeout(ctx, reportAttemptTimeout)
+		lastErr = fn(attemptCtx)
+		cancel()
+		if lastErr == nil {
+			return nil
+		}
+		if !isTransientRPCError(lastErr) || attempt == reportAttempts {
+			return lastErr
+		}
+		r.logger.Warn("rpc failed, retrying", "rpc", rpcName, "attempt", attempt, "error", lastErr)
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return lastErr
+		}
+		backoff *= 2
+	}
+	return lastErr
+}
+
+// isTransientRPCError reports whether a gRPC error is transient and safe to
+// retry. FailedPrecondition (STALE_LEASE / terminal state), NotFound and
+// InvalidArgument are permanent and must not be retried.
+func isTransientRPCError(err error) bool {
+	switch status.Code(err) {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.Unknown, codes.ResourceExhausted:
+		return true
+	default:
+		return false
 	}
 }
 
