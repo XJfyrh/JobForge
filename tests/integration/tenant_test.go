@@ -43,7 +43,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 
 	// 2. Tenant A claims 2 jobs (fills quota).
 	claimedA, err := js.Claim(ctx, store.ClaimParams{
-		Queue:             queueA,
+		Queues:            []string{queueA},
 		WorkerID:          "worker-A",
 		MaxJobs:           10,
 		LeaseTTL:          30 * time.Second,
@@ -61,7 +61,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 
 	// 3. Tenant A tries to claim more - should get 0 (quota full).
 	claimedAMore, err := js.Claim(ctx, store.ClaimParams{
-		Queue:             queueA,
+		Queues:            []string{queueA},
 		WorkerID:          "worker-A-2",
 		MaxJobs:           10,
 		LeaseTTL:          30 * time.Second,
@@ -83,7 +83,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 
 	// 5. Tenant B can claim (not affected by tenant A's quota).
 	claimedB, err := js.Claim(ctx, store.ClaimParams{
-		Queue:             queueA,
+		Queues:            []string{queueA},
 		WorkerID:          "worker-B",
 		MaxJobs:           10,
 		LeaseTTL:          30 * time.Second,
@@ -134,7 +134,7 @@ func TestTenantQuotaRelease(t *testing.T) {
 
 	// Claim 1 job (fills quota).
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:             queue,
+		Queues:            []string{queue},
 		WorkerID:          "worker-1",
 		MaxJobs:           10,
 		LeaseTTL:          30 * time.Second,
@@ -155,7 +155,7 @@ func TestTenantQuotaRelease(t *testing.T) {
 
 	// Now the second job can be claimed.
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:             queue,
+		Queues:            []string{queue},
 		WorkerID:          "worker-2",
 		MaxJobs:           10,
 		LeaseTTL:          30 * time.Second,

@@ -125,7 +125,7 @@ func main() {
 
 				// Claim one job.
 				claimed, err := js.Claim(ctx, store.ClaimParams{
-					Queue:    queue,
+					Queues:   []string{queue},
 					WorkerID: wid,
 					MaxJobs:  1,
 					LeaseTTL: 30 * time.Second,

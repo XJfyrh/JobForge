@@ -76,7 +76,7 @@ func TestObservabilityAT12FullSpans(t *testing.T) {
 	claimSpan.SetAttributes(attribute.String("worker_id", "obs-worker"))
 
 	claimed, err := js.Claim(claimCtx, store.ClaimParams{
-		Queue:    "obs-queue",
+		Queues:   []string{"obs-queue"},
 		WorkerID: "obs-worker",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,

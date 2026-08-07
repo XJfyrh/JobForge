@@ -56,7 +56,7 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 
 	// 2. Worker A claims the job.
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at02",
+		Queues:   []string{"fault-at02"},
 		WorkerID: "worker-A-crash",
 		MaxJobs:  1,
 		LeaseTTL: 50 * time.Millisecond, // Short lease: will expire quickly
@@ -110,7 +110,7 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 
 	// 7. Worker B claims the re-delivered job.
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at02",
+		Queues:   []string{"fault-at02"},
 		WorkerID: "worker-B-recovery",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -172,7 +172,7 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 	job := createTestJob(t, js, "fault-at04", "demo.sleep")
 
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at04",
+		Queues:   []string{"fault-at04"},
 		WorkerID: "worker-isolated",
 		MaxJobs:  1,
 		LeaseTTL: 100 * time.Millisecond, // Short lease for testing
@@ -229,7 +229,7 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 
 	// 7. New Worker claims the recovered job.
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at04",
+		Queues:   []string{"fault-at04"},
 		WorkerID: "worker-new",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,
@@ -273,7 +273,7 @@ func TestFaultAT03StaleWorkerLateComplete(t *testing.T) {
 	// 1. Create and claim with very short lease.
 	job := createTestJob(t, js, "fault-at03", "demo.echo")
 	claimed, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at03",
+		Queues:   []string{"fault-at03"},
 		WorkerID: "worker-slow",
 		MaxJobs:  1,
 		LeaseTTL: 1 * time.Millisecond,
@@ -299,7 +299,7 @@ func TestFaultAT03StaleWorkerLateComplete(t *testing.T) {
 
 	// 4. New Worker claims.
 	claimed2, err := js.Claim(ctx, store.ClaimParams{
-		Queue:    "fault-at03",
+		Queues:   []string{"fault-at03"},
 		WorkerID: "worker-fast",
 		MaxJobs:  1,
 		LeaseTTL: 30 * time.Second,

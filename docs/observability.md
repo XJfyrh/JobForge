@@ -59,7 +59,7 @@
 | `jobforge_job_attempts_total` | Counter | queue, type, outcome |
 | `jobforge_queue_depth` | Gauge | tenant, queue, state |
 | `jobforge_job_latency_seconds` | Histogram | queue, type, outcome |
-| `jobforge_claim_duration_seconds` | Histogram | queue |
+| `jobforge_claim_duration_seconds` | Histogram | —（单次 Poll 可能跨多个声明队列领取，无单一 queue 标签） |
 | `jobforge_retries_total` | Counter | queue, error_code |
 | `jobforge_dlq_total` | Counter | queue, type |
 | `jobforge_lease_expired_total` | Counter | queue |

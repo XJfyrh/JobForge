@@ -72,7 +72,10 @@ type JobStore interface {
 
 // ClaimParams holds the parameters for a claim operation.
 type ClaimParams struct {
-	Queue    string
+	// Queues lists the queues to claim from, in priority order: jobs from
+	// earlier-declared queues are claimed before later ones, and within a
+	// queue the usual priority/created_at ordering applies.
+	Queues   []string
 	WorkerID string
 	Types    []string
 	MaxJobs  int

@@ -90,6 +90,10 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 	if req.Capacity <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "capacity must be positive")
 	}
+	if len(req.Queues) == 0 {
+		// Fail loud: a worker without queues could register but never claim.
+		return nil, status.Error(codes.InvalidArgument, "queues must not be empty")
+	}
 
 	sessionID := domain.NewID()
 	if err := svc.store.RegisterWorker(ctx, req, sessionID); err != nil {
@@ -138,14 +142,19 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		maxJobs = int(req.AvailableCapacity)
 	}
 
-	// Determine queue: use first registered queue or request queue.
-	queue := ""
-	if len(req.Queues) > 0 {
-		queue = req.Queues[0]
+	// Fail loud on missing or malformed queues instead of silently claiming
+	// nothing: every declared queue participates in the claim.
+	if len(req.Queues) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "queues must not be empty")
+	}
+	for _, q := range req.Queues {
+		if q == "" {
+			return nil, status.Error(codes.InvalidArgument, "queues must not contain empty entries")
+		}
 	}
 
 	claimParams := store.ClaimParams{
-		Queue:             queue,
+		Queues:            req.Queues,
 		WorkerID:          req.WorkerId,
 		Types:             req.Types,
 		MaxJobs:           maxJobs,
@@ -179,11 +188,11 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		}
 	}
 
-	// Record claim duration metric (PRD 12.1).
+	// Record claim duration metric (PRD 12.1). No queue attribute: a single
+	// Poll may claim across several declared queues.
 	claimDuration := time.Since(start).Seconds()
 	if svc.metrics != nil {
-		svc.metrics.ClaimDurationSeconds.Record(ctx, claimDuration,
-			metric.WithAttributes(attribute.String("queue", queue)))
+		svc.metrics.ClaimDurationSeconds.Record(ctx, claimDuration)
 	}
 
 	span.SetAttributes(attribute.Int("jobs.claimed", len(jobs)))
