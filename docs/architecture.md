@@ -114,6 +114,15 @@ stateDiagram-v2
 - Heartbeat/Complete/Fail 必须匹配 job_id + lease_owner + fencing_token + 允许的当前状态。
 - Complete 与 Cancel 竞争采用"事务先提交者生效"规则。
 
+### 多队列领取语义
+
+Worker 在 Register/Poll 中声明队列列表，Poll 对**全部**声明队列参与领取（`queue = any($queues)`）：
+
+- **队列间**按声明顺序优先——先声明的队列先被领空，再轮到后续队列；
+- **队列内**保持 `priority DESC, created_at ASC`；
+- Poll/Register 对空队列列表（或含空串）返回 `INVALID_ARGUMENT`，不做静默忽略；
+- `idx_jobs_claim` 部分索引逐队列命中，SKIP LOCKED 与单队列语义一致。
+
 ## 部署拓扑
 
 JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
