@@ -151,3 +151,15 @@ type WorkerCountRow struct {
 	Status  string
 	Count   int64
 }
+
+// WorkerRow is one registered worker as surfaced by operational queries
+// (stale worker detection). LastHeartbeatAt is nil for rows that never
+// reported liveness.
+type WorkerRow struct {
+	WorkerID        string
+	InstanceID      string
+	Version         string
+	Status          string
+	LastHeartbeatAt *time.Time
+	RegisteredAt    time.Time
+}

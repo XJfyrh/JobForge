@@ -85,8 +85,27 @@
 | 指标 | 发射位置 | 触发时机 |
 |---|---|---|
 | `jobforge_queue_depth` | Scheduler `scanCycle` | 每次扫描周期按 (tenant, queue, state) 采样 pending 任务数 |
-| `jobforge_workers_active` | Gateway `Register` | Worker 注册/刷新后按 (version, status) 采样注册表 |
+| `jobforge_workers_active` | Gateway `Register` + 周期采样器 | Worker 注册后即时采样；Gateway 后台每 `max(LeaseTTL/2, 5s)` 周期采样，仅统计心跳新鲜的 worker（见下节） |
 | `jobforge_outbox_pending` | Publisher `Run` | 每轮发布结束后采样未发布事件数 |
+
+### Worker 存活判定与 workers_active 语义
+
+`workers.last_heartbeat_at` 是唯一的 worker 存活信号，由 Gateway 在两类 RPC 入口刷新（best-effort，失败不影响 RPC 结果）：
+
+- **Heartbeat**：运行中任务按 job 心跳触达；
+- **Poll**：空闲 worker 不发 job 心跳，只通过长轮询触达 Gateway，因此 Poll 同样刷新存活时间。
+
+写放大由 **SQL 层条件节流**控制：仅当 `last_heartbeat_at` 缺失或早于 `LeaseTTL/3`（默认 10s）前才写，与 RPC 频率无关。
+
+`jobforge_workers_active` 只统计 `last_heartbeat_at > now() - 2×LeaseTTL` 的 worker：
+
+| 语义 | 说明 |
+|---|---|
+| 新鲜度窗口 2×LeaseTTL | 容忍一次触达失败（空闲 worker 触达间隔上界为 PollTimeout = 1×TTL） |
+| 下降延迟上界 ~2.5×TTL | worker 崩溃后，最坏经过 2×TTL 心跳老化 + TTL/2 采样周期，gauge 归零 |
+| 归零机制 | 周期采样器对上一轮存在、本轮消失的 (version, status) 序列显式记录 0 |
+
+运维查询：`jobforge ctl workers-status`（只读直连数据库）列出全部注册 worker 的心跳时间与 stale 标记，`--stale-after` 默认 `3×LeaseTTL`（可覆盖）；gauge 新鲜度窗口（2×TTL）与该默认值是不同口径，前者服务监控降噪，后者服务运维巡检。
 
 ## pprof 诊断
 

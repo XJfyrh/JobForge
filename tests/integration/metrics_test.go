@@ -150,7 +150,7 @@ func TestGatewayRegisterEmitsWorkersActive(t *testing.T) {
 	}
 
 	// Sanity: the sampling source sees the registered worker.
-	counts, err := js.WorkerCounts(ctx)
+	counts, err := js.WorkerCounts(ctx, time.Minute)
 	if err != nil {
 		t.Fatalf("worker counts: %v", err)
 	}
@@ -164,4 +164,78 @@ func TestGatewayRegisterEmitsWorkersActive(t *testing.T) {
 	if !found {
 		t.Errorf("WorkerCounts did not include the registered worker: %+v", counts)
 	}
+}
+
+// TestWorkersActiveGaugeDecaysToZero verifies the gauge decays after a
+// worker's heartbeat goes stale: the freshness filter drops the worker and
+// the sampler explicitly records 0 for the vanished (version, status)
+// series, so workers_active reaches zero without another Register.
+func TestWorkersActiveGaugeDecaysToZero(t *testing.T) {
+	ctx := context.Background()
+
+	reg := prometheus.NewRegistry()
+	metrics, shutdown, err := observability.SetupMetrics(ctx, reg)
+	if err != nil {
+		t.Fatalf("setup metrics: %v", err)
+	}
+	defer func() { _ = shutdown(ctx) }()
+
+	js := setupStore(t)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, logger, metrics)
+
+	version := "7.7.7-decay-" + uuid.New().String()[:8]
+	workerID := "decay-worker-" + uuid.New().String()[:8]
+	_, err = svc.Register(ctx, &workerv1.RegisterRequest{
+		WorkerId:       workerID,
+		InstanceId:     "instance-decay",
+		SupportedTypes: []string{"demo.echo"},
+		Queues:         []string{"default"},
+		Capacity:       1,
+		Version:        version,
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if got := workersActiveValue(t, reg, version); *got != 1 {
+		t.Fatalf("expected gauge 1 after register, got %v", *got)
+	}
+
+	// Simulate a crash: age the heartbeat beyond the freshness window
+	// (2x lease TTL). Uses the PostgreSQL clock to avoid host drift.
+	if _, err := testEnv.pool.Exec(ctx,
+		`update workers set last_heartbeat_at = now() - interval '5 minutes' where worker_id = $1`,
+		workerID); err != nil {
+		t.Fatalf("backdate heartbeat: %v", err)
+	}
+
+	// The periodic sampler must drive the series to zero.
+	svc.SampleWorkerCounts(ctx)
+	if got := workersActiveValue(t, reg, version); *got != 0 {
+		t.Fatalf("expected gauge 0 after heartbeat went stale, got %v", *got)
+	}
+}
+
+// workersActiveValue returns the jobforge_workers_active gauge value for the
+// given version label, or fails the test if the series is missing.
+func workersActiveValue(t *testing.T, reg *prometheus.Registry, version string) *float64 {
+	t.Helper()
+	families, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("gather metrics: %v", err)
+	}
+	for _, mf := range families {
+		if mf.GetName() != "jobforge_workers_active" {
+			continue
+		}
+		for _, m := range mf.GetMetric() {
+			for _, lp := range m.GetLabel() {
+				if lp.GetName() == "version" && lp.GetValue() == version {
+					return m.GetGauge().Value
+				}
+			}
+		}
+	}
+	t.Fatalf("jobforge_workers_active series for version %s not found", version)
+	return nil
 }

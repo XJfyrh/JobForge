@@ -303,6 +303,26 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.TenantMaxInflight, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
+	// Periodically sample jobforge_workers_active so the gauge decays when
+	// workers crash: the freshness filter drops stale heartbeats and vanished
+	// groups are recorded as 0.
+	sampleInterval := cfg.LeaseTTL / 2
+	if sampleInterval < 5*time.Second {
+		sampleInterval = 5 * time.Second
+	}
+	go func() {
+		ticker := time.NewTicker(sampleInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				service.SampleWorkerCounts(ctx)
+			}
+		}
+	}()
+
 	// Run gateway until context cancelled.
 	errCh := make(chan error, 1)
 	go func() {
@@ -433,12 +453,12 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 
 // runCtl executes the operational CLI client (PRD v0.2 FR-620/621). It is a
 // pure client of the existing HTTP API: list/get/cancel/retry use Bearer API
-// key auth; outbox-status performs a read-only database query. The API key
-// is never logged (NFR-205).
+// key auth; outbox-status and workers-status perform read-only database
+// queries. The API key is never logged (NFR-205).
 func runCtl(ctx context.Context, cfg *config.Config) error {
 	args := os.Args[2:]
 	if len(args) == 0 {
-		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status> [flags] (outbox status also accepted)")
+		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status|workers-status> [flags] (outbox status also accepted)")
 	}
 	command := args[0]
 	rest := args[1:]
@@ -461,6 +481,9 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 	jobType := fs.String("type", "", "list filter: job type")
 	limit := fs.Int("limit", 20, "list page size")
 	cursor := fs.String("cursor", "", "list pagination cursor")
+	// workers-status staleness threshold.
+	staleAfter := fs.Duration("stale-after", 3*cfg.LeaseTTL,
+		"workers-status: mark workers stale when their last heartbeat is older than this")
 
 	if err := fs.Parse(rest); err != nil {
 		return err
@@ -480,6 +503,15 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 			return err
 		}
 		return ctl.RenderOutboxStatus(out, *output, status)
+
+	case "workers-status":
+		// Read-only worker registry query; needs database credentials,
+		// not the HTTP API.
+		workers, err := ctl.QueryWorkers(ctx, cfg.DatabaseURL, *staleAfter)
+		if err != nil {
+			return err
+		}
+		return ctl.RenderWorkers(out, *output, workers, *staleAfter)
 	}
 
 	// All remaining commands talk to the HTTP control plane.
@@ -537,7 +569,7 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 		return ctl.RenderSubmitResult(out, *output, "retry", res)
 
 	default:
-		return fmt.Errorf("unknown ctl command: %s (expected list|get|cancel|retry|outbox-status)", command)
+		return fmt.Errorf("unknown ctl command: %s (expected list|get|cancel|retry|outbox-status|workers-status)", command)
 	}
 }
 

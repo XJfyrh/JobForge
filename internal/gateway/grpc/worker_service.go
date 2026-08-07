@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -34,9 +35,13 @@ type WorkerStore interface {
 	// GetJobRunAt returns the run_at timestamp of a job (for next_retry_at).
 	GetJobRunAt(ctx context.Context, jobID string) (*time.Time, error)
 
-	// WorkerCounts samples registered workers per (version, status) for the
-	// jobforge_workers_active gauge (PRD 12.1).
-	WorkerCounts(ctx context.Context) ([]store.WorkerCountRow, error)
+	// WorkerCounts samples workers with a heartbeat fresher than freshWithin
+	// per (version, status) for the jobforge_workers_active gauge (PRD 12.1).
+	WorkerCounts(ctx context.Context, freshWithin time.Duration) ([]store.WorkerCountRow, error)
+
+	// RefreshWorkerHeartbeat advances the worker's liveness timestamp,
+	// writing at most once per minInterval (SQL-layer throttling).
+	RefreshWorkerHeartbeat(ctx context.Context, workerID string, minInterval time.Duration) error
 }
 
 // PollWaiter provides notification-based wakeup for Poll long-polling.
@@ -57,6 +62,11 @@ type WorkerService struct {
 	// tenantMaxInflight limits how many running jobs a tenant may have.
 	// Claim skips jobs of tenants at their quota (FR-302). <= 0 disables it.
 	tenantMaxInflight int
+
+	// gaugeMu guards prevGaugeKeys, used to zero out workers_active series
+	// whose (version, status) group disappeared since the previous sample.
+	gaugeMu      sync.Mutex
+	prevGaugeKey map[workerCountKey]struct{}
 }
 
 // NewWorkerService creates a WorkerService. tenantMaxInflight is the per-tenant
@@ -87,17 +97,7 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 	}
 
 	// Emit the jobforge_workers_active gauge (PRD 12.1). Best-effort.
-	if svc.metrics != nil {
-		if counts, err := svc.store.WorkerCounts(ctx); err == nil {
-			for _, c := range counts {
-				svc.metrics.WorkersActive.Record(ctx, c.Count,
-					metric.WithAttributes(
-						attribute.String("version", c.Version),
-						attribute.String("status", c.Status),
-					))
-			}
-		}
-	}
+	svc.SampleWorkerCounts(ctx)
 
 	svc.logger.Info("worker registered",
 		"worker_id", req.WorkerId,
@@ -117,6 +117,10 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 	if req.WorkerId == "" {
 		return nil, status.Error(codes.InvalidArgument, "worker_id is required")
 	}
+
+	// Idle workers only reach the Gateway through Poll, so every Poll also
+	// serves as a worker liveness signal (best-effort, throttled in SQL).
+	svc.refreshWorkerLiveness(ctx, req.WorkerId)
 
 	// gateway.claim_jobs span (PRD 12.2).
 	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.claim_jobs")
@@ -199,6 +203,10 @@ func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.Heartbeat
 	if err != nil {
 		return nil, mapError(err)
 	}
+
+	// A successful job heartbeat also proves the worker process is alive
+	// (best-effort, throttled in SQL).
+	svc.refreshWorkerLiveness(ctx, req.WorkerId)
 
 	// Check if the job has a pending cancel request.
 	signal := workerv1.ControlSignal_CONTROL_SIGNAL_CONTINUE
@@ -326,6 +334,79 @@ func (svc *WorkerService) Fail(ctx context.Context, req *workerv1.FailRequest) (
 		}
 	}
 	return resp, nil
+}
+
+// refreshWorkerLiveness advances workers.last_heartbeat_at at most once per
+// throttle interval. Failures never affect the RPC outcome: liveness is an
+// observability signal, not part of the lease contract.
+func (svc *WorkerService) refreshWorkerLiveness(ctx context.Context, workerID string) {
+	if err := svc.store.RefreshWorkerHeartbeat(ctx, workerID, svc.livenessRefreshInterval()); err != nil {
+		svc.logger.Debug("refresh worker heartbeat failed", "worker_id", workerID, "error", err)
+	}
+}
+
+// livenessRefreshInterval is the SQL-layer throttle for worker liveness
+// writes: one third of the lease TTL (10s at the 30s default), matching the
+// suggested worker heartbeat cadence.
+func (svc *WorkerService) livenessRefreshInterval() time.Duration {
+	if svc.leaseTTL/3 > 0 {
+		return svc.leaseTTL / 3
+	}
+	return time.Second
+}
+
+// workerFreshness is the window within which a worker's last heartbeat is
+// considered live for the jobforge_workers_active gauge: twice the lease
+// TTL, tolerating one missed touch (idle workers reach the Gateway at most
+// once per Poll timeout).
+func (svc *WorkerService) workerFreshness() time.Duration {
+	return 2 * svc.leaseTTL
+}
+
+// workerCountKey identifies one workers_active gauge time series.
+type workerCountKey struct {
+	version string
+	status  string
+}
+
+// SampleWorkerCounts records the jobforge_workers_active gauge from the
+// current freshness-filtered worker counts (PRD 12.1). Groups present in
+// the previous sample but absent now are explicitly recorded as 0 so the
+// gauge decays to zero after workers crash or drain away. Best-effort.
+func (svc *WorkerService) SampleWorkerCounts(ctx context.Context) {
+	if svc.metrics == nil {
+		return
+	}
+	counts, err := svc.store.WorkerCounts(ctx, svc.workerFreshness())
+	if err != nil {
+		return
+	}
+
+	current := make(map[workerCountKey]struct{}, len(counts))
+	for _, c := range counts {
+		svc.metrics.WorkersActive.Record(ctx, c.Count,
+			metric.WithAttributes(
+				attribute.String("version", c.Version),
+				attribute.String("status", c.Status),
+			))
+		current[workerCountKey{version: c.Version, status: c.Status}] = struct{}{}
+	}
+
+	svc.gaugeMu.Lock()
+	prev := svc.prevGaugeKey
+	svc.prevGaugeKey = current
+	svc.gaugeMu.Unlock()
+
+	for key := range prev {
+		if _, ok := current[key]; ok {
+			continue
+		}
+		svc.metrics.WorkersActive.Record(ctx, 0,
+			metric.WithAttributes(
+				attribute.String("version", key.version),
+				attribute.String("status", key.status),
+			))
+	}
 }
 
 // isIdempotentComplete checks if a Complete error is due to the job already

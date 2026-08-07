@@ -15,6 +15,7 @@ import (
 	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/store"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
+	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
 // These tests verify the jobforge ctl operational CLI (PRD v0.2 FR-620/621,
@@ -308,5 +309,63 @@ func TestCtlOutboxStatus(t *testing.T) {
 	}
 	if after.OldestUnpublished == nil {
 		t.Fatal("expected oldest_unpublished to be set")
+	}
+}
+
+// TestCtlWorkersStatus verifies the workers-status operational query: every
+// registered worker is listed with a staleness flag derived from the
+// supplied threshold (fresh registration vs backdated heartbeat).
+func TestCtlWorkersStatus(t *testing.T) {
+	ctx := context.Background()
+	js := setupStore(t)
+
+	freshID := "ctl-ws-fresh-" + uuid.New().String()[:8]
+	staleID := "ctl-ws-stale-" + uuid.New().String()[:8]
+	for _, id := range []string{freshID, staleID} {
+		err := js.RegisterWorker(ctx, &workerv1.RegisterRequest{
+			WorkerId:       id,
+			InstanceId:     "instance-ctl-ws",
+			SupportedTypes: []string{"demo.echo"},
+			Queues:         []string{"default"},
+			Capacity:       1,
+			Version:        "1.0.0-ctl-ws",
+		}, uuid.New().String())
+		if err != nil {
+			t.Fatalf("register %s: %v", id, err)
+		}
+	}
+	// Age one worker beyond the threshold (PostgreSQL clock, drift-safe).
+	if _, err := testEnv.pool.Exec(ctx,
+		`update workers set last_heartbeat_at = now() - interval '2 hours' where worker_id = $1`,
+		staleID); err != nil {
+		t.Fatalf("backdate heartbeat: %v", err)
+	}
+
+	workers, err := ctl.QueryWorkers(ctx, testEnv.dsn, time.Hour)
+	if err != nil {
+		t.Fatalf("query workers: %v", err)
+	}
+
+	var freshSeen, staleSeen bool
+	for _, w := range workers {
+		switch w.WorkerID {
+		case freshID:
+			freshSeen = true
+			if w.Stale {
+				t.Error("freshly registered worker must not be flagged stale")
+			}
+		case staleID:
+			staleSeen = true
+			if !w.Stale {
+				t.Error("backdated worker must be flagged stale")
+			}
+			if w.LastHeartbeatAt == nil {
+				t.Error("stale worker must carry its last heartbeat timestamp")
+			}
+		}
+	}
+	if !freshSeen || !staleSeen {
+		t.Fatalf("expected both workers in the registry listing (fresh=%v stale=%v)",
+			freshSeen, staleSeen)
 	}
 }

@@ -34,12 +34,37 @@ const getJobRunAt = `
 select run_at from jobs where id = $1
 `
 
-// workerCounts samples registered workers per (version, status) for the
-// jobforge_workers_active gauge (PRD 12.1).
+// workerCounts samples workers with a fresh liveness timestamp per
+// (version, status) for the jobforge_workers_active gauge (PRD 12.1).
+// Workers whose last heartbeat is older than the freshness window (or that
+// never reported one) are not counted, so the gauge decays when workers
+// crash instead of staying inflated forever.
 const workerCounts = `
 select coalesce(version, ''), status, count(*)
 from workers
+where last_heartbeat_at is not null
+  and last_heartbeat_at > now() - $1::interval
 group by version, status
+`
+
+// refreshWorkerHeartbeat advances the worker's liveness timestamp, throttled
+// at the SQL layer: the row is only written when the stored timestamp is
+// missing or at least minInterval old. This keeps write amplification
+// bounded regardless of how many Poll/Heartbeat RPCs arrive.
+const refreshWorkerHeartbeat = `
+update workers
+set last_heartbeat_at = now()
+where worker_id = $1
+  and (last_heartbeat_at is null or last_heartbeat_at < now() - $2::interval)
+`
+
+// staleWorkers lists workers whose liveness timestamp is missing or older
+// than the given threshold, oldest first (operational query).
+const staleWorkers = `
+select worker_id, instance_id, coalesce(version, ''), status, last_heartbeat_at, registered_at
+from workers
+where last_heartbeat_at is null or last_heartbeat_at < now() - $1::interval
+order by last_heartbeat_at asc nulls first
 `
 
 // RegisterWorker upserts a worker registration record.
@@ -79,10 +104,12 @@ func (s *JobStore) GetJobRunAt(ctx context.Context, jobID string) (*time.Time, e
 	return &runAt, nil
 }
 
-// WorkerCounts samples registered workers per (version, status) so the
-// Gateway can emit the jobforge_workers_active gauge (PRD 12.1).
-func (s *JobStore) WorkerCounts(ctx context.Context) ([]store.WorkerCountRow, error) {
-	rows, err := s.pool.Query(ctx, workerCounts)
+// WorkerCounts samples workers with a heartbeat fresher than freshWithin
+// per (version, status) so the Gateway can emit the jobforge_workers_active
+// gauge (PRD 12.1). Crashed workers drop out once their heartbeat ages past
+// the window.
+func (s *JobStore) WorkerCounts(ctx context.Context, freshWithin time.Duration) ([]store.WorkerCountRow, error) {
+	rows, err := s.pool.Query(ctx, workerCounts, freshWithin.String())
 	if err != nil {
 		return nil, fmt.Errorf("worker counts: %w", err)
 	}
@@ -97,6 +124,37 @@ func (s *JobStore) WorkerCounts(ctx context.Context) ([]store.WorkerCountRow, er
 		}
 		if status != nil {
 			r.Status = *status
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
+}
+
+// RefreshWorkerHeartbeat advances the worker's liveness timestamp, writing
+// at most once per minInterval (throttled by the UPDATE condition).
+func (s *JobStore) RefreshWorkerHeartbeat(ctx context.Context, workerID string, minInterval time.Duration) error {
+	_, err := s.pool.Exec(ctx, refreshWorkerHeartbeat, workerID, minInterval.String())
+	if err != nil {
+		return fmt.Errorf("refresh worker heartbeat %s: %w", workerID, err)
+	}
+	return nil
+}
+
+// StaleWorkers lists workers whose liveness timestamp is missing or older
+// than olderThan, oldest first.
+func (s *JobStore) StaleWorkers(ctx context.Context, olderThan time.Duration) ([]store.WorkerRow, error) {
+	rows, err := s.pool.Query(ctx, staleWorkers, olderThan.String())
+	if err != nil {
+		return nil, fmt.Errorf("stale workers: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.WorkerRow
+	for rows.Next() {
+		var r store.WorkerRow
+		if err := rows.Scan(&r.WorkerID, &r.InstanceID, &r.Version, &r.Status,
+			&r.LastHeartbeatAt, &r.RegisteredAt); err != nil {
+			return nil, fmt.Errorf("scan worker row: %w", err)
 		}
 		result = append(result, r)
 	}
