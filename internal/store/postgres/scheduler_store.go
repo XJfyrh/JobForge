@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,10 +15,16 @@ import (
 
 // SchedulerStore implements the scheduler.Store interface using PostgreSQL.
 // It uses a dedicated connection for the advisory lock (session-level locks
-// are tied to the connection, not the transaction).
+// are tied to the connection, not the transaction). Leadership itself is
+// tracked in the scheduler_leadership lease row (ADR-0005): the advisory lock
+// is only the fast-path mutual exclusion, the row is the source of truth.
 type SchedulerStore struct {
 	pool     *pgxpool.Pool
 	lockConn *pgx.Conn // dedicated connection for advisory lock
+
+	// heldAdvisory records whether this store currently holds the advisory
+	// lock, so ReleaseLeadership only unlocks what it acquired.
+	heldAdvisory bool
 }
 
 // NewSchedulerStore creates a SchedulerStore. The lockConn is a dedicated
@@ -26,23 +34,97 @@ func NewSchedulerStore(pool *pgxpool.Pool, lockConn *pgx.Conn) *SchedulerStore {
 	return &SchedulerStore{pool: pool, lockConn: lockConn}
 }
 
-// TryAcquireLock attempts to acquire the scheduler advisory lock on the
-// dedicated connection. Returns true if this instance is now the leader.
-func (s *SchedulerStore) TryAcquireLock(ctx context.Context) (bool, error) {
-	var acquired bool
-	err := s.lockConn.QueryRow(ctx, tryAdvisoryLock, schedulerAdvisoryLockID).Scan(&acquired)
+// TryBecomeLeader attempts to make instanceID the scheduler leader
+// (ADR-0005). Two paths:
+//  1. The advisory lock try succeeds: the previous holder is necessarily
+//     gone (session-level locks die with their connection), so the lease
+//     row is taken over unconditionally — this keeps the NFR-004 fast path
+//     (process termination → immediate takeover).
+//  2. The advisory lock is held by someone else: the holder may be a stuck
+//     leader whose scan loop no longer runs. The lease row is claimed only
+//     when unowned or stale (last_seen older than staleAfter).
+//
+// Returns the new epoch and acquired=true on success.
+func (s *SchedulerStore) TryBecomeLeader(ctx context.Context, instanceID string, staleAfter time.Duration) (int64, bool, error) {
+	var lockAcquired bool
+	err := s.lockConn.QueryRow(ctx, tryAdvisoryLock, schedulerAdvisoryLockID).Scan(&lockAcquired)
 	if err != nil {
-		return false, fmt.Errorf("try advisory lock: %w", err)
+		return 0, false, fmt.Errorf("try advisory lock: %w", err)
 	}
-	return acquired, nil
+
+	if lockAcquired {
+		epoch, err := s.claimLease(ctx, claimLeadershipForced, instanceID)
+		if err != nil {
+			_, _ = s.lockConn.Exec(ctx, releaseAdvisoryLock, schedulerAdvisoryLockID)
+			return 0, false, err
+		}
+		s.heldAdvisory = true
+		return epoch, true, nil
+	}
+
+	// Advisory lock held by another instance: only a stale lease allows
+	// takeover (stuck-leader path).
+	epoch, err := s.claimLease(ctx, claimLeadershipIfStale, instanceID, staleAfter)
+	if err != nil {
+		return 0, false, err
+	}
+	if epoch == 0 {
+		return 0, false, nil
+	}
+	return epoch, true, nil
 }
 
-// ReleaseLock releases the scheduler advisory lock.
-func (s *SchedulerStore) ReleaseLock(ctx context.Context) error {
-	var released bool
-	err := s.lockConn.QueryRow(ctx, releaseAdvisoryLock, schedulerAdvisoryLockID).Scan(&released)
+// claimLease runs a leadership claim upsert. Returns the new epoch, or 0
+// when the conditional claim did not match (another leader's lease fresh).
+func (s *SchedulerStore) claimLease(ctx context.Context, query string, args ...any) (int64, error) {
+	var epoch int64
+	err := s.pool.QueryRow(ctx, query, args...).Scan(&epoch)
 	if err != nil {
-		return fmt.Errorf("release advisory lock: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("claim leadership: %w", err)
+	}
+	return epoch, nil
+}
+
+// HeartbeatLeadership refreshes the leader's lease (last_seen = now()).
+// Returns false when the instance is no longer the leader of the given
+// epoch: a standby took over while this instance was stuck, and the caller
+// must step down immediately (epoch fencing, ADR-0005). While leader, also
+// opportunistically re-acquires the advisory lock if it was lost (e.g. this
+// instance took over a stuck leader that later released the lock).
+func (s *SchedulerStore) HeartbeatLeadership(ctx context.Context, instanceID string, epoch int64) (bool, error) {
+	var got int64
+	err := s.pool.QueryRow(ctx, heartbeatLeadership, instanceID, epoch).Scan(&got)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("heartbeat leadership: %w", err)
+	}
+	if !s.heldAdvisory {
+		var acquired bool
+		if err := s.lockConn.QueryRow(ctx, tryAdvisoryLock, schedulerAdvisoryLockID).Scan(&acquired); err == nil {
+			s.heldAdvisory = acquired
+		}
+	}
+	return true, nil
+}
+
+// ReleaseLeadership steps down gracefully: clears leader_id (guarded by
+// leader_id and epoch, so a stale release cannot disturb a successor) and
+// releases the advisory lock if this store holds it. After this call a
+// standby can take over immediately without waiting out the lease.
+func (s *SchedulerStore) ReleaseLeadership(ctx context.Context, instanceID string, epoch int64) error {
+	if _, err := s.pool.Exec(ctx, releaseLeadership, instanceID, epoch); err != nil {
+		return fmt.Errorf("release leadership: %w", err)
+	}
+	if s.heldAdvisory {
+		if _, err := s.lockConn.Exec(ctx, releaseAdvisoryLock, schedulerAdvisoryLockID); err != nil {
+			return fmt.Errorf("release advisory lock: %w", err)
+		}
+		s.heldAdvisory = false
 	}
 	return nil
 }

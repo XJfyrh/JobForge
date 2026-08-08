@@ -27,6 +27,16 @@ func setupSchedulerStore(t *testing.T) (*postgres.SchedulerStore, *pgx.Conn) {
 	return postgres.NewSchedulerStore(testEnv.pool, lockConn), lockConn
 }
 
+// resetLeadership clears the singleton leadership row so election tests are
+// isolated from leftovers of earlier tests or previous runs.
+func resetLeadership(t *testing.T) {
+	t.Helper()
+	if _, err := testEnv.pool.Exec(context.Background(),
+		`update scheduler_leadership set leader_id = null, epoch = 0, last_seen = now() where id = 1`); err != nil {
+		t.Fatalf("reset leadership row: %v", err)
+	}
+}
+
 // createScheduledJob inserts a job directly with state='scheduled' and a past
 // run_at. We bypass domain.NewJob because it correctly sets state='ready' when
 // run_at <= now; for scheduler tests we need the DB row to be 'scheduled' with
@@ -300,9 +310,10 @@ func TestSchedulerRecoverCancellingExpired(t *testing.T) {
 }
 
 // TestSchedulerAdvisoryLock verifies that only one instance can hold the
-// scheduler advisory lock at a time.
+// scheduler leadership at a time (advisory lock fast path + fresh lease).
 func TestSchedulerAdvisoryLock(t *testing.T) {
 	ctx := context.Background()
+	resetLeadership(t)
 
 	// Create two scheduler stores with separate lock connections.
 	lockConn1, err := pgx.Connect(ctx, testEnv.dsn)
@@ -320,41 +331,41 @@ func TestSchedulerAdvisoryLock(t *testing.T) {
 	ss1 := postgres.NewSchedulerStore(testEnv.pool, lockConn1)
 	ss2 := postgres.NewSchedulerStore(testEnv.pool, lockConn2)
 
-	// Instance 1 acquires lock.
-	acquired, err := ss1.TryAcquireLock(ctx)
+	// Instance 1 becomes leader.
+	epoch1, acquired, err := ss1.TryBecomeLeader(ctx, "lock-test-1", time.Hour)
 	if err != nil {
 		t.Fatalf("ss1 acquire: %v", err)
 	}
 	if !acquired {
-		t.Fatal("ss1 should acquire lock")
+		t.Fatal("ss1 should acquire leadership")
 	}
 
-	// Instance 2 should fail to acquire.
-	acquired, err = ss2.TryAcquireLock(ctx)
+	// Instance 2 should fail: ss1 holds the advisory lock and its lease is fresh.
+	_, acquired, err = ss2.TryBecomeLeader(ctx, "lock-test-2", time.Hour)
 	if err != nil {
 		t.Fatalf("ss2 acquire: %v", err)
 	}
 	if acquired {
-		t.Fatal("ss2 should NOT acquire lock while ss1 holds it")
+		t.Fatal("ss2 should NOT acquire leadership while ss1 holds it")
 	}
 
 	// Release from instance 1.
-	err = ss1.ReleaseLock(ctx)
+	err = ss1.ReleaseLeadership(ctx, "lock-test-1", epoch1)
 	if err != nil {
 		t.Fatalf("ss1 release: %v", err)
 	}
 
 	// Now instance 2 should succeed.
-	acquired, err = ss2.TryAcquireLock(ctx)
+	epoch2, acquired, err := ss2.TryBecomeLeader(ctx, "lock-test-2", time.Hour)
 	if err != nil {
 		t.Fatalf("ss2 acquire after release: %v", err)
 	}
 	if !acquired {
-		t.Fatal("ss2 should acquire lock after ss1 released")
+		t.Fatal("ss2 should acquire leadership after ss1 released")
 	}
 
 	// Cleanup.
-	_ = ss2.ReleaseLock(ctx)
+	_ = ss2.ReleaseLeadership(ctx, "lock-test-2", epoch2)
 }
 
 // TestSchedulerFailover verifies AT-09: Scheduler high-availability failover.
@@ -368,6 +379,7 @@ func TestSchedulerAdvisoryLock(t *testing.T) {
 // NFR-004: Scheduler takeover time <= 2 × lock_retry_interval + 2s (default 6s)
 func TestSchedulerFailover(t *testing.T) {
 	ctx := context.Background()
+	resetLeadership(t)
 
 	// Create two scheduler stores with separate lock connections.
 	lockConnA, err := pgx.Connect(ctx, testEnv.dsn)
@@ -391,7 +403,7 @@ func TestSchedulerFailover(t *testing.T) {
 	maxTakeoverTime := 2*lockRetryInterval + 2*time.Second // NFR-004: 3s for test
 
 	// 1. Scheduler A acquires leadership.
-	acquired, err := ssA.TryAcquireLock(ctx)
+	epochA, acquired, err := ssA.TryBecomeLeader(ctx, "failover-A", time.Hour)
 	if err != nil {
 		t.Fatalf("scheduler A acquire: %v", err)
 	}
@@ -424,21 +436,22 @@ func TestSchedulerFailover(t *testing.T) {
 	stateVersionAfterA := got.StateVersion
 	t.Logf("Scheduler A promoted job1 (state_version=%d)", stateVersionAfterA)
 
-	// 4. Kill Scheduler A (release lock / simulate crash).
-	err = ssA.ReleaseLock(ctx)
+	// 4. Kill Scheduler A (graceful release / simulate termination).
+	err = ssA.ReleaseLeadership(ctx, "failover-A", epochA)
 	if err != nil {
 		t.Fatalf("scheduler A release: %v", err)
 	}
-	t.Log("Scheduler A killed (lock released)")
+	t.Log("Scheduler A killed (leadership released)")
 
 	// 5. Scheduler B attempts to acquire leadership.
 	// Measure takeover time.
 	start := time.Now()
 	var acquiredB bool
+	var epochB int64
 	deadline := time.Now().Add(maxTakeoverTime)
 
 	for time.Now().Before(deadline) {
-		acquiredB, err = ssB.TryAcquireLock(ctx)
+		epochB, acquiredB, err = ssB.TryBecomeLeader(ctx, "failover-B", time.Hour)
 		if err != nil {
 			t.Fatalf("scheduler B acquire: %v", err)
 		}
@@ -451,6 +464,9 @@ func TestSchedulerFailover(t *testing.T) {
 	takeoverTime := time.Since(start)
 	if !acquiredB {
 		t.Fatalf("AT-09 FAILED: scheduler B did not acquire leadership within %v", maxTakeoverTime)
+	}
+	if epochB <= epochA {
+		t.Fatalf("epoch must increase on takeover: %d -> %d", epochA, epochB)
 	}
 	t.Logf("Scheduler B acquired leadership (takeover time: %v)", takeoverTime)
 
@@ -497,5 +513,154 @@ func TestSchedulerFailover(t *testing.T) {
 	}
 
 	// Cleanup.
-	_ = ssB.ReleaseLock(ctx)
+	_ = ssB.ReleaseLeadership(ctx, "failover-B", epochB)
+}
+
+// TestSchedulerStuckLeaderTakeover verifies the lease-based takeover of a
+// stuck leader (ADR-0005): the leader stops scanning (and thus stops
+// heartbeating) while its lock connection stays alive, so the advisory lock
+// is never released. A standby must take over once the lease goes stale,
+// the resurrected old leader must be fenced by epoch, and no duplicate
+// promotion may occur.
+func TestSchedulerStuckLeaderTakeover(t *testing.T) {
+	ctx := context.Background()
+	resetLeadership(t)
+
+	lockConnA, err := pgx.Connect(ctx, testEnv.dsn)
+	if err != nil {
+		t.Fatalf("connect lockConnA: %v", err)
+	}
+	defer func() { _ = lockConnA.Close(ctx) }()
+	lockConnB, err := pgx.Connect(ctx, testEnv.dsn)
+	if err != nil {
+		t.Fatalf("connect lockConnB: %v", err)
+	}
+	defer func() { _ = lockConnB.Close(ctx) }()
+
+	ssA := postgres.NewSchedulerStore(testEnv.pool, lockConnA)
+	ssB := postgres.NewSchedulerStore(testEnv.pool, lockConnB)
+	js := setupStore(t)
+
+	const staleAfter = 2 * time.Second
+	lockRetry := 200 * time.Millisecond
+
+	// 1. A becomes leader and promotes job1.
+	epochA, acquired, err := ssA.TryBecomeLeader(ctx, "stuck-A", staleAfter)
+	if err != nil || !acquired {
+		t.Fatalf("scheduler A acquire: acquired=%v, err=%v", acquired, err)
+	}
+	pastRunAt := time.Now().Add(-10 * time.Second)
+	job1 := createScheduledJob(t, js, "stuck-leader-test", "demo.echo", pastRunAt)
+	if _, err := ssA.PromoteReady(ctx, 100); err != nil {
+		t.Fatalf("scheduler A promote: %v", err)
+	}
+	got, err := js.GetByID(ctx, "test-tenant", job1.ID)
+	if err != nil || got.State != domain.StateReady {
+		t.Fatalf("job1 should be ready: %v / %v", got, err)
+	}
+	stateVersionAfterA := got.StateVersion
+
+	// 2. Simulate a stuck leader: A stops heartbeating but lockConnA stays
+	// alive, so the advisory lock is never released. Age the lease using the
+	// PostgreSQL clock (avoids Docker/WSL2 host clock drift).
+	if _, err := testEnv.pool.Exec(ctx,
+		`update scheduler_leadership set last_seen = now() - interval '5 seconds' where id = 1`); err != nil {
+		t.Fatalf("age lease: %v", err)
+	}
+
+	// 3. B takes over once the lease is stale, despite A holding the lock.
+	start := time.Now()
+	deadline := start.Add(staleAfter + 2*lockRetry + 2*time.Second)
+	var epochB int64
+	var acquiredB bool
+	for time.Now().Before(deadline) {
+		epochB, acquiredB, err = ssB.TryBecomeLeader(ctx, "stuck-B", staleAfter)
+		if err != nil {
+			t.Fatalf("scheduler B acquire: %v", err)
+		}
+		if acquiredB {
+			break
+		}
+		time.Sleep(lockRetry)
+	}
+	if !acquiredB {
+		t.Fatalf("standby did not take over the stuck leader within %v", time.Since(start))
+	}
+	if epochB <= epochA {
+		t.Fatalf("epoch must increase on takeover: %d -> %d", epochA, epochB)
+	}
+	t.Logf("standby took over stuck leader in %v (epoch %d -> %d)", time.Since(start), epochA, epochB)
+
+	// 4. A resurrects: its heartbeat is fenced (epoch/leader mismatch) and
+	// its release must not disturb B's leadership.
+	stillLeader, err := ssA.HeartbeatLeadership(ctx, "stuck-A", epochA)
+	if err != nil {
+		t.Fatalf("A heartbeat: %v", err)
+	}
+	if stillLeader {
+		t.Fatal("resurrected old leader must be fenced by epoch")
+	}
+	if err := ssA.ReleaseLeadership(ctx, "stuck-A", epochA); err != nil {
+		t.Fatalf("A release: %v", err)
+	}
+	stillLeader, err = ssB.HeartbeatLeadership(ctx, "stuck-B", epochB)
+	if err != nil || !stillLeader {
+		t.Fatalf("B must remain leader after A's fenced release: stillLeader=%v, err=%v", stillLeader, err)
+	}
+
+	// 5. B promotes job2; job1 must not be promoted again.
+	job2 := createScheduledJob(t, js, "stuck-leader-test", "demo.echo", pastRunAt)
+	if _, err := ssB.PromoteReady(ctx, 100); err != nil {
+		t.Fatalf("scheduler B promote: %v", err)
+	}
+	got, err = js.GetByID(ctx, "test-tenant", job2.ID)
+	if err != nil || got.State != domain.StateReady {
+		t.Fatalf("job2 should be ready: %v / %v", got, err)
+	}
+	got, err = js.GetByID(ctx, "test-tenant", job1.ID)
+	if err != nil {
+		t.Fatalf("get job1 final: %v", err)
+	}
+	if got.State != domain.StateReady {
+		t.Errorf("job1 state changed unexpectedly: %s", got.State)
+	}
+	if got.StateVersion != stateVersionAfterA {
+		t.Errorf("job1 promoted multiple times (state_version: %d -> %d)",
+			stateVersionAfterA, got.StateVersion)
+	}
+
+	_ = ssB.ReleaseLeadership(ctx, "stuck-B", epochB)
+}
+
+// TestSchedulerGracefulReleaseImmediateTakeover verifies that a graceful
+// step-down (leader_id cleared) lets a standby take over immediately,
+// without waiting out the lease — preserving the NFR-004 fast path.
+func TestSchedulerGracefulReleaseImmediateTakeover(t *testing.T) {
+	ctx := context.Background()
+	resetLeadership(t)
+
+	ssA, _ := setupSchedulerStore(t)
+	ssB, _ := setupSchedulerStore(t)
+
+	epochA, acquired, err := ssA.TryBecomeLeader(ctx, "graceful-A", time.Hour)
+	if err != nil || !acquired {
+		t.Fatalf("A acquire: acquired=%v, err=%v", acquired, err)
+	}
+	if err := ssA.ReleaseLeadership(ctx, "graceful-A", epochA); err != nil {
+		t.Fatalf("A release: %v", err)
+	}
+
+	// First attempt must succeed: no lease expiry needed.
+	epochB, acquired, err := ssB.TryBecomeLeader(ctx, "graceful-B", time.Hour)
+	if err != nil {
+		t.Fatalf("B acquire: %v", err)
+	}
+	if !acquired {
+		t.Fatal("standby must take over immediately after a graceful release")
+	}
+	if epochB <= epochA {
+		t.Fatalf("epoch must increase on takeover: %d -> %d", epochA, epochB)
+	}
+
+	_ = ssB.ReleaseLeadership(ctx, "graceful-B", epochB)
 }

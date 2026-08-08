@@ -29,7 +29,7 @@ flowchart LR
 | 组件 | 职责 | 不负责 |
 |---|---|---|
 | API Server | 提交、查询、取消、人工重试；API key 鉴权；参数校验；队列背压 | 执行业务任务 |
-| Scheduler | scheduled/retry_wait → ready 推进；过期 lease 回收；advisory-lock 单活 | 存储业务结果 |
+| Scheduler | scheduled/retry_wait → ready 推进；过期 lease 回收；advisory lock + 领导权租约（epoch fencing，ADR-0005）单活 | 存储业务结果 |
 | Worker Gateway | gRPC Worker 会话管理；Poll/Heartbeat/Complete/Fail 事务；fencing 验证 | 运行用户 Handler |
 | Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态 |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
