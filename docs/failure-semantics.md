@@ -14,7 +14,8 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 |---|---|---|
 | Worker 崩溃 | Worker 进程异常终止（kill -9、OOM） | 心跳停止 → lease 过期；`workers.last_heartbeat_at` 老化 → `jobforge_workers_active` 在 ~2×TTL 后不再计入该 worker（见[可观测性](observability.md)的 Worker 存活判定） |
 | 网络分区 | Worker 与 Gateway 之间网络中断 | 心跳指数退避重试；超过 lease 仍未续租成功 → lease 过期 |
-| Scheduler 宕机 | Scheduler 进程终止 | Advisory lock 释放 → follower 接管 |
+| Scheduler 宕机 | Scheduler 进程终止 | Advisory lock 随连接断开释放 + 优雅让位置空领导权行 → follower 立即接管 |
+| Scheduler 卡死 | 进程存活但扫描循环停摆（死循环、阻塞），advisory lock 不释放 | 领导权租约心跳停止（心跳在扫描循环内）→ `last_seen` 过期（默认 10s）→ standby 条件接管；旧实例复活后 epoch 自检让位（ADR-0005） |
 | PostgreSQL 短暂不可用 | 数据库连接中断 | 连接池重试；事务回滚 |
 | 重复投递 | 相同任务被多次执行 | 幂等键 / fencing token |
 | 取消竞争 | Complete 与 Cancel 同时到达 | 事务先提交者生效 |
@@ -43,7 +44,9 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | NFR | 约束 | 公式 | 默认值 |
 |---|---|---|---|
 | NFR-003 | 任务恢复上界 | lease_ttl + scan_interval + 2s | 30 + 1 + 2 = 33s |
-| NFR-004 | Scheduler 接管时间 | 2 × lock_retry_interval + 2s | 2 × 5 + 2 = 12s |
+| NFR-004 | Scheduler 接管时间（终止路径） | 2 × lock_retry_interval + 2s | 2 × 5 + 2 = 12s |
+
+NFR-004 公式适用于主实例终止路径；卡死路径（进程存活但扫描停摆）的接管上界为 `leadership_timeout + lock_retry_interval`（默认 10 + 2 = 12s，见 [ADR-0005](adr/0005-scheduler-leadership-lease.md)）。
 
 ## Fencing Token 机制
 
@@ -142,7 +145,7 @@ cancelling 状态下：
 |---|---|
 | `tests/integration/fault_test.go` | AT-02, AT-03, AT-04；Gateway 抖动（TTL 内恢复）零重投、租约丢失取消执行并丢弃结果（`TestFaultGatewayBlipWithinTTLNoRedelivery`、`TestFaultLeaseLostCancelsExecutionAndDiscardsResult`） |
 | `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
-| `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock |
+| `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock；卡死 leader 租约接管与 epoch fencing、优雅让位即时接管（`TestSchedulerStuckLeaderTakeover`、`TestSchedulerGracefulReleaseImmediateTakeover`） |
 | `tests/integration/tenant_test.go` | AT-10 |
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
