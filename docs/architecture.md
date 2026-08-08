@@ -126,6 +126,17 @@ Worker 在 Register/Poll 中声明队列列表，Poll 对**全部**声明队列�
 - Poll/Register 对空队列列表（或含空串）返回 `INVALID_ARGUMENT`，不做静默忽略；
 - `idx_jobs_claim` 部分索引逐队列命中，SKIP LOCKED 与单队列语义一致。
 
+### 热路径部分索引
+
+jobs 表的热路径查询均由部分索引服务，避免随表增长退化为全表扫描：
+
+| 索引 | 定义 | 服务的查询 |
+|---|---|---|
+| `idx_jobs_claim` | `(queue, priority desc, created_at asc) WHERE state='ready'` | Claim 领取（0001） |
+| `idx_jobs_lease_expiry` | `(lease_until) WHERE state IN ('running','cancelling')` | Scheduler 过期 lease 回收（0001） |
+| `idx_jobs_promote_ready` | `(run_at) WHERE state IN ('scheduled','retry_wait')` | Scheduler promote 扫描（0011）：`run_at` 打头使扫描有序且命中 limit 即停，免排序 |
+| `idx_jobs_tenant_running` | `(tenant_id) WHERE state='running'` | Claim 事务内 FR-302 租户配额计数（0012）：index-only count，缩短 claim 事务行锁持有时长 |
+
 ## 部署拓扑
 
 JobForge 使用单二进制多子命令模式，避免过早拆分微服务：

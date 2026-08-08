@@ -311,3 +311,21 @@ go run . -jobs 100 -workers 4
 ### 结论
 
 W8~W10（outbox publisher、ctl CLI、obs profile 与文档对齐）未引入性能回归；全部指标相对 W4 基线满足 PRD §11.2 门禁，e2e p95/p99 与 Claim 路径持续改善。NFR-203 亦间接验证：outbox 发布在任务状态事务外异步进行，enqueue/claim 热路径无可测量回退。
+
+## 附录：热路径部分索引验证（migration 0011/0012）
+
+> 测量日期：2026-08-08（同环境规格，`-race` 开启）
+
+为 Scheduler promote 扫描与 Claim 事务内 FR-302 租户配额计数新增部分索引（`idx_jobs_promote_ready`、`idx_jobs_tenant_running`，见 [架构文档](architecture.md)的“热路径部分索引”），消除两处全表扫描。`tests/scale/perf_index_test.go`（`TestScalePerfPromoteClaimLatency`）在 20,000 行规模下实测：
+
+| 路径 | 规模 | p50 | p95 | 备注 |
+|------|------|-----|-----|------|
+| promote（batch=1000） | 20,000 scheduled / 共 ~60,000 行 | 23.5 ms | 25.7 ms | 21 批共 463 ms；部分索引有序扫描免排序 |
+| claim（batch=50，8 worker 并发，配额计数激活） | 20,000 ready | 188.8 ms | 304.2 ms | 424 次调用零重复领取；配额计数为 index-only，不再随表增长拉长行锁持有 |
+
+索引命中验证：promote 扫描在 20k 行规模下自然计划即命中 `idx_jobs_promote_ready`；配额计数在 running 行为零时自然计划可能漂移至 `idx_jobs_lease_expiry`（同为 `state='running'` 候选），故断言在 `enable_seqscan = off` 下确认专用索引可服务该查询（集成套件 `index_plan_test.go` 同样覆盖）。延迟绝对值受 Docker/WSL2 与 `-race` 影响，仅作基线参考；复现命令：
+
+```sh
+go test -tags scale -count=1 -timeout 60m -run TestScalePerfPromoteClaimLatency ./tests/scale/
+```
+

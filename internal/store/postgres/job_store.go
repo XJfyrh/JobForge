@@ -243,9 +243,7 @@ func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) ([]*doma
 		// because PostgreSQL allows reading our own uncommitted changes.
 		if params.TenantMaxInflight > 0 {
 			var runningCount int
-			err := tx.QueryRow(ctx,
-				"select count(*) from jobs where tenant_id = $1 and state = 'running'",
-				candidate.TenantID).Scan(&runningCount)
+			err := tx.QueryRow(ctx, claimTenantRunningCount, candidate.TenantID).Scan(&runningCount)
 			if err != nil {
 				return nil, fmt.Errorf("check tenant quota: %w", err)
 			}
