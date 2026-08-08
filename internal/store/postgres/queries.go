@@ -106,6 +106,15 @@ returning id, tenant_id, queue, type, payload, priority, state,
           created_at, updated_at
 `
 
+// claimTenantRunningCount counts the tenant's running jobs for the FR-302
+// quota check inside the claim transaction. Served by the partial index
+// idx_jobs_tenant_running (tenant_id) WHERE state='running' (migration
+// 0012); without it this per-candidate count would be a sequential scan
+// extending the claim transaction's row-lock hold time.
+const claimTenantRunningCount = `
+select count(*) from jobs where tenant_id = $1 and state = 'running'
+`
+
 // claimInsertAttempt records the start of a new attempt.
 const claimInsertAttempt = `
 insert into job_attempts (job_id, attempt_no, worker_id, fencing_token, started_at, trace_id)
