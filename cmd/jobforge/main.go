@@ -242,6 +242,9 @@ func runScheduler(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 		ScanInterval:      cfg.ScanInterval,
 		PromoteBatchSize:  1000,
 		LockRetryInterval: 2 * time.Second,
+		// Stable per-process identity for the leadership lease row (ADR-0005).
+		InstanceID:        fmt.Sprintf("scheduler-%s-%d", hostname(), os.Getpid()),
+		LeadershipTimeout: cfg.SchedulerLeadershipTimeout,
 	}
 
 	sched := scheduler.New(schedStore, notifier, listener, schedCfg, logger, metrics)

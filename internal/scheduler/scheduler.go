@@ -2,10 +2,13 @@
 // loop. It scans for scheduled/retry_wait jobs whose run_at has arrived and
 // promotes them to ready, and recovers jobs whose leases have expired.
 //
-// The Scheduler uses a PostgreSQL advisory lock for single-active election.
-// Only the lock holder performs scans; standby instances poll for lock
-// availability. Event-driven wakeup via pg_notify supplements the periodic
-// scan (ADR-0003).
+// Single-active election combines a PostgreSQL advisory lock (fast-path
+// mutual exclusion) with a leadership lease row (ADR-0005): the leader
+// refreshes last_seen on every scan cycle, standbys take over when the
+// lease goes stale (covering leaders whose scan loop is stuck while their
+// lock connection stays alive), and epoch fencing makes resurrected old
+// leaders step down. Event-driven wakeup via pg_notify supplements the
+// periodic scan (ADR-0003).
 package scheduler
 
 import (
@@ -23,12 +26,20 @@ import (
 // Store defines the persistence operations required by the Scheduler.
 // Following Go convention, the interface is defined at the consumer side.
 type Store interface {
-	// TryAcquireLock attempts to acquire the scheduler advisory lock.
-	// Returns true if this instance is now the leader.
-	TryAcquireLock(ctx context.Context) (bool, error)
+	// TryBecomeLeader attempts to elect instanceID as leader (advisory lock
+	// fast path plus the leadership lease row, ADR-0005). Returns the new
+	// epoch and acquired=true on success; acquired=false when another
+	// leader's lease is still fresh.
+	TryBecomeLeader(ctx context.Context, instanceID string, staleAfter time.Duration) (int64, bool, error)
 
-	// ReleaseLock releases the scheduler advisory lock.
-	ReleaseLock(ctx context.Context) error
+	// HeartbeatLeadership refreshes the leader's lease. Returns false when
+	// the instance is no longer the leader of the given epoch (taken over);
+	// the caller must step down immediately.
+	HeartbeatLeadership(ctx context.Context, instanceID string, epoch int64) (bool, error)
+
+	// ReleaseLeadership steps down gracefully so a standby can take over
+	// immediately (clears leader_id, releases the advisory lock if held).
+	ReleaseLeadership(ctx context.Context, instanceID string, epoch int64) error
 
 	// PromoteReady transitions scheduled/retry_wait jobs to ready.
 	// Returns the number of jobs promoted.
@@ -68,6 +79,16 @@ type Config struct {
 
 	// LockRetryInterval is how often standby instances try to acquire the lock.
 	LockRetryInterval time.Duration
+
+	// InstanceID uniquely identifies this scheduler instance in the
+	// leadership lease row (typically hostname-pid).
+	InstanceID string
+
+	// LeadershipTimeout bounds how long the leader may go without a
+	// heartbeat before standbys may take over. The heartbeat rides on scan
+	// cycles, so a stuck scan loop ages the lease past this bound and
+	// triggers takeover (ADR-0005).
+	LeadershipTimeout time.Duration
 }
 
 // DefaultConfig returns production-default Scheduler configuration.
@@ -76,6 +97,7 @@ func DefaultConfig() Config {
 		ScanInterval:      1 * time.Second,
 		PromoteBatchSize:  1000,
 		LockRetryInterval: 2 * time.Second,
+		LeadershipTimeout: 10 * time.Second,
 	}
 }
 
@@ -103,11 +125,14 @@ func New(store Store, notifier Notifier, listener Listener, cfg Config, logger *
 }
 
 // Run starts the Scheduler main loop. It blocks until ctx is cancelled.
-// The loop: acquire lock → scan → promote → recover → wait (notify or timer).
+// The loop: become leader → scan (heartbeating the lease each cycle) →
+// release leadership → wait (notify or timer).
 func (s *Scheduler) Run(ctx context.Context) error {
 	s.logger.Info("scheduler starting",
 		"scan_interval", s.cfg.ScanInterval,
 		"batch_size", s.cfg.PromoteBatchSize,
+		"instance_id", s.cfg.InstanceID,
+		"leadership_timeout", s.cfg.LeadershipTimeout,
 	)
 
 	for {
@@ -115,29 +140,36 @@ func (s *Scheduler) Run(ctx context.Context) error {
 			return ctx.Err()
 		}
 
-		acquired, err := s.store.TryAcquireLock(ctx)
+		epoch, acquired, err := s.store.TryBecomeLeader(ctx, s.cfg.InstanceID, s.cfg.LeadershipTimeout)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			s.logger.Error("failed to acquire advisory lock", "error", err)
+			s.logger.Error("failed to acquire leadership", "error", err)
 			s.sleep(ctx, s.cfg.LockRetryInterval)
 			continue
 		}
 
 		if !acquired {
-			// Standby mode: wait and retry.
-			s.logger.Debug("scheduler standby: lock held by another instance")
+			// Standby mode: another leader's lease is fresh; wait and retry.
+			s.logger.Debug("scheduler standby: leadership held by another instance")
 			s.sleep(ctx, s.cfg.LockRetryInterval)
 			continue
 		}
 
-		s.logger.Info("scheduler acquired leadership")
-		s.runLoop(ctx)
+		s.logger.Info("scheduler acquired leadership", "epoch", epoch)
+		s.runLoop(ctx, epoch)
 
-		// Lost leadership (ctx cancelled or lock released).
-		_ = s.store.ReleaseLock(ctx)
-		s.logger.Info("scheduler released leadership")
+		// Lost leadership (ctx cancelled or lease taken over). Release on a
+		// detached context: ctx may already be done, but stepping down cleanly
+		// still matters for fast takeover. The epoch guard makes this a no-op
+		// when a successor already owns the lease.
+		relCtx, relCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := s.store.ReleaseLeadership(relCtx, s.cfg.InstanceID, epoch); err != nil {
+			s.logger.Warn("release leadership failed", "epoch", epoch, "error", err)
+		}
+		relCancel()
+		s.logger.Info("scheduler released leadership", "epoch", epoch)
 
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -145,10 +177,13 @@ func (s *Scheduler) Run(ctx context.Context) error {
 	}
 }
 
-// runLoop performs scan cycles until context is cancelled.
-func (s *Scheduler) runLoop(ctx context.Context) {
+// runLoop performs scan cycles until the context is cancelled or the
+// leadership lease is taken over (epoch fencing detected by scanCycle).
+func (s *Scheduler) runLoop(ctx context.Context, epoch int64) {
 	// Perform an immediate scan on startup.
-	s.scanCycle(ctx)
+	if !s.scanCycle(ctx, epoch) {
+		return
+	}
 
 	timer := time.NewTimer(s.cfg.ScanInterval)
 	defer timer.Stop()
@@ -170,7 +205,9 @@ func (s *Scheduler) runLoop(ctx context.Context) {
 
 		if notified {
 			// Event-driven: scan immediately.
-			s.scanCycle(ctx)
+			if !s.scanCycle(ctx, epoch) {
+				return
+			}
 			// Reset the timer since we just scanned.
 			if !timer.Stop() {
 				select {
@@ -183,7 +220,9 @@ func (s *Scheduler) runLoop(ctx context.Context) {
 			// Timer or timeout: check if we should scan.
 			select {
 			case <-timer.C:
-				s.scanCycle(ctx)
+				if !s.scanCycle(ctx, epoch) {
+					return
+				}
 				timer.Reset(s.cfg.ScanInterval)
 			case <-ctx.Done():
 				return
@@ -192,10 +231,29 @@ func (s *Scheduler) runLoop(ctx context.Context) {
 	}
 }
 
-// scanCycle performs one promote + recover cycle.
-func (s *Scheduler) scanCycle(ctx context.Context) {
+// scanCycle performs one promote + recover cycle after refreshing the
+// leadership lease. Returns false when the lease has been taken over
+// (heartbeat matched no row); the caller must stop scanning immediately.
+func (s *Scheduler) scanCycle(ctx context.Context, epoch int64) bool {
 	if ctx.Err() != nil {
-		return
+		return true
+	}
+
+	// Heartbeat the lease before doing any work: a stuck scan loop stops
+	// reaching this point, which is exactly what ages the lease out and lets
+	// a standby take over (ADR-0005). A heartbeat that matches no row means
+	// a standby already took over while we were stuck: step down.
+	stillLeader, err := s.store.HeartbeatLeadership(ctx, s.cfg.InstanceID, epoch)
+	if err != nil {
+		if ctx.Err() != nil {
+			return true
+		}
+		// Transient heartbeat errors must not demote a healthy leader; the
+		// scan below will surface the same database problem.
+		s.logger.Error("leadership heartbeat failed", "epoch", epoch, "error", err)
+	} else if !stillLeader {
+		s.logger.Info("leadership lost (taken over by a standby), stepping down", "epoch", epoch)
+		return false
 	}
 
 	// scheduler.promote_jobs span (PRD 12.2).
@@ -206,7 +264,7 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 	promoted, err := s.store.PromoteReady(ctx, s.cfg.PromoteBatchSize)
 	if err != nil {
 		if ctx.Err() != nil {
-			return
+			return true
 		}
 		s.logger.Error("promote failed", "error", err)
 	} else if promoted > 0 {
@@ -222,7 +280,7 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 	recovered, err := s.store.RecoverExpiredLeases(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
-			return
+			return true
 		}
 		s.logger.Error("lease recovery failed", "error", err)
 	} else if recovered > 0 {
@@ -241,6 +299,7 @@ func (s *Scheduler) scanCycle(ctx context.Context) {
 
 	// Emit the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
 	s.recordQueueDepth(ctx)
+	return true
 }
 
 // recordQueueDepth samples pending jobs per (tenant, queue, state) and

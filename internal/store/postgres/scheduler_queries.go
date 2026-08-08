@@ -20,6 +20,57 @@ const releaseAdvisoryLock = `
 select pg_advisory_unlock($1)
 `
 
+// claimLeadershipForced takes over the scheduler_leadership singleton row
+// (ADR-0005) unconditionally, incrementing epoch. Used when the advisory
+// lock try succeeded: the previous advisory holder is necessarily gone
+// (session-level locks die with their connection), so waiting out the lease
+// would needlessly delay NFR-004 fast-path takeover. A rare corner case
+// (a live lease-based leader not holding the advisory lock) is resolved by
+// epoch fencing: the displaced leader's next heartbeat fails and it steps
+// down.
+const claimLeadershipForced = `
+insert into scheduler_leadership (id, leader_id, epoch, last_seen)
+values (1, $1, 1, now())
+on conflict (id) do update
+set leader_id = $1,
+    epoch = scheduler_leadership.epoch + 1,
+    last_seen = now()
+returning epoch`
+
+// claimLeadershipIfStale takes over the lease only when there is no leader,
+// the current leader's lease is stale (last_seen older than $2), or the
+// claimant already owns the lease. Used when the advisory lock is still held
+// by another instance (a stuck leader): the lease is the only liveness
+// signal. An empty result means another leader's lease is still fresh.
+const claimLeadershipIfStale = `
+insert into scheduler_leadership (id, leader_id, epoch, last_seen)
+values (1, $1, 1, now())
+on conflict (id) do update
+set leader_id = $1,
+    epoch = scheduler_leadership.epoch + 1,
+    last_seen = now()
+where scheduler_leadership.leader_id is null
+   or scheduler_leadership.last_seen < now() - $2::interval
+   or scheduler_leadership.leader_id = $1
+returning epoch`
+
+// heartbeatLeadership refreshes the leader's lease. Returns no rows when the
+// caller is no longer the leader of the given epoch (taken over), which the
+// Scheduler treats as an immediate step-down signal (fencing).
+const heartbeatLeadership = `
+update scheduler_leadership
+set last_seen = now()
+where id = 1 and leader_id = $1 and epoch = $2
+returning epoch`
+
+// releaseLeadership steps down gracefully: clears leader_id so a standby can
+// take over immediately without waiting out the lease. Guarded by leader_id
+// and epoch so a resurrected old leader cannot disturb the new one.
+const releaseLeadership = `
+update scheduler_leadership
+set leader_id = null
+where id = 1 and leader_id = $1 and epoch = $2`
+
 // promoteReady transitions scheduled/retry_wait jobs whose run_at has arrived
 // to the ready state. Uses a CTE with FOR UPDATE SKIP LOCKED to avoid lock
 // contention with concurrent claim transactions.

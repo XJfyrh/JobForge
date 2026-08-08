@@ -68,6 +68,11 @@ type Config struct {
 	// OutboxChannel is the PostgreSQL NOTIFY channel used to deliver outbox
 	// event hints (PRD v0.2 FR-611, ADR-0003).
 	OutboxChannel string
+
+	// SchedulerLeadershipTimeout bounds how long the Scheduler leader may go
+	// without a heartbeat before standbys take over the leadership lease
+	// (ADR-0005).
+	SchedulerLeadershipTimeout time.Duration
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -90,6 +95,8 @@ func Load() (*Config, error) {
 		OutboxBatchSize:    getIntEnv("JOBFORGE_OUTBOX_BATCH_SIZE", 100),
 		OutboxRetention:    getDurationEnv("JOBFORGE_OUTBOX_RETENTION", 7*24*time.Hour),
 		OutboxChannel:      getEnv("JOBFORGE_OUTBOX_CHANNEL", "jobforge_outbox"),
+
+		SchedulerLeadershipTimeout: getDurationEnv("JOBFORGE_SCHEDULER_LEADERSHIP_TIMEOUT", 10*time.Second),
 
 		APIKeys: make(map[string]string),
 	}
