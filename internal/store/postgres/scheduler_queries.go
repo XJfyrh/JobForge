@@ -100,6 +100,11 @@ returning jobs.id, jobs.queue
 // ready. The lease_owner and lease_until are cleared so a new Worker can claim.
 // Uses a CTE to capture pre-update values (lease_owner, attempt, fencing_token)
 // for audit, since RETURNING would return the post-update NULLs.
+// FOR UPDATE SKIP LOCKED keeps concurrent recoveries (possible during the
+// leadership split-brain window, ADR-0005) disjoint: the state predicate
+// lives only in the CTE, so without row locking a second transaction that
+// waited on the row lock would re-check only the id and re-execute the
+// update, double-incrementing state_version and duplicating outbox events.
 //
 // Invariant: recovery writes an outbox event and updates job_attempts with
 // outcome 'lease_expired' for audit (handled in Go code within the same tx).
@@ -109,6 +114,7 @@ with expired as (
     from jobs
     where state = 'running'
       and lease_until < now()
+    for update skip locked
 )
 update jobs
 set state = 'ready',
@@ -123,14 +129,16 @@ returning expired.id, expired.queue, expired.lease_owner, expired.attempt, expir
 
 // recoverCancellingLeases transitions cancelling jobs with expired leases to
 // cancelled. This handles the case where a Worker was cancelling but never
-// acknowledged before the lease expired. Uses CTE + FOR UPDATE SKIP LOCKED
-// for consistency with recoverRunningLeases.
+// acknowledged before the lease expired. Uses CTE + FOR UPDATE SKIP LOCKED,
+// for the same reason as recoverRunningLeases: concurrent recoveries during
+// the leadership split-brain window must stay disjoint.
 const recoverCancellingLeases = `
 with expired as (
     select id, queue, lease_owner, attempt, fencing_token
     from jobs
     where state = 'cancelling'
       and lease_until < now()
+    for update skip locked
 )
 update jobs
 set state = 'cancelled',
