@@ -39,3 +39,6 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 | [ADR-0003](0003-event-notification.md) | 事件通知机制（PostgreSQL LISTEN/NOTIFY） | Accepted | 2026-07-29 |
 | [ADR-0004](0004-observability-stack.md) | 可观测性技术选型（OTel + Prometheus + pprof） | Accepted | 2026-07-29 |
 | [ADR-0005](0005-scheduler-leadership-lease.md) | Scheduler 领导权租约（advisory lock + epoch fencing） | Accepted | 2026-08-08 |
+| [ADR-0006](0006-durable-event-transport.md) | 耐久事件 transport 与 envelope（Redis Streams 首选） | Accepted | 2026-08-10 |
+| [ADR-0007](0007-tenant-quota-atomic-counter.md) | 租户配额原子计数（派生计数表 + 事务内原子预留） | Accepted | 2026-08-10 |
+| [ADR-0008](0008-cancel-control-channel-heartbeat.md) | 取消控制通道与 Heartbeat 参数（5s 默认，ControlStream 预留） | Accepted | 2026-08-10 |

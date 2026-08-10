@@ -329,3 +329,53 @@ W8~W10（outbox publisher、ctl CLI、obs profile 与文档对齐）未引入性
 go test -tags scale -count=1 -timeout 60m -run TestScalePerfPromoteClaimLatency ./tests/scale/
 ```
 
+## M1 前基线（NFR-304 第 1 步，PRD v0.3）
+
+> 测量日期：2026-08-10（同环境规格）<br>
+> 代码 commit：`2153c777c9cf36578baaba9c09740ca9fa6d97a1`（代码基线 `e6b2ef3` + PRD v0.3 文档）<br>
+> 条件：`-tags scale`，**race 检测器关闭**（race 抽样由 `go test -race ./...` 回归覆盖）；PostgreSQL 16-alpine（compose，localhost:5433）；负载参数 20,000 jobs / 8 workers / batch 50 / 单租户 `perf-tenant`
+
+按 NFR-304 基线迁移协议，在任何 quota 代码、migration 及 Phase B 改写之前，对当前实现（锁候选后逐候选 `count(state='running')`，migration 0012 索引）运行 5 轮并归档：
+
+| 轮次 | claim 调用数 | claim p50 | claim p95 | promote p50 | promote p95 |
+|------|-----------|-----------|-----------|-------------|-------------|
+| 1 | 424 | 160.94 ms | 220.34 ms | 24.59 ms | 34.83 ms |
+| 2 | 424 | 160.03 ms | 236.36 ms | 22.86 ms | 29.22 ms |
+| 3 | 424 | 160.03 ms | 219.05 ms | 24.40 ms | 28.96 ms |
+| 4 | 424 | 160.23 ms | 250.28 ms | 23.55 ms | 27.17 ms |
+| 5 | 424 | 165.92 ms | 259.35 ms | 25.44 ms | 28.71 ms |
+
+**比较口径（供 M1 使用）**：claim p50 各轮中位数 = **160.23 ms**；claim p95 各轮中位数 = **236.36 ms**。M1 重写后以相同负载参数的 5 轮 p95 中位数与之比较，恶化须 < 15%（即 ≤ 271.8 ms）。历史参考值 304.2ms（`-race` 开启、不同日期）不作跨硬件硬门禁。
+
+EXPLAIN 计划证据（每轮测试后在 20,000 running 行上采集，`enable_seqscan = off` 事务内）：
+
+```
+Aggregate  (cost=4.31..4.32 rows=1 width=8) (actual time=2.710..2.710 rows=1 loops=1)
+  ->  Index Only Scan using idx_jobs_tenant_running on jobs  (cost=0.29..4.30 rows=1 width=0)
+        (actual time=0.052..2.234 rows=20000 loops=1)
+        Index Cond: (tenant_id = 'perf-tenant'::text)
+        Heap Fetches: 18882
+```
+
+该断言只描述改造前的 `count(*) WHERE state='running'` 路径；M1 验收改用 quota counter 主键与 `idx_jobs_tenant_inflight` 的结构性证据，不再引用 `explainQuotaCount` 或 `idx_jobs_tenant_running`。
+
+### 修改前多租户公平性观测（AT-22 对照）
+
+在同一环境以旧候选选择语义（`order by priority desc, created_at asc limit 50`，无满额租户预筛）复现：租户 `obs-a` 满额且积压 10,000 ready 任务，租户 `obs-b` 有 1 个 ready 任务时，候选窗口组成：
+
+```
+ tenant_id | candidates
+-----------+------------
+ obs-a     |         50
+```
+
+窗口被满额租户 100% 占据；旧流程在行锁事务内逐候选 count 后全部跳过，Claim 返回空且下一轮选中同一批候选——`obs-b` 的任务永远无法进入窗口（饿死）。M1 预筛后 `TestQuotaAT22FullTenantDoesNotBlock` 实测 B 在 19.9 ms 内被领取（上界 1 s）。
+
+### 复现命令
+
+```powershell
+docker compose -f deploy/compose.yaml up -d postgres
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test -tags scale -count=1 -timeout 30m -run TestScalePerfPromoteClaimLatency -v ./tests/scale/
+```
+
