@@ -379,3 +379,42 @@ $env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?s
 go test -tags scale -count=1 -timeout 30m -run TestScalePerfPromoteClaimLatency -v ./tests/scale/
 ```
 
+## M1 改造后双口径对比（NFR-304 第 3 步，PRD v0.3）
+
+> 测量日期：2026-08-10（同环境规格，与 M0 同参数：20,000 jobs / 8 workers / batch 50 / 单租户，race 检测器关闭）<br>
+> 实现形态：“预留激活但配额不阻塞”（limit = n+100）：候选预筛 + counter 快照定批 + 事务末尾条件批量预留（ADR-0007 §2）
+
+| 轮次 | claim p50 | claim p95 | promote p50 | promote p95 |
+|------|-----------|-----------|-------------|-------------|
+| 1 | 87.74 ms | 113.10 ms | 19.36 ms | 22.41 ms |
+| 2 | 86.91 ms | 105.48 ms | 18.61 ms | 64.82 ms |
+| 3 | 87.15 ms | 116.56 ms | 19.58 ms | 60.28 ms |
+| 4 | 88.53 ms | 109.49 ms | 19.23 ms | 71.42 ms |
+| 5 | 88.42 ms | 119.43 ms | 18.59 ms | 65.62 ms |
+
+**比较结论（各轮中位数）**：
+
+| 口径 | M0 前基线 | M1 改造后 | 变化 | 门禁（恶化 < 15%） |
+|------|-----------|-----------|------|--------------------|
+| claim p50 中位数 | 160.23 ms | 87.74 ms | **-45.2%（改善）** | PASS |
+| claim p95 中位数 | 236.36 ms | 113.10 ms | **-52.2%（改善）** | PASS |
+
+改善来源：逐候选 `count(state='running')`（每候选一次 index-only 扫描，batch 50 即 50 次）被替换为每租户一次 counter 快照读 + 事务末尾一次条件 upsert。
+
+形态演进记录（NFR-304 协议要求结构性证据与口径可审计）：首轮“逐候选预留”（claim p95 ≈ 1.7s）与次轮“事务开头批量预留”（claim p95 ≈ 1.0~1.2s）均因 counter 行锁持有到提交而超标，最终采用“预留置后 + 快照定批 + 竞争回滚重试”，详见 [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) §2 与方案 B。M1 结构断言：`idx_jobs_tenant_inflight` 服务 inflight 口径计数（`enable_seqscan = off`），预留 upsert 的 EXPLAIN 命中 `tenant_quota_counters_pkey`（`assertCounterTableUsable`），不再引用 `explainQuotaCount`/`idx_jobs_tenant_running`。
+
+### 多租户混合场景（NFR-304 第 4 步）
+
+`TestScaleQuotaMultiTenantFairness`（`-tags scale`）：租户 A 满额（limit=20）且持续保有 10,000 ready 积压，租户 B/C/D 各以 20 jobs/s 持续 15s，8 worker 即领即完成：
+
+| 口径 | 值 |
+|------|-----|
+| reservation conflicts | 0 |
+| claim 调用数 | 5,063 |
+| claim 调用 p50 / p95（含 counter 行等待） | 13.12 ms / 17.87 ms |
+| B ready→claim p50 / p95 / max | 23.15 ms / 36.91 ms / 45.96 ms |
+| C ready→claim p50 / p95 / max | 22.81 ms / 36.10 ms / 45.60 ms |
+| D ready→claim p50 / p95 / max | 22.98 ms / 37.04 ms / 56.14 ms |
+
+B/C/D 各自满足 AT-22 上界（p95 ≤1s、max ≤2s）；A 的积压全程零领取。正确性以 AT-21 为准，本场景不外推为配额压力容量证明。
+

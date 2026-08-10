@@ -42,7 +42,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 	}
 
 	// 2. Tenant A claims 2 jobs (fills quota).
-	claimedA, err := js.Claim(ctx, store.ClaimParams{
+	claimedA, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:            []string{queueA},
 		WorkerID:          "worker-A",
 		MaxJobs:           10,
@@ -60,7 +60,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 	t.Logf("Tenant A claimed %d jobs (quota = %d)", len(claimedA), tenantMaxInflight)
 
 	// 3. Tenant A tries to claim more - should get 0 (quota full).
-	claimedAMore, err := js.Claim(ctx, store.ClaimParams{
+	claimedAMore, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:            []string{queueA},
 		WorkerID:          "worker-A-2",
 		MaxJobs:           10,
@@ -82,7 +82,7 @@ func TestTenantAT10Isolation(t *testing.T) {
 	jobB := createTestJobForTenant(t, js, tenantB, queueA, "demo.echo")
 
 	// 5. Tenant B can claim (not affected by tenant A's quota).
-	claimedB, err := js.Claim(ctx, store.ClaimParams{
+	claimedB, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:            []string{queueA},
 		WorkerID:          "worker-B",
 		MaxJobs:           10,
@@ -133,7 +133,7 @@ func TestTenantQuotaRelease(t *testing.T) {
 	job2 := createTestJobForTenant(t, js, tenant, queue, "demo.echo")
 
 	// Claim 1 job (fills quota).
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:            []string{queue},
 		WorkerID:          "worker-1",
 		MaxJobs:           10,
@@ -154,7 +154,7 @@ func TestTenantQuotaRelease(t *testing.T) {
 	}
 
 	// Now the second job can be claimed.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:            []string{queue},
 		WorkerID:          "worker-2",
 		MaxJobs:           10,
@@ -201,7 +201,7 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 	ctx := context.Background()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 1, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 1, true, logger, nil)
 
 	tenantA := "tenant-gw-A-" + uuid.New().String()[:8]
 	tenantB := "tenant-gw-B-" + uuid.New().String()[:8]

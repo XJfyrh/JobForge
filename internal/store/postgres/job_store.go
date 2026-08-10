@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -202,18 +203,53 @@ func (s *JobStore) List(ctx context.Context, filter store.ListFilter) ([]*domain
 // job_attempts all happen in a single transaction. This guarantees that
 // lease_owner, lease_until, attempt, fencing_token and state are updated
 // atomically, and no two Workers can claim the same job.
-func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) ([]*domain.Job, error) {
+//
+// Tenant quota (PRD v0.3 FR-720~726, ADR-0007): when TenantMaxInflight > 0,
+// candidates of full tenants are pre-filtered before the row-lock window;
+// per-tenant slot reservations run as the LAST step of the claim transaction
+// (conditional batch upserts, tenants in ascending order) so the counter row
+// lock is held for a single round trip instead of the whole claim. Losing
+// the reservation race (a concurrent claim filled the slots after the
+// unlocked counter snapshot) rolls the transaction back and retries with a
+// fresh snapshot.
+func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) (*store.ClaimResult, error) {
+	// Reservation races are rare (the pre-filter already excludes full
+	// tenants); a bounded retry keeps the store self-contained while the
+	// gateway long-poll provides the outer loop.
+	const maxQuotaAttempts = 3
+	for attempt := 0; ; attempt++ {
+		res, retriable, err := s.claimOnce(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+		if !retriable || attempt+1 >= maxQuotaAttempts {
+			return res, nil
+		}
+	}
+}
+
+// claimOnce executes one claim transaction. retriable=true means a quota
+// reservation lost a race; the transaction was rolled back and the caller
+// may retry.
+func (s *JobStore) claimOnce(ctx context.Context, params store.ClaimParams) (*store.ClaimResult, bool, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin claim tx: %w", err)
+		return nil, false, fmt.Errorf("begin claim tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Select ready jobs with row-level locking. Queues are claimed in
-	// declaration order (see claimSelect).
-	rows, err := tx.Query(ctx, claimSelect, params.Queues, params.Types, params.MaxJobs)
+	// declaration order (see claimSelect). With an active quota and enabled
+	// pre-filter, claimSelectQuota additionally excludes full tenants before
+	// the LIMIT window so other tenants' candidates backfill it (FR-725).
+	var rows pgx.Rows
+	if params.TenantMaxInflight > 0 && params.QuotaPrefilter {
+		rows, err = tx.Query(ctx, claimSelectQuota, params.Queues, params.Types, params.MaxJobs, params.TenantMaxInflight)
+	} else {
+		rows, err = tx.Query(ctx, claimSelect, params.Queues, params.Types, params.MaxJobs)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("claim select: %w", err)
+		return nil, false, fmt.Errorf("claim select: %w", err)
 	}
 
 	var candidates []*domain.Job
@@ -221,59 +257,157 @@ func (s *JobStore) Claim(ctx context.Context, params store.ClaimParams) ([]*doma
 		job, err := scanJobFromRows(rows)
 		if err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scan claim candidate: %w", err)
+			return nil, false, fmt.Errorf("scan claim candidate: %w", err)
 		}
 		candidates = append(candidates, job)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("claim rows: %w", err)
+		return nil, false, fmt.Errorf("claim rows: %w", err)
 	}
 
 	if len(candidates) == 0 {
-		return nil, nil
+		return &store.ClaimResult{}, false, nil
 	}
 
 	leaseUntil := time.Now().Add(params.LeaseTTL)
 	claimed := make([]*domain.Job, 0, len(candidates))
+	conflicts := 0
+	maxObservedInflight := 0
 
-	for _, candidate := range candidates {
-		// Check tenant quota if limit is set (FR-302).
-		// The running count includes jobs claimed earlier in this transaction
-		// because PostgreSQL allows reading our own uncommitted changes.
-		if params.TenantMaxInflight > 0 {
-			var runningCount int
-			err := tx.QueryRow(ctx, claimTenantRunningCount, candidate.TenantID).Scan(&runningCount)
-			if err != nil {
-				return nil, fmt.Errorf("check tenant quota: %w", err)
+	// Planned claims per tenant (quota active): an unlocked counter snapshot
+	// decides how many candidates of each tenant can be claimed; the binding
+	// hard-cap check stays in the conditional reservation below.
+	planned := make(map[string]struct{}, len(candidates))
+	type tenantPlan struct {
+		tenant string
+		count  int
+	}
+	var plans []tenantPlan
+	if params.TenantMaxInflight > 0 {
+		byTenant := make([]*domain.Job, len(candidates))
+		copy(byTenant, candidates)
+		sort.SliceStable(byTenant, func(i, j int) bool {
+			return byTenant[i].TenantID < byTenant[j].TenantID
+		})
+
+		tenants := make([]string, 0)
+		for i := 0; i < len(byTenant); {
+			tenant := byTenant[i].TenantID
+			tenants = append(tenants, tenant)
+			for i < len(byTenant) && byTenant[i].TenantID == tenant {
+				i++
 			}
-			if runningCount >= params.TenantMaxInflight {
-				// Tenant quota full, skip this job.
+		}
+		counters, err := snapshotQuotaCounters(ctx, tx, tenants)
+		if err != nil {
+			return nil, false, err
+		}
+
+		for i := 0; i < len(byTenant); {
+			tenant := byTenant[i].TenantID
+			end := i
+			for end < len(byTenant) && byTenant[end].TenantID == tenant {
+				end++
+			}
+			group := byTenant[i:end]
+			i = end
+
+			available := params.TenantMaxInflight - counters[tenant]
+			take := len(group)
+			if take > available {
+				take = available
+			}
+			if take <= 0 {
+				// Snapshot already at the cap: skip the whole group.
+				conflicts += len(group)
 				continue
 			}
+			conflicts += len(group) - take
+			for _, candidate := range group[:take] {
+				planned[candidate.ID] = struct{}{}
+			}
+			plans = append(plans, tenantPlan{tenant: tenant, count: take})
+		}
+	} else {
+		for _, candidate := range candidates {
+			planned[candidate.ID] = struct{}{}
+		}
+	}
+
+	// Claim phase: lease update + attempt record, in candidate order, only
+	// for planned candidates.
+	for _, candidate := range candidates {
+		if _, ok := planned[candidate.ID]; !ok {
+			continue
 		}
 
 		// Update lease fields atomically.
 		job, err := scanJob(tx.QueryRow(ctx, claimUpdate, candidate.ID, params.WorkerID, leaseUntil))
 		if err != nil {
-			return nil, fmt.Errorf("claim update: %w", err)
+			return nil, false, fmt.Errorf("claim update: %w", err)
 		}
 
 		// Record the attempt start.
 		_, err = tx.Exec(ctx, claimInsertAttempt,
 			job.ID, job.Attempt, params.WorkerID, job.FencingToken, job.TraceID)
 		if err != nil {
-			return nil, fmt.Errorf("claim insert attempt: %w", err)
+			return nil, false, fmt.Errorf("claim insert attempt: %w", err)
 		}
 
 		claimed = append(claimed, job)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit claim tx: %w", err)
+	// Reservation phase LAST (quota active): the conditional batch upserts
+	// are the binding hard-cap check. Running them after the claim updates
+	// keeps the counter row lock held for a single round trip before commit
+	// instead of the whole claim (ADR-0007 §2/§3). Tenants are reserved in
+	// ascending tenant_id order; a lost race rolls back everything and the
+	// caller retries with a fresh snapshot.
+	for _, plan := range plans {
+		var inflight int
+		err := tx.QueryRow(ctx, quotaReserveBatch, plan.tenant, plan.count, params.TenantMaxInflight).Scan(&inflight)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &store.ClaimResult{}, true, nil
+		}
+		if err != nil {
+			return nil, false, fmt.Errorf("reserve tenant quota: %w", err)
+		}
+		if inflight > maxObservedInflight {
+			maxObservedInflight = inflight
+		}
 	}
 
-	return claimed, nil
+	if err := tx.Commit(ctx); err != nil {
+		return nil, false, fmt.Errorf("commit claim tx: %w", err)
+	}
+
+	return &store.ClaimResult{
+		Jobs:                claimed,
+		QuotaConflicts:      conflicts,
+		MaxObservedInflight: maxObservedInflight,
+	}, false, nil
+}
+
+// snapshotQuotaCounters reads the derived counters for the given tenants
+// without locking them. Missing rows report zero. The snapshot may be stale;
+// the conditional reservation later in the transaction enforces the hard cap.
+func snapshotQuotaCounters(ctx context.Context, tx pgx.Tx, tenants []string) (map[string]int, error) {
+	counters := make(map[string]int, len(tenants))
+	rows, err := tx.Query(ctx, quotaCounterSnapshot, tenants)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot quota counters: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var tenant string
+		var inflight int
+		if err := rows.Scan(&tenant, &inflight); err != nil {
+			return nil, fmt.Errorf("scan quota counter: %w", err)
+		}
+		counters[tenant] = inflight
+	}
+	return counters, rows.Err()
 }
 
 // Heartbeat extends the lease for a running/cancelling job.
@@ -291,7 +425,8 @@ func (s *JobStore) Heartbeat(ctx context.Context, jobID, workerID string, fencin
 }
 
 // Complete transitions a running job to succeeded within a transaction that
-// also updates the attempt record and writes an outbox event.
+// also updates the attempt record, releases the tenant's quota slot and
+// writes an outbox event.
 func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencingToken int64, _ string, durationMs int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -299,12 +434,12 @@ func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencing
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	tag, err := tx.Exec(ctx, completeUpdate, jobID, workerID, fencingToken)
+	var tenantID string
+	err = tx.QueryRow(ctx, completeUpdate, jobID, workerID, fencingToken).Scan(&tenantID)
 	if err != nil {
-		return fmt.Errorf("complete update: %w", err)
-	}
-
-	if tag.RowsAffected() == 0 {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("complete update: %w", err)
+		}
 		// Determine specific rejection reason.
 		var state string
 		err := tx.QueryRow(ctx, completeRejectCancelling, jobID, workerID, fencingToken).Scan(&state)
@@ -314,6 +449,11 @@ func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencing
 		}
 		return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
 			"complete rejected: owner/token mismatch or job not running")
+	}
+
+	// Release the tenant's inflight slot in the same transaction (ADR-0007 §6).
+	if _, err := tx.Exec(ctx, quotaRelease, tenantID); err != nil {
+		return fmt.Errorf("release tenant quota: %w", err)
 	}
 
 	// Update attempt outcome.
@@ -330,7 +470,8 @@ func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencing
 }
 
 // Fail transitions a running job to retry_wait or dead, or a cancelling job
-// to cancelled. All within a single transaction with attempt and outbox writes.
+// to cancelled. All within a single transaction with quota release, attempt
+// and outbox writes.
 func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToken int64, errCode, errMsg string, retryable bool, durationMs int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -339,15 +480,13 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Try cancelling → cancelled first.
-	tag, err := tx.Exec(ctx, failUpdateCancelling, jobID, workerID, fencingToken)
-	if err != nil {
-		return fmt.Errorf("fail cancelling: %w", err)
-	}
-
+	var tenantID string
 	var outcome string
-	if tag.RowsAffected() > 0 {
+	err = tx.QueryRow(ctx, failUpdateCancelling, jobID, workerID, fencingToken).Scan(&tenantID)
+	switch {
+	case err == nil:
 		outcome = "cancelled"
-	} else {
+	case errors.Is(err, pgx.ErrNoRows):
 		// Determine retry vs dead.
 		// Fetch current attempt count to decide.
 		var attempt, maxAttempts int
@@ -366,23 +505,34 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 			jitter := time.Duration(rand.Int64N(int64(time.Second)))
 			backoff := domain.Backoff(attempt, time.Second, 5*time.Minute, jitter)
 			nextRetry := time.Now().Add(backoff)
-			tag, err = tx.Exec(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry)
+			err = tx.QueryRow(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry).Scan(&tenantID)
 			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
+						"fail rejected: concurrent state change")
+				}
 				return fmt.Errorf("fail retry: %w", err)
 			}
 			outcome = "failed_retry"
 		} else {
-			tag, err = tx.Exec(ctx, failUpdateDead, jobID, workerID, fencingToken)
+			err = tx.QueryRow(ctx, failUpdateDead, jobID, workerID, fencingToken).Scan(&tenantID)
 			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
+						"fail rejected: concurrent state change")
+				}
 				return fmt.Errorf("fail dead: %w", err)
 			}
 			outcome = "failed_dead"
 		}
+	default:
+		return fmt.Errorf("fail cancelling: %w", err)
+	}
 
-		if tag.RowsAffected() == 0 {
-			return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
-				"fail rejected: concurrent state change")
-		}
+	// Release the tenant's inflight slot in the same transaction: all three
+	// transitions above leave the inflight states (ADR-0007 §6).
+	if _, err := tx.Exec(ctx, quotaRelease, tenantID); err != nil {
+		return fmt.Errorf("release tenant quota: %w", err)
 	}
 
 	// Update attempt outcome.

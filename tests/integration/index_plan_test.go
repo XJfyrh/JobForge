@@ -132,30 +132,33 @@ func TestPromoteScanUsesPartialIndex(t *testing.T) {
 	}
 }
 
-// TestTenantQuotaCountUsesPartialIndex verifies migration 0012's
-// idx_jobs_tenant_running serves the FR-302 quota count executed inside the
-// Claim transaction.
-func TestTenantQuotaCountUsesPartialIndex(t *testing.T) {
+// TestTenantInflightCountUsesPartialIndex verifies migration 0014's
+// idx_jobs_tenant_inflight serves the inflight-caliber queries of the quota
+// counter design (reconcile aggregates and AT-21 sampling; ADR-0007 §5).
+// The running-only idx_jobs_tenant_running from migration 0012 is dropped by
+// migration 0015 together with its consumer.
+func TestTenantInflightCountUsesPartialIndex(t *testing.T) {
 	ctx := context.Background()
 
 	insertIndexTestJobs(t, "idx-quota-tenant", "succeeded", 3000, true)
-	insertIndexTestJobs(t, "idx-quota-tenant", "running", 30, true)
+	insertIndexTestJobs(t, "idx-quota-tenant", "running", 20, true)
+	insertIndexTestJobs(t, "idx-quota-tenant", "cancelling", 10, true)
 	if _, err := testEnv.pool.Exec(ctx, "analyze jobs"); err != nil {
 		t.Fatalf("analyze jobs: %v", err)
 	}
 
-	const q = `select count(*) from jobs where tenant_id = 'idx-quota-tenant' and state = 'running'`
+	const q = `select count(*) from jobs where tenant_id = 'idx-quota-tenant' and state in ('running', 'cancelling')`
 
 	plan := explainWithSeqScanOff(t, q)
-	if !strings.Contains(plan, "idx_jobs_tenant_running") {
-		t.Errorf("quota count does not use idx_jobs_tenant_running:\n%s", plan)
+	if !strings.Contains(plan, "idx_jobs_tenant_inflight") {
+		t.Errorf("inflight count does not use idx_jobs_tenant_inflight:\n%s", plan)
 	}
 	if strings.Contains(plan, "Seq Scan") {
-		t.Errorf("quota count falls back to Seq Scan with the index present:\n%s", plan)
+		t.Errorf("inflight count falls back to Seq Scan with the index present:\n%s", plan)
 	}
 
 	plan = explainAnalyze(t, q)
-	if !strings.Contains(plan, "idx_jobs_tenant_running") {
-		t.Errorf("natural quota plan does not pick idx_jobs_tenant_running:\n%s", plan)
+	if !strings.Contains(plan, "idx_jobs_tenant_inflight") {
+		t.Errorf("natural inflight plan does not pick idx_jobs_tenant_inflight:\n%s", plan)
 	}
 }

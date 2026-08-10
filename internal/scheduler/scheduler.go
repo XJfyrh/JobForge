@@ -53,6 +53,14 @@ type Store interface {
 	// QueueDepthMetrics samples pending jobs per (tenant, queue, state) for
 	// the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
 	QueueDepthMetrics(ctx context.Context) ([]store.QueueDepthRow, error)
+
+	// QuotaDrift compares tenant_quota_counters against the jobs aggregation
+	// and returns every disagreeing tenant (PRD v0.3 FR-724).
+	QuotaDrift(ctx context.Context) ([]store.QuotaDriftRow, error)
+
+	// RepairQuotaCounters overwrites the derived counters with the jobs
+	// aggregation (the source of truth). Returns rows changed.
+	RepairQuotaCounters(ctx context.Context) (int, error)
 }
 
 // Notifier sends pg_notify signals to wake up waiting consumers.
@@ -89,6 +97,11 @@ type Config struct {
 	// cycles, so a stuck scan loop ages the lease past this bound and
 	// triggers takeover (ADR-0005).
 	LeadershipTimeout time.Duration
+
+	// QuotaReconcileInterval is how often the leader reconciles
+	// tenant_quota_counters against the jobs aggregation, records the drift
+	// gauge and repairs discrepancies (PRD v0.3 FR-724). <= 0 disables it.
+	QuotaReconcileInterval time.Duration
 }
 
 // DefaultConfig returns production-default Scheduler configuration.
@@ -110,6 +123,10 @@ type Scheduler struct {
 	cfg      Config
 	logger   *slog.Logger
 	metrics  *observability.Metrics
+
+	// lastQuotaReconcile gates the periodic quota reconcile so it runs at
+	// most once per QuotaReconcileInterval instead of every scan cycle.
+	lastQuotaReconcile time.Time
 }
 
 // New creates a Scheduler with the given dependencies.
@@ -299,7 +316,67 @@ func (s *Scheduler) scanCycle(ctx context.Context, epoch int64) bool {
 
 	// Emit the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
 	s.recordQueueDepth(ctx)
+
+	// Periodic quota counter reconcile + repair (PRD v0.3 FR-724).
+	s.reconcileQuota(ctx)
 	return true
+}
+
+// reconcileQuota compares tenant_quota_counters with the jobs aggregation at
+// most once per QuotaReconcileInterval, records the drift gauge and repairs
+// any drift with the jobs aggregation as the source of truth (ADR-0007 §7).
+// Best-effort: errors are logged but never break the scan loop.
+func (s *Scheduler) reconcileQuota(ctx context.Context) {
+	if s.cfg.QuotaReconcileInterval <= 0 || ctx.Err() != nil {
+		return
+	}
+	if time.Since(s.lastQuotaReconcile) < s.cfg.QuotaReconcileInterval {
+		return
+	}
+	s.lastQuotaReconcile = time.Now()
+
+	drift, err := s.store.QuotaDrift(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			s.logger.Error("quota reconcile failed", "error", err)
+		}
+		return
+	}
+
+	var totalDrift int64
+	for _, r := range drift {
+		d := r.Counter - r.Actual
+		if d < 0 {
+			d = -d
+		}
+		totalDrift += d
+		s.logger.Warn("quota counter drift detected",
+			"tenant", r.TenantID,
+			"counter", r.Counter,
+			"actual", r.Actual,
+		)
+	}
+	if s.metrics != nil {
+		s.metrics.QuotaCounterDrift.Record(ctx, totalDrift)
+	}
+
+	if totalDrift == 0 {
+		return
+	}
+
+	// Repair from the jobs aggregation; the structured log above is the
+	// audit trail (ADR-0007 §7).
+	repaired, err := s.store.RepairQuotaCounters(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			s.logger.Error("quota counter repair failed", "error", err)
+		}
+		return
+	}
+	s.logger.Info("quota counters repaired", "drift", totalDrift, "rows_repaired", repaired)
+	if s.metrics != nil {
+		s.metrics.QuotaCounterDrift.Record(ctx, 0)
+	}
 }
 
 // recordQueueDepth samples pending jobs per (tenant, queue, state) and

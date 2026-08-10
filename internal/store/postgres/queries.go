@@ -106,13 +106,82 @@ returning id, tenant_id, queue, type, payload, priority, state,
           created_at, updated_at
 `
 
-// claimTenantRunningCount counts the tenant's running jobs for the FR-302
-// quota check inside the claim transaction. Served by the partial index
-// idx_jobs_tenant_running (tenant_id) WHERE state='running' (migration
-// 0012); without it this per-candidate count would be a sequential scan
-// extending the claim transaction's row-lock hold time.
-const claimTenantRunningCount = `
-select count(*) from jobs where tenant_id = $1 and state = 'running'
+// claimSelectQuota selects claim candidates with the tenant quota pre-filter
+// active (PRD v0.3 FR-721/725, ADR-0007 §4): candidates of tenants whose
+// derived counter already reached the limit are excluded BEFORE the LIMIT
+// window, so jobs of tenants with free slots backfill the window instead of
+// being starved behind a full tenant's backlog. The pre-filter read is an
+// unlocked READ COMMITTED snapshot: staleness only wastes candidate slots
+// (reservation below enforces the hard cap) or delays a claim by one round.
+// $4 is the tenant inflight limit (> 0). FOR UPDATE OF j keeps the row locks
+// on the jobs table only.
+const claimSelectQuota = `
+select j.id, j.tenant_id, j.queue, j.type, j.payload, j.priority, j.state,
+       j.run_at, j.attempt, j.max_attempts, j.timeout_seconds,
+       j.idempotency_key, j.lease_owner, j.lease_until, j.fencing_token,
+       j.cancel_requested_at, j.trace_id, j.trace_context, j.state_version, j.retry_of_job_id,
+       j.created_at, j.updated_at
+from jobs j
+where j.queue = any($1::text[])
+  and j.state = 'ready'
+  and j.run_at <= now()
+  and ($2::text[] is null or j.type = any($2))
+  and not exists (
+      select 1 from tenant_quota_counters c
+      where c.tenant_id = j.tenant_id
+        and c.inflight >= $4
+  )
+order by array_position($1::text[], j.queue) asc, j.priority desc, j.created_at asc
+limit $3
+for update of j skip locked
+`
+
+// quotaCounterSnapshot reads the derived counters for the candidate tenants
+// without locking them (ADR-0007 §4 stale-window semantics): the snapshot
+// only sizes the per-tenant claim batches, the conditional reservation below
+// enforces the hard cap. Missing rows report zero at the caller.
+const quotaCounterSnapshot = `
+select tenant_id, inflight from tenant_quota_counters where tenant_id = any($1::text[])
+`
+
+// quotaReserveBatch atomically reserves n slots for one tenant as the LAST
+// step of the claim transaction (PRD v0.3 FR-721 batch caliber, ADR-0007 §2).
+// The condition inflight + n <= limit makes the whole batch fail atomically
+// (no row returned, counter untouched) when it would cross the cap; the
+// caller then rolls back and retries with a fresh snapshot. A successful
+// batch is refunded only by transaction rollback: every reserved candidate is
+// claimed in the same transaction, so no unused slots exist at commit. The
+// counter row is created lazily (inflight = n) on first use; the caller only
+// reserves n <= limit, so the insert branch never crosses the cap.
+const quotaReserveBatch = `
+insert into tenant_quota_counters (tenant_id, inflight, updated_at)
+values ($1, $2, now())
+on conflict (tenant_id) do update
+set inflight = tenant_quota_counters.inflight + $2,
+    updated_at = now()
+where tenant_quota_counters.inflight + $2 <= $3
+returning inflight
+`
+
+// quotaRelease decrements the tenant's inflight counter when a job leaves the
+// inflight states (running/cancelling) within the same transaction as the
+// state transition (PRD v0.3 FR-722). The inflight > 0 guard prevents going
+// negative on pre-existing drift; reconcile repairs drift from jobs.
+const quotaRelease = `
+update tenant_quota_counters
+set inflight = inflight - 1,
+    updated_at = now()
+where tenant_id = $1 and inflight > 0
+`
+
+// quotaReleaseN decrements the tenant's inflight counter by $2, clamped at
+// zero. Used by lease recovery, which releases several jobs of the same
+// tenant in one statement (per-tenant aggregate).
+const quotaReleaseN = `
+update tenant_quota_counters
+set inflight = greatest(inflight - $2, 0),
+    updated_at = now()
+where tenant_id = $1
 `
 
 // claimInsertAttempt records the start of a new attempt.
@@ -133,7 +202,8 @@ where id = $1
   and state in ('running', 'cancelling')
 `
 
-// completeUpdate transitions running → succeeded.
+// completeUpdate transitions running → succeeded. Returns the tenant_id so
+// the same transaction can release the tenant's quota slot (ADR-0007 §6).
 // Matches owner + token + state. Rejects cancelling state (cancel wins race).
 const completeUpdate = `
 update jobs
@@ -144,6 +214,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
+returning tenant_id
 `
 
 // completeRejectCancelling checks if the job is in cancelling state (cancel won
@@ -153,7 +224,8 @@ select state from jobs
 where id = $1 and lease_owner = $2 and fencing_token = $3 and state = 'cancelling'
 `
 
-// failUpdateRetry transitions running → retry_wait with backoff.
+// failUpdateRetry transitions running → retry_wait with backoff. Returns the
+// tenant_id for the same-transaction quota release (ADR-0007 §6).
 const failUpdateRetry = `
 update jobs
 set state = 'retry_wait',
@@ -166,9 +238,11 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
+returning tenant_id
 `
 
-// failUpdateDead transitions running → dead.
+// failUpdateDead transitions running → dead. Returns the tenant_id for the
+// same-transaction quota release (ADR-0007 §6).
 const failUpdateDead = `
 update jobs
 set state = 'dead',
@@ -178,10 +252,13 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
+returning tenant_id
 `
 
 // failUpdateCancelling transitions cancelling → cancelled on fail.
-// In cancelling state, fail does not trigger retry.
+// In cancelling state, fail does not trigger retry. Returns the tenant_id:
+// cancelling jobs keep occupying a quota slot until this terminal transition
+// releases it (PRD v0.3 FR-723, ADR-0007 §6).
 const failUpdateCancelling = `
 update jobs
 set state = 'cancelled',
@@ -191,6 +268,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'cancelling'
+returning tenant_id
 `
 
 // updateAttemptOutcome records the attempt result.

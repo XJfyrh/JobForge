@@ -30,7 +30,7 @@ func TestAttemptTimelineStore(t *testing.T) {
 	job := createTestJobForTenant(t, js, tenant, queue, "demo.fail")
 
 	// Attempt 1: claim then fail retryable.
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues: []string{queue}, WorkerID: "attempt-worker-1", MaxJobs: 1, LeaseTTL: 30 * time.Second,
 	})
 	if err != nil || len(claimed) == 0 {
@@ -53,7 +53,7 @@ func TestAttemptTimelineStore(t *testing.T) {
 	}
 
 	// Attempt 2: claim then complete.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues: []string{queue}, WorkerID: "attempt-worker-2", MaxJobs: 1, LeaseTTL: 30 * time.Second,
 	})
 	if err != nil || len(claimed2) == 0 {
@@ -111,7 +111,7 @@ func TestGetJobReturnsAttemptTimeline(t *testing.T) {
 	queue := "attempts-http-queue"
 	job := createTestJobForTenant(t, js, tenant, queue, "demo.echo")
 
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues: []string{queue}, WorkerID: "http-attempt-worker", MaxJobs: 1, LeaseTTL: 30 * time.Second,
 	})
 	if err != nil || len(claimed) == 0 {

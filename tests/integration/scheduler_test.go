@@ -141,7 +141,7 @@ func TestSchedulerPromoteRetryWait(t *testing.T) {
 
 	// Create a ready job, claim it, then fail it (retryable) to get retry_wait.
 	job := createTestJob(t, js, "sched-retry", "demo.fail")
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"sched-retry"},
 		WorkerID: "worker-sched-retry",
 		MaxJobs:  1,
@@ -201,7 +201,7 @@ func TestSchedulerRecoverExpiredLease(t *testing.T) {
 
 	// Create and claim a job with a very short lease.
 	job := createTestJob(t, js, "sched-recover", "demo.echo")
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"sched-recover"},
 		WorkerID: "worker-dead",
 		MaxJobs:  1,
@@ -268,7 +268,7 @@ func TestRecoverExpiredLeasesConcurrentNoDoubleRecovery(t *testing.T) {
 	for i := 0; i < n; i++ {
 		createTestJob(t, js, queue, "demo.echo")
 	}
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{queue},
 		WorkerID: "worker-conc",
 		MaxJobs:  n,
@@ -353,7 +353,7 @@ func TestSchedulerRecoverCancellingExpired(t *testing.T) {
 
 	// Create, claim, then cancel a job (running → cancelling).
 	job := createTestJob(t, js, "sched-cancel-recover", "demo.echo")
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"sched-cancel-recover"},
 		WorkerID: "worker-cr",
 		MaxJobs:  1,

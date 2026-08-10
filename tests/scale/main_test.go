@@ -41,6 +41,8 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/store"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
 )
 
@@ -179,6 +181,16 @@ func setupStore(_ *testing.T) *postgres.JobStore {
 	return postgres.NewJobStore(testEnv.pool)
 }
 
+// claimJobs unwraps the store.ClaimResult for tests that only need the
+// claimed jobs. Tests asserting quota internals call Claim directly.
+func claimJobs(ctx context.Context, s store.JobStore, params store.ClaimParams) ([]*domain.Job, error) {
+	res, err := s.Claim(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	return res.Jobs, nil
+}
+
 // applyMigrations reads and executes all .up.sql migration files in order.
 // It uses DROP TABLE IF EXISTS to ensure a clean schema on repeated runs
 // against the same database (direct DSN mode).
@@ -192,7 +204,7 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	// Clean slate: drop tables in reverse dependency order for direct DSN mode.
-	cleanup := `drop table if exists scheduler_leadership, outbox_events, job_attempts, workers, jobs cascade`
+	cleanup := `drop table if exists tenant_quota_counters, scheduler_leadership, outbox_events, job_attempts, workers, jobs cascade`
 	if _, err := pool.Exec(ctx, cleanup); err != nil {
 		return fmt.Errorf("cleanup: %w", err)
 	}

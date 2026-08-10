@@ -31,31 +31,81 @@ from generate_series(1, $1)`
 
 // Constant EXPLAIN statements for the at-scale index spot checks; kept as
 // full literal statements so no SQL is assembled at runtime.
-const explainPromoteScan = `explain (analyze)
+const explainPromoteScan = `
+explain (analyze)
 select id from jobs
 where state in ('scheduled', 'retry_wait') and run_at <= now()
 order by run_at asc limit 1000`
 
-const explainQuotaCount = `explain (analyze)
-select count(*) from jobs where tenant_id = 'perf-tenant' and state = 'running'`
+// explainInflightCount covers the inflight-caliber queries of the quota
+// counter design (reconcile aggregates, AT-21 sampling; ADR-0007 §5). It
+// replaced the pre-M1 running-only quota count, whose idx_jobs_tenant_running
+// consumer was removed by the counter table (migration 0015).
+const explainInflightCount = `explain (analyze)
+select count(*) from jobs where tenant_id = 'perf-tenant' and state in ('running', 'cancelling')`
 
-// setLocalSeqScanOff is applied in the same transaction as the quota count
-// explain. With zero running rows the natural plan may drift to another
-// partial index (idx_jobs_lease_expiry also matches state='running'); with
-// sequential scans disabled the dedicated quota index wins whenever it
-// exists, so a missing index still fails the check.
+// setLocalSeqScanOff is applied in the same transaction as the inflight
+// count explain. With few inflight rows the natural plan may drift to a
+// different access path; with sequential scans disabled the dedicated
+// partial index wins whenever it exists, so a missing index still fails the
+// check.
 const setLocalSeqScanOff = `set local enable_seqscan = off`
 
+// explainCounterUpsert plans the exact reservation statement used by Claim
+// (ADR-0007 §2) against a probe tenant. EXPLAIN does not execute it; the
+// plan's conflict-resolution line must reference the primary key constraint,
+// proving the counter table and its conflict target exist.
+const explainCounterUpsert = `explain
+insert into tenant_quota_counters (tenant_id, inflight, updated_at)
+values ('perf-counter-probe', 1, now())
+on conflict (tenant_id) do update
+set inflight = tenant_quota_counters.inflight + 1,
+    updated_at = now()
+where tenant_quota_counters.inflight + 1 <= 5
+returning inflight`
+
+// assertCounterTableUsable verifies tenant_quota_counters is present and its
+// primary key serves the reservation upsert's conflict target.
+func assertCounterTableUsable(t *testing.T) {
+	t.Helper()
+	rows, err := testEnv.pool.Query(context.Background(), explainCounterUpsert)
+	if err != nil {
+		t.Fatalf("explain counter upsert: %v", err)
+	}
+	defer rows.Close()
+	var b strings.Builder
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatalf("scan explain row: %v", err)
+		}
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("explain rows: %v", err)
+	}
+	if plan := b.String(); !strings.Contains(plan, "tenant_quota_counters_pkey") {
+		t.Fatalf("counter reservation does not target tenant_quota_counters_pkey:\n%s", plan)
+	}
+}
+
 // TestScalePerfPromoteClaimLatency measures the two hot paths served by the
-// migrations 0011/0012 partial indexes and reports p50/p95 latencies:
+// migrations 0011/0014 partial indexes and reports p50/p95 latencies:
 //
 //   - Scheduler promote batches (idx_jobs_promote_ready) at scale;
-//   - concurrent Claims with the FR-302 quota count active
-//     (idx_jobs_tenant_running), reporting claim call p50/p95.
+//   - concurrent Claims with the tenant quota reservation active
+//     (tenant_quota_counters conditional upsert; PRD v0.3 NFR-304 "reserved
+//     but not blocking" caliber: the limit is high enough to never refuse a
+//     claim while the pre-filter and reservation paths actually execute).
 //
 // Assertions stay structural (everything promoted/claimed exactly once,
 // natural plans use the indexes); latency numbers are logged for comparison
 // because dev hardware (Docker/WSL2) cannot sustain hard thresholds.
+//
+// NFR-304 baseline migration: the pre-quota Phase B (running-only count on
+// idx_jobs_tenant_running) was archived in docs/benchmark.md ("M1 前基线")
+// before this rewrite; comparisons use those archived rounds.
 func TestScalePerfPromoteClaimLatency(t *testing.T) {
 	ctx := context.Background()
 	js := setupStore(t)
@@ -112,7 +162,7 @@ func TestScalePerfPromoteClaimLatency(t *testing.T) {
 	t.Logf("PERF-INDEX promote: batches=%d batch=%d promoted=%d total=%v p50=%v p95=%v",
 		len(promoteLatencies), promoteBatch, promotedTotal, promoteElapsed.Round(time.Millisecond), p50, p95)
 
-	// ---- Phase B: claim latency with tenant quota active (idx_jobs_tenant_running) ----
+	// ---- Phase B: claim latency with quota reservation active (counter upsert) ----
 
 	if _, err := testEnv.pool.Exec(ctx, insertPerfReadyJobs, n); err != nil {
 		t.Fatalf("insert ready jobs: %v", err)
@@ -121,11 +171,11 @@ func TestScalePerfPromoteClaimLatency(t *testing.T) {
 		t.Fatalf("analyze jobs: %v", err)
 	}
 
-	// Index spot check for the quota count. The natural plan may drift to
-	// idx_jobs_lease_expiry when no rows are running yet, so the coverage
-	// assertion disables sequential scans: idx_jobs_tenant_running then
-	// wins whenever it exists.
-	assertPlanUsesIndexNoSeqScan(t, explainQuotaCount, "idx_jobs_tenant_running")
+	// Structural spot checks for the M1 structures: the inflight partial
+	// index serves the inflight-caliber queries (seqscan disabled so the
+	// assertion is deterministic), and the counter table primary key exists.
+	assertPlanUsesIndexNoSeqScan(t, explainInflightCount, "idx_jobs_tenant_inflight")
+	assertCounterTableUsable(t)
 
 	var (
 		mu             sync.Mutex
@@ -142,15 +192,17 @@ func TestScalePerfPromoteClaimLatency(t *testing.T) {
 			emptyStreak := 0
 			for emptyStreak < 3 {
 				callStart := time.Now()
-				jobs, err := js.Claim(ctx, store.ClaimParams{
+				jobs, err := claimJobs(ctx, js, store.ClaimParams{
 					Queues:   []string{"perf-claim-q"},
 					WorkerID: workerID,
 					Types:    []string{"demo.echo"},
 					MaxJobs:  50,
 					LeaseTTL: 5 * time.Minute,
-					// High enough to never block, but > 0 so the quota
-					// count (and its index) runs for every candidate.
+					// NFR-304 "reserved but not blocking": high enough to
+					// never refuse a claim, but > 0 so the pre-filter and the
+					// conditional counter reservation run for every candidate.
 					TenantMaxInflight: n + 100,
+					QuotaPrefilter:    true,
 				})
 				latency := time.Since(callStart)
 				if err != nil {

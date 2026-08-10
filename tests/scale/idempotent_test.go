@@ -98,7 +98,7 @@ func drainAndExecute(t *testing.T, js store.JobStore, rec *effectRecorder, worke
 		go func() {
 			defer wg.Done()
 			for {
-				claimed, err := js.Claim(ctx, store.ClaimParams{
+				claimed, err := claimJobs(ctx, js, store.ClaimParams{
 					Queues:   []string{at14Queue},
 					WorkerID: workerID,
 					MaxJobs:  20,

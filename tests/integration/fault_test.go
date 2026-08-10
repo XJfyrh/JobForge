@@ -55,7 +55,7 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 	job := createTestJob(t, js, "fault-at02", "demo.idempotent_effect")
 
 	// 2. Worker A claims the job.
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at02"},
 		WorkerID: "worker-A-crash",
 		MaxJobs:  1,
@@ -109,7 +109,7 @@ func TestFaultAT02CrashBeforeACK(t *testing.T) {
 	}
 
 	// 7. Worker B claims the re-delivered job.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at02"},
 		WorkerID: "worker-B-recovery",
 		MaxJobs:  1,
@@ -171,7 +171,7 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 	// 1. Create a job with short lease.
 	job := createTestJob(t, js, "fault-at04", "demo.sleep")
 
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at04"},
 		WorkerID: "worker-isolated",
 		MaxJobs:  1,
@@ -228,7 +228,7 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 	t.Logf("Old Worker Complete correctly rejected: %v", err)
 
 	// 7. New Worker claims the recovered job.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at04"},
 		WorkerID: "worker-new",
 		MaxJobs:  1,
@@ -272,7 +272,7 @@ func TestFaultAT03StaleWorkerLateComplete(t *testing.T) {
 
 	// 1. Create and claim with very short lease.
 	job := createTestJob(t, js, "fault-at03", "demo.echo")
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at03"},
 		WorkerID: "worker-slow",
 		MaxJobs:  1,
@@ -298,7 +298,7 @@ func TestFaultAT03StaleWorkerLateComplete(t *testing.T) {
 	}
 
 	// 4. New Worker claims.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"fault-at03"},
 		WorkerID: "worker-fast",
 		MaxJobs:  1,
@@ -361,7 +361,7 @@ func startFaultGateway(t *testing.T, leaseTTL time.Duration) (string, func(bool)
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, 0, logger, nil)
+	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, 0, true, logger, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor))
 	workerv1.RegisterWorkerServiceServer(server, service)
 

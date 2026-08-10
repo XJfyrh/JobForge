@@ -65,6 +65,16 @@ type Metrics struct {
 	// OutboxPublishFailuresTotal counts outbox publish failures
 	// (PRD v0.2 §8). Labels: event_type, reason.
 	OutboxPublishFailuresTotal metric.Int64Counter
+
+	// QuotaReservationConflictsTotal counts claim candidates skipped because
+	// their tenant's atomic slot reservation hit the hard cap (PRD v0.3 §8).
+	// Labels: none.
+	QuotaReservationConflictsTotal metric.Int64Counter
+
+	// QuotaCounterDrift records the total absolute drift found by the last
+	// quota reconcile between tenant_quota_counters and the jobs aggregation
+	// (PRD v0.3 §8). Labels: none.
+	QuotaCounterDrift metric.Int64Gauge
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -168,6 +178,18 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Total number of outbox publish failures"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create outbox_publish_failures_total: %w", err)
+	}
+
+	m.QuotaReservationConflictsTotal, err = meter.Int64Counter("jobforge_quota_reservation_conflicts_total",
+		metric.WithDescription("Total number of claim candidates skipped because the tenant quota was full"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create quota_reservation_conflicts_total: %w", err)
+	}
+
+	m.QuotaCounterDrift, err = meter.Int64Gauge("jobforge_quota_counter_drift",
+		metric.WithDescription("Absolute quota counter drift found by the last reconcile"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create quota_counter_drift: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

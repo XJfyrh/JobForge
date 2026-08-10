@@ -245,6 +245,8 @@ func runScheduler(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 		// Stable per-process identity for the leadership lease row (ADR-0005).
 		InstanceID:        fmt.Sprintf("scheduler-%s-%d", hostname(), os.Getpid()),
 		LeadershipTimeout: cfg.SchedulerLeadershipTimeout,
+		// Periodic quota counter reconcile + repair (PRD v0.3 FR-724).
+		QuotaReconcileInterval: cfg.QuotaReconcileInterval,
 	}
 
 	sched := scheduler.New(schedStore, notifier, listener, schedCfg, logger, metrics)
@@ -304,7 +306,7 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	defer listener.Close()
 
 	// Create gRPC service and server.
-	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.TenantMaxInflight, logger, metrics)
+	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.TenantMaxInflight, cfg.TenantQuotaPrefilter, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
 	// Periodically sample jobforge_workers_active so the gauge decays when
@@ -468,7 +470,7 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 func runCtl(ctx context.Context, cfg *config.Config) error {
 	args := os.Args[2:]
 	if len(args) == 0 {
-		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status|workers-status> [flags] (outbox status also accepted)")
+		return fmt.Errorf("usage: jobforge ctl <list|get|cancel|retry|outbox-status|workers-status|quota-reconcile> [flags] (outbox status also accepted)")
 	}
 	command := args[0]
 	rest := args[1:]
@@ -494,6 +496,9 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 	// workers-status staleness threshold.
 	staleAfter := fs.Duration("stale-after", 3*cfg.LeaseTTL,
 		"workers-status: mark workers stale when their last heartbeat is older than this")
+	// quota-reconcile repair switch.
+	repair := fs.Bool("repair", false,
+		"quota-reconcile: overwrite divergent counters from the jobs aggregation")
 
 	if err := fs.Parse(rest); err != nil {
 		return err
@@ -522,6 +527,16 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 			return err
 		}
 		return ctl.RenderWorkers(out, *output, workers, *staleAfter)
+
+	case "quota-reconcile":
+		// Quota counter drift check (and optional repair) straight against
+		// PostgreSQL (PRD v0.3 FR-724); needs database credentials, not the
+		// HTTP API.
+		res, err := ctl.ReconcileQuotaCounters(ctx, cfg.DatabaseURL, *repair)
+		if err != nil {
+			return err
+		}
+		return ctl.RenderQuotaReconcile(out, *output, res)
 	}
 
 	// All remaining commands talk to the HTTP control plane.
@@ -579,7 +594,7 @@ func runCtl(ctx context.Context, cfg *config.Config) error {
 		return ctl.RenderSubmitResult(out, *output, "retry", res)
 
 	default:
-		return fmt.Errorf("unknown ctl command: %s (expected list|get|cancel|retry|outbox-status|workers-status)", command)
+		return fmt.Errorf("unknown ctl command: %s (expected list|get|cancel|retry|outbox-status|workers-status|quota-reconcile)", command)
 	}
 }
 

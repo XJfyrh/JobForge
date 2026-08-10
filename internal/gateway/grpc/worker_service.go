@@ -59,9 +59,16 @@ type WorkerService struct {
 	leaseTTL time.Duration
 	metrics  *observability.Metrics
 
-	// tenantMaxInflight limits how many running jobs a tenant may have.
-	// Claim skips jobs of tenants at their quota (FR-302). <= 0 disables it.
+	// tenantMaxInflight limits how many inflight (running + cancelling) jobs
+	// a tenant may have. Claim reserves slots on the derived counter and
+	// skips jobs of tenants at their quota (PRD v0.3 FR-720~726). <= 0
+	// disables it.
 	tenantMaxInflight int
+
+	// quotaPrefilter enables the candidate pre-filter that excludes full
+	// tenants before the row-lock window (ADR-0007 §4). Correctness never
+	// depends on it; disabling only costs fairness performance.
+	quotaPrefilter bool
 
 	// gaugeMu guards prevGaugeKeys, used to zero out workers_active series
 	// whose (version, status) group disappeared since the previous sample.
@@ -69,9 +76,11 @@ type WorkerService struct {
 	prevGaugeKey map[workerCountKey]struct{}
 }
 
-// NewWorkerService creates a WorkerService. tenantMaxInflight is the per-tenant
-// running-job quota enforced during claim (FR-302); <= 0 disables the limit.
-func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, tenantMaxInflight int, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
+// NewWorkerService creates a WorkerService. tenantMaxInflight is the
+// per-tenant inflight-job quota enforced during claim (PRD v0.3 FR-720~726);
+// <= 0 disables the limit. quotaPrefilter toggles the full-tenant candidate
+// pre-filter (ADR-0007 §4).
+func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, tenantMaxInflight int, quotaPrefilter bool, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
 	return &WorkerService{
 		store:             s,
 		waiter:            waiter,
@@ -79,6 +88,7 @@ func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, 
 		leaseTTL:          leaseTTL,
 		metrics:           metrics,
 		tenantMaxInflight: tenantMaxInflight,
+		quotaPrefilter:    quotaPrefilter,
 	}
 }
 
@@ -159,16 +169,19 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		Types:             req.Types,
 		MaxJobs:           maxJobs,
 		LeaseTTL:          svc.leaseTTL,
-		TenantMaxInflight: svc.tenantMaxInflight, // FR-302 tenant quota.
+		TenantMaxInflight: svc.tenantMaxInflight, // PRD v0.3 tenant quota.
+		QuotaPrefilter:    svc.quotaPrefilter,
 	}
 
 	// Try immediate claim.
 	start := time.Now()
-	jobs, err := svc.store.Claim(ctx, claimParams)
+	res, err := svc.store.Claim(ctx, claimParams)
 	if err != nil {
 		span.SetStatus(otelcodes.Error, err.Error())
 		return nil, mapError(err)
 	}
+	jobs := res.Jobs
+	svc.observeQuotaConflicts(ctx, res.QuotaConflicts)
 
 	// Long-poll: if no jobs, wait for notification or deadline.
 	for len(jobs) == 0 && ctx.Err() == nil {
@@ -181,11 +194,13 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 			break
 		}
 
-		jobs, err = svc.store.Claim(ctx, claimParams)
+		res, err = svc.store.Claim(ctx, claimParams)
 		if err != nil {
 			span.SetStatus(otelcodes.Error, err.Error())
 			return nil, mapError(err)
 		}
+		jobs = res.Jobs
+		svc.observeQuotaConflicts(ctx, res.QuotaConflicts)
 	}
 
 	// Record claim duration metric (PRD 12.1). No queue attribute: a single
@@ -352,6 +367,15 @@ func (svc *WorkerService) refreshWorkerLiveness(ctx context.Context, workerID st
 	if err := svc.store.RefreshWorkerHeartbeat(ctx, workerID, svc.livenessRefreshInterval()); err != nil {
 		svc.logger.Debug("refresh worker heartbeat failed", "worker_id", workerID, "error", err)
 	}
+}
+
+// observeQuotaConflicts records candidates skipped because their tenant hit
+// the hard cap during reservation (pre-filter staleness; PRD v0.3 §8).
+func (svc *WorkerService) observeQuotaConflicts(ctx context.Context, conflicts int) {
+	if svc.metrics == nil || conflicts <= 0 {
+		return
+	}
+	svc.metrics.QuotaReservationConflictsTotal.Add(ctx, int64(conflicts))
 }
 
 // livenessRefreshInterval is the SQL-layer throttle for worker liveness

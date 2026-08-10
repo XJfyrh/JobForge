@@ -105,6 +105,26 @@ cancelling 状态下：
 - Worker 通过 Heartbeat 控制消息收到 cancel 信号 → 停止执行 → Fail(cancelled)
 - 若 Worker 未响应 → lease 过期 → Scheduler 将 cancelling → cancelled
 
+## 租户配额计数（PRD v0.3）
+
+租户 inflight 硬配额由派生计数表 `tenant_quota_counters` 执行（ADR-0007），故障语义与 PRD v0.3 §7.2 一致：
+
+1. quota slot 的预留/释放必须与对应 job 状态变化同事务：Claim 预留与 lease 更新同事务提交；Complete、Fail（retry/dead/cancelling→cancelled）与 Scheduler lease 回收均在状态转换事务内扣减；running→cancelling 不释放（cancelling 继续占用）。
+2. 事务回滚后 slot 与 job 均不变化：预留是事务内的条件 upsert，回滚时与领取一起消失，不存在未用 slot。
+3. 计数漂移修复以 `jobs WHERE state IN ('running','cancelling')` 聚合为准：Scheduler leader 周期核对（默认 5m，`JOBFORGE_QUOTA_RECONCILE_INTERVAL`）与 `jobforge ctl quota-reconcile [--repair]` 都从 jobs 聚合覆盖写入 counter（含无 inflight 任务的租户归零）。
+4. 计数表不可替代 jobs 进行任务查询、恢复或审计：它是 PostgreSQL 内的派生一致性数据，任何时候可重建。
+5. 同租户 Claim 可在计数行上短暂串行化（counter 行按 tenant_id 升序加锁，全局锁序 jobs 行 → counter 行），禁止通过放松硬上限换取吞吐。
+
+**故障与恢复路径**：
+
+| 故障 | 表现 | 恢复 |
+|---|---|---|
+| 预筛陈旧（并发事务刚填满/释放配额） | 候选预留被拒（`jobforge_quota_reservation_conflicts_total` 递增）或满额租户多等一轮 Claim | 事务内条件预留保证不超配；下一轮 Claim 自然收敛 |
+| 计数漂移（人为改动/历史路径遗漏） | `jobforge_quota_counter_drift` > 0；错误限流或超配风险 | 周期核对自动修复（日志含 tenant/counter/actual 审计）；或手工 `ctl quota-reconcile --repair` |
+| migration 0013 backfill 后存量运行中任务 | counter 在迁移时从 jobs 聚合初始化 | backfill 幂等（ON CONFLICT 覆盖），无需人工介入 |
+
+硬上限正确性（并发 Claim 不超配、cancelling 占用、满额租户不阻塞他人）由 AT-21/22/23 验收（见下节测试证据）。
+
 ## DLQ 进入与恢复
 
 **进入条件**：
@@ -147,6 +167,7 @@ cancelling 状态下：
 | `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
 | `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock；卡死 leader 租约接管与 epoch fencing、优雅让位即时接管（`TestSchedulerStuckLeaderTakeover`、`TestSchedulerGracefulReleaseImmediateTakeover`） |
 | `tests/integration/tenant_test.go` | AT-10 |
+| `tests/integration/quota_test.go` | AT-21（64 并发硬上限，事务内/采样/终态三层断言，预筛开关双变体）、AT-22（满额租户不阻塞：单任务 ≤1s；30s 持续流量 p95≤1s/max≤2s）、AT-23（取消风暴占用 slot）、FR-724 漂移核对与修复（Scheduler 与 ctl 双路径）；AT-24/25 为 M4/M5 骨架 |
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |

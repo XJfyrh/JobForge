@@ -126,6 +126,28 @@ Worker 在 Register/Poll 中声明队列列表，Poll 对**全部**声明队列�
 - Poll/Register 对空队列列表（或含空串）返回 `INVALID_ARGUMENT`，不做静默忽略；
 - `idx_jobs_claim` 部分索引逐队列命中，SKIP LOCKED 与单队列语义一致。
 
+### 租户配额原子计数（PRD v0.3，ADR-0007）
+
+租户 inflight 硬配额（`JOBFORGE_TENANT_MAX_INFLIGHT`，inflight = running + cancelling）由派生计数表 `tenant_quota_counters`（migration 0013）执行，jobs 仍是唯一事实源：
+
+```text
+1. 候选预筛：claimSelect 在行锁窗口前以 NOT EXISTS 排除 counter ≥ limit 的租户，
+   其他租户候选回填窗口（满额租户不再饿死他人）
+2. 快照定批：不加锁读取候选租户 counter 快照，按 limit − inflight 决定每租户领取数
+   （快照只定批量大小，不保证硬上限）
+3. 同事务领取 + 原子预留：先对计划候选执行 lease 更新 + attempt 写入，事务最后按
+   tenant_id 升序逐租户批量条件 upsert（inflight + N ≤ limit，全局锁序：jobs 行 →
+   counter 行）；条件不满足整批原子失败，回滚整个事务并以新快照重试（有界重试 3 次），
+   回滚时领取与预留同时消失
+4. 同事务释放：Complete / Fail（retry、dead、cancelling→cancelled）/ Scheduler lease 回收
+   都在状态转换事务内扣减 counter；running→cancelling 不释放（FR-723）
+5. 周期核对：Scheduler leader 每 JOBFORGE_QUOTA_RECONCILE_INTERVAL（默认 5m）比对
+   counter 与 jobs 聚合，差异记入 jobforge_quota_counter_drift 并按 jobs 聚合修复；
+   `jobforge ctl quota-reconcile [--repair]` 提供手工核对/修复
+```
+
+预筛读不加锁（READ COMMITTED 快照），陈旧只影响性能不影响正确性：硬上限始终由事务末尾的条件批量预留保证；预筛可由 `JOBFORGE_TENANT_QUOTA_PREFILTER=false` 关闭（正确性不降级）。快照显示满额而在定批阶段被跳过的候选数计入 `jobforge_quota_reservation_conflicts_total`。故障语义见 [failure-semantics.md](failure-semantics.md) “配额计数”节。
+
 ### 热路径部分索引
 
 jobs 表的热路径查询均由部分索引服务，避免随表增长退化为全表扫描：
@@ -135,7 +157,7 @@ jobs 表的热路径查询均由部分索引服务，避免随表增长退化为
 | `idx_jobs_claim` | `(queue, priority desc, created_at asc) WHERE state='ready'` | Claim 领取（0001） |
 | `idx_jobs_lease_expiry` | `(lease_until) WHERE state IN ('running','cancelling')` | Scheduler 过期 lease 回收（0001） |
 | `idx_jobs_promote_ready` | `(run_at) WHERE state IN ('scheduled','retry_wait')` | Scheduler promote 扫描（0011）：`run_at` 打头使扫描有序且命中 limit 即停，免排序 |
-| `idx_jobs_tenant_running` | `(tenant_id) WHERE state='running'` | Claim 事务内 FR-302 租户配额计数（0012）：index-only count，缩短 claim 事务行锁持有时长 |
+| `idx_jobs_tenant_inflight` | `(tenant_id) WHERE state IN ('running','cancelling')` | 配额核对聚合与采样断言（0014，ADR-0007）；取代 0012 的 `idx_jobs_tenant_running`（其消费者逐候选 count 被计数表替代，索引已在 0015 删除） |
 
 ## 部署拓扑
 
