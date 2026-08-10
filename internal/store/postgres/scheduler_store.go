@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -152,6 +153,7 @@ func (s *SchedulerStore) PromoteReady(ctx context.Context, batchSize int) (int, 
 // recoveredJob holds the data returned by lease recovery queries.
 type recoveredJob struct {
 	ID           string
+	TenantID     string
 	Queue        string
 	LeaseOwner   *string
 	Attempt      int
@@ -160,8 +162,9 @@ type recoveredJob struct {
 
 // RecoverExpiredLeases recovers running jobs with expired leases (back to
 // ready) and cancelling jobs with expired leases (to cancelled). It writes
-// audit records (job_attempts + outbox_events) for each recovered job.
-// Returns the total number of jobs recovered.
+// audit records (job_attempts + outbox_events) for each recovered job and
+// releases the recovered jobs' tenant quota slots, all within one
+// transaction (ADR-0007 §6). Returns the total number of jobs recovered.
 func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -170,6 +173,10 @@ func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) 
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	total := 0
+	// Per-tenant release counters: both recovery paths decrement the same
+	// counter rows, so releases are aggregated per tenant and applied in
+	// ascending tenant_id order after the jobs updates (global lock order).
+	released := make(map[string]int)
 
 	// Recover running → ready.
 	runningJobs, err := s.recoverQuery(ctx, tx, recoverRunningLeases)
@@ -180,6 +187,7 @@ func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) 
 		if err := s.writeRecoveryAudit(ctx, tx, j); err != nil {
 			return 0, err
 		}
+		released[j.TenantID]++
 		total++
 	}
 
@@ -192,13 +200,37 @@ func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) 
 		if err := s.writeRecoveryAudit(ctx, tx, j); err != nil {
 			return 0, err
 		}
+		released[j.TenantID]++
 		total++
+	}
+
+	if err := releaseQuotaByTenant(ctx, tx, released); err != nil {
+		return 0, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return 0, fmt.Errorf("commit recovery tx: %w", err)
 	}
 	return total, nil
+}
+
+// releaseQuotaByTenant decrements tenant_quota_counters for every recovered
+// job, one statement per tenant (ascending tenant_id order, ADR-0007 §3).
+func releaseQuotaByTenant(ctx context.Context, tx pgx.Tx, released map[string]int) error {
+	if len(released) == 0 {
+		return nil
+	}
+	tenants := make([]string, 0, len(released))
+	for t := range released {
+		tenants = append(tenants, t)
+	}
+	sort.Strings(tenants)
+	for _, t := range tenants {
+		if _, err := tx.Exec(ctx, quotaReleaseN, t, released[t]); err != nil {
+			return fmt.Errorf("release tenant quota for %s: %w", t, err)
+		}
+	}
+	return nil
 }
 
 // recoverQuery executes a recovery UPDATE ... RETURNING query.
@@ -212,7 +244,7 @@ func (s *SchedulerStore) recoverQuery(ctx context.Context, tx pgx.Tx, query stri
 	var jobs []recoveredJob
 	for rows.Next() {
 		var j recoveredJob
-		if err := rows.Scan(&j.ID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken); err != nil {
+		if err := rows.Scan(&j.ID, &j.TenantID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken); err != nil {
 			return nil, fmt.Errorf("scan recovered job: %w", err)
 		}
 		jobs = append(jobs, j)
@@ -263,4 +295,35 @@ func (s *SchedulerStore) QueueDepthMetrics(ctx context.Context) ([]store.QueueDe
 		result = append(result, r)
 	}
 	return result, rows.Err()
+}
+
+// QuotaDrift compares tenant_quota_counters against the jobs aggregation and
+// returns every disagreeing tenant (PRD v0.3 FR-724). Read-only.
+func (s *SchedulerStore) QuotaDrift(ctx context.Context) ([]store.QuotaDriftRow, error) {
+	rows, err := s.pool.Query(ctx, quotaDriftRows)
+	if err != nil {
+		return nil, fmt.Errorf("quota drift query: %w", err)
+	}
+	defer rows.Close()
+
+	var drift []store.QuotaDriftRow
+	for rows.Next() {
+		var r store.QuotaDriftRow
+		if err := rows.Scan(&r.TenantID, &r.Counter, &r.Actual); err != nil {
+			return nil, fmt.Errorf("scan drift row: %w", err)
+		}
+		drift = append(drift, r)
+	}
+	return drift, rows.Err()
+}
+
+// RepairQuotaCounters overwrites the derived counters with the jobs
+// aggregation (the source of truth, PRD v0.3 §7.2.3). Returns the number of
+// counter rows changed.
+func (s *SchedulerStore) RepairQuotaCounters(ctx context.Context) (int, error) {
+	var repaired int
+	if err := s.pool.QueryRow(ctx, quotaRepairFromJobs).Scan(&repaired); err != nil {
+		return 0, fmt.Errorf("repair quota counters: %w", err)
+	}
+	return repaired, nil
 }

@@ -76,6 +76,16 @@
 
 `jobforge_outbox_pending` 为采样值：publisher 每轮发布后统计 `published_at IS NULL` 的事件数。事件发布是 at-least-once，发布失败/重复发布不影响任务状态（详见[故障语义](failure-semantics.md)的 outbox 事件发布语义）。
 
+### 租户配额指标（PRD v0.3 §8）
+
+| 指标名 | 类型 | 标签 |
+|---|---|---|
+| `jobforge_quota_reservation_conflicts_total` | Counter | — |
+| `jobforge_quota_counter_drift` | Gauge | — |
+
+- `jobforge_quota_reservation_conflicts_total`：Gateway 每次 Poll 统计候选因 counter 快照已达租户硬配额而在定批阶段被跳过的数量；持续上升说明预筛陈旧窗口内配额竞争激烈（只影响性能，不影响硬上限）。
+- `jobforge_quota_counter_drift`：Scheduler leader 周期核对（`JOBFORGE_QUOTA_RECONCILE_INTERVAL`，默认 5m）发现的 counter 与 jobs 聚合绝对差异之和；发现差异后自动按 jobs 聚合并归零（详见[故障语义](failure-semantics.md)的租户配额计数节）。
+
 ### 标签约束
 
 高基数字段 `job_id`、`trace_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
@@ -87,6 +97,7 @@
 | `jobforge_queue_depth` | Scheduler `scanCycle` | 每次扫描周期按 (tenant, queue, state) 采样 pending 任务数 |
 | `jobforge_workers_active` | Gateway `Register` + 周期采样器 | Worker 注册后即时采样；Gateway 后台每 `max(LeaseTTL/2, 5s)` 周期采样，仅统计心跳新鲜的 worker（见下节） |
 | `jobforge_outbox_pending` | Publisher `Run` | 每轮发布结束后采样未发布事件数 |
+| `jobforge_quota_counter_drift` | Scheduler `reconcileQuota` | 每 `JOBFORGE_QUOTA_RECONCILE_INTERVAL`（默认 5m）核对一次；修复成功后归零 |
 
 ### Worker 存活判定与 workers_active 语义
 

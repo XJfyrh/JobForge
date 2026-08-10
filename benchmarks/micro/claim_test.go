@@ -139,7 +139,7 @@ func BenchmarkClaimContention(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		workerID := fmt.Sprintf("bench-worker-%s", uuid.New().String()[:8])
 		for pb.Next() {
-			jobs, err := js.Claim(ctx, store.ClaimParams{
+			_, err := js.Claim(ctx, store.ClaimParams{
 				Queues:   []string{queue},
 				WorkerID: workerID,
 				MaxJobs:  1,
@@ -149,7 +149,6 @@ func BenchmarkClaimContention(b *testing.B) {
 				b.Fatalf("claim: %v", err)
 			}
 			// Empty result is expected under contention.
-			_ = jobs
 		}
 	})
 }

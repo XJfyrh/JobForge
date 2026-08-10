@@ -108,9 +108,11 @@ returning jobs.id, jobs.queue
 //
 // Invariant: recovery writes an outbox event and updates job_attempts with
 // outcome 'lease_expired' for audit (handled in Go code within the same tx).
+// tenant_id is returned so the same transaction can release the tenant's
+// quota slot (running jobs occupy one; ADR-0007 §6).
 const recoverRunningLeases = `
 with expired as (
-    select id, queue, lease_owner, attempt, fencing_token
+    select id, tenant_id, queue, lease_owner, attempt, fencing_token
     from jobs
     where state = 'running'
       and lease_until < now()
@@ -124,7 +126,7 @@ set state = 'ready',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
 `
 
 // recoverCancellingLeases transitions cancelling jobs with expired leases to
@@ -132,9 +134,11 @@ returning expired.id, expired.queue, expired.lease_owner, expired.attempt, expir
 // acknowledged before the lease expired. Uses CTE + FOR UPDATE SKIP LOCKED,
 // for the same reason as recoverRunningLeases: concurrent recoveries during
 // the leadership split-brain window must stay disjoint.
+// tenant_id is returned so the same transaction can release the tenant's
+// quota slot (cancelling jobs keep occupying one until cancelled; ADR-0007 §6).
 const recoverCancellingLeases = `
 with expired as (
-    select id, queue, lease_owner, attempt, fencing_token
+    select id, tenant_id, queue, lease_owner, attempt, fencing_token
     from jobs
     where state = 'cancelling'
       and lease_until < now()
@@ -146,7 +150,7 @@ set state = 'cancelled',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
 `
 
 // insertRecoveryAttempt records a lease-expired recovery event in job_attempts.
@@ -174,4 +178,56 @@ select tenant_id, queue, state, count(*)
 from jobs
 where state in ('scheduled', 'ready', 'retry_wait')
 group by tenant_id, queue, state
+`
+
+// quotaDriftRows compares the derived tenant_quota_counters against the jobs
+// aggregation (the source of truth, PRD v0.3 §7.2.3 / FR-724). A FULL OUTER
+// JOIN surfaces both over-counted tenants and tenants whose counter row is
+// missing while jobs are inflight. Tenants with no inflight jobs and a zero
+// counter are in agreement and are not returned.
+const quotaDriftRows = `
+with actual as (
+    select tenant_id, count(*) as n
+    from jobs
+    where state in ('running', 'cancelling')
+    group by tenant_id
+)
+select coalesce(c.tenant_id, a.tenant_id) as tenant_id,
+       coalesce(c.inflight, 0) as counter,
+       coalesce(a.n, 0) as actual
+from tenant_quota_counters c
+full outer join actual a on a.tenant_id = c.tenant_id
+where coalesce(c.inflight, 0) <> coalesce(a.n, 0)
+order by tenant_id
+`
+
+// quotaRepairFromJobs overwrites the derived counters with the jobs
+// aggregation (the repair source of truth, ADR-0007 §7). Tenants whose jobs
+// all left the inflight states get their counter reset to zero. Only rows
+// that actually differ are touched (counted by the statement tag).
+const quotaRepairFromJobs = `
+with actual as (
+    select tenant_id, count(*) as n
+    from jobs
+    where state in ('running', 'cancelling')
+    group by tenant_id
+),
+upserted as (
+    insert into tenant_quota_counters (tenant_id, inflight, updated_at)
+    select tenant_id, n, now() from actual
+    on conflict (tenant_id) do update
+    set inflight = excluded.inflight,
+        updated_at = now()
+    where tenant_quota_counters.inflight <> excluded.inflight
+    returning tenant_id
+),
+zeroed as (
+    update tenant_quota_counters c
+    set inflight = 0,
+        updated_at = now()
+    where c.inflight > 0
+      and not exists (select 1 from actual a where a.tenant_id = c.tenant_id)
+    returning c.tenant_id
+)
+select (select count(*) from upserted) + (select count(*) from zeroed)
 `

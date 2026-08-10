@@ -131,7 +131,7 @@ func TestCtlGetAttempts(t *testing.T) {
 	job := createTestJob(t, js, "ctl-get", "demo.echo")
 	reanchorRunAt(t, job.ID)
 
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"ctl-get"},
 		WorkerID: "ctl-get-worker",
 		MaxJobs:  1,
@@ -195,7 +195,7 @@ func TestCtlAT16RetryDLQ(t *testing.T) {
 	job := createTestJob(t, js, "ctl-at16", "demo.fail")
 	reanchorRunAt(t, job.ID)
 
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"ctl-at16"},
 		WorkerID: "ctl-at16-worker",
 		MaxJobs:  1,
@@ -265,7 +265,7 @@ func TestCtlRetryTerminalGuard(t *testing.T) {
 
 	job := createTestJob(t, js, "ctl-guard", "demo.echo")
 	reanchorRunAt(t, job.ID)
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"ctl-guard"},
 		WorkerID: "ctl-guard-worker",
 		MaxJobs:  1,

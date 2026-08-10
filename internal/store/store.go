@@ -41,8 +41,10 @@ type JobStore interface {
 	// concurrent claims from conflicting.
 	//
 	// Invariant: within the claim transaction, lease_owner, lease_until,
-	// attempt, fencing_token and state are all updated atomically.
-	Claim(ctx context.Context, params ClaimParams) ([]*domain.Job, error)
+	// attempt, fencing_token and state are all updated atomically. When a
+	// tenant quota is active, each claimed job's slot is reserved on the
+	// derived counter in the same transaction (PRD v0.3 FR-721, ADR-0007).
+	Claim(ctx context.Context, params ClaimParams) (*ClaimResult, error)
 
 	// Heartbeat extends the lease for a running job. Only the current owner
 	// with the correct fencing token may extend.
@@ -81,9 +83,32 @@ type ClaimParams struct {
 	MaxJobs  int
 	LeaseTTL time.Duration
 
-	// TenantMaxInflight limits how many running jobs a tenant can have.
-	// If <= 0, no limit is enforced.
+	// TenantMaxInflight limits how many inflight (running + cancelling) jobs
+	// a tenant can have. If <= 0, no limit is enforced.
 	TenantMaxInflight int
+
+	// QuotaPrefilter enables the candidate pre-filter that excludes full
+	// tenants before the row-lock window (PRD v0.3 FR-725/726, ADR-0007 §4).
+	// Disabling it only costs fairness performance: the in-transaction atomic
+	// reservation still enforces the hard cap.
+	QuotaPrefilter bool
+}
+
+// ClaimResult carries the outcome of a claim operation.
+type ClaimResult struct {
+	// Jobs are the successfully claimed jobs.
+	Jobs []*domain.Job
+
+	// QuotaConflicts counts candidates skipped because their tenant's atomic
+	// slot reservation hit the hard cap (pre-filter staleness). Feeds
+	// jobforge_quota_reservation_conflicts_total.
+	QuotaConflicts int
+
+	// MaxObservedInflight is the highest counter value returned by a
+	// successful in-transaction slot reservation (post-increment). It lets
+	// tests assert the hard cap held inside every claim transaction (AT-21);
+	// 0 when no quota reservation ran.
+	MaxObservedInflight int
 }
 
 // OutboxEvent represents one row of the outbox_events table. Events are
@@ -173,4 +198,13 @@ type WorkerRow struct {
 	Status          string
 	LastHeartbeatAt *time.Time
 	RegisteredAt    time.Time
+}
+
+// QuotaDriftRow is one tenant whose derived inflight counter disagrees with
+// the jobs aggregation (PRD v0.3 FR-724). Counter is the tenant_quota_counters
+// value (0 when the row is missing), Actual the jobs running+cancelling count.
+type QuotaDriftRow struct {
+	TenantID string
+	Counter  int64
+	Actual   int64
 }

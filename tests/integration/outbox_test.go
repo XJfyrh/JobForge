@@ -413,7 +413,7 @@ func TestOutboxAT15DuplicateDeliveryIdempotent(t *testing.T) {
 		`update jobs set run_at = now() - interval '10 seconds' where id = $1`, job.ID); err != nil {
 		t.Fatalf("re-anchor run_at: %v", err)
 	}
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"outbox-at15"},
 		WorkerID: "outbox-at15-worker",
 		MaxJobs:  1,

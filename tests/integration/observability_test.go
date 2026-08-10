@@ -67,6 +67,9 @@ func TestObservabilityAT12FullSpans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so the claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 clock jumps (see reanchorRunAt).
+	reanchorRunAt(t, jobID)
 	submitSpan.End()
 
 	// 2. Simulate gateway.claim_jobs span (Gateway layer).
@@ -75,7 +78,7 @@ func TestObservabilityAT12FullSpans(t *testing.T) {
 	claimCtx, claimSpan := gwTracer.Start(ctx, "gateway.claim_jobs")
 	claimSpan.SetAttributes(attribute.String("worker_id", "obs-worker"))
 
-	claimed, err := js.Claim(claimCtx, store.ClaimParams{
+	claimed, err := claimJobs(claimCtx, js, store.ClaimParams{
 		Queues:   []string{"obs-queue"},
 		WorkerID: "obs-worker",
 		MaxJobs:  1,

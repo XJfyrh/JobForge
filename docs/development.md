@@ -110,6 +110,9 @@ jobforge ctl outbox-status
 
 # worker 注册表与存活状态（只读，需数据库连接串）
 jobforge ctl workers-status [--stale-after 90s]
+
+# 租户配额计数核对（PRD v0.3 FR-724，只读；--repair 以 jobs 聚合为事实源覆盖修复）
+jobforge ctl quota-reconcile [--repair]
 ```
 
 凭据与连接参数：
@@ -121,6 +124,9 @@ jobforge ctl workers-status [--stale-after 90s]
 | `--output` | — | `table`（可选 `json`） | 全部 |
 | — | `JOBFORGE_DATABASE_URL` | `postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`（代码默认值） | outbox-status / workers-status |
 | `--stale-after` | — | `3×JOBFORGE_LEASE_TTL` | workers-status |
+| `--repair` | — | `false` | quota-reconcile |
+| — | `JOBFORGE_TENANT_QUOTA_PREFILTER` | `true` | 服务配置：Claim 候选预筛开关（关闭仅损失公平性性能，硬上限不受影响，ADR-0007 §4） |
+| — | `JOBFORGE_QUOTA_RECONCILE_INTERVAL` | `5m` | 服务配置：Scheduler leader 配额核对周期（≤0 关闭） |
 
 table 视图不输出完整 payload；CLI 日志不记录 API key、Authorization header（PRD v0.2 NFR-205）。`retry` 克隆新 job_id 并记录 `retry_of_job_id`，原任务终态不可变（AT-16）。
 

@@ -80,7 +80,7 @@ func TestGatewayGetJobState(t *testing.T) {
 	}
 
 	// Claim → running.
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"gw-state"},
 		WorkerID: "gw-worker-state",
 		MaxJobs:  1,
@@ -107,7 +107,7 @@ func TestGatewayHeartbeatCancelSignal(t *testing.T) {
 
 	job := createTestJob(t, s, "gw-hb-cancel", "demo.echo")
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"gw-hb-cancel"},
 		WorkerID: "gw-worker-hb",
 		MaxJobs:  1,
@@ -148,7 +148,7 @@ func TestGatewayCompleteIdempotent(t *testing.T) {
 
 	job := createTestJob(t, s, "gw-idem", "demo.echo")
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"gw-idem"},
 		WorkerID: "gw-worker-idem",
 		MaxJobs:  1,
@@ -219,7 +219,7 @@ func TestEndToEndSubmitExecuteComplete(t *testing.T) {
 	}
 
 	// 3. Worker claims (Poll equivalent).
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"e2e"},
 		WorkerID: "e2e-worker",
 		Types:    []string{"demo.echo"},
@@ -282,7 +282,7 @@ func TestEndToEndFailRetryRecover(t *testing.T) {
 	job := createTestJob(t, js, "e2e-retry", "demo.fail")
 
 	// 2. Claim.
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"e2e-retry"},
 		WorkerID: "e2e-worker-r",
 		MaxJobs:  1,
@@ -326,7 +326,7 @@ func TestEndToEndFailRetryRecover(t *testing.T) {
 	}
 
 	// 5. Re-claim (attempt 2).
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"e2e-retry"},
 		WorkerID: "e2e-worker-r2",
 		MaxJobs:  1,
@@ -373,7 +373,7 @@ func TestEndToEndLeaseExpiryRecovery(t *testing.T) {
 
 	// 1. Create and claim with very short lease.
 	job := createTestJob(t, js, "e2e-lease", "demo.sleep")
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"e2e-lease"},
 		WorkerID: "e2e-dead-worker",
 		MaxJobs:  1,
@@ -409,7 +409,7 @@ func TestEndToEndLeaseExpiryRecovery(t *testing.T) {
 	}
 
 	// 4. New worker claims.
-	claimed2, err := js.Claim(ctx, store.ClaimParams{
+	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"e2e-lease"},
 		WorkerID: "e2e-new-worker",
 		MaxJobs:  1,
@@ -467,8 +467,11 @@ func TestEndToEndManualRetry(t *testing.T) {
 		if err != nil {
 			t.Fatalf("enqueue: %v", err)
 		}
+		// Anchor run_at to the PostgreSQL clock so the claim's run_at <=
+		// now() predicate is immune to Docker/WSL2 clock jumps.
+		reanchorRunAt(t, origJob.ID)
 
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"manual-retry"},
 			WorkerID: "retry-worker",
 			MaxJobs:  1,
@@ -515,6 +518,8 @@ func TestEndToEndManualRetry(t *testing.T) {
 		if err != nil {
 			t.Fatalf("enqueue clone: %v", err)
 		}
+		// Same clock anchoring for the clone's claim below.
+		reanchorRunAt(t, newJob.ID)
 
 		// 3. Verify clone properties.
 		clone, err := js.GetByID(ctx, "test-tenant", newJob.ID)
@@ -532,7 +537,7 @@ func TestEndToEndManualRetry(t *testing.T) {
 		}
 
 		// 4. Clone can be claimed and completed (full lifecycle).
-		claimed2, err := js.Claim(ctx, store.ClaimParams{
+		claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"manual-retry"},
 			WorkerID: "retry-worker-2",
 			MaxJobs:  1,
@@ -558,7 +563,7 @@ func TestEndToEndManualRetry(t *testing.T) {
 	t.Run("succeeded job cannot be retried", func(t *testing.T) {
 		// Create and complete a job.
 		job := createTestJob(t, js, "retry-reject", "demo.echo")
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"retry-reject"},
 			WorkerID: "retry-reject-worker",
 			MaxJobs:  1,
@@ -620,7 +625,7 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, true, logger, nil)
 
 	workerID := "liveness-worker-" + uuid.New().String()[:8]
 	_, err := svc.Register(ctx, &workerv1.RegisterRequest{
@@ -641,7 +646,7 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	// Heartbeat RPC must refresh the worker's liveness timestamp.
 	job := createTestJob(t, js, "liveness-hb", "demo.echo")
 	reanchorRunAt(t, job.ID)
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"liveness-hb"},
 		WorkerID: workerID,
 		MaxJobs:  1,
@@ -799,7 +804,7 @@ func TestGatewayPollMultiQueue(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, true, logger, nil)
 
 	queueA := "poll-mq-a-" + uuid.New().String()[:8]
 	queueB := "poll-mq-b-" + uuid.New().String()[:8]

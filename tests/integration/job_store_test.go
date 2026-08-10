@@ -70,7 +70,7 @@ func TestConcurrentClaim(t *testing.T) {
 		go func(workerIdx int) {
 			defer wg.Done()
 			workerID := fmt.Sprintf("worker-%d", workerIdx)
-			jobs, err := s.Claim(ctx, store.ClaimParams{
+			jobs, err := claimJobs(ctx, s, store.ClaimParams{
 				Queues:   []string{"claim-test"},
 				WorkerID: workerID,
 				MaxJobs:  numJobs, // each tries to grab all
@@ -261,7 +261,7 @@ func TestCompleteStaleToken(t *testing.T) {
 	job := createTestJob(t, s, "stale-test", "demo.echo")
 
 	// Worker-1 claims the job.
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"stale-test"},
 		WorkerID: "worker-1",
 		MaxJobs:  1,
@@ -310,7 +310,7 @@ func TestCancelStates(t *testing.T) {
 
 	// Cancel a running job -> should become cancelling.
 	runJob := createTestJob(t, s, "cancel-test", "demo.echo")
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"cancel-test"},
 		WorkerID: "worker-cancel",
 		MaxJobs:  1,
@@ -343,7 +343,7 @@ func TestCancelTerminal(t *testing.T) {
 	job := createTestJob(t, s, "cancel-terminal", "demo.echo")
 
 	// Claim and complete.
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"cancel-terminal"},
 		WorkerID: "worker-t",
 		MaxJobs:  1,
@@ -375,7 +375,7 @@ func TestFailRetry(t *testing.T) {
 
 	job := createTestJob(t, s, "retry-test", "demo.fail")
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"retry-test"},
 		WorkerID: "worker-retry",
 		MaxJobs:  1,
@@ -427,8 +427,11 @@ func TestFailDead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so the claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 clock jumps (see reanchorRunAt).
+	reanchorRunAt(t, job.ID)
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"dead-test"},
 		WorkerID: "worker-dead",
 		MaxJobs:  1,
@@ -463,7 +466,7 @@ func TestCompleteCancelRace(t *testing.T) {
 	for i := 0; i < iterations; i++ {
 		job := createTestJob(t, s, "race-test", "demo.echo")
 
-		claimed, err := s.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, s, store.ClaimParams{
 			Queues:   []string{"race-test"},
 			WorkerID: "worker-race",
 			MaxJobs:  1,
@@ -524,7 +527,7 @@ func TestHeartbeatStaleToken(t *testing.T) {
 
 	job := createTestJob(t, s, "hb-test", "demo.echo")
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{"hb-test"},
 		WorkerID: "worker-hb",
 		MaxJobs:  1,
@@ -575,6 +578,9 @@ func createPriorityJob(t *testing.T, s store.JobStore, queue string, priority in
 	if _, err = s.Enqueue(context.Background(), job); err != nil {
 		t.Fatalf("enqueue job: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so the claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 clock jumps (see reanchorRunAt).
+	reanchorRunAt(t, job.ID)
 	return job
 }
 
@@ -595,7 +601,7 @@ func TestClaimMultiQueue(t *testing.T) {
 	// that declaration order dominates over cross-queue priority.
 	bMid := createPriorityJob(t, s, queueB, 5)
 
-	claimed, err := s.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{queueA, queueB},
 		WorkerID: "mq-worker",
 		MaxJobs:  10,
@@ -629,7 +635,7 @@ func TestClaimMultiQueue(t *testing.T) {
 	}
 
 	// Single-queue claim still works and does not touch the other queue.
-	leftover, err := s.Claim(ctx, store.ClaimParams{
+	leftover, err := claimJobs(ctx, s, store.ClaimParams{
 		Queues:   []string{queueA},
 		WorkerID: "mq-worker-2",
 		MaxJobs:  10,

@@ -40,9 +40,20 @@ type Config struct {
 	// QueueHardLimit is the hard threshold above which submissions are rejected.
 	QueueHardLimit int
 
-	// TenantMaxInflight is the maximum number of running jobs per tenant.
-	// If <= 0, no limit is enforced.
+	// TenantMaxInflight is the maximum number of inflight (running +
+	// cancelling) jobs per tenant. If <= 0, no limit is enforced.
 	TenantMaxInflight int
+
+	// TenantQuotaPrefilter enables the claim candidate pre-filter that
+	// excludes full tenants before the row-lock window (PRD v0.3 FR-726,
+	// ADR-0007 §4). Disabling it only costs fairness performance; the
+	// in-transaction atomic reservation still enforces the hard cap.
+	TenantQuotaPrefilter bool
+
+	// QuotaReconcileInterval is how often the Scheduler leader reconciles
+	// tenant_quota_counters against the jobs aggregation and repairs drift
+	// (PRD v0.3 FR-724). <= 0 disables the periodic reconcile.
+	QuotaReconcileInterval time.Duration
 
 	// OTelExporterType selects the trace exporter: "stdout" or "none".
 	OTelExporterType string
@@ -87,9 +98,12 @@ func Load() (*Config, error) {
 		QueueSoftLimit:    getIntEnv("JOBFORGE_QUEUE_SOFT_LIMIT", 10000),
 		QueueHardLimit:    getIntEnv("JOBFORGE_QUEUE_HARD_LIMIT", 50000),
 		TenantMaxInflight: getIntEnv("JOBFORGE_TENANT_MAX_INFLIGHT", 100),
-		OTelExporterType:  getEnv("JOBFORGE_OTEL_EXPORTER", "stdout"),
-		OTelSampleRatio:   getFloatEnv("JOBFORGE_OTEL_SAMPLE_RATIO", 1.0),
-		MetricsAddr:       getEnv("JOBFORGE_METRICS_ADDR", "127.0.0.1:6060"),
+
+		TenantQuotaPrefilter:   getBoolEnv("JOBFORGE_TENANT_QUOTA_PREFILTER", true),
+		QuotaReconcileInterval: getDurationEnv("JOBFORGE_QUOTA_RECONCILE_INTERVAL", 5*time.Minute),
+		OTelExporterType:       getEnv("JOBFORGE_OTEL_EXPORTER", "stdout"),
+		OTelSampleRatio:        getFloatEnv("JOBFORGE_OTEL_SAMPLE_RATIO", 1.0),
+		MetricsAddr:            getEnv("JOBFORGE_METRICS_ADDR", "127.0.0.1:6060"),
 
 		OutboxPollInterval: getDurationEnv("JOBFORGE_OUTBOX_POLL_INTERVAL", 1*time.Second),
 		OutboxBatchSize:    getIntEnv("JOBFORGE_OUTBOX_BATCH_SIZE", 100),
@@ -158,6 +172,18 @@ func getFloatEnv(key string, fallback float64) float64 {
 	if v := os.Getenv(key); v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			return f
+		}
+	}
+	return fallback
+}
+
+// getBoolEnv reads a boolean environment variable. Accepted truthy values
+// are the strconv.ParseBool set (1, t, true, ...); an unset or unparsable
+// value falls back to the default.
+func getBoolEnv(key string, fallback bool) bool {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return fallback

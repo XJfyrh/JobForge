@@ -36,7 +36,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 
 		job := createTestJob(t, js, "at11-complete", "demo.echo")
 
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"at11-complete"},
 			WorkerID: "worker-graceful",
 			MaxJobs:  1,
@@ -75,7 +75,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 
 		job := createTestJob(t, js, "at11-release", "demo.sleep")
 
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"at11-release"},
 			WorkerID: "worker-timeout",
 			MaxJobs:  1,
@@ -112,7 +112,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 		}
 
 		// Another worker can now claim and complete the job.
-		claimed2, err := js.Claim(ctx, store.ClaimParams{
+		claimed2, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"at11-release"},
 			WorkerID: "worker-replacement",
 			MaxJobs:  1,
@@ -140,7 +140,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 
 		// Worker A is shutting down (does not claim).
 		// Worker B (active) claims all available jobs.
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"at11-no-claim"},
 			WorkerID: "worker-active",
 			MaxJobs:  10,
@@ -174,7 +174,7 @@ func TestWorkerGoroutineStability(t *testing.T) {
 	// Process multiple jobs (claim + complete cycle).
 	for i := 0; i < 10; i++ {
 		job := createTestJob(t, js, "goroutine-stability", "demo.echo")
-		claimed, err := js.Claim(ctx, store.ClaimParams{
+		claimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{"goroutine-stability"},
 			WorkerID: "worker-stability",
 			MaxJobs:  1,

@@ -124,7 +124,7 @@ func main() {
 				start := time.Now()
 
 				// Claim one job.
-				claimed, err := js.Claim(ctx, store.ClaimParams{
+				claimRes, err := js.Claim(ctx, store.ClaimParams{
 					Queues:   []string{queue},
 					WorkerID: wid,
 					MaxJobs:  1,
@@ -134,6 +134,7 @@ func main() {
 					failed.Add(1)
 					continue
 				}
+				claimed := claimRes.Jobs
 				if len(claimed) == 0 {
 					// No jobs available, retry.
 					jobChan <- idx

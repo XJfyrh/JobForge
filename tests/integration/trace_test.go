@@ -51,6 +51,9 @@ func TestTraceAT12Propagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so the claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 clock jumps (see reanchorRunAt).
+	reanchorRunAt(t, jobID)
 
 	// 2. Verify trace_id is stored in job table.
 	got, err := js.GetByID(ctx, "test-tenant", jobID)
@@ -67,7 +70,7 @@ func TestTraceAT12Propagation(t *testing.T) {
 	t.Logf("Job stored with trace_id=%s", *got.TraceID)
 
 	// 3. Claim the job and verify trace_id is returned.
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"trace-test"},
 		WorkerID: "trace-worker",
 		MaxJobs:  1,
@@ -177,6 +180,9 @@ func TestTraceContextEndToEnd(t *testing.T) {
 	if _, err := js.Enqueue(submitCtx, job); err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so the claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 clock jumps (see reanchorRunAt).
+	reanchorRunAt(t, jobID)
 	submitSpan.End()
 
 	// 3. trace_context survives the GetByID round trip.
@@ -189,7 +195,7 @@ func TestTraceContextEndToEnd(t *testing.T) {
 	}
 
 	// 4. Claim returns the trace context to the Worker.
-	claimed, err := js.Claim(ctx, store.ClaimParams{
+	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{"tctx-queue"},
 		WorkerID: "tctx-worker",
 		MaxJobs:  1,
