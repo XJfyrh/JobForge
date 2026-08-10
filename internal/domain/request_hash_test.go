@@ -97,3 +97,50 @@ func TestRequestHashDefaultedFields(t *testing.T) {
 		t.Fatal("omitting max_attempts/timeout_seconds must equal passing their defaults")
 	}
 }
+
+// TestRequestHashLargeIntegerFidelity verifies that payload numbers keep
+// their original text in canonicalization. Before the UseNumber fix,
+// integers above 2^53 were rounded through float64 and distinct payloads
+// collided on the same hash, so a second submission with different
+// parameters was silently deduplicated instead of rejected as a conflict.
+func TestRequestHashLargeIntegerFidelity(t *testing.T) {
+	a := hashTestParams()
+	a.Payload = []byte(`{"n":9007199254740993}`)
+	b := hashTestParams()
+	b.Payload = []byte(`{"n":9007199254740994}`)
+
+	if RequestHash(a) == RequestHash(b) {
+		t.Fatal("distinct large integers must not collide in the request hash")
+	}
+
+	// Key-order canonicalization must still hold alongside big integers.
+	reordered := hashTestParams()
+	reordered.Payload = []byte(`{ "n" : 9007199254740993, "a" : 1 }`)
+	withKey := hashTestParams()
+	withKey.Payload = []byte(`{"a":1,"n":9007199254740993}`)
+	if RequestHash(reordered) != RequestHash(withKey) {
+		t.Fatal("key order and whitespace must stay insignificant for big integers")
+	}
+
+	// The exact integer text survives canonicalization: adjacent values
+	// around the float64 rounding boundary must stay distinct too.
+	c := hashTestParams()
+	c.Payload = []byte(`{"n":9007199254740992}`)
+	if RequestHash(a) == RequestHash(c) {
+		t.Fatal("adjacent large integers must not collide in the request hash")
+	}
+}
+
+// TestRequestHashTrailingGarbageNotCanonical verifies that a payload with
+// trailing garbage after the JSON value is treated as non-canonicalizable
+// raw bytes (matching json.Unmarshal strictness), not silently truncated.
+func TestRequestHashTrailingGarbageNotCanonical(t *testing.T) {
+	clean := hashTestParams()
+	clean.Payload = []byte(`{"a":1}`)
+	garbage := hashTestParams()
+	garbage.Payload = []byte(`{"a":1} trailing`)
+
+	if RequestHash(clean) == RequestHash(garbage) {
+		t.Fatal("payload with trailing garbage must not hash like the clean payload")
+	}
+}

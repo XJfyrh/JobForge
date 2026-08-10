@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -246,6 +247,100 @@ func TestSchedulerRecoverExpiredLease(t *testing.T) {
 	}
 	if got.LeaseOwner != nil {
 		t.Errorf("expected nil lease_owner, got %v", *got.LeaseOwner)
+	}
+}
+
+// TestRecoverExpiredLeasesConcurrentNoDoubleRecovery verifies that two
+// concurrent RecoverExpiredLeases calls (possible during the leadership
+// split-brain window, ADR-0005) recover each job exactly once. The recovery
+// CTEs use FOR UPDATE SKIP LOCKED, so concurrent recoveries are disjoint;
+// without row locking the second transaction would wait on the row lock and
+// re-execute the update (the outer WHERE matches on id only),
+// double-incrementing state_version and duplicating outbox events.
+func TestRecoverExpiredLeasesConcurrentNoDoubleRecovery(t *testing.T) {
+	js := setupStore(t)
+	ssA, _ := setupSchedulerStore(t)
+	ssB, _ := setupSchedulerStore(t)
+	ctx := context.Background()
+
+	const queue = "sched-conc-recover"
+	const n = 10
+	for i := 0; i < n; i++ {
+		createTestJob(t, js, queue, "demo.echo")
+	}
+	claimed, err := js.Claim(ctx, store.ClaimParams{
+		Queues:   []string{queue},
+		WorkerID: "worker-conc",
+		MaxJobs:  n,
+		LeaseTTL: time.Minute,
+	})
+	if err != nil || len(claimed) != n {
+		t.Fatalf("claim %d/%d jobs: %v", len(claimed), n, err)
+	}
+
+	// Force-expire all leases using the PostgreSQL clock.
+	if _, err := testEnv.pool.Exec(ctx,
+		"update jobs set lease_until = now() - interval '1 second' where queue = $1 and state = 'running'",
+		queue); err != nil {
+		t.Fatalf("expire leases: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	counts := make([]int, 2)
+	errs := make([]error, 2)
+	for i, ss := range []*postgres.SchedulerStore{ssA, ssB} {
+		wg.Add(1)
+		go func(idx int, s *postgres.SchedulerStore) {
+			defer wg.Done()
+			counts[idx], errs[idx] = s.RecoverExpiredLeases(ctx)
+		}(i, ss)
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent recover: %v", err)
+		}
+	}
+	if total := counts[0] + counts[1]; total != n {
+		t.Fatalf("concurrent recoveries recovered %d jobs (a=%d b=%d), want %d",
+			total, counts[0], counts[1], n)
+	}
+
+	// Each job must have been recovered exactly once: state_version is 3
+	// (enqueue 1 + claim 2 + recovery 3); a double recovery would make it 4.
+	var badVersions int
+	if err := testEnv.pool.QueryRow(ctx,
+		"select count(*) from jobs where queue = $1 and state_version <> 3", queue).
+		Scan(&badVersions); err != nil {
+		t.Fatalf("count state_version: %v", err)
+	}
+	if badVersions != 0 {
+		t.Fatalf("%d jobs have unexpected state_version (double recovery?)", badVersions)
+	}
+
+	// Audit must be written exactly once per job.
+	const countAudit = `
+select count(*) from outbox_events
+where event_type = 'job.lease_expired'
+  and aggregate_id in (select id from jobs where queue = $1)`
+	var events int
+	if err := testEnv.pool.QueryRow(ctx, countAudit, queue).Scan(&events); err != nil {
+		t.Fatalf("count outbox events: %v", err)
+	}
+	if events != n {
+		t.Fatalf("found %d job.lease_expired outbox events, want %d (duplicates?)", events, n)
+	}
+
+	const countAttempts = `
+select count(*) from job_attempts ja
+where ja.outcome = 'lease_expired'
+  and ja.job_id in (select id from jobs where queue = $1)`
+	var attempts int
+	if err := testEnv.pool.QueryRow(ctx, countAttempts, queue).Scan(&attempts); err != nil {
+		t.Fatalf("count attempts: %v", err)
+	}
+	if attempts != n {
+		t.Fatalf("found %d lease_expired attempt records, want %d", attempts, n)
 	}
 }
 

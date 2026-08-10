@@ -36,7 +36,11 @@ func setupScaleSchedulerStore(t *testing.T) *postgres.SchedulerStore {
 }
 
 // enqueueReadyJobs enqueues n ready jobs into the given queue and returns
-// their IDs. RunAt is set in the past to avoid Docker/WSL2 clock drift.
+// their IDs. RunAt is re-anchored to the PostgreSQL clock after enqueue:
+// the claim predicate run_at <= now() is evaluated by PostgreSQL, so a
+// host-anchored run_at can be filtered out when the Docker/WSL2 clock
+// drifts more than the 1s margin (root cause of the AT-13 round-36
+// intermittent claim-0 failure).
 func enqueueReadyJobs(t *testing.T, js store.JobStore, queue string, n int) []string {
 	t.Helper()
 	ctx := context.Background()
@@ -58,6 +62,13 @@ func enqueueReadyJobs(t *testing.T, js store.JobStore, queue string, n int) []st
 			t.Fatalf("enqueue job %d: %v", i, err)
 		}
 		ids = append(ids, id)
+	}
+	// Re-anchor on the PostgreSQL clock; the state filter keeps terminal
+	// rows from earlier rounds untouched.
+	if _, err := testEnv.pool.Exec(ctx,
+		"update jobs set run_at = now() - interval '10 seconds' where queue = $1 and state = 'ready'",
+		queue); err != nil {
+		t.Fatalf("re-anchor run_at: %v", err)
 	}
 	return ids
 }
