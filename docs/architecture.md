@@ -63,7 +63,7 @@ flowchart LR
 | 同键异参（哈希不一致） | 409 + `CONFLICT`，错误消息携带已有 job id（ADR-0002） |
 | 存量行 request_hash 为 NULL（migration 0008 前创建） | 保持旧语义：直接去重返回已有任务 |
 
-规范化要点：省略 `run_at` 时哈希使用哨兵值而非服务端 `now()` 填充值，否则合法重试会被误判冲突；省略 `max_attempts`/`timeout_seconds` 与显式传默认值哈希一致。
+规范化要点：省略 `run_at` 时哈希使用哨兵值而非服务端 `now()` 填充值，否则合法重试会被误判冲突；省略 `max_attempts`/`timeout_seconds` 与显式传默认值哈希一致。payload 规范化保留数字原文（`json.Number`，不经过 float64），>2^53 大整数不损精度、不同大整数不会碰撞同哈希；已知权衡：`1e2` 与 `100` 等数值等价但文本不同的表示哈希不同（保真优先，避免异参提交被静默去重）。
 
 ### Outbox 事件发布（PRD v0.2）
 

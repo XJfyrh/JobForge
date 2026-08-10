@@ -36,6 +36,9 @@ func createTestJob(t *testing.T, s store.JobStore, queue, jobType string) *domai
 	if err != nil {
 		t.Fatalf("enqueue job: %v", err)
 	}
+	// Anchor run_at to the PostgreSQL clock so claim's run_at <= now()
+	// predicate is immune to Docker/WSL2 host clock drift.
+	reanchorRunAt(t, job.ID)
 	return job
 }
 
