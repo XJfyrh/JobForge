@@ -1,10 +1,12 @@
 package domain
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -167,7 +169,12 @@ func NewJob(id string, params NewJobParams, now time.Time) (*Job, error) {
 // Canonicalization rules:
 //   - payload is re-marshaled from its parsed JSON form so semantically equal
 //     payloads (differing only in key order or whitespace) hash identically;
-//     payloads that are not valid JSON are hashed as raw bytes.
+//     numbers keep their original text (json.Number) so large integers above
+//     2^53 never lose precision or collide in the hash. Known trade-off:
+//     numerically equal but textually different forms (1e2 vs 100) hash
+//     differently; fidelity wins because big-integer collisions silently
+//     deduplicated distinct submissions. Payloads that are not valid JSON
+//     are hashed as raw bytes.
 //   - max_attempts and timeout_seconds use the defaulted values, so omitting
 //     a field and passing its default hash identically.
 //   - run_at hashes the client-provided value (UTC RFC3339Nano) when set, or
@@ -197,13 +204,23 @@ func RequestHash(params NewJobParams) string {
 
 // canonicalPayload returns the canonical form of a JSON payload: parsed and
 // re-marshaled so object keys are sorted and insignificant whitespace is
-// removed. Payloads that are not valid JSON are returned unchanged.
+// removed. Numbers are decoded with UseNumber so large integers above 2^53
+// keep their exact text instead of being rounded through float64, which
+// would make distinct payloads collide in the request hash. Payloads that
+// are not valid JSON are returned unchanged.
 func canonicalPayload(payload []byte) []byte {
 	if len(payload) == 0 {
 		return nil
 	}
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.UseNumber()
 	var decoded any
-	if err := json.Unmarshal(payload, &decoded); err != nil {
+	if err := dec.Decode(&decoded); err != nil {
+		return payload
+	}
+	// Reject trailing garbage after the JSON value (Decode would silently
+	// ignore it, Unmarshal would not), keeping canonicalization strict.
+	if _, err := dec.Token(); err != io.EOF {
 		return payload
 	}
 	canonical, err := json.Marshal(decoded)
