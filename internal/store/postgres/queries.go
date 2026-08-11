@@ -214,7 +214,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
-returning tenant_id
+returning tenant_id, state_version, trace_context
 `
 
 // completeRejectCancelling checks if the job is in cancelling state (cancel won
@@ -238,7 +238,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
-returning tenant_id
+returning tenant_id, state_version, trace_context
 `
 
 // failUpdateDead transitions running → dead. Returns the tenant_id for the
@@ -252,7 +252,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'running'
-returning tenant_id
+returning tenant_id, state_version, trace_context
 `
 
 // failUpdateCancelling transitions cancelling → cancelled on fail.
@@ -268,7 +268,7 @@ where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state = 'cancelling'
-returning tenant_id
+returning tenant_id, state_version, trace_context
 `
 
 // updateAttemptOutcome records the attempt result.
@@ -283,13 +283,16 @@ where job_id = $1 and attempt_no = $2
 `
 
 // insertOutboxEvent writes a state-change event to the outbox within the same
-// transaction as the state transition. P0 only persists; P1 publishes.
+// transaction as the state transition. aggregate_version (jobs.state_version)
+// and traceparent are captured here so envelope v1 can be built at publish
+// time without joining jobs (PRD v0.3 FR-703, ADR-0006 §4).
 const insertOutboxEvent = `
-insert into outbox_events (aggregate_id, event_type, payload)
-values ($1, $2, $3)
+insert into outbox_events (aggregate_id, event_type, payload, aggregate_version, traceparent)
+values ($1, $2, $3, $4, $5)
 `
 
 // cancelWaiting transitions a waiting-state job directly to cancelled.
+// Returns state_version/trace_context for the outbox envelope capture.
 const cancelWaiting = `
 update jobs
 set state = 'cancelled',
@@ -299,9 +302,11 @@ set state = 'cancelled',
 where id = $1
   and tenant_id = $2
   and state in ('scheduled', 'ready', 'retry_wait')
+returning state_version, trace_context
 `
 
 // cancelRunning transitions a running job to cancelling.
+// Returns state_version/trace_context for the outbox envelope capture.
 const cancelRunning = `
 update jobs
 set state = 'cancelling',
@@ -311,6 +316,7 @@ set state = 'cancelling',
 where id = $1
   and tenant_id = $2
   and state = 'running'
+returning state_version, trace_context
 `
 
 // checkTerminal checks if a job is already in a terminal state.

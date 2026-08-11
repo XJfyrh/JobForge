@@ -136,28 +136,39 @@ cancelling 状态下：
 - 原任务终态（dead/cancelled）不可变
 - 新任务继承原 type/queue/payload，attempt 重置为 0
 
-## Outbox 事件发布语义（PRD v0.2）
+## Outbox 事件发布语义（PRD v0.2 / v0.3 §7.1，ADR-0006）
 
-任务终态转换（succeeded/dead/cancelled/cancelling→cancelled）与 lease 回收均在任务事务内写入 `outbox_events`；`publisher` 子命令异步发布这些事件，维持 ADR-0003（PostgreSQL LISTEN/NOTIFY，不引入外部 MQ）。
+任务终态转换（succeeded/dead/cancelled/cancelling→cancelled）与 lease 回收均在任务事务内写入 `outbox_events`（同时捕获 envelope v1 的 `aggregate_version`/`traceparent`，migration 0016）；`publisher` 子命令异步发布这些事件。外部 transport 可配置为 `notify`（ADR-0003 的 PostgreSQL LISTEN/NOTIFY，v0.2 兼容默认，非耐久）或 `redis_streams`（ADR-0006，耐久）。
 
-**发布保证**：
+**发布保证（PRD v0.3 §7.1 逐条落地）**：
 
-- **at-least-once**：事件可能重复发布；消费方必须按 `event_id` 幂等去重。
-- 领取为单语句原子操作：`UPDATE outbox_events SET claimed_at = now() WHERE ... FOR UPDATE SKIP LOCKED RETURNING`，并发 publisher 不会领到同一事件，避免重复 NOTIFY；发布失败与优雅关停即时释放领取，仅硬崩溃的领取标记留存至过期（5 分钟）后重领。
-- NOTIFY 仅作 hint：payload 只携带 `event_id`（通道 `jobforge_outbox`），消费方回查 `outbox_events` 获取完整事件。
-- 发布在任务状态事务之外异步进行：发布失败、重复发布或 publisher 崩溃均**不得**改变任务状态。
+1. 任务状态事务与 outbox 写入原子提交；broker 调用永远在事务外。
+2. broker 调用失败时 `published_at` 保持 NULL，publisher 退避重试；redis_streams 下禁止降级 NOTIFY 后标记成功（FR-702）。
+3. broker ACK 成功、PostgreSQL 标记前崩溃时允许重复消息（批量标记把该崩溃窗扩大到整轮，语义不变）；消费者按 `event_id` 去重（AT-18 固化）。
+4. consumer 业务事务成功、ACK 前崩溃时允许 redelivery；inbox 唯一约束吸收重复（M3 交付，见 ADR-0006 §7）。
+5. consumer ACK 后不再依赖 JobForge outbox 作为其个人消费游标。
+6. Redis 数据耐久性依赖启用 AOF（durable-events profile 固定 `appendonly yes`、`appendfsync everysec`）；未启用持久化时不得宣称可跨 Redis 重启恢复（AT-17 验证）。
+
+**其他不变量**：
+
+- **at-least-once**：事件可能重复发布；消费方必须按 `event_id` 幂等去重，不得宣称 exactly-once。
+- 领取为单语句原子操作：`UPDATE outbox_events SET claimed_at = now() WHERE ... FOR UPDATE SKIP LOCKED RETURNING`，并发 publisher 不会领到同一事件；发布失败与优雅关停即时释放领取，仅硬崩溃的领取标记留存至过期（5 分钟）后重领。
+- notify 仅作 hint：payload 只携带 `event_id`（通道 `jobforge_outbox`），消费方回查 `outbox_events` 获取完整事件；redis_streams 直接携带 envelope v1。
+- 发布在任务状态事务之外异步进行：发布失败、重复发布、publisher 崩溃或 Redis 停机均**不得**改变任务状态（NFR-303 固化：broker 暂停期间任务状态事务不被阻塞）。
 - publisher 不持有内存进度：崩溃重启后仅从 `published_at IS NULL` 恢复。
+- Redis 故障不回写 jobs；健康检查分离 task/event readiness。
 
 **故障恢复路径**：
 
 | 故障 | 表现 | 恢复 |
 |---|---|---|
-| 发布通道失败 | `publish_attempts` 递增，`published_at` 保持 NULL | 退避后下一轮重试 |
-| publisher 崩溃（NOTIFY 已发、未标记） | 重启后重复发布同一事件 | 消费方按 event_id 去重；任务状态不受影响 |
+| 发布通道失败 | `publish_attempts` 递增、`jobforge_event_transport_failures_total` 上升，`published_at` 保持 NULL | 退避后下一轮重试 |
+| publisher 崩溃（broker ACK 已得、未标记） | 重启后重复发布同一事件（Stream 中同 event_id 多 entry 被允许） | 消费方按 event_id 去重；任务状态不受影响（AT-18） |
 | publisher 领取后崩溃（`claimed_at` 已置、未发布） | 事件暂停参与领取 | 领取过期（5 分钟）后下一轮自动重领；at-least-once 下可能重复发布 |
-| 事件积压 | `jobforge_outbox_pending` 上升 | 增加 publisher 实例（单语句原子领取，并发不重复） |
+| Redis 停机/重启 | 停机期事件保持未发布；AOF + 命名 volume 保留停机前 Stream 记录 | 恢复后全部补入 Stream、积压归零（AT-17/NFR-303） |
+| 事件积压 | `jobforge_outbox_pending` 上升、`jobforge_event_publish_lag_seconds` 变大 | 增加 publisher 实例（单语句原子领取，并发不重复） |
 
-**Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件；未发布事件永不被清理。
+**Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件，即只清理已成功交付到当前启用 transport 的行；未发布事件永不被清理。Stream 自身的裁剪（`JOBFORGE_REDIS_STREAM_MAXLEN`，默认 0 不裁剪）属运维责任，不影响 outbox 事实源。
 
 ## 测试证据索引
 
@@ -171,7 +182,9 @@ cancelling 状态下：
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
-| `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复、重复投递幂等、retention 边界；双 publisher 并发零重复 NOTIFY、僵尸领取回收（`TestOutboxConcurrentPublishersNoDuplicateNotify`、`TestOutboxStaleClaimReclaimed`） |
+| `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复（批量标记崩溃窗语义）、重复投递幂等、retention 边界；双 publisher 并发零重复 NOTIFY、僵尸领取回收（`TestOutboxConcurrentPublishersNoDuplicateNotify`、`TestOutboxStaleClaimReclaimed`） |
+| `tests/integration/durable_events_test.go` | AT-17（Redis stop/start AOF 重启恢复）、AT-18（XADD 后标记前崩溃窗重复 entry）、AT-20（双 consumer group 隔离与组内分摊）、NFR-303（60s broker 暂停恢复与任务事务不阻塞）；`JOBFORGE_TEST_REDIS_URL` 缺省时 skip |
+| `tests/scale/nfr302_event_publish_test.go`（`-tags scale`） | NFR-302 事件发布 smoke floor（约 1,800 events/sec）与健康态 publish lag p95 ≤2s |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 | `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |
 | `tests/scale/idempotent_test.go` | AT-14：10,000 任务重复投递零重复副作用（`-tags scale`） |

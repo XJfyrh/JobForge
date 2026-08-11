@@ -8,6 +8,16 @@
 #   docker compose -f deploy/compose.yaml --profile obs up -d
 # adds Prometheus + Grafana scraping each service's :6060/metrics.
 # The default `up` behavior is unchanged: no observability dependency.
+#
+# Optional durable-events profile (PRD v0.3 §10.2, ADR-0006):
+#   docker compose -f deploy/compose.yaml --profile durable-events up -d
+# adds a Redis with AOF on a named volume for the redis_streams outbox
+# transport. The publisher transport itself is selected via the
+# JOBFORGE_OUTBOX_TRANSPORT env var (default stays the non-durable notify),
+# so enabling the profile never creates a second publisher competing for
+# published_at:
+#   $env:JOBFORGE_OUTBOX_TRANSPORT = "redis_streams"
+#   $env:JOBFORGE_REDIS_URL = "redis://localhost:6379/0"
 services:
   postgres:
     image: postgres:16-alpine
@@ -89,11 +99,35 @@ services:
       JOBFORGE_OUTBOX_BATCH_SIZE: "100"
       JOBFORGE_OUTBOX_RETENTION: "168h"
       JOBFORGE_OUTBOX_CHANNEL: "jobforge_outbox"
+      # Transport selection (PRD v0.3 FR-705): defaults to the v0.2-compatible
+      # non-durable notify transport; set redis_streams together with the
+      # durable-events profile for durable delivery (ADR-0006 §6).
+      JOBFORGE_OUTBOX_TRANSPORT: "${JOBFORGE_OUTBOX_TRANSPORT:-notify}"
+      JOBFORGE_REDIS_URL: "${JOBFORGE_REDIS_URL:-redis://redis:6379/0}"
+      JOBFORGE_REDIS_STREAM_KEY: "${JOBFORGE_REDIS_STREAM_KEY:-jobforge:events}"
       JOBFORGE_OTEL_EXPORTER: "stdout"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Durable event broker (PRD v0.3 §10.2, ADR-0006 §2): only started with
+  # --profile durable-events. AOF (appendonly yes, everysec fsync) plus a
+  # named volume makes the stream survive container restarts; AT-17 verifies
+  # recovery with `docker compose stop/start` on this service.
+  redis:
+    image: redis:7-alpine
+    profiles: ["durable-events"]
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   worker-1:
     build:
@@ -161,3 +195,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:

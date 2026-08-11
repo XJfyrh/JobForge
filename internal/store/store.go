@@ -114,14 +114,21 @@ type ClaimResult struct {
 // OutboxEvent represents one row of the outbox_events table. Events are
 // written within job state transactions and published asynchronously by the
 // outbox publisher (PRD v0.2 FR-610~612).
+//
+// AggregateVersion and Traceparent (migration 0016) capture envelope v1
+// fields at event write time (PRD v0.3 FR-703, ADR-0006 §4). Both are NULL
+// for legacy rows written before 0016: the envelope renders a nil
+// AggregateVersion as 0 (unknown) and a nil Traceparent as empty.
 type OutboxEvent struct {
-	EventID         int64
-	AggregateID     string
-	EventType       string
-	Payload         []byte
-	CreatedAt       time.Time
-	PublishedAt     *time.Time
-	PublishAttempts int
+	EventID          int64
+	AggregateID      string
+	EventType        string
+	Payload          []byte
+	CreatedAt        time.Time
+	PublishedAt      *time.Time
+	PublishAttempts  int
+	AggregateVersion *int64
+	Traceparent      *string
 }
 
 // OutboxStore defines the persistence operations consumed by the outbox
@@ -138,6 +145,11 @@ type OutboxStore interface {
 	// MarkPublished records successful publication. Returns true if this call
 	// performed the transition (published_at was still NULL).
 	MarkPublished(ctx context.Context, eventID int64) (bool, error)
+
+	// MarkPublishedBatch records successful publication for a whole batch in
+	// one statement (publisher throughput, NFR-302). Returns how many rows
+	// this call transitioned.
+	MarkPublishedBatch(ctx context.Context, eventIDs []int64) (int64, error)
 
 	// MarkPublishFailed increments publish_attempts; the event remains
 	// unpublished and eligible for retry.

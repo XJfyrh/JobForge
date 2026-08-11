@@ -52,6 +52,20 @@
 | 未达 succeeded 的任务数 | 0 |
 | 套件耗时 | 45.71s |
 
+## 耐久事件恢复（PRD v0.3 M2，ADR-0006）
+
+Redis Streams transport 的故障路径以真实 Redis（AOF `appendonly yes`/`appendfsync everysec` + 命名 volume）验证，数据详见 [benchmark.md](benchmark.md) “M2 耐久事件”章节：
+
+| 场景 | 结果 |
+|---|---|
+| AT-17：Redis stop/start（保留 volume）重启恢复 | 停机前 Stream 记录保留；停机期 outbox 未发布行保留；恢复后全部补入、积压归零 |
+| AT-18：XADD 成功后标记前崩溃 | 同 event_id 多 entry 被允许；outbox 最终标记成功；任务状态不变 |
+| AT-20：双 consumer group | 每组完整消费，组内实例分摊，无跨组游标干扰 |
+| NFR-303：Redis 暂停 60s 恢复 | 停机期任务状态事务不被 publisher 阻塞；恢复后积压归零、零静默丢失 |
+| NFR-302 smoke | 约 7,640 events/sec（floor 1,800）；健康态 publish lag p95 146.66ms ≤ 2s |
+
+notify 默认下 AT-15/16 不回退，启动日志/指标明确 `durable=false`。
+
 ## Race 抽样（NFR-202）
 
 `go test -tags scale -race`：AT-13 以 100 轮字面规模运行，AT-14 以 `JOBFORGE_SCALE_IDEMPOTENT_JOBS=1000` 抽样运行。结果：`ok`，无数据竞争（19.5s）。

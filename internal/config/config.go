@@ -80,6 +80,24 @@ type Config struct {
 	// event hints (PRD v0.2 FR-611, ADR-0003).
 	OutboxChannel string
 
+	// OutboxTransport selects the external outbox event transport:
+	// "notify" (v0.2-compatible default, NOT durable) or "redis_streams"
+	// (PRD v0.3 FR-705, ADR-0006 §1/§6).
+	OutboxTransport string
+
+	// RedisURL is the Redis connection URL, required when
+	// OutboxTransport == "redis_streams". Never logged (NFR-309).
+	RedisURL string
+
+	// RedisStreamKey is the fixed Redis Stream key events are published to
+	// (ADR-0006 §2).
+	RedisStreamKey string
+
+	// RedisStreamMaxLen bounds the stream length via approximate trimming
+	// (XADD MAXLEN ~). 0 disables trimming; retention of the stream itself
+	// is then an operational responsibility.
+	RedisStreamMaxLen int64
+
 	// SchedulerLeadershipTimeout bounds how long the Scheduler leader may go
 	// without a heartbeat before standbys take over the leadership lease
 	// (ADR-0005).
@@ -110,6 +128,11 @@ func Load() (*Config, error) {
 		OutboxRetention:    getDurationEnv("JOBFORGE_OUTBOX_RETENTION", 7*24*time.Hour),
 		OutboxChannel:      getEnv("JOBFORGE_OUTBOX_CHANNEL", "jobforge_outbox"),
 
+		OutboxTransport:   getEnv("JOBFORGE_OUTBOX_TRANSPORT", "notify"),
+		RedisURL:          getEnv("JOBFORGE_REDIS_URL", ""),
+		RedisStreamKey:    getEnv("JOBFORGE_REDIS_STREAM_KEY", "jobforge:events"),
+		RedisStreamMaxLen: int64(getIntEnv("JOBFORGE_REDIS_STREAM_MAXLEN", 0)),
+
 		SchedulerLeadershipTimeout: getDurationEnv("JOBFORGE_SCHEDULER_LEADERSHIP_TIMEOUT", 10*time.Second),
 
 		APIKeys: make(map[string]string),
@@ -131,6 +154,24 @@ func Load() (*Config, error) {
 	// Default development key if none configured.
 	if len(cfg.APIKeys) == 0 {
 		cfg.APIKeys["dev-api-key"] = "dev-tenant"
+	}
+
+	// Outbox transport validation (PRD v0.3 FR-705, ADR-0006 §1).
+	switch cfg.OutboxTransport {
+	case "notify", "redis_streams":
+	default:
+		return nil, fmt.Errorf("invalid JOBFORGE_OUTBOX_TRANSPORT %q (expected notify or redis_streams)", cfg.OutboxTransport)
+	}
+	if cfg.OutboxTransport == "redis_streams" {
+		if cfg.RedisURL == "" {
+			return nil, fmt.Errorf("JOBFORGE_REDIS_URL is required when JOBFORGE_OUTBOX_TRANSPORT=redis_streams")
+		}
+		if cfg.RedisStreamKey == "" {
+			return nil, fmt.Errorf("JOBFORGE_REDIS_STREAM_KEY must not be empty")
+		}
+	}
+	if cfg.RedisStreamMaxLen < 0 {
+		return nil, fmt.Errorf("JOBFORGE_REDIS_STREAM_MAXLEN must be >= 0 (0 disables trimming)")
 	}
 
 	return cfg, nil

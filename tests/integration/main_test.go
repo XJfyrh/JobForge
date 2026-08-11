@@ -8,6 +8,13 @@
 //     does not support Docker Desktop's rootless/WSL2 backend.
 //   - Testcontainers: if JOBFORGE_TEST_DSN is empty, a PostgreSQL 16 container
 //     is started automatically (Linux CI).
+//
+// Durable-event tests (PRD v0.3 §10) additionally need a Redis:
+//   - Set JOBFORGE_TEST_REDIS_URL to use an existing broker (Windows compose
+//     durable-events profile, PRD v0.3 §10.2).
+//   - In testcontainers mode a Redis with AOF is started automatically and
+//     JOBFORGE_TEST_REDIS_URL/JOBFORGE_TEST_REDIS_CONTAINER are exported.
+//   - Without any Redis the durable tests skip (never fail).
 package integration
 
 import (
@@ -23,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
@@ -118,9 +126,48 @@ See docs/development.md for details.`
 		dsn:       dsn,
 	}
 
+	// Durable-event tests: in testcontainers mode (Linux CI) spin up an AOF
+	// Redis so the suite runs the same Redis contract tests as Windows.
+	// Direct-DSN environments provide their own broker via
+	// JOBFORGE_TEST_REDIS_URL (compose durable-events profile).
+	var redisContainer *tcredis.RedisContainer
+	if os.Getenv("JOBFORGE_TEST_REDIS_URL") == "" && pgContainer != nil {
+		rc, err := tcredis.Run(ctx, "redis:7-alpine",
+			testcontainers.CustomizeRequest(testcontainers.GenericContainerRequest{
+				ContainerRequest: testcontainers.ContainerRequest{
+					Cmd: []string{"redis-server", "--appendonly", "yes", "--appendfsync", "everysec"},
+				},
+			}),
+			testcontainers.WithWaitStrategy(wait.ForLog("Ready to accept connections").
+				WithOccurrence(1).
+				WithStartupTimeout(30*time.Second)),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: testcontainers redis failed to start, durable tests will skip: %v\n", err)
+		} else {
+			redisContainer = rc
+			endpoint, err := rc.Endpoint(ctx, "redis")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: redis endpoint unavailable, durable tests will skip: %v\n", err)
+			} else {
+				_ = os.Setenv("JOBFORGE_TEST_REDIS_URL", endpoint)
+				if name, err := rc.Name(ctx); err == nil {
+					// docker stop/start based restarts (AT-17/NFR-303) target
+					// this container; the name keeps its volumes alive.
+					_ = os.Setenv("JOBFORGE_TEST_REDIS_CONTAINER", strings.TrimPrefix(name, "/"))
+				}
+			}
+		}
+	}
+
 	code := m.Run()
 
 	pool.Close()
+	if redisContainer != nil {
+		if err := redisContainer.Terminate(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to terminate redis container: %v\n", err)
+		}
+	}
 	if pgContainer != nil {
 		if err := pgContainer.Terminate(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to terminate container: %v\n", err)

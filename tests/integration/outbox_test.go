@@ -93,9 +93,9 @@ type recordingChannel struct {
 	processed map[int64]bool // deduplicated business effects per event_id
 	failIDs   map[int64]int  // event_id -> remaining forced failures
 
-	// delegate optionally forwards deliveries to a real channel (e.g.
-	// outbox.NotifyChannel) so tests can observe NOTIFY side effects.
-	delegate outbox.Channel
+	// delegate optionally forwards deliveries to a real transport (e.g.
+	// outbox.NotifyTransport) so tests can observe NOTIFY side effects.
+	delegate outbox.Transport
 }
 
 func newRecordingChannel() *recordingChannel {
@@ -111,22 +111,32 @@ func (c *recordingChannel) forceFailures(ids []int64, n int) {
 	}
 }
 
-// Publish implements outbox.Channel.
-func (c *recordingChannel) Publish(ctx context.Context, ev *store.OutboxEvent) error {
-	c.mu.Lock()
-	if n, ok := c.failIDs[ev.EventID]; ok && n > 0 {
-		c.failIDs[ev.EventID] = n - 1
-		c.mu.Unlock()
-		return fmt.Errorf("injected publish failure for event %d", ev.EventID)
+// Name implements outbox.Transport.
+func (c *recordingChannel) Name() string { return "test-recording" }
+
+// Durable implements outbox.Transport.
+func (c *recordingChannel) Durable() bool { return false }
+
+// Publish implements outbox.Transport.
+func (c *recordingChannel) Publish(ctx context.Context, env *outbox.Envelope) error {
+	id, err := strconv.ParseInt(env.EventID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("bad envelope event_id %q: %w", env.EventID, err)
 	}
-	c.delivered = append(c.delivered, ev.EventID)
+	c.mu.Lock()
+	if n, ok := c.failIDs[id]; ok && n > 0 {
+		c.failIDs[id] = n - 1
+		c.mu.Unlock()
+		return fmt.Errorf("injected publish failure for event %d", id)
+	}
+	c.delivered = append(c.delivered, id)
 	// Consumer-side idempotency: the business effect happens once per
 	// event_id, regardless of duplicate deliveries (at-least-once).
-	c.processed[ev.EventID] = true
+	c.processed[id] = true
 	delegate := c.delegate
 	c.mu.Unlock()
 	if delegate != nil {
-		return delegate.Publish(ctx, ev)
+		return delegate.Publish(ctx, env)
 	}
 	return nil
 }
@@ -202,7 +212,7 @@ func TestOutboxAT15NormalPublish(t *testing.T) {
 	// Deliver through the real NOTIFY channel so the listener below can
 	// observe the hint, while recording deliveries for dedup assertions.
 	channel := newRecordingChannel()
-	channel.delegate = outbox.NewNotifyChannel(testEnv.pool, outbox.DefaultChannel, testLogger(t))
+	channel.delegate = outbox.NewNotifyTransport(testEnv.pool, outbox.DefaultChannel, testLogger(t))
 	pub := outbox.New(os, channel, fastPublisherConfig(), testLogger(t), nil)
 
 	runCtx, cancel := context.WithCancel(ctx)
@@ -315,10 +325,10 @@ func TestOutboxAT15CrashRecovery(t *testing.T) {
 	channel := newRecordingChannel()
 	cfg := fastPublisherConfig()
 
-	// First run: crash mid-run by cancelling on the second delivery. Event 1
-	// completes publish+mark; event 2 is delivered but its mark races with
-	// the crash; event 3 is untouched. This simulates losing progress in
-	// memory on crash while the table holds the truth.
+	// First run: crash mid-run by cancelling on the second delivery. Since
+	// publication marks are batched at the end of the round (NFR-302), the
+	// crash lands before the batch mark: deliveries happened but any subset
+	// of rows may still be unmarked — the table holds the truth either way.
 	crashCtx, crashCancel := context.WithCancel(ctx)
 	crashChannel := &cancelOnDelivery{inner: channel, cancel: crashCancel, after: 2}
 	pub1 := outbox.New(os, crashChannel, cfg, testLogger(t), nil)
@@ -329,15 +339,14 @@ func TestOutboxAT15CrashRecovery(t *testing.T) {
 	}()
 	<-done1 // publisher crashed (stopped)
 
-	// At least one event delivered before the crash; some may remain unpublished.
-	var publishedBefore int
+	// At least one event reached the transport before the crash; some (or
+	// all) may remain unpublished because the batch mark raced the crash.
+	deliveriesBefore := 0
 	for _, id := range ids {
-		if publishedAt, _ := getOutboxRow(t, id); publishedAt != nil {
-			publishedBefore++
-		}
+		deliveriesBefore += channel.deliveryCount(id)
 	}
-	if publishedBefore == 0 {
-		t.Fatalf("expected at least one event published before crash")
+	if deliveriesBefore == 0 {
+		t.Fatalf("expected at least one delivery before crash")
 	}
 
 	// Second run: a fresh publisher resumes purely from table state.
@@ -381,9 +390,9 @@ type cancelOnDelivery struct {
 	delivered int
 }
 
-// Publish implements outbox.Channel.
-func (c *cancelOnDelivery) Publish(ctx context.Context, ev *store.OutboxEvent) error {
-	if err := c.inner.Publish(ctx, ev); err != nil {
+// Publish implements outbox.Transport.
+func (c *cancelOnDelivery) Publish(ctx context.Context, env *outbox.Envelope) error {
+	if err := c.inner.Publish(ctx, env); err != nil {
 		return err
 	}
 	c.mu.Lock()
@@ -395,6 +404,12 @@ func (c *cancelOnDelivery) Publish(ctx context.Context, ev *store.OutboxEvent) e
 	}
 	return nil
 }
+
+// Name implements outbox.Transport.
+func (c *cancelOnDelivery) Name() string { return "test-crash" }
+
+// Durable implements outbox.Transport.
+func (c *cancelOnDelivery) Durable() bool { return false }
 
 // TestOutboxAT15DuplicateDeliveryIdempotent verifies that re-publishing an
 // already-published event (simulating a crash between NOTIFY and marking
