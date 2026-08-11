@@ -75,6 +75,14 @@ type Metrics struct {
 	// quota reconcile between tenant_quota_counters and the jobs aggregation
 	// (PRD v0.3 §8). Labels: none.
 	QuotaCounterDrift metric.Int64Gauge
+
+	// EventPublishLagSeconds measures outbox created_at to broker ACK
+	// (PRD v0.3 §8). Labels: transport.
+	EventPublishLagSeconds metric.Float64Histogram
+
+	// EventTransportFailuresTotal counts broker/serialization/ACK failures
+	// on the external event transport (PRD v0.3 §8). Labels: transport, reason.
+	EventTransportFailuresTotal metric.Int64Counter
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -190,6 +198,19 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Absolute quota counter drift found by the last reconcile"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create quota_counter_drift: %w", err)
+	}
+
+	m.EventPublishLagSeconds, err = meter.Float64Histogram("jobforge_event_publish_lag_seconds",
+		metric.WithDescription("Outbox event age at broker ACK (created_at to publish success)"),
+		metric.WithExplicitBucketBoundaries(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create event_publish_lag_seconds: %w", err)
+	}
+
+	m.EventTransportFailuresTotal, err = meter.Int64Counter("jobforge_event_transport_failures_total",
+		metric.WithDescription("Total number of external event transport failures"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create event_transport_failures_total: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

@@ -434,8 +434,12 @@ func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencing
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var tenantID string
-	err = tx.QueryRow(ctx, completeUpdate, jobID, workerID, fencingToken).Scan(&tenantID)
+	var (
+		tenantID    string
+		stateVer    int64
+		traceparent *string
+	)
+	err = tx.QueryRow(ctx, completeUpdate, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("complete update: %w", err)
@@ -462,7 +466,7 @@ func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencing
 	}
 
 	// Write outbox event.
-	if err := writeOutbox(ctx, tx, jobID, "job.succeeded"); err != nil {
+	if err := writeOutbox(ctx, tx, jobID, "job.succeeded", stateVer, traceparent); err != nil {
 		return err
 	}
 
@@ -480,9 +484,13 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Try cancelling → cancelled first.
-	var tenantID string
+	var (
+		tenantID    string
+		stateVer    int64
+		traceparent *string
+	)
 	var outcome string
-	err = tx.QueryRow(ctx, failUpdateCancelling, jobID, workerID, fencingToken).Scan(&tenantID)
+	err = tx.QueryRow(ctx, failUpdateCancelling, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
 	switch {
 	case err == nil:
 		outcome = "cancelled"
@@ -505,7 +513,7 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 			jitter := time.Duration(rand.Int64N(int64(time.Second)))
 			backoff := domain.Backoff(attempt, time.Second, 5*time.Minute, jitter)
 			nextRetry := time.Now().Add(backoff)
-			err = tx.QueryRow(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry).Scan(&tenantID)
+			err = tx.QueryRow(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry).Scan(&tenantID, &stateVer, &traceparent)
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
 					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
@@ -515,7 +523,7 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 			}
 			outcome = "failed_retry"
 		} else {
-			err = tx.QueryRow(ctx, failUpdateDead, jobID, workerID, fencingToken).Scan(&tenantID)
+			err = tx.QueryRow(ctx, failUpdateDead, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
 					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
@@ -542,7 +550,7 @@ func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToke
 
 	// Write outbox event.
 	eventType := "job." + outcome
-	if err := writeOutbox(ctx, tx, jobID, eventType); err != nil {
+	if err := writeOutbox(ctx, tx, jobID, eventType, stateVer, traceparent); err != nil {
 		return err
 	}
 
@@ -558,28 +566,33 @@ func (s *JobStore) Cancel(ctx context.Context, tenantID, jobID string) error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Try waiting-state cancel first.
-	tag, err := tx.Exec(ctx, cancelWaiting, jobID, tenantID)
-	if err != nil {
-		return fmt.Errorf("cancel waiting: %w", err)
-	}
-	if tag.RowsAffected() > 0 {
-		if err := writeOutbox(ctx, tx, jobID, "job.cancelled"); err != nil {
+	// Try waiting-state cancel first. The update returns envelope capture
+	// values; ErrNoRows means no waiting-state row matched.
+	var (
+		stateVer    int64
+		traceparent *string
+	)
+	err = tx.QueryRow(ctx, cancelWaiting, jobID, tenantID).Scan(&stateVer, &traceparent)
+	if err == nil {
+		if err := writeOutbox(ctx, tx, jobID, "job.cancelled", stateVer, traceparent); err != nil {
 			return err
 		}
 		return tx.Commit(ctx)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("cancel waiting: %w", err)
 	}
 
 	// Try running → cancelling.
-	tag, err = tx.Exec(ctx, cancelRunning, jobID, tenantID)
-	if err != nil {
-		return fmt.Errorf("cancel running: %w", err)
-	}
-	if tag.RowsAffected() > 0 {
-		if err := writeOutbox(ctx, tx, jobID, "job.cancelling"); err != nil {
+	err = tx.QueryRow(ctx, cancelRunning, jobID, tenantID).Scan(&stateVer, &traceparent)
+	if err == nil {
+		if err := writeOutbox(ctx, tx, jobID, "job.cancelling", stateVer, traceparent); err != nil {
 			return err
 		}
 		return tx.Commit(ctx)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("cancel running: %w", err)
 	}
 
 	// Check if already terminal.
@@ -610,13 +623,15 @@ func updateAttempt(ctx context.Context, tx pgx.Tx, jobID, _, outcome string, err
 	return nil
 }
 
-// writeOutbox inserts an outbox event within the transaction.
-func writeOutbox(ctx context.Context, tx pgx.Tx, aggregateID, eventType string) error {
+// writeOutbox inserts an outbox event within the transaction, capturing the
+// post-transition state_version and the job's trace_context for envelope v1
+// (PRD v0.3 FR-703, ADR-0006 §4).
+func writeOutbox(ctx context.Context, tx pgx.Tx, aggregateID, eventType string, aggregateVersion int64, traceparent *string) error {
 	payload, _ := json.Marshal(map[string]string{
 		"job_id":     aggregateID,
 		"event_type": eventType,
 	})
-	_, err := tx.Exec(ctx, insertOutboxEvent, aggregateID, eventType, payload)
+	_, err := tx.Exec(ctx, insertOutboxEvent, aggregateID, eventType, payload, aggregateVersion, traceparent)
 	if err != nil {
 		return fmt.Errorf("write outbox: %w", err)
 	}

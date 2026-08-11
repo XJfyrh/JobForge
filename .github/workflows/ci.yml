@@ -65,15 +65,33 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # Durable-event tests (PRD v0.3 §10.2): AOF-enabled Redis so AT-17/18/20
+      # and NFR-303 run in CI with the same contract as the Windows compose
+      # durable-events profile. The container filesystem survives stop/start,
+      # which is what the restart-recovery tests rely on.
+      redis:
+        image: redis:7-alpine
+        command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       # Credentials mirror deploy/compose.yaml local development values only.
       JOBFORGE_TEST_DSN: postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable
+      JOBFORGE_TEST_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
+      - name: Resolve Redis container name for restart tests
+        run: |
+          echo "JOBFORGE_TEST_REDIS_CONTAINER=$(docker ps --filter ancestor=redis:7-alpine --format '{{.Names}}' | head -1)" >> "$GITHUB_ENV"
       - name: Test with race detector
         run: go test -race -count=1 ./...
 

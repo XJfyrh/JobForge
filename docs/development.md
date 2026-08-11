@@ -94,6 +94,21 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 
 以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
 
+## 耐久事件与 Redis（Compose durable-events，PRD v0.3 §10.2）
+
+外部事件 transport 由 `JOBFORGE_OUTBOX_TRANSPORT` 选择：默认 `notify`（v0.2 兼容，非耐久）；耐久交付需 `redis_streams` 与 Redis：
+
+```powershell
+# Windows/Docker Desktop：启动 PostgreSQL + AOF Redis（命名 volume）
+docker compose -f deploy/compose.yaml --profile durable-events up -d postgres redis
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+$env:JOBFORGE_TEST_REDIS_URL = "redis://localhost:6379/0"
+```
+
+- 耐久事件集成测试（AT-17/18/20、NFR-303，`tests/integration/durable_events_test.go`）在 `JOBFORGE_TEST_REDIS_URL` 缺省时 **skip 而非失败**；Linux CI 的 testcontainers 模式会自动拉起 AOF Redis。
+- AT-17/NFR-303 通过 `docker stop/start` 重启 broker 验证 AOF 恢复，目标容器名由 `JOBFORGE_TEST_REDIS_CONTAINER` 指定（默认 `deploy-redis-1`）；重启必须保留命名 volume，禁止用 `down -v` 后把全新实例误报为重启恢复。
+- 运行 publisher 子命令启用 redis_streams：设 `JOBFORGE_OUTBOX_TRANSPORT=redis_streams` 与 `JOBFORGE_REDIS_URL`（Compose 内默认指向 `redis://redis:6379/0`）；Redis URL 与认证信息不进入日志/trace/metrics（NFR-309）。
+
 ## 运维 CLI（jobforge ctl）
 
 `jobforge ctl` 是纯客户端运维入口（PRD v0.2 FR-620/621），复用 HTTP API 与 Bearer API key 鉴权，不新增服务端特权路径：
@@ -189,6 +204,8 @@ go test -tags scale -count=1 ./tests/scale/
 ```
 
 规模参数：`JOBFORGE_SCALE_KILL_ROUNDS`（默认 100）、`JOBFORGE_SCALE_KILL_JOBS_PER_ROUND`（默认 10）、`JOBFORGE_SCALE_IDEMPOTENT_JOBS`（默认 10000）、`JOBFORGE_SCALE_WORKERS`（默认 8）。运行前仅保留 postgres 服务（停止 compose 应用服务，避免争用）；运行结果与 race 抽样归档于 [可靠性报告](reliability-report.md)。
+
+设置 `JOBFORGE_TEST_REDIS_URL` 时额外执行 NFR-302 事件发布 smoke（`TestScaleNFR302EventPublishSmoke`，参数 `JOBFORGE_SCALE_NFR302_EVENTS` 默认 10000、`JOBFORGE_SCALE_NFR302_WAVE` 默认 1000）；未设置时该测试 skip。
 
 ## CI 质量门禁
 

@@ -158,6 +158,8 @@ type recoveredJob struct {
 	LeaseOwner   *string
 	Attempt      int
 	FencingToken int64
+	StateVersion int64
+	Traceparent  *string
 }
 
 // RecoverExpiredLeases recovers running jobs with expired leases (back to
@@ -244,7 +246,7 @@ func (s *SchedulerStore) recoverQuery(ctx context.Context, tx pgx.Tx, query stri
 	var jobs []recoveredJob
 	for rows.Next() {
 		var j recoveredJob
-		if err := rows.Scan(&j.ID, &j.TenantID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken); err != nil {
+		if err := rows.Scan(&j.ID, &j.TenantID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken, &j.StateVersion, &j.Traceparent); err != nil {
 			return nil, fmt.Errorf("scan recovered job: %w", err)
 		}
 		jobs = append(jobs, j)
@@ -270,7 +272,7 @@ func (s *SchedulerStore) writeRecoveryAudit(ctx context.Context, tx pgx.Tx, j re
 		"worker":  workerID,
 		"attempt": fmt.Sprintf("%d", j.Attempt),
 	})
-	_, err = tx.Exec(ctx, insertRecoveryOutbox, j.ID, payload)
+	_, err = tx.Exec(ctx, insertRecoveryOutbox, j.ID, payload, j.StateVersion, j.Traceparent)
 	if err != nil {
 		return fmt.Errorf("insert recovery outbox for job %s: %w", j.ID, err)
 	}

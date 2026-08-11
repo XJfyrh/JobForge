@@ -369,7 +369,7 @@ func runPublisher(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 	if err := pool.Ping(ctx); err != nil {
 		return fmt.Errorf("ping database: %w", err)
 	}
-	logger.Info("publisher connected to PostgreSQL", "channel", cfg.OutboxChannel)
+	logger.Info("publisher connected to PostgreSQL")
 
 	// Run migrations.
 	migrator := migrate.New(pool, logger)
@@ -377,8 +377,25 @@ func runPublisher(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 		return fmt.Errorf("run migrations: %w", err)
 	}
 
+	// Select the external event transport (PRD v0.3 FR-705, ADR-0006).
+	// notify is the v0.2-compatible non-durable default; redis_streams
+	// requires the durable-events deployment profile. Redis reachability is
+	// NOT checked here on purpose: a down broker must only back off event
+	// publishing, never stop the publisher from starting (NFR-303).
+	var transport outbox.Transport
+	switch cfg.OutboxTransport {
+	case outbox.TransportRedisStreams:
+		rt, err := outbox.NewRedisStreamsTransport(cfg.RedisURL, cfg.RedisStreamKey, cfg.RedisStreamMaxLen)
+		if err != nil {
+			return fmt.Errorf("create redis streams transport: %w", err)
+		}
+		defer func() { _ = rt.Close() }()
+		transport = rt
+	default:
+		transport = outbox.NewNotifyTransport(pool, cfg.OutboxChannel, logger)
+	}
+
 	outboxStore := postgres.NewOutboxStore(pool)
-	channel := outbox.NewNotifyChannel(pool, cfg.OutboxChannel, logger)
 
 	pubCfg := outbox.Config{
 		PollInterval:    cfg.OutboxPollInterval,
@@ -388,7 +405,7 @@ func runPublisher(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 		CleanupInterval: time.Hour,
 	}
 
-	pub := outbox.New(outboxStore, channel, pubCfg, logger, metrics)
+	pub := outbox.New(outboxStore, transport, pubCfg, logger, metrics)
 
 	// Run publisher until context cancelled.
 	errCh := make(chan error, 1)

@@ -118,7 +118,7 @@ transport 适配器接口不暴露 Redis 私有类型；envelope、partition key
 
 ## 后续工作
 
-- [ ] M2：Redis Streams adapter、durable-events Compose profile、事件指标与健康检查；
+- [x] M2：Redis Streams adapter、durable-events Compose profile、事件指标与健康检查（v0.3-inc2：transport 抽象/envelope v1/migration 0016/AT-17/18/20/NFR-302/303）；
 - [ ] M3：inbox schema、Go reference consumer、pending 恢复与幂等 demo；
 - [ ] transport 切换运行手册随事件文档发布；
 - [ ] 触发 Kafka 门槛时的后续 ADR/Spike。

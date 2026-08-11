@@ -36,7 +36,7 @@
 | `gateway.claim_jobs` | Gateway | worker_id, max_jobs, jobs.claimed | `internal/gateway/grpc/worker_service.go` |
 | `worker.execute` | Worker | queue, type, attempt, worker_id | `internal/worker/runtime.go` |
 | `gateway.complete_job` | Gateway | worker_id | `internal/gateway/grpc/worker_service.go` |
-| `outbox.publish` | Publisher | event_id, event_type, aggregate_id（不含 payload） | `internal/outbox/publisher.go` |
+| `outbox.publish` | Publisher | event_id, event_type, aggregate_id, transport, transport_durable, ack（delivered/failed；不含 payload） | `internal/outbox/publisher.go` |
 
 ### Span 属性约束
 
@@ -75,6 +75,17 @@
 | `jobforge_outbox_publish_failures_total` | Counter | event_type, reason |
 
 `jobforge_outbox_pending` 为采样值：publisher 每轮发布后统计 `published_at IS NULL` 的事件数。事件发布是 at-least-once，发布失败/重复发布不影响任务状态（详见[故障语义](failure-semantics.md)的 outbox 事件发布语义）。
+
+### 事件 transport 指标（PRD v0.3 §8，ADR-0006）
+
+| 指标名 | 类型 | 标签 |
+|---|---|---|
+| `jobforge_event_publish_lag_seconds` | Histogram | transport |
+| `jobforge_event_transport_failures_total` | Counter | transport, reason |
+
+- `jobforge_event_publish_lag_seconds`：outbox `created_at` 到 broker ACK 的时延；成功批量标记时逐事件记录（created_at 为 PostgreSQL 时钟，本地时钟负偏差钳位为 0）。
+- `jobforge_event_transport_failures_total`：broker/序列化/ACK/标记失败计数；`reason` 取值 `channel_error`（transport 投递失败）与 `mark_error`（PostgreSQL 标记失败）。
+- `transport` 标签仅有界取值 `notify` / `redis_streams`；PRD §8 的 `jobforge_event_redeliveries_total` 与 `jobforge_consumer_inbox_duplicates_total` 属消费侧（consumer_group 标签），随 M3 消费协议交付。
 
 ### 租户配额指标（PRD v0.3 §8）
 

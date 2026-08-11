@@ -51,7 +51,7 @@ where event_id in (
     limit $2
     for update skip locked
 )
-returning event_id, aggregate_id, event_type, payload, created_at, published_at, publish_attempts`
+returning event_id, aggregate_id, event_type, payload, created_at, published_at, publish_attempts, aggregate_version, traceparent`
 
 // markPublished records successful publication. Guarded by published_at IS
 // NULL so concurrent publishers cannot double-mark.
@@ -59,6 +59,14 @@ const markPublished = `
 update outbox_events
 set published_at = now()
 where event_id = $1 and published_at is null`
+
+// markPublishedBatch is the batch form of markPublished: one statement for a
+// whole publish round keeps the mark cost O(1) round trips regardless of
+// batch size (NFR-302 smoke floor).
+const markPublishedBatch = `
+update outbox_events
+set published_at = now()
+where event_id = any($1) and published_at is null`
 
 // markPublishFailed increments the attempt counter without changing
 // publication state; the event remains eligible for retry.
@@ -105,6 +113,7 @@ func (s *OutboxStore) FetchUnpublished(ctx context.Context, batch int) ([]*store
 		if err := rows.Scan(
 			&ev.EventID, &ev.AggregateID, &ev.EventType, &ev.Payload,
 			&ev.CreatedAt, &ev.PublishedAt, &ev.PublishAttempts,
+			&ev.AggregateVersion, &ev.Traceparent,
 		); err != nil {
 			return nil, fmt.Errorf("scan outbox event: %w", err)
 		}
@@ -125,6 +134,19 @@ func (s *OutboxStore) MarkPublished(ctx context.Context, eventID int64) (bool, e
 		return false, fmt.Errorf("mark published: %w", err)
 	}
 	return tag.RowsAffected() > 0, nil
+}
+
+// MarkPublishedBatch sets published_at for every event in one statement
+// (see markPublishedBatch). Returns the number of rows transitioned.
+func (s *OutboxStore) MarkPublishedBatch(ctx context.Context, eventIDs []int64) (int64, error) {
+	if len(eventIDs) == 0 {
+		return 0, nil
+	}
+	tag, err := s.pool.Exec(ctx, markPublishedBatch, eventIDs)
+	if err != nil {
+		return 0, fmt.Errorf("mark published batch: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 // MarkPublishFailed increments publish_attempts for the event. The event

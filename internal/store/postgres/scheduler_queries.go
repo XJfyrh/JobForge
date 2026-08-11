@@ -126,7 +126,7 @@ set state = 'ready',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context
 `
 
 // recoverCancellingLeases transitions cancelling jobs with expired leases to
@@ -150,7 +150,7 @@ set state = 'cancelled',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context
 `
 
 // insertRecoveryAttempt records a lease-expired recovery event in job_attempts.
@@ -164,10 +164,11 @@ on conflict (job_id, attempt_no) do update set
     outcome = 'lease_expired'
 `
 
-// insertRecoveryOutbox writes a lease_expired event to the outbox.
+// insertRecoveryOutbox writes a lease_expired event to the outbox, capturing
+// the post-transition state_version and trace_context for envelope v1.
 const insertRecoveryOutbox = `
-insert into outbox_events (aggregate_id, event_type, payload)
-values ($1, 'job.lease_expired', $2)
+insert into outbox_events (aggregate_id, event_type, payload, aggregate_version, traceparent)
+values ($1, 'job.lease_expired', $2, $3, $4)
 `
 
 // queueDepthMetrics samples pending jobs per (tenant, queue, state) for the

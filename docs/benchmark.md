@@ -418,3 +418,33 @@ go test -tags scale -count=1 -timeout 30m -run TestScalePerfPromoteClaimLatency 
 
 B/C/D 各自满足 AT-22 上界（p95 ≤1s、max ≤2s）；A 的积压全程零领取。正确性以 AT-21 为准，本场景不外推为配额压力容量证明。
 
+## M2 耐久事件（PRD v0.3 NFR-302/303，ADR-0006）
+
+> 测量日期：2026-08-11（同环境规格，另加 Redis 7.4.10-alpine，`appendonly yes`、`appendfsync everysec`，命名 volume；Docker Desktop/WSL2）
+
+### NFR-302 事件发布 smoke（`TestScaleNFR302EventPublishSmoke`，`-tags scale`）
+
+| 口径 | 值 |
+|------|-----|
+| 积压注入（10,000 events，服务端 generate_series） | 52 ms |
+| 积压 drain（10,000 events，batch 500 / 并发投递 8 / 批量标记） | 1.309 s → **约 7,640 events/sec** |
+| smoke floor（PRD §6.1，5× W11 ≈ 1,800 events/sec） | **PASS（约 4.2×）** |
+| 健康态新波（1,000 events，无积压）publish lag p50 / p95 / max（纯 PostgreSQL 时钟口径） | 146.66 ms / 146.66 ms / 146.66 ms |
+| 健康态 publish lag p95 ≤ 2s 门禁 | **PASS** |
+
+说明：本测试是选型门槛的 smoke floor，不是容量报告（PRD §6.1）；正式容量结论还需覆盖持续写入、消费者滞后、PEL 回收、AOF rewrite 与故障恢复尾延迟。失败口径区分（PRD NFR-302 原文支持）：**健康态 publish lag p95 ≤ 2s 是功能门禁**（超限即测试失败）；**吞吐 floor（约 1,800 events/sec）不达标仅归档为容量风险**（触发 Kafka 门槛评估，不作为功能失败）。健康波 p50/p95/max 同为 146.66ms 系批量提交同轮标记所致（lag = published_at − created_at 同批一致），非测量异常。优化背景：首版逐条 XADD + 逐条 mark 仅约 425 events/sec，经批量标记（`MarkPublishedBatch`）与有界并发投递（`PublishConcurrency` 默认 8）后达标；无全局顺序保证的契约不变。
+
+### NFR-303 Redis 暂停恢复（`TestDurableNFR303PauseRecovery`）
+
+Redis 容器 stop 60s 后 start（保留命名 volume）：停机期间任务状态事务（submit→claim→complete）不被阻塞（实测 <5s），停机期事件保持未发布；恢复后积压全部补入 Stream、归零，零静默丢失（总耗时 61.80s，PASS）。
+
+### 事件恢复验收证据（AT-17/18/20，`tests/integration/durable_events_test.go`）
+
+| 用例 | 结果 |
+|------|------|
+| AT-17（`TestDurableAT17RestartRecovery`） | 停机前 Stream 记录经 AOF 重启保留；停机期事件未标记成功；恢复后全部补入、积压归零（PASS） |
+| AT-18（`TestDurableAT18AckCrashWindow`） | XADD 成功后批量标记前崩溃：同 event_id 两条 entry 被允许，outbox 最终标记成功，job 状态不变（PASS） |
+| AT-20（`TestDurableAT20GroupIsolation`） | 双 group 各完整消费 40 事件，组内两实例各分摊 20，无跨组游标干扰（PASS） |
+
+Windows 约定按 PRD §10.2：`docker compose --profile durable-events up -d postgres redis` + `JOBFORGE_TEST_REDIS_URL`；重启验证用保留命名 volume 的 `docker stop/start`（容器 `deploy-redis-1`）。Linux CI 由 testcontainers 自动拉起同参数 AOF Redis。
+

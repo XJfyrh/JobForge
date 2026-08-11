@@ -65,18 +65,32 @@ flowchart LR
 
 规范化要点：省略 `run_at` 时哈希使用哨兵值而非服务端 `now()` 填充值，否则合法重试会被误判冲突；省略 `max_attempts`/`timeout_seconds` 与显式传默认值哈希一致。payload 规范化保留数字原文（`json.Number`，不经过 float64），>2^53 大整数不损精度、不同大整数不会碰撞同哈希；已知权衡：`1e2` 与 `100` 等数值等价但文本不同的表示哈希不同（保真优先，避免异参提交被静默去重）。
 
-### Outbox 事件发布（PRD v0.2）
+### Outbox 事件发布与耐久事件通道（PRD v0.2 / v0.3 §5.1，ADR-0003 / ADR-0006）
+
+**通道分层（FR-701）**：内部任务唤醒 hint（`jobforge_job_ready` LISTEN/NOTIFY + 轮询兜底）与外部事件通道分离；外部 outbox transport 为独立可配置适配器（`JOBFORGE_OUTBOX_TRANSPORT`，取值 `notify` | `redis_streams`，默认 `notify`）。同一时刻只启用一个外部 transport；notify 是 v0.2 兼容/本地开发默认，**非耐久**（启动日志与有界频率警告明确标记 `durable=false`），不得宣称其可重放（FR-705、D2）。
 
 ```text
-1. 任务终态事务 → INSERT outbox_events (published_at NULL) → PostgreSQL
+1. 任务终态事务 → INSERT outbox_events (published_at NULL，含 envelope v1
+   捕获列 aggregate_version/traceparent，migration 0016) → PostgreSQL
 2. Publisher → 原子领取：UPDATE outbox_events SET claimed_at = now()
    WHERE ... published_at IS NULL ... FOR UPDATE SKIP LOCKED ... RETURNING
-3. Publisher → pg_notify('jobforge_outbox', event_id) → 消费方收到 hint
-4. Publisher → UPDATE published_at = now()（独立短事务，不进入任务状态事务）
+3. Publisher → 有界并发投递（Transport.Publish，每轮内不保证顺序）：
+   - notify：pg_notify('jobforge_outbox', event_id) → 消费方收到 hint（非耐久）
+   - redis_streams：XADD envelope v1 到固定 stream key（默认 jobforge:events），
+     仅 XADD 成功响应算发布成功；Redis 不可用时保持未发布并退避，禁止降级
+     NOTIFY 后标记成功（FR-702）
+4. Publisher → 本轮成功事件一次性批量 UPDATE published_at = now()（单语句，
+   独立短事务，不进入任务状态事务）
 5. Cleaner → 周期清理 published_at 非空且超过保留期的行
 ```
 
 领取为单语句原子操作（migration 0009 的 `claimed_at` 列），并发 publisher 不会领到同一事件；发布失败与优雅关停会即时释放领取，仅硬崩溃留下领取标记，已领取但超过 5 分钟未发布的行在下一轮自动重领。
+
+**envelope v1（FR-703，PRD 附录 B）**：`schema_version`、`event_id`（业务去重键，不得用 Redis entry ID）、`aggregate_id`（partition key）、`aggregate_version`（jobs.state_version，检测重复/乱序）、`event_type`、`occurred_at`、`payload`、`traceparent`；捕获列在事件写入时随状态事务持久化，发布时无需回查 jobs。未来仅允许向后兼容新增字段。
+
+**Redis Streams 形态（FR-704，ADR-0006 §2）**：consumer group 独立维护游标与 Pending Entries；数据耐久性依赖启用 AOF（`appendonly yes`、`appendfsync everysec`）与命名 volume（`deploy/compose.yaml` 的 `durable-events` profile）。Redis 只是事件交付依赖，不是任务状态事实源：broker 故障不回写 jobs，健康检查不将 Redis 纳入任务 readiness。
+
+**notify → redis_streams 切换**是受控运维变更（非零停机，ADR-0006 §6）：暂停 publisher/retention → 记录 event_id 高水位 → 书面决定回灌/截断 → 启用并验证 Redis 后恢复；单一 `published_at` 无法证明交付目标，不得把切换前仅经 notify 标记成功的行宣称为已耐久交付。
 
 发布语义为 at-least-once：消费方按 event_id 幂等去重；发布失败/publisher 崩溃不影响任务状态。
 
