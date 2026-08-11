@@ -4,6 +4,7 @@ package scale
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,8 +12,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
+
+var errTenantInflightIndexMissing = errors.New("tenant inflight index is missing")
+
+const (
+	tenantInflightIndexName      = "idx_jobs_tenant_inflight"
+	tenantInflightIndexKey       = "tenant_id"
+	tenantInflightIndexPredicate = "(state = ANY (ARRAY['running'::text, 'cancelling'::text]))"
+	perfInflightFixtureQueue     = "perf-inflight-plan-q"
+	perfInflightTargetTenant     = "perf-inflight-0"
+	perfInflightFixtureRows      = 4096
+	perfInflightFixtureTenants   = 32
+)
+
+type indexCatalogQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
 
 // Fixture inserts for the index performance test. All rows are generated
 // server-side; run_at is anchored to the PostgreSQL clock so Docker/WSL2
@@ -29,6 +47,16 @@ select gen_random_uuid(), 'perf-tenant', 'perf-claim-q', 'demo.echo', 'ready',
        now() - interval '1 hour'
 from generate_series(1, $1)`
 
+const insertPerfInflightJobs = `
+insert into jobs (id, tenant_id, queue, type, state, run_at)
+select gen_random_uuid(),
+       'perf-inflight-' || (series.n % $2)::text,
+       'perf-inflight-plan-q',
+       'demo.echo',
+       case when series.n % 2 = 0 then 'running' else 'cancelling' end,
+       now() - interval '1 hour'
+from generate_series(1, $1) as series(n)`
+
 // Constant EXPLAIN statements for the at-scale index spot checks; kept as
 // full literal statements so no SQL is assembled at runtime.
 const explainPromoteScan = `
@@ -42,14 +70,34 @@ order by run_at asc limit 1000`
 // replaced the pre-M1 running-only quota count, whose idx_jobs_tenant_running
 // consumer was removed by the counter table (migration 0015).
 const explainInflightCount = `explain (analyze)
-select count(*) from jobs where tenant_id = 'perf-tenant' and state in ('running', 'cancelling')`
+select count(*) from jobs
+where tenant_id = 'perf-inflight-0' and state in ('running', 'cancelling')`
 
-// setLocalSeqScanOff is applied in the same transaction as the inflight
-// count explain. With few inflight rows the natural plan may drift to a
-// different access path; with sequential scans disabled the dedicated
-// partial index wins whenever it exists, so a missing index still fails the
-// check.
-const setLocalSeqScanOff = `set local enable_seqscan = off`
+const queryTenantInflightIndexContract = `
+select i.indisvalid,
+       i.indisready,
+       i.indnkeyatts,
+       i.indnatts,
+       coalesce(pg_get_indexdef(i.indexrelid, 1, false), ''),
+       coalesce(pg_get_expr(i.indpred, i.indrelid, false), ''),
+       pg_get_indexdef(i.indexrelid)
+from pg_catalog.pg_index i
+join pg_catalog.pg_class idx on idx.oid = i.indexrelid
+join pg_catalog.pg_class tbl on tbl.oid = i.indrelid
+join pg_catalog.pg_namespace ns on ns.oid = tbl.relnamespace
+where ns.nspname = 'public'
+  and tbl.relname = 'jobs'
+  and idx.relname = 'idx_jobs_tenant_inflight'`
+
+const deletePerfJobAttempts = `
+delete from job_attempts a
+using jobs j
+where a.job_id = j.id
+  and j.queue in ('perf-q', 'perf-claim-q', 'perf-inflight-plan-q')`
+
+const deletePerfJobs = `
+delete from jobs
+where queue in ('perf-q', 'perf-claim-q', 'perf-inflight-plan-q')`
 
 // explainCounterUpsert plans the exact reservation statement used by Claim
 // (ADR-0007 §2) against a probe tenant. EXPLAIN does not execute it; the
@@ -108,8 +156,17 @@ func assertCounterTableUsable(t *testing.T) {
 // before this rewrite; comparisons use those archived rounds.
 func TestScalePerfPromoteClaimLatency(t *testing.T) {
 	ctx := context.Background()
+	if err := cleanupPerfIndexFixtures(ctx); err != nil {
+		t.Fatalf("clean stale perf-index fixtures: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := cleanupPerfIndexFixtures(context.Background()); err != nil {
+			t.Errorf("clean perf-index fixtures: %v", err)
+		}
+	})
 	js := setupStore(t)
 	ss := setupScaleSchedulerStore(t)
+	assertTenantInflightIndexContractGate(t)
 
 	n := envInt("JOBFORGE_SCALE_PERF_JOBS", 20000)
 	t.Logf("PERF-INDEX: jobs per phase = %d, workers = %d", n, params.workers)
@@ -167,15 +224,47 @@ func TestScalePerfPromoteClaimLatency(t *testing.T) {
 	if _, err := testEnv.pool.Exec(ctx, insertPerfReadyJobs, n); err != nil {
 		t.Fatalf("insert ready jobs: %v", err)
 	}
+	if _, err := testEnv.pool.Exec(
+		ctx, insertPerfInflightJobs, perfInflightFixtureRows, perfInflightFixtureTenants,
+	); err != nil {
+		t.Fatalf("insert inflight plan fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := testEnv.pool.Exec(
+			context.Background(), "delete from jobs where queue = $1", perfInflightFixtureQueue,
+		); err != nil {
+			t.Errorf("clean inflight plan fixture: %v", err)
+		}
+	})
 	if _, err := testEnv.pool.Exec(ctx, "analyze jobs"); err != nil {
 		t.Fatalf("analyze jobs: %v", err)
 	}
 
-	// Structural spot checks for the M1 structures: the inflight partial
-	// index serves the inflight-caliber queries (seqscan disabled so the
-	// assertion is deterministic), and the counter table primary key exists.
-	assertPlanUsesIndexNoSeqScan(t, explainInflightCount, "idx_jobs_tenant_inflight")
+	var targetInflight int
+	if err := testEnv.pool.QueryRow(ctx, `
+		select count(*) from jobs
+		where tenant_id = $1 and state in ('running', 'cancelling')
+	`, perfInflightTargetTenant).Scan(&targetInflight); err != nil {
+		t.Fatalf("count inflight plan fixture: %v", err)
+	}
+	if targetInflight == 0 {
+		t.Fatal("inflight plan fixture is empty")
+	}
+
+	// The catalog check above proves the dedicated index contract. This plan
+	// check only enforces the performance property: with realistic multi-tenant
+	// inflight data, the natural plan must not scan the whole jobs table. The
+	// optimizer remains free to choose any legal index or bitmap path.
+	assertPlanAvoidsJobsSeqScan(t, explainInflightCount)
 	assertCounterTableUsable(t)
+	if _, err := testEnv.pool.Exec(
+		ctx, "delete from jobs where queue = $1", perfInflightFixtureQueue,
+	); err != nil {
+		t.Fatalf("delete inflight plan fixture: %v", err)
+	}
+	if _, err := testEnv.pool.Exec(ctx, "analyze jobs"); err != nil {
+		t.Fatalf("analyze jobs after fixture cleanup: %v", err)
+	}
 
 	var (
 		mu             sync.Mutex
@@ -250,10 +339,113 @@ func latencyPercentiles(samples []time.Duration) (p50, p95 time.Duration) {
 	return percentile(sorted, 50), percentile(sorted, 95)
 }
 
+func cleanupPerfIndexFixtures(ctx context.Context) error {
+	tx, err := testEnv.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin cleanup: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	for _, query := range []string{
+		deletePerfJobAttempts,
+		deletePerfJobs,
+		"delete from tenant_quota_counters where tenant_id = 'perf-tenant'",
+	} {
+		if _, err := tx.Exec(ctx, query); err != nil {
+			return fmt.Errorf("execute cleanup: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit cleanup: %w", err)
+	}
+	return nil
+}
+
+func checkTenantInflightIndexContract(ctx context.Context, querier indexCatalogQuerier) error {
+	var (
+		valid      bool
+		ready      bool
+		keyCount   int16
+		attrCount  int16
+		key        string
+		predicate  string
+		definition string
+	)
+	err := querier.QueryRow(ctx, queryTenantInflightIndexContract).Scan(
+		&valid, &ready, &keyCount, &attrCount, &key, &predicate, &definition,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("%w: public.%s", errTenantInflightIndexMissing, tenantInflightIndexName)
+	}
+	if err != nil {
+		return fmt.Errorf("query tenant inflight index contract: %w", err)
+	}
+	if !valid || !ready {
+		return fmt.Errorf(
+			"tenant inflight index is not usable: valid=%t ready=%t", valid, ready,
+		)
+	}
+	if keyCount != 1 || attrCount != 1 || key != tenantInflightIndexKey {
+		return fmt.Errorf(
+			"tenant inflight index key mismatch: keys=%d attributes=%d key=%q definition=%q",
+			keyCount, attrCount, key, definition,
+		)
+	}
+	normalizedPredicate := strings.Join(strings.Fields(predicate), " ")
+	if normalizedPredicate != tenantInflightIndexPredicate {
+		return fmt.Errorf(
+			"tenant inflight index predicate mismatch: got %q want %q",
+			normalizedPredicate, tenantInflightIndexPredicate,
+		)
+	}
+	return nil
+}
+
+func assertTenantInflightIndexContractGate(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	if err := checkTenantInflightIndexContract(ctx, testEnv.pool); err != nil {
+		t.Fatalf("tenant inflight index contract: %v", err)
+	}
+
+	tx, err := testEnv.pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin missing-index probe: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, "drop index public.idx_jobs_tenant_inflight"); err != nil {
+		t.Fatalf("drop tenant inflight index in probe transaction: %v", err)
+	}
+	if err := checkTenantInflightIndexContract(ctx, tx); !errors.Is(err, errTenantInflightIndexMissing) {
+		t.Fatalf("missing-index probe returned %v, want %v", err, errTenantInflightIndexMissing)
+	}
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("rollback missing-index probe: %v", err)
+	}
+	if err := checkTenantInflightIndexContract(ctx, testEnv.pool); err != nil {
+		t.Fatalf("tenant inflight index contract after rollback: %v", err)
+	}
+}
+
 // assertPlanUsesIndex runs the given EXPLAIN statement (a constant, fully
 // literal query) and fails unless the natural plan references the expected
 // index.
 func assertPlanUsesIndex(t *testing.T, explainQuery, index string) {
+	t.Helper()
+	plan := explainPlan(t, explainQuery)
+	if !strings.Contains(plan, index) {
+		t.Fatalf("plan does not use %s:\n%s", index, plan)
+	}
+}
+
+func assertPlanAvoidsJobsSeqScan(t *testing.T, explainQuery string) {
+	t.Helper()
+	plan := explainPlan(t, explainQuery)
+	if strings.Contains(plan, "Seq Scan on jobs") || strings.Contains(plan, "Seq Scan on public.jobs") {
+		t.Fatalf("plan scans the complete jobs table:\n%s", plan)
+	}
+}
+
+func explainPlan(t *testing.T, explainQuery string) string {
 	t.Helper()
 	rows, err := testEnv.pool.Query(context.Background(), explainQuery)
 	if err != nil {
@@ -272,46 +464,5 @@ func assertPlanUsesIndex(t *testing.T, explainQuery, index string) {
 	if err := rows.Err(); err != nil {
 		t.Fatalf("explain rows: %v", err)
 	}
-	if plan := b.String(); !strings.Contains(plan, index) {
-		t.Fatalf("plan does not use %s:\n%s", index, plan)
-	}
-}
-
-// assertPlanUsesIndexNoSeqScan runs the given EXPLAIN statement inside a
-// transaction with enable_seqscan = off (SET LOCAL), then fails unless the
-// plan references the expected index. Both statements are constants; no SQL
-// is assembled at runtime.
-func assertPlanUsesIndexNoSeqScan(t *testing.T, explainQuery, index string) {
-	t.Helper()
-	ctx := context.Background()
-	tx, err := testEnv.pool.Begin(ctx)
-	if err != nil {
-		t.Fatalf("begin tx: %v", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, setLocalSeqScanOff); err != nil {
-		t.Fatalf("set enable_seqscan: %v", err)
-	}
-	rows, err := tx.Query(ctx, explainQuery)
-	if err != nil {
-		t.Fatalf("explain: %v", err)
-	}
-	var b strings.Builder
-	for rows.Next() {
-		var line string
-		if err := rows.Scan(&line); err != nil {
-			rows.Close()
-			t.Fatalf("scan explain row: %v", err)
-		}
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		t.Fatalf("explain rows: %v", err)
-	}
-	rows.Close()
-	if plan := b.String(); !strings.Contains(plan, index) {
-		t.Fatalf("plan does not use %s:\n%s", index, plan)
-	}
+	return b.String()
 }
