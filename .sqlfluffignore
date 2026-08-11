@@ -1,0 +1,5 @@
+# Frozen historical baseline: these applied migrations must not be rewritten.
+# The ignore covers only existing formatting debt. Never add a new migration here.
+migrations/0006_add_trace_context.up.sql
+migrations/0006_add_trace_context.down.sql
+migrations/0013_create_tenant_quota_counters.up.sql

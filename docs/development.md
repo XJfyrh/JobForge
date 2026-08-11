@@ -61,6 +61,8 @@ python3 -m venv .venv
 
 升级工具时先确认新版本支持项目 Python 基线，再更新 requirements、本文版本表和配置，且在同一 Pull Request 中运行完整检查。
 
+`.sqlfluffignore` 是已应用 migration 的冻结历史基线，其有效条目由 `tools/check_sqlfluff_baseline.py` 精确校验。不得改写这些历史 migration，也不得把新 migration 加入 ignore；新 SQL 必须直接通过全量 `sqlfluff lint migrations`。
+
 ## Go 与 Proto 检查工具
 
 golangci-lint 和 Buf 使用官方 release 二进制。下载与当前平台匹配的稳定版本，核对发布页 checksum 后放入 `.tools/bin`。不要把该目录加入全局 PATH；从仓库根目录显式调用。
@@ -205,6 +207,7 @@ go vet ./...
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/mypy sdk/python
+.venv/bin/python tools/check_sqlfluff_baseline.py
 .venv/bin/sqlfluff lint migrations
 .tools/bin/buf lint
 .tools/bin/buf breaking --against '.git#branch=main'
@@ -244,10 +247,10 @@ go test -tags scale -count=1 ./tests/scale/
 |---|---|---|
 | `go-lint` | `go build ./...`、`go vet ./...`、golangci-lint v2.12.2 | `go build ./...`、`go vet ./...`、`.tools/bin/golangci-lint run` |
 | `go-test` | `go test -race -count=1 ./...`（真实 PostgreSQL 16 service，覆盖单元、集成与故障测试） | `go test -race ./...` |
-| `python-lint` | `ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
+| `python-lint` | SQLFluff 历史基线校验、`sqlfluff lint migrations`、`ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/python tools/check_sqlfluff_baseline.py`、`.venv/bin/sqlfluff lint migrations`、`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
 
-该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`sqlfluff lint migrations` 与 `buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表与 CONTRIBUTING.md。
+该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表、AGENTS.md 与 CONTRIBUTING.md。
 
 ## 测试分层
 

@@ -103,6 +103,8 @@ M3 后 scale 回归（2026-08-11）实际结果：AT-13 100 轮 × 10 任务零�
 
 Quality Gate Debt Cleanup 后的追加验收（2026-08-11）保留上述历史失败、不回写原结论。索引门禁已拆为 catalog 结构契约与自然执行计划性能性质：连续五轮定向测试全部通过（340.142s），每轮均在事务内删除 `idx_jobs_tenant_inflight` 并确定得到 missing-index 错误，回滚后结构检查恢复；`-race` 定向测试通过（60.826s），无数据竞争。完整 scale 套件随后 **PASS**（245.283s，无非预期 skip）：AT-14 10,000 任务零重复副作用（45.67s）；AT-13 100 轮零静默丢失、恢复 max 23.1424ms（12.48s）；NFR-302 为 2,275 events/sec、publish lag p95 120.931ms（4.64s）；索引性能测试与多租户公平性测试均通过。默认全仓 `go test -race -count=1 ./...` 亦 **PASS**（131.5s，其中 `tests/integration` 123.266s）。
 
+SQLFluff 历史基线门禁追加验收（2026-08-11）同样保留 M3 当时的非 PASS 记录。冻结 allowlist 后，baseline validator **PASS**（有效条目严格为 0006 up/down、0013 up），全量 `sqlfluff lint migrations` **PASS**。负向探针 `0018_sqlfluff_negative_probe.up.sql` 以确定性 LT01 被 SQLFluff 拒绝；临时把该路径加入 ignore 后，baseline validator 亦按预期失败。探针与临时条目删除后再次全量 lint 通过，且 `git diff -- migrations` 为空。配套 Ruff check/format、mypy、go vet、golangci-lint（0 issues）、Buf lint 均通过；默认全仓 race 回归 **PASS**（130.4s，其中 `tests/integration` 122.800s）。
+
 ## Race 抽样（NFR-202）
 
 `go test -tags scale -race`：AT-13 以 100 轮字面规模运行，AT-14 以 `JOBFORGE_SCALE_IDEMPOTENT_JOBS=1000` 抽样运行。结果：`ok`，无数据竞争（19.5s）。

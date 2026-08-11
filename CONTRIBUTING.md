@@ -66,11 +66,12 @@ go vet ./...
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/mypy sdk/python
+.venv/bin/python tools/check_sqlfluff_baseline.py
 .venv/bin/sqlfluff lint migrations
 .tools/bin/buf lint
 ```
 
-其中 golangci-lint、`go test -race ./...`、ruff（check + format）、mypy、buf lint 同时由 [CI 工作流](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行（见 [开发环境](docs/development.md) 的 “CI 质量门禁” 一节），本地清单与 PR 门禁保持一致；sqlfluff 目前仅作为本地检查。
+上述 golangci-lint、`go test -race ./...`、ruff（check + format）、mypy、SQLFluff 历史基线校验、`sqlfluff lint migrations` 和 buf lint 均由 [CI 工作流](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行（见 [开发环境](docs/development.md) 的 “CI 质量门禁” 一节），本地清单与 PR 门禁保持一致。`.sqlfluffignore` 只冻结已应用 migration 的既有格式债务；禁止用新增 ignore 条目绕过新 migration 的检查。
 
 Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具位于 `.tools\bin`。可靠性集成测试必须使用真实 PostgreSQL，核心行为不能只由 mock 验证。
 
