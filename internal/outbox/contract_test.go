@@ -142,7 +142,7 @@ func TestStreamFieldRoundTrip(t *testing.T) {
 		"payload":           string(env.Payload),
 		"traceparent":       env.Traceparent,
 	}
-	got, err := envelopeFromStreamFields(fields)
+	got, err := DecodeEnvelopeFields(fields)
 	if err != nil {
 		t.Fatalf("decode fields: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestStreamFieldRoundTrip(t *testing.T) {
 	// Missing identity field is an error (poison entries must not decode
 	// silently into valid envelopes).
 	delete(fields, "event_id")
-	if _, err := envelopeFromStreamFields(fields); err == nil {
+	if _, err := DecodeEnvelopeFields(fields); err == nil {
 		t.Fatalf("expected error for missing event_id")
 	}
 }

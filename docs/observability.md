@@ -37,11 +37,14 @@
 | `worker.execute` | Worker | queue, type, attempt, worker_id | `internal/worker/runtime.go` |
 | `gateway.complete_job` | Gateway | worker_id | `internal/gateway/grpc/worker_service.go` |
 | `outbox.publish` | Publisher | event_id, event_type, aggregate_id, transport, transport_durable, ack（delivered/failed；不含 payload） | `internal/outbox/publisher.go` |
+| `event.consume` | Reference Consumer | messaging.system、consumer group、redelivered、delivery_count、ACK/pending/poison 结果 | `internal/eventconsumer/consumer.go` |
+| `event.process` | Reference Consumer | inbox duplicate、事务结果；从 envelope traceparent 续接 | `internal/eventconsumer/processor.go` |
 
 ### Span 属性约束
 
 - 包含：queue、type、attempt、worker_id、tenant_id
 - 不包含：完整 payload、API key、Authorization header
+- Consumer span 不包含 Redis URL、凭据或完整 payload；consumer group 仅来自已校验的启动配置。
 
 ### 传播机制
 
@@ -50,6 +53,7 @@
 3. **DB → Worker**：Poll 响应的 `ClaimedJob.trace_context` 携带 traceparent，Worker 提取后以 submit span 为 parent 创建 `worker.execute` child span
 4. **Worker → Gateway**：Complete/Fail RPC 通过 gRPC metadata 携带 `traceparent`，Gateway 提取后使 `gateway.complete_job` span 加入同一 trace
 5. **向后兼容**：`X-Trace-ID` header 继续支持；job.TraceID 字段保留；无 `trace_context` 的历史任务按原逻辑运行
+6. **Outbox → Consumer**：envelope v1 的 `traceparent` 由 Consumer 提取，`event.consume` 与其子 span `event.process` 续接原 trace；空 traceparent 合法并形成新 trace
 
 ## Prometheus 指标（PRD 12.1）
 
@@ -82,10 +86,14 @@
 |---|---|---|
 | `jobforge_event_publish_lag_seconds` | Histogram | transport |
 | `jobforge_event_transport_failures_total` | Counter | transport, reason |
+| `jobforge_event_redeliveries_total` | Counter | transport, consumer_group |
+| `jobforge_consumer_inbox_duplicates_total` | Counter | consumer_group |
 
 - `jobforge_event_publish_lag_seconds`：outbox `created_at` 到 broker ACK 的时延；成功批量标记时逐事件记录（created_at 为 PostgreSQL 时钟，本地时钟负偏差钳位为 0）。
-- `jobforge_event_transport_failures_total`：broker/序列化/ACK/标记失败计数；`reason` 取值 `channel_error`（transport 投递失败）与 `mark_error`（PostgreSQL 标记失败）。
-- `transport` 标签仅有界取值 `notify` / `redis_streams`；PRD §8 的 `jobforge_event_redeliveries_total` 与 `jobforge_consumer_inbox_duplicates_total` 属消费侧（consumer_group 标签），随 M3 消费协议交付。
+- `jobforge_event_transport_failures_total`：broker/序列化/ACK/标记/完整性失败计数；`reason` 取值 `channel_error`（transport 投递失败）、`mark_error`（PostgreSQL 标记失败）与 `pending_payload_deleted`（Redis 7 报告 PEL payload 已被裁剪/XDEL；Consumer fail closed）。
+- `jobforge_event_redeliveries_total`：`XAUTOCLAIM` 恢复 PEL entry 时增加，消费侧 `transport` 当前固定为 `redis_streams`。
+- `jobforge_consumer_inbox_duplicates_total`：inbox 冲突事务成功提交后增加；表示协议安全吸收的重复，不是失败计数。
+- `transport` 标签仅有界取值 `notify` / `redis_streams`；`consumer_group` 只来自启动配置并受 1～128 字符安全字符集校验，不能由单条消息动态提供。
 
 ### 租户配额指标（PRD v0.3 §8）
 
@@ -99,7 +107,7 @@
 
 ### 标签约束
 
-高基数字段 `job_id`、`trace_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
+高基数字段 `event_id`、`job_id`、`trace_id`、`worker_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
 
 ### Gauge 发射点
 

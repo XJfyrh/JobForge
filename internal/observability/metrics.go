@@ -83,6 +83,14 @@ type Metrics struct {
 	// EventTransportFailuresTotal counts broker/serialization/ACK failures
 	// on the external event transport (PRD v0.3 §8). Labels: transport, reason.
 	EventTransportFailuresTotal metric.Int64Counter
+
+	// EventRedeliveriesTotal counts entries recovered from a broker pending
+	// list. Labels: transport, consumer_group.
+	EventRedeliveriesTotal metric.Int64Counter
+
+	// ConsumerInboxDuplicatesTotal counts events absorbed by the PostgreSQL
+	// inbox after a previous transaction committed. Labels: consumer_group.
+	ConsumerInboxDuplicatesTotal metric.Int64Counter
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -211,6 +219,18 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Total number of external event transport failures"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create event_transport_failures_total: %w", err)
+	}
+
+	m.EventRedeliveriesTotal, err = meter.Int64Counter("jobforge_event_redeliveries_total",
+		metric.WithDescription("Total number of event entries recovered from pending delivery"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create event_redeliveries_total: %w", err)
+	}
+
+	m.ConsumerInboxDuplicatesTotal, err = meter.Int64Counter("jobforge_consumer_inbox_duplicates_total",
+		metric.WithDescription("Total number of event duplicates absorbed by the consumer inbox"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create consumer_inbox_duplicates_total: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

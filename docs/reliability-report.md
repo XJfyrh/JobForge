@@ -66,6 +66,41 @@ Redis Streams transport 的故障路径以真实 Redis（AOF `appendonly yes`/`a
 
 notify 默认下 AT-15/16 不回退，启动日志/指标明确 `durable=false`。
 
+## 事务性事件消费（PRD v0.3 M3，2026-08-11）
+
+在 Windows + PostgreSQL 16 + Redis 7 AOF Compose 环境中，以 `-race -count=1` 独立运行 M3 消费闭环及 AT-20 回归：
+
+| 场景 | 实际结果 |
+|---|---|
+| AT-19：同 event_id 两个 entry；Consumer A commit 后、ACK 前退出；Consumer B XAUTOCLAIM | **PASS（0.97s）**：两源 entry 最终 ACK、PEL=0、inbox=1、无 event_id 唯一约束的 demo effects=1 |
+| 指标与 traceparent | **PASS**：redelivery/duplicate 两个 Counter 均增加；`event.consume`/`event.process` 延续 envelope trace_id，span 无完整 payload |
+| pending 游标继续扫描 | **PASS（0.19s）**：25 条 PEL 前缀保持 fresh、尾部变 stale；`XAUTOCLAIM` 空页返回的非零 cursor 被保留，尾部事件最终恢复 |
+| inbox group binding 与元数据完整性 | **PASS（0.04s）**：同组多实例可复用；不同 group 共享 schema、相同 event_id 元数据不一致均 fail closed，且不 ACK、不 poison |
+| Redis read、数据库处理与 ACK 瞬时故障 | **PASS（0.67s）**：三类故障依次注入并恢复；经 PEL/XAUTOCLAIM 收敛至 PEL=0、inbox=1、effect=1、poison=0 |
+| deleted pending payload | **PASS（0.03s）**：pending entry 被 `XDEL` 后，Consumer 返回 fatal integrity error，`pending_payload_deleted` 增加且不执行业务效果 |
+| poison 与前进性 | **PASS（3.20s）**：unsupported schema 第 5 次永久投递进入 poison（生产默认上限=5），原 entry ACK；后续合法事件完成；poison 无 payload |
+| 取消与生命周期 | **PASS（0.07s）**：运行中 Handler 已写 effect 后收到取消，inbox/effect 一起回滚，entry 保持 pending；Close/Wait 与单元 race 通过 |
+| migration 0017：0016 基线前滚与 down | **PASS（0.37s）**：独立临时 PostgreSQL 数据库登记 0001～0016，通过正式 Migrator 前滚至 0017；随后按 effect → inbox → binding 顺序 down 并销毁临时库 |
+| AT-20 晚建 group + 双 group/双实例 | **PASS（0.22s）**：事件先发布、group 后从 0-0 创建；每组 40/40，组内各实例 20/20 |
+| Compose `--scale consumer=2` | **PASS**：两个副本持续运行；Redis 注册名为 `9ace7e34d049-1`/`43b16dda1807-1`，loopback 随机端口为 `127.0.0.1:17706`/`:17707`，无名称或端口冲突 |
+
+复现命令：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+$env:JOBFORGE_TEST_REDIS_URL = "redis://localhost:6379/0"
+go test -race -count=1 -v ./internal/eventconsumer ./tests/integration `
+  -run 'TestConsumer|TestDurableAT19TransactionalConsumer|TestEventConsumerPendingCursorSkipsFreshPrefix|TestConsumerInboxBindingAndDuplicateMetadata|TestEventConsumerTransientFailuresRecoverWithoutPoison|TestEventConsumerDeletedPendingFailsClosed|TestEventConsumerPoisonIsolationAndForwardProgress|TestMigration0017FromClean0016|TestEventConsumerCancellationRollsBackInFlight|TestDurableAT20GroupIsolation'
+```
+
+这些结果证明的是 at-least-once + PostgreSQL 同事务 inbox 幂等，不是跨系统 exactly-once。poison 测试与运行配置均使用默认的 5 次投递上限。
+
+同一环境随后执行完整 `go test -race -count=1 ./...`：**PASS**，其中 `tests/integration` 用时 124.212s，覆盖 Redis stop/start、60s broker pause、AT-19/20 与 AT-21～23；无数据竞争。
+
+本次新增的 0017 up/down 文件单独执行 SQLFluff：**PASS**。全 `migrations/` 目录执行结果仍为非 PASS，仅报告已应用且未在本增量改写的 0006（indent/long line）和 0013（spacing/select layout/alias）既有格式债务；未将该工具缺口误报为通过。
+
+M3 后 scale 回归（2026-08-11）实际结果：AT-13 100 轮 × 10 任务零静默丢失（12.98s，恢复 max 26.235ms）；AT-14 10,000 任务、10,000 次重复命中、零重复副作用（46.89s）；NFR-302 10,000 事件 2,239 events/sec、publish lag p95 164.867ms；多租户公平性 15s 套件通过。完整 scale 命令还运行了 `TestScalePerfPromoteClaimLatency`，该用例因 PostgreSQL 在空 inflight 集合上选择同样覆盖谓词的 `idx_jobs_lease_expiry`、而测试硬要求 `idx_jobs_tenant_inflight` 而失败；这是执行计划断言的既有可移植性问题，M3 相关路径与上述独立 scale 回归均通过，不能把完整 scale 命令记为 PASS。
+
 ## Race 抽样（NFR-202）
 
 `go test -tags scale -race`：AT-13 以 100 轮字面规模运行，AT-14 以 `JOBFORGE_SCALE_IDEMPOTENT_JOBS=1000` 抽样运行。结果：`ok`，无数据竞争（19.5s）。

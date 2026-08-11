@@ -1,7 +1,8 @@
 // Command jobforge is the single-binary entry point for the JobForge platform.
 // It supports subcommands: migrate (database migration), api (HTTP control plane),
 // scheduler (job promotion), worker (task execution), gateway (gRPC worker gateway),
-// publisher (outbox event publisher), and ctl (operational CLI client).
+// publisher (outbox event publisher), consumer (reference event consumer), and
+// ctl (operational CLI client).
 package main
 
 import (
@@ -18,11 +19,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	apihttp "github.com/xjfyrh/jobforge/internal/api/http"
 	"github.com/xjfyrh/jobforge/internal/config"
 	"github.com/xjfyrh/jobforge/internal/ctl"
 	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/eventconsumer"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/migrate"
 	"github.com/xjfyrh/jobforge/internal/notify"
@@ -40,7 +43,7 @@ func main() {
 	}))
 
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker|publisher|ctl>\n")
+		fmt.Fprintf(os.Stderr, "usage: jobforge <migrate|api|scheduler|gateway|worker|publisher|consumer|ctl>\n")
 		os.Exit(1)
 	}
 
@@ -115,13 +118,18 @@ func main() {
 			logger.Error("publisher failed", "error", err)
 			os.Exit(1)
 		}
+	case "consumer":
+		if err := runConsumer(ctx, logger, cfg, metrics); err != nil {
+			logger.Error("consumer failed", "error", err)
+			os.Exit(1)
+		}
 	case "ctl":
 		if err := runCtl(ctx, cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "ctl: %v\n", err)
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker|publisher|ctl>\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "unknown command: %s\nusage: jobforge <migrate|api|scheduler|gateway|worker|publisher|consumer|ctl>\n", os.Args[1])
 		os.Exit(1)
 	}
 }
@@ -424,6 +432,96 @@ func runPublisher(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 	}
 
 	logger.Info("publisher stopped")
+	return nil
+}
+
+// runConsumer starts the fixed reference consumer. PostgreSQL commit always
+// precedes Redis ACK, so an ACK failure or process exit leaves a recoverable
+// pending entry that the event_id inbox absorbs on redelivery.
+func runConsumer(
+	ctx context.Context,
+	logger *slog.Logger,
+	cfg *config.Config,
+	metrics *observability.Metrics,
+) error {
+	if cfg.RedisURL == "" {
+		return fmt.Errorf("JOBFORGE_REDIS_URL is required for jobforge consumer")
+	}
+
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("parse database url: %w", err)
+	}
+	poolCfg.MaxConns = 5
+	poolCfg.MinConns = 1
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return fmt.Errorf("create connection pool: %w", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("ping database: %w", err)
+	}
+
+	migrator := migrate.New(pool, logger)
+	if err := migrator.Up(ctx); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+
+	processor, err := eventconsumer.NewInboxProcessor(
+		pool, cfg.ConsumerGroup, eventconsumer.DemoEffectHandler{}, metrics,
+	)
+	if err != nil {
+		return fmt.Errorf("create inbox processor: %w", err)
+	}
+	if err := processor.EnsureBinding(ctx); err != nil {
+		return fmt.Errorf("bind consumer inbox: %w", err)
+	}
+
+	redisOptions, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		// Do not wrap the parser error: it may include credentials from the URL.
+		return fmt.Errorf("parse JOBFORGE_REDIS_URL: invalid value")
+	}
+	redisClient := redis.NewClient(redisOptions)
+	source, err := eventconsumer.NewRedisSource(
+		redisClient,
+		cfg.RedisStreamKey,
+		cfg.ConsumerGroup,
+		cfg.ConsumerName,
+		cfg.ConsumerPoisonStream,
+	)
+	if err != nil {
+		_ = redisClient.Close()
+		return fmt.Errorf("create event source: %w", err)
+	}
+	consumer, err := eventconsumer.New(source, processor, eventconsumer.Config{
+		Group:               cfg.ConsumerGroup,
+		BlockTimeout:        cfg.ConsumerBlockTimeout,
+		PendingScanInterval: cfg.ConsumerPendingScanInterval,
+		PendingMinIdle:      cfg.ConsumerPendingMinIdle,
+		ProcessTimeout:      cfg.ConsumerProcessTimeout,
+		MaxDeliveries:       cfg.ConsumerMaxDeliveries,
+		RetryBase:           cfg.ConsumerRetryBase,
+		RetryMax:            cfg.ConsumerRetryMax,
+	}, metrics, logger)
+	if err != nil {
+		_ = source.Close()
+		return fmt.Errorf("create event consumer: %w", err)
+	}
+	defer func() { _ = consumer.Close() }()
+
+	logger.Info("starting reference event consumer",
+		"transport", source.Transport(),
+		"consumer_group", cfg.ConsumerGroup,
+	)
+	if err := consumer.Start(ctx); err != nil {
+		return err
+	}
+	if err := consumer.Wait(); err != nil {
+		return fmt.Errorf("consumer loop: %w", err)
+	}
+	logger.Info("consumer stopped")
 	return nil
 }
 

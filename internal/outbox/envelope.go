@@ -11,10 +11,16 @@ package outbox
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/xjfyrh/jobforge/internal/store"
+)
+
+var traceparentPattern = regexp.MustCompile(
+	`^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$`,
 )
 
 // EnvelopeSchemaVersion is the fixed schema version of envelope v1.
@@ -84,10 +90,10 @@ func (e *Envelope) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// envelopeFromStreamFields decodes the stream-field encoding written by
-// RedisStreamsTransport.Publish. Used by the consumer-group reader; missing
-// optional fields decode as zero values, missing identity fields are errors.
-func envelopeFromStreamFields(fields map[string]any) (*Envelope, error) {
+// DecodeEnvelopeFields validates and decodes the stream-field encoding written
+// by RedisStreamsTransport. Aggregate version zero is accepted for legacy
+// outbox rows, and an empty or absent traceparent is valid.
+func DecodeEnvelopeFields(fields map[string]any) (*Envelope, error) {
 	str := func(key string) (string, bool) {
 		v, ok := fields[key]
 		if !ok {
@@ -97,36 +103,83 @@ func envelopeFromStreamFields(fields map[string]any) (*Envelope, error) {
 		return s, ok
 	}
 
-	eventID, ok := str("event_id")
-	if !ok || eventID == "" {
-		return nil, fmt.Errorf("missing event_id field")
+	required := func(key string) (string, error) {
+		value, ok := str(key)
+		if !ok || strings.TrimSpace(value) == "" {
+			return "", fmt.Errorf("missing %s field", key)
+		}
+		return value, nil
 	}
-	aggregateID, _ := str("aggregate_id")
-	eventType, _ := str("event_type")
-	payload, _ := str("payload")
-	traceparent, _ := str("traceparent")
 
-	env := &Envelope{
-		EventID:     eventID,
-		AggregateID: aggregateID,
-		EventType:   eventType,
-		Payload:     []byte(payload),
-		Traceparent: traceparent,
+	schemaVersion, err := required("schema_version")
+	if err != nil {
+		return nil, err
 	}
-	if sv, ok := str("schema_version"); ok {
-		if n, err := strconv.Atoi(sv); err == nil {
-			env.SchemaVersion = n
-		}
+	parsedSchemaVersion, err := strconv.Atoi(schemaVersion)
+	if err != nil || parsedSchemaVersion != EnvelopeSchemaVersion {
+		return nil, fmt.Errorf("unsupported schema_version")
 	}
-	if av, ok := str("aggregate_version"); ok {
-		if n, err := strconv.ParseInt(av, 10, 64); err == nil {
-			env.AggregateVersion = n
-		}
+	eventID, err := required("event_id")
+	if err != nil {
+		return nil, err
 	}
-	if oa, ok := str("occurred_at"); ok {
-		if t, err := time.Parse("2006-01-02T15:04:05.999999999Z07:00", oa); err == nil {
-			env.OccurredAt = t
-		}
+	parsedEventID, err := strconv.ParseInt(eventID, 10, 64)
+	if err != nil || parsedEventID < 1 || strconv.FormatInt(parsedEventID, 10) != eventID {
+		return nil, fmt.Errorf("invalid event_id field")
 	}
-	return env, nil
+	aggregateID, err := required("aggregate_id")
+	if err != nil {
+		return nil, err
+	}
+	eventType, err := required("event_type")
+	if err != nil {
+		return nil, err
+	}
+
+	aggregateVersion, err := required("aggregate_version")
+	if err != nil {
+		return nil, err
+	}
+	parsedAggregateVersion, err := strconv.ParseInt(aggregateVersion, 10, 64)
+	if err != nil || parsedAggregateVersion < 0 {
+		return nil, fmt.Errorf("invalid aggregate_version field")
+	}
+	occurredAt, err := required("occurred_at")
+	if err != nil {
+		return nil, err
+	}
+	parsedOccurredAt, err := time.Parse(time.RFC3339Nano, occurredAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid occurred_at field")
+	}
+	payload, err := required("payload")
+	if err != nil {
+		return nil, err
+	}
+	if !json.Valid([]byte(payload)) {
+		return nil, fmt.Errorf("invalid payload JSON")
+	}
+
+	traceparent, _ := str("traceparent")
+	if traceparent != "" && !validTraceparent(traceparent) {
+		return nil, fmt.Errorf("invalid traceparent field")
+	}
+	return &Envelope{
+		SchemaVersion:    parsedSchemaVersion,
+		EventID:          eventID,
+		AggregateID:      aggregateID,
+		AggregateVersion: parsedAggregateVersion,
+		EventType:        eventType,
+		OccurredAt:       parsedOccurredAt,
+		Payload:          []byte(payload),
+		Traceparent:      traceparent,
+	}, nil
+}
+
+func validTraceparent(value string) bool {
+	if !traceparentPattern.MatchString(value) {
+		return false
+	}
+	parts := strings.Split(value, "-")
+	return parts[1] != strings.Repeat("0", 32) && parts[2] != strings.Repeat("0", 16)
 }

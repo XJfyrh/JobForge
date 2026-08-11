@@ -213,8 +213,14 @@ func TestObservabilityMetricsSetup(t *testing.T) {
 	if metrics.TenantThrottledTotal == nil {
 		t.Error("TenantThrottledTotal instrument is nil")
 	}
+	if metrics.EventRedeliveriesTotal == nil {
+		t.Error("EventRedeliveriesTotal instrument is nil")
+	}
+	if metrics.ConsumerInboxDuplicatesTotal == nil {
+		t.Error("ConsumerInboxDuplicatesTotal instrument is nil")
+	}
 
-	t.Log("All 10 PRD 12.1 metrics instruments created successfully")
+	t.Log("Core and transactional-consumer metric instruments created successfully")
 }
 
 // TestObservabilityTracingSetup verifies that tracing can be initialized

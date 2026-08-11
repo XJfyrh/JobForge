@@ -15,7 +15,10 @@ flowchart LR
     Scheduler -.->|LISTEN/NOTIFY| Gateway
     API -.->|LISTEN/NOTIFY| Gateway
     Publisher[Outbox Publisher] --> PG
-    PG -.->|NOTIFY jobforge_outbox| Consumers[事件消费方]
+    Publisher -.->|notify：非耐久默认| Consumers[事件消费方]
+    Publisher -->|redis_streams：envelope v1| Redis[(Redis Streams + AOF)]
+    Redis --> ReferenceConsumer[Reference Consumer]
+    ReferenceConsumer -->|inbox + 业务效果同事务| PG
 ```
 
 **核心约束**：
@@ -33,7 +36,8 @@ flowchart LR
 | Worker Gateway | gRPC Worker 会话管理；Poll/Heartbeat/Complete/Fail 事务；fencing 验证 | 运行用户 Handler |
 | Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态 |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
-| Outbox Publisher | 轮询发布 outbox_events（at-least-once，LISTEN/NOTIFY）；进度追踪与 retention 清理 | 改写任务核心状态 |
+| Outbox Publisher | 轮询发布 outbox_events（at-least-once，可选 notify/Redis Streams）；进度追踪与 retention 清理 | 改写任务核心状态 |
+| Reference Consumer | Redis consumer group 读取；inbox 去重与示例业务效果同事务；commit 后 ACK；pending/poison 恢复 | 动态加载 Handler；为跨系统副作用承诺 exactly-once |
 | 运维 CLI（jobforge ctl） | 纯客户端查询与 DLQ 人工恢复（list/get/cancel/retry）；outbox 只读积压视图 | 引入服务端特权路径 |
 | Observability | OTel tracing；Prometheus metrics；pprof 诊断 | 业务逻辑 |
 
@@ -86,11 +90,28 @@ flowchart LR
 
 领取为单语句原子操作（migration 0009 的 `claimed_at` 列），并发 publisher 不会领到同一事件；发布失败与优雅关停会即时释放领取，仅硬崩溃留下领取标记，已领取但超过 5 分钟未发布的行在下一轮自动重领。
 
-**envelope v1（FR-703，PRD 附录 B）**：`schema_version`、`event_id`（业务去重键，不得用 Redis entry ID）、`aggregate_id`（partition key）、`aggregate_version`（jobs.state_version，检测重复/乱序）、`event_type`、`occurred_at`、`payload`、`traceparent`；捕获列在事件写入时随状态事务持久化，发布时无需回查 jobs。未来仅允许向后兼容新增字段。
+**envelope v1（FR-703，PRD 附录 B）**：`schema_version`、`event_id`（业务去重键，不得用 Redis entry ID）、`aggregate_id`（partition key）、`aggregate_version`（jobs.state_version，检测重复/乱序）、`event_type`、`occurred_at`、`payload`、`traceparent`；捕获列在事件写入时随状态事务持久化，发布时无需回查 jobs。消费端要求 event_id 为正整数的规范十进制文本，`+42`/`042` 等别名视为非法 envelope，避免绕过 inbox 文本主键。未来仅允许向后兼容新增字段。
 
 **Redis Streams 形态（FR-704，ADR-0006 §2）**：consumer group 独立维护游标与 Pending Entries；数据耐久性依赖启用 AOF（`appendonly yes`、`appendfsync everysec`）与命名 volume（`deploy/compose.yaml` 的 `durable-events` profile）。Redis 只是事件交付依赖，不是任务状态事实源：broker 故障不回写 jobs，健康检查不将 Redis 纳入任务 readiness。
 
-**notify → redis_streams 切换**是受控运维变更（非零停机，ADR-0006 §6）：暂停 publisher/retention → 记录 event_id 高水位 → 书面决定回灌/截断 → 启用并验证 Redis 后恢复；单一 `published_at` 无法证明交付目标，不得把切换前仅经 notify 标记成功的行宣称为已耐久交付。
+**事务性参考消费（FR-710～714）**：`jobforge consumer` 创建新 group 时从 `0-0` 起步，已有 group 保留 cursor/PEL；每次只处理一个 entry。消费端严格校验 envelope v1，随后执行：
+
+```text
+BEGIN
+  → 校验 consumer_inbox_binding 与启动 group 一致
+  → INSERT consumer_inbox(event_id, ...) ON CONFLICT DO NOTHING
+  → 首次事件执行预注册 Handler，写 consumer_demo_effects
+COMMIT
+  → XACK
+```
+
+inbox 命中时先核对 group 与 aggregate id/version，再跳过 Handler、提交空事务并 ACK；不一致属于完整性故障，Consumer 退出且不 ACK/poison。commit 失败不 ACK；commit 成功后进程退出或 ACK 失败时，entry 留在 PEL，其他实例通过 `XAUTOCLAIM` 重投并由 inbox 吸收。`XAUTOCLAIM` 的非零扫描 cursor 即使本页无消息也会保留，并与新消息读取交替，避免 PEL 后部饥饿。基础设施错误永不消耗 poison 次数；严格解码错误或 Handler 明确标记的永久错误达到 delivery 上限后，先向 `<stream>:poison` 写入有界元数据，再 ACK 原 entry。Poison XADD 后、ACK 前的崩溃窗允许重复隔离记录，以 `source_entry_id` 核对，不提升为 exactly-once。
+
+`consumer_inbox_binding` 以单行约束把 schema/数据库绑定到一个逻辑 consumer group；不同 group 复用时启动失败。`consumer_inbox.event_id` 是主键，`consumer_demo_effects.event_id` 故意不设唯一约束。需要独立业务效果的另一个 group 使用独立 schema/数据库，不能把主键静默改成 `(consumer_group,event_id)`。HTTP、邮件、支付等跨系统副作用不在 PostgreSQL 原子边界内，Handler 必须把 `event_id` 作为 idempotency key 透传。
+
+Stream `MAXLEN` 仍为兼容配置且默认 0，但 Redis 裁剪不理解 PEL。若 `MAXLEN`、`XDEL` 或外部运维删除了尚未 ACK 的 payload，Redis 7 会在 `XAUTOCLAIM` 返回 deleted IDs；reference Consumer 增加 `pending_payload_deleted` transport failure 后立即退出，不得把 PEL 变为 0 误报为成功消费。恢复需要基于 PostgreSQL outbox 与书面高水位决策人工处置，本阶段不自动回灌。
+
+**notify → redis_streams 切换**是受控运维变更（非零停机，ADR-0006 §6）：暂停 publisher/retention → 记录 event_id 高水位 → 书面决定回灌/截断 → 启用并验证 Redis 后恢复；单一 `published_at` 无法证明交付目标，不得把切换前仅经 notify 标记成功的行宣称为已耐久交付。逐步操作见[事件 transport 切换运行手册](runbooks/event-transport-switch.md)。
 
 发布语义为 at-least-once：消费方按 event_id 幂等去重；发布失败/publisher 崩溃不影响任务状态。
 
@@ -194,7 +215,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 └─────────────────────────────────────────────────────────┘
 ```
 
-- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`、`jobforge publisher`）；`jobforge ctl` 为纯客户端运维子命令，复用 HTTP API 与 API key 鉴权。
+- **API / Scheduler / Gateway / Publisher / Consumer**：同一 Go 二进制的不同子命令（`jobforge api`、`jobforge scheduler`、`jobforge gateway`、`jobforge publisher`、`jobforge consumer`）；Consumer 仅在 durable-events profile 启用，`jobforge ctl` 为纯客户端运维子命令。
 - **Worker**：独立进程，通过 gRPC 连接 Gateway，可启动多个实例。
 - **PostgreSQL**：唯一强依赖外部服务。
 - **观测**：pprof + /metrics 绑定 `127.0.0.1:6060`（PRD 11.4）；OTel stdout exporter 默认零外部依赖。
@@ -217,6 +238,7 @@ jobforge/
 │   ├── api/http/           # HTTP 控制面 API（chi router）
 │   ├── config/             # 环境变量配置
 │   ├── ctl/                # 运维 CLI 客户端（HTTP API + outbox 只读查询）
+│   ├── eventconsumer/      # Redis Source + inbox 事务 + pending/poison 协议
 │   ├── domain/             # 领域模型、状态机、错误定义
 │   ├── gateway/grpc/       # gRPC Worker Gateway
 │   ├── migrate/            # 自动迁移（embed SQL）

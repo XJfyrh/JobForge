@@ -135,6 +135,9 @@ func at21Body(t *testing.T, prefilter bool) {
 				if err := conn.QueryRow(samplerCtx,
 					`select count(*) from jobs where tenant_id = $1 and state in ('running', 'cancelling')`,
 					tenant).Scan(&inflight); err != nil {
+					if samplerCtx.Err() != nil {
+						return
+					}
 					recordViolation("sampler jobs count: %v", err)
 					continue
 				}
@@ -142,6 +145,9 @@ func at21Body(t *testing.T, prefilter bool) {
 				err := conn.QueryRow(samplerCtx,
 					`select inflight from tenant_quota_counters where tenant_id = $1`, tenant).Scan(&counter)
 				if err != nil {
+					if samplerCtx.Err() != nil {
+						return
+					}
 					counter = 0 // row not created yet
 				}
 				if inflight > limit {
