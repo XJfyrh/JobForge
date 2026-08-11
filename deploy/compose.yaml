@@ -11,8 +11,8 @@
 #
 # Optional durable-events profile (PRD v0.3 §10.2, ADR-0006):
 #   docker compose -f deploy/compose.yaml --profile durable-events up -d
-# adds a Redis with AOF on a named volume for the redis_streams outbox
-# transport. The publisher transport itself is selected via the
+# adds Redis with AOF plus the optional transactional reference consumer.
+# The publisher transport itself is selected via the
 # JOBFORGE_OUTBOX_TRANSPORT env var (default stays the non-durable notify),
 # so enabling the profile never creates a second publisher competing for
 # published_at:
@@ -128,6 +128,40 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  # Reference transactional consumer (PRD v0.3 FR-710~714). It is isolated
+  # behind durable-events, so the default deployment remains PostgreSQL-only.
+  # One consumer_inbox table represents this one logical group; additional
+  # groups that need independent effects require an independent inbox schema.
+  consumer:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    profiles: ["durable-events"]
+    command: ["consumer"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_REDIS_URL: "${JOBFORGE_REDIS_URL:-redis://redis:6379/0}"
+      JOBFORGE_REDIS_STREAM_KEY: "${JOBFORGE_REDIS_STREAM_KEY:-jobforge:events}"
+      JOBFORGE_CONSUMER_GROUP: "${JOBFORGE_CONSUMER_GROUP:-jobforge-reference-v1}"
+      JOBFORGE_CONSUMER_BLOCK_TIMEOUT: "${JOBFORGE_CONSUMER_BLOCK_TIMEOUT:-2s}"
+      JOBFORGE_CONSUMER_PENDING_SCAN_INTERVAL: "${JOBFORGE_CONSUMER_PENDING_SCAN_INTERVAL:-5s}"
+      JOBFORGE_CONSUMER_PENDING_MIN_IDLE: "${JOBFORGE_CONSUMER_PENDING_MIN_IDLE:-30s}"
+      JOBFORGE_CONSUMER_PROCESS_TIMEOUT: "${JOBFORGE_CONSUMER_PROCESS_TIMEOUT:-10s}"
+      JOBFORGE_CONSUMER_MAX_DELIVERIES: "${JOBFORGE_CONSUMER_MAX_DELIVERIES:-5}"
+      JOBFORGE_CONSUMER_RETRY_BASE: "${JOBFORGE_CONSUMER_RETRY_BASE:-1s}"
+      JOBFORGE_CONSUMER_RETRY_MAX: "${JOBFORGE_CONSUMER_RETRY_MAX:-30s}"
+      # Empty delegates to the binary's <stream>:poison derivation.
+      JOBFORGE_CONSUMER_POISON_STREAM: "${JOBFORGE_CONSUMER_POISON_STREAM:-}"
+      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
+    ports:
+      - "127.0.0.1::6060"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   worker-1:
     build:

@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/xjfyrh/jobforge/internal/eventconsumer"
 	"github.com/xjfyrh/jobforge/internal/outbox"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
@@ -365,25 +366,9 @@ func TestDurableAT20GroupIsolation(t *testing.T) {
 	streamKey := "test:at20:" + uuid.NewString()[:8]
 	tr := newDurableTransport(t, env, streamKey)
 
-	// Groups must exist before the entries are read; ">" starts them at the
-	// stream's current tail, so create them first, then publish.
+	// Publish before creating either group. The M3 Source creates new groups at
+	// 0-0, so retained backlog must remain visible to late-starting consumers.
 	const total = 40
-	groups := []string{"grp-a", "grp-b"}
-	readers := make([]*outbox.GroupReader, 0, 4)
-	for _, g := range groups {
-		for i := 0; i < 2; i++ {
-			r, err := outbox.NewGroupReader(env.url, streamKey, g, fmt.Sprintf("inst-%d", i))
-			if err != nil {
-				t.Fatalf("create group reader %s/%d: %v", g, i, err)
-			}
-			t.Cleanup(func() { _ = r.Close() })
-			if err := r.EnsureGroup(context.Background()); err != nil {
-				t.Fatalf("ensure group %s: %v", g, err)
-			}
-			readers = append(readers, r)
-		}
-	}
-
 	aggregate := uuid.New().String()
 	wantIDs := make(map[string]bool, total)
 	for i := 0; i < total; i++ {
@@ -392,6 +377,29 @@ func TestDurableAT20GroupIsolation(t *testing.T) {
 	runPublisherUntil(t, os, tr, 30*time.Second, func() bool {
 		return len(streamEventIDs(t, client, streamKey)) >= total
 	})
+
+	groups := []string{"grp-a", "grp-b"}
+	readers := make([]eventconsumer.Source, 0, 4)
+	for _, group := range groups {
+		for i := 0; i < 2; i++ {
+			options, err := redis.ParseURL(env.url)
+			if err != nil {
+				t.Fatalf("parse test Redis URL: %v", err)
+			}
+			reader, err := eventconsumer.NewRedisSource(
+				redis.NewClient(options), streamKey, group,
+				fmt.Sprintf("inst-%d", i), streamKey+":poison",
+			)
+			if err != nil {
+				t.Fatalf("create group reader %s/%d: %v", group, i, err)
+			}
+			t.Cleanup(func() { _ = reader.Close() })
+			if err := reader.EnsureGroup(context.Background()); err != nil {
+				t.Fatalf("ensure group %s: %v", group, err)
+			}
+			readers = append(readers, reader)
+		}
+	}
 
 	// Consume with all four readers until every group has the full set.
 	type groupState struct {
@@ -417,26 +425,27 @@ func TestDurableAT20GroupIsolation(t *testing.T) {
 		if allDone {
 			break
 		}
-		for i, r := range readers {
+		for i, reader := range readers {
 			group := groups[i/2]
 			inst := fmt.Sprintf("inst-%d", i%2)
-			envs, entryIDs, err := r.ReadNext(context.Background(), 20, 200*time.Millisecond)
+			message, err := reader.ReadNew(context.Background(), 200*time.Millisecond)
 			if err != nil {
 				t.Fatalf("read group %s: %v", group, err)
 			}
-			if len(envs) == 0 {
+			if message == nil {
 				continue
+			}
+			if message.DecodeErr != nil {
+				t.Fatalf("decode group %s entry: %v", group, message.DecodeErr)
 			}
 			st := states[group]
 			st.mu.Lock()
-			for _, e := range envs {
-				if st.seen[e.EventID] == 0 {
-					st.count[inst]++
-				}
-				st.seen[e.EventID]++
+			if st.seen[message.Envelope.EventID] == 0 {
+				st.count[inst]++
 			}
+			st.seen[message.Envelope.EventID]++
 			st.mu.Unlock()
-			if err := r.Ack(context.Background(), entryIDs...); err != nil {
+			if err := reader.Ack(context.Background(), message.EntryID); err != nil {
 				t.Fatalf("ack group %s: %v", group, err)
 			}
 		}

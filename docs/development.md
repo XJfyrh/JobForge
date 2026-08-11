@@ -11,6 +11,7 @@ jobforge/
 │   ├── api/http/       # HTTP 控制面 API
 │   ├── config/         # 环境变量配置
 │   ├── domain/         # 领域模型与状态机
+│   ├── eventconsumer/  # Redis Source + inbox 事务 + pending/poison 恢复
 │   ├── gateway/grpc/   # gRPC Worker Gateway
 │   ├── migrate/        # 自动迁移
 │   ├── notify/         # LISTEN/NOTIFY fan-out
@@ -105,9 +106,37 @@ $env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?s
 $env:JOBFORGE_TEST_REDIS_URL = "redis://localhost:6379/0"
 ```
 
-- 耐久事件集成测试（AT-17/18/20、NFR-303，`tests/integration/durable_events_test.go`）在 `JOBFORGE_TEST_REDIS_URL` 缺省时 **skip 而非失败**；Linux CI 的 testcontainers 模式会自动拉起 AOF Redis。
+- 耐久事件集成测试（AT-17/18/19/20、NFR-303，`tests/integration/durable_events_test.go` 与 `tests/integration/event_consumer_test.go`）在 `JOBFORGE_TEST_REDIS_URL` 缺省时 **skip 而非失败**；Linux CI 的 testcontainers 模式会自动拉起 AOF Redis。
 - AT-17/NFR-303 通过 `docker stop/start` 重启 broker 验证 AOF 恢复，目标容器名由 `JOBFORGE_TEST_REDIS_CONTAINER` 指定（默认 `deploy-redis-1`）；重启必须保留命名 volume，禁止用 `down -v` 后把全新实例误报为重启恢复。
 - 运行 publisher 子命令启用 redis_streams：设 `JOBFORGE_OUTBOX_TRANSPORT=redis_streams` 与 `JOBFORGE_REDIS_URL`（Compose 内默认指向 `redis://redis:6379/0`）；Redis URL 与认证信息不进入日志/trace/metrics（NFR-309）。
+
+完整 reference consumer demo：
+
+```powershell
+$env:JOBFORGE_OUTBOX_TRANSPORT = "redis_streams"
+docker compose -f deploy/compose.yaml --profile durable-events up -d --build
+```
+
+`consumer` 服务仅属于 durable-events profile；默认部署不依赖 Redis。Consumer 通过 `consumer_inbox_binding` 将数据库/schema 绑定到一个逻辑 group，并在 PostgreSQL 中执行 `consumer_inbox` + `consumer_demo_effects` 同事务，commit 后才 ACK。独立业务效果的其他 group 必须使用独立 schema/数据库；复用会在消费前 fail closed。
+
+本地 Compose 把每个 Consumer 的 `/metrics` + pprof 映射到 loopback 随机宿主端口，避免 `--scale consumer=2` 冲突。用 `docker compose -f deploy/compose.yaml port --index 1 consumer 6060`（第二实例使用 `--index 2`）查询实际端口；生产仍应只绑定内网或 localhost。Compose 不覆盖 `JOBFORGE_CONSUMER_NAME`，各容器使用自身 `<hostname>-<pid>`。
+
+| 环境变量 | 默认值 | 约束/说明 |
+|---|---:|---|
+| `JOBFORGE_CONSUMER_GROUP` | `jobforge-reference-v1` | 1～128 个安全字符；一个 inbox 对应一个逻辑 group |
+| `JOBFORGE_CONSUMER_NAME` | `<hostname>-<pid>` | 1～128 个安全字符；同 group 实例应不同 |
+| `JOBFORGE_CONSUMER_BLOCK_TIMEOUT` | `2s` | 单 entry 阻塞读取上限 |
+| `JOBFORGE_CONSUMER_PENDING_SCAN_INTERVAL` | `5s` | PEL 扫描周期；与新消息读取交替 |
+| `JOBFORGE_CONSUMER_PENDING_MIN_IDLE` | `30s` | 必须大于 process timeout |
+| `JOBFORGE_CONSUMER_PROCESS_TIMEOUT` | `10s` | 单次 PostgreSQL 业务事务上限 |
+| `JOBFORGE_CONSUMER_MAX_DELIVERIES` | `5` | 仅永久 decode/schema/Handler 错误消耗该上限 |
+| `JOBFORGE_CONSUMER_RETRY_BASE` | `1s` | 瞬时基础设施错误退避起点 |
+| `JOBFORGE_CONSUMER_RETRY_MAX` | `30s` | 瞬时错误退避上限 |
+| `JOBFORGE_CONSUMER_POISON_STREAM` | `<event-stream>:poison` | 必须与源 stream 不同；只存有界元数据，不复制 payload |
+
+`JOBFORGE_REDIS_STREAM_MAXLEN` 默认 0。非零值保持兼容，但 Redis 裁剪不保护 PEL；若尚未 ACK 的 payload 被删除，Consumer 会记录 `pending_payload_deleted` 并退出。生产启用裁剪前必须准备基于 PostgreSQL outbox 高水位的人工恢复方案，不能把退出后的 PEL=0 当作成功消费。
+
+从 `notify` 切换到 Redis 不是自动双写或零停机升级；执行前阅读[事件 transport 切换运行手册](runbooks/event-transport-switch.md)。
 
 ## 运维 CLI（jobforge ctl）
 
@@ -224,6 +253,7 @@ go test -tags scale -count=1 ./tests/scale/
 
 - 单元测试：状态转换、错误分类、退避、配额和 Handler 生命周期。
 - 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、幂等与 outbox。
+- 事件消费集成测试：使用真实 PostgreSQL + Redis 验证 commit-before-ACK、XAUTOCLAIM 多页 cursor、inbox group binding/去重、瞬时 read/processor/ACK 恢复、deleted pending fail-fast、默认五次 poison 和晚建 group backlog；migration 0017 另在独立临时 0016 数据库上通过正式 Migrator 前滚。
 - 契约测试：验证 HTTP/gRPC 错误映射、deadline、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。
 - scale 可靠性测试（`-tags scale`）：100 轮故障注入与万级幂等的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
@@ -310,3 +340,5 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
 | `gateway.claim_jobs` | Gateway | worker_id, max_jobs, jobs.claimed |
 | `worker.execute` | Worker | queue, type, attempt, worker_id |
 | `gateway.complete_job` | Gateway | worker_id |
+| `event.consume` | Reference Consumer | consumer group、redelivered、delivery_count、ACK/pending/poison 结果 |
+| `event.process` | Reference Consumer | inbox duplicate、业务事务结果 |

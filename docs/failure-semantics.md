@@ -158,6 +158,25 @@ cancelling 状态下：
 - publisher 不持有内存进度：崩溃重启后仅从 `published_at IS NULL` 恢复。
 - Redis 故障不回写 jobs；健康检查分离 task/event readiness。
 
+### Consumer inbox、pending 与 poison
+
+参考 Consumer 的原子边界仅覆盖同一个 PostgreSQL 事务：`consumer_inbox` 首次插入与预注册 Handler 的业务效果一起提交，提交成功后才执行 Redis `XACK`。因此：
+
+| 故障窗口 | 可观察结果 | 恢复 |
+|---|---|---|
+| BEGIN/Handler/COMMIT 失败 | inbox 与业务效果一起回滚，entry 保持 pending | 基础设施恢复后重投；不计入 poison 上限 |
+| COMMIT 成功、XACK 前进程退出 | inbox 与效果已存在，entry 保持 pending | 其他实例 `XAUTOCLAIM`；inbox 冲突跳过 Handler 后 ACK |
+| XACK 瞬时失败 | 与上一行相同，可能重复读取 | 退避；重投由 inbox 吸收 |
+| envelope/schema 或 Handler 明确永久错误 | entry 保持 pending，并按 PEL delivery count 重试 | 达到上限后先 XADD poison 元数据，再 ACK 原 entry |
+| poison XADD 成功、原 entry ACK 前退出 | poison 记录可能重复，原 entry 仍 pending | 再次隔离；按 `source_stream + source_entry_id` 人工去重 |
+| Redis/数据库/context 瞬时故障 | 不 ACK、不 poison，不触碰 jobs | 有界指数退避，依赖恢复后收敛 |
+| inbox 已绑定其他 group 或同 event_id 元数据冲突 | 配置/数据完整性错误，当前 entry 不 ACK、不 poison | Consumer fail closed；修正 schema/group 或调查事件来源后重启 |
+| pending payload 被 MAXLEN/XDEL 删除 | Redis 7 从 PEL 清除缺失 ID，但业务事务从未执行 | `pending_payload_deleted` 指标增加且 Consumer 退出；依据 outbox 高水位人工恢复，不得误报 drain |
+
+poison 记录只包含 source stream/entry、固定 consumer group、可解析的 event_id、delivery count、有界 reason 与 failed_at；不复制 payload，且 poison stream 必须与源 stream 不同。新 consumer group 从 `0-0` 创建以读取已有 backlog，已有 group 的 cursor/PEL 不被重置。单 entry 处理且默认 `process_timeout=10s < pending_min_idle=30s`，避免正常事务被过早抢占；持续新流量与 pending recovery 交替执行，空页返回的非零 XAUTOCLAIM cursor 也会继续扫描，因此 PEL 后部不会因新消息或前部 fresh entry 永久饥饿。
+
+`consumer_inbox_binding` 在数据库中强制一个 inbox schema 只对应一个逻辑 consumer group；不同 group 不能靠运维约定静默复用。PostgreSQL 事务外的 HTTP、邮件、支付等副作用仍可能在调用成功后、数据库提交前重复；必须透传 `event_id`/idempotency key，由目标系统幂等，不得称为 exactly-once。Poison 自动重放不在本阶段范围内。
+
 **故障恢复路径**：
 
 | 故障 | 表现 | 恢复 |
@@ -167,8 +186,10 @@ cancelling 状态下：
 | publisher 领取后崩溃（`claimed_at` 已置、未发布） | 事件暂停参与领取 | 领取过期（5 分钟）后下一轮自动重领；at-least-once 下可能重复发布 |
 | Redis 停机/重启 | 停机期事件保持未发布；AOF + 命名 volume 保留停机前 Stream 记录 | 恢复后全部补入 Stream、积压归零（AT-17/NFR-303） |
 | 事件积压 | `jobforge_outbox_pending` 上升、`jobforge_event_publish_lag_seconds` 变大 | 增加 publisher 实例（单语句原子领取，并发不重复） |
+| Consumer commit 后 ACK 前退出 | Stream entry 留在 PEL；业务效果已提交 | `XAUTOCLAIM` + inbox 冲突吸收重复（AT-19） |
+| 永久坏事件 | PEL delivery count 增长；合法后续事件继续处理 | 达上限写 poison 元数据后 ACK；人工检查/重放 |
 
-**Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件，即只清理已成功交付到当前启用 transport 的行；未发布事件永不被清理。Stream 自身的裁剪（`JOBFORGE_REDIS_STREAM_MAXLEN`，默认 0 不裁剪）属运维责任，不影响 outbox 事实源。
+**Retention**：仅清理 `published_at IS NOT NULL` 且超过保留期（默认 7 天，`JOBFORGE_OUTBOX_RETENTION`）的事件，即只清理已成功交付到当前启用 transport 的行；未发布事件永不被清理。Stream 自身的裁剪（`JOBFORGE_REDIS_STREAM_MAXLEN`，默认 0 不裁剪）属运维责任，不改变 PostgreSQL outbox 事实源，但可能删除尚未 ACK 的 Redis payload；reference Consumer 会检测 Redis 7 deleted PEL IDs 并故障退出，而不是把该事件视为已消费。
 
 ## 测试证据索引
 
@@ -184,6 +205,7 @@ cancelling 状态下：
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
 | `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复（批量标记崩溃窗语义）、重复投递幂等、retention 边界；双 publisher 并发零重复 NOTIFY、僵尸领取回收（`TestOutboxConcurrentPublishersNoDuplicateNotify`、`TestOutboxStaleClaimReclaimed`） |
 | `tests/integration/durable_events_test.go` | AT-17（Redis stop/start AOF 重启恢复）、AT-18（XADD 后标记前崩溃窗重复 entry）、AT-20（双 consumer group 隔离与组内分摊）、NFR-303（60s broker 暂停恢复与任务事务不阻塞）；`JOBFORGE_TEST_REDIS_URL` 缺省时 skip |
+| `tests/integration/event_consumer_test.go` | AT-19（commit 后 ACK 前确定性退出、XAUTOCLAIM、inbox 单效果）、晚建 group backlog、poison 隔离/后续合法事件、消费指标与 traceparent 传播；Redis 缺省时 skip |
 | `tests/scale/nfr302_event_publish_test.go`（`-tags scale`） | NFR-302 事件发布 smoke floor（约 1,800 events/sec）与健康态 publish lag p95 ≤2s |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 | `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |

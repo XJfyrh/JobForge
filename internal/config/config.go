@@ -5,10 +5,13 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var consumerIdentifierPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
 // Config holds all application configuration.
 type Config struct {
@@ -98,6 +101,22 @@ type Config struct {
 	// is then an operational responsibility.
 	RedisStreamMaxLen int64
 
+	// ConsumerGroup identifies one logical transactional consumer. One
+	// consumer_inbox table belongs to one configured logical group.
+	ConsumerGroup string
+
+	// ConsumerName identifies this process inside the Redis consumer group.
+	ConsumerName string
+
+	ConsumerBlockTimeout        time.Duration
+	ConsumerPendingScanInterval time.Duration
+	ConsumerPendingMinIdle      time.Duration
+	ConsumerProcessTimeout      time.Duration
+	ConsumerMaxDeliveries       int64
+	ConsumerRetryBase           time.Duration
+	ConsumerRetryMax            time.Duration
+	ConsumerPoisonStream        string
+
 	// SchedulerLeadershipTimeout bounds how long the Scheduler leader may go
 	// without a heartbeat before standbys take over the leadership lease
 	// (ADR-0005).
@@ -132,6 +151,16 @@ func Load() (*Config, error) {
 		RedisURL:          getEnv("JOBFORGE_REDIS_URL", ""),
 		RedisStreamKey:    getEnv("JOBFORGE_REDIS_STREAM_KEY", "jobforge:events"),
 		RedisStreamMaxLen: int64(getIntEnv("JOBFORGE_REDIS_STREAM_MAXLEN", 0)),
+
+		ConsumerGroup:               getEnv("JOBFORGE_CONSUMER_GROUP", "jobforge-reference-v1"),
+		ConsumerName:                getEnv("JOBFORGE_CONSUMER_NAME", defaultConsumerName()),
+		ConsumerBlockTimeout:        getDurationEnv("JOBFORGE_CONSUMER_BLOCK_TIMEOUT", 2*time.Second),
+		ConsumerPendingScanInterval: getDurationEnv("JOBFORGE_CONSUMER_PENDING_SCAN_INTERVAL", 5*time.Second),
+		ConsumerPendingMinIdle:      getDurationEnv("JOBFORGE_CONSUMER_PENDING_MIN_IDLE", 30*time.Second),
+		ConsumerProcessTimeout:      getDurationEnv("JOBFORGE_CONSUMER_PROCESS_TIMEOUT", 10*time.Second),
+		ConsumerMaxDeliveries:       int64(getIntEnv("JOBFORGE_CONSUMER_MAX_DELIVERIES", 5)),
+		ConsumerRetryBase:           getDurationEnv("JOBFORGE_CONSUMER_RETRY_BASE", time.Second),
+		ConsumerRetryMax:            getDurationEnv("JOBFORGE_CONSUMER_RETRY_MAX", 30*time.Second),
 
 		SchedulerLeadershipTimeout: getDurationEnv("JOBFORGE_SCHEDULER_LEADERSHIP_TIMEOUT", 10*time.Second),
 
@@ -173,8 +202,87 @@ func Load() (*Config, error) {
 	if cfg.RedisStreamMaxLen < 0 {
 		return nil, fmt.Errorf("JOBFORGE_REDIS_STREAM_MAXLEN must be >= 0 (0 disables trimming)")
 	}
+	if poison := os.Getenv("JOBFORGE_CONSUMER_POISON_STREAM"); poison != "" {
+		cfg.ConsumerPoisonStream = poison
+	} else {
+		cfg.ConsumerPoisonStream = cfg.RedisStreamKey + ":poison"
+	}
+	for _, key := range []string{
+		"JOBFORGE_CONSUMER_BLOCK_TIMEOUT",
+		"JOBFORGE_CONSUMER_PENDING_SCAN_INTERVAL",
+		"JOBFORGE_CONSUMER_PENDING_MIN_IDLE",
+		"JOBFORGE_CONSUMER_PROCESS_TIMEOUT",
+		"JOBFORGE_CONSUMER_RETRY_BASE",
+		"JOBFORGE_CONSUMER_RETRY_MAX",
+	} {
+		if raw := os.Getenv(key); raw != "" {
+			if _, err := time.ParseDuration(raw); err != nil {
+				return nil, fmt.Errorf("%s must be a valid duration", key)
+			}
+		}
+	}
+	if raw := os.Getenv("JOBFORGE_CONSUMER_MAX_DELIVERIES"); raw != "" {
+		if _, err := strconv.Atoi(raw); err != nil {
+			return nil, fmt.Errorf("JOBFORGE_CONSUMER_MAX_DELIVERIES must be an integer")
+		}
+	}
+	if !consumerIdentifierPattern.MatchString(cfg.ConsumerGroup) {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_GROUP must be 1-128 safe characters")
+	}
+	if !consumerIdentifierPattern.MatchString(cfg.ConsumerName) {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_NAME must be 1-128 safe characters")
+	}
+	if cfg.ConsumerBlockTimeout <= 0 || cfg.ConsumerPendingScanInterval <= 0 ||
+		cfg.ConsumerPendingMinIdle <= 0 || cfg.ConsumerProcessTimeout <= 0 ||
+		cfg.ConsumerRetryBase <= 0 || cfg.ConsumerRetryMax <= 0 {
+		return nil, fmt.Errorf("consumer durations must be positive")
+	}
+	if cfg.ConsumerPendingMinIdle <= cfg.ConsumerProcessTimeout {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_PENDING_MIN_IDLE must exceed JOBFORGE_CONSUMER_PROCESS_TIMEOUT")
+	}
+	if cfg.ConsumerMaxDeliveries < 1 {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_MAX_DELIVERIES must be >= 1")
+	}
+	if cfg.ConsumerRetryBase > cfg.ConsumerRetryMax {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_RETRY_BASE must not exceed JOBFORGE_CONSUMER_RETRY_MAX")
+	}
+	if cfg.ConsumerPoisonStream == "" {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_POISON_STREAM must not be empty")
+	}
+	if cfg.ConsumerPoisonStream == cfg.RedisStreamKey {
+		return nil, fmt.Errorf("JOBFORGE_CONSUMER_POISON_STREAM must differ from JOBFORGE_REDIS_STREAM_KEY")
+	}
 
 	return cfg, nil
+}
+
+func defaultConsumerName() string {
+	hostname, err := os.Hostname()
+	if err != nil || hostname == "" {
+		hostname = "jobforge"
+	}
+	var builder strings.Builder
+	for _, r := range hostname {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '.' || r == '_' || r == ':' || r == '-' {
+			builder.WriteRune(r)
+		} else {
+			builder.WriteByte('-')
+		}
+		if builder.Len() >= 100 {
+			break
+		}
+	}
+	if builder.Len() == 0 || !isASCIIAlphaNumeric(builder.String()[0]) {
+		builder.Reset()
+		builder.WriteString("jobforge")
+	}
+	return fmt.Sprintf("%s-%d", builder.String(), os.Getpid())
+}
+
+func isASCIIAlphaNumeric(value byte) bool {
+	return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z') ||
+		(value >= '0' && value <= '9')
 }
 
 // TenantForKey looks up the tenant ID for a given API key.

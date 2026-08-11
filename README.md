@@ -18,10 +18,13 @@ flowchart LR
     Gateway --> PG
     Scheduler -.->|LISTEN/NOTIFY| Gateway
     Publisher[Outbox Publisher] --> PG
-    PG -.->|NOTIFY jobforge_outbox| Consumers[事件消费方]
+    Publisher -.->|notify：非耐久默认| Consumers[事件消费方]
+    Publisher -->|redis_streams：envelope v1| Redis[(Redis Streams + AOF)]
+    Redis --> ReferenceConsumer[Reference Consumer]
+    ReferenceConsumer -->|inbox + 业务效果同事务| PG
 ```
 
-- **API / Scheduler / Gateway / Publisher**：同一 Go 二进制的不同子命令，按需独立部署、水平扩展。
+- **API / Scheduler / Gateway / Publisher / Consumer**：同一 Go 二进制的不同子命令，按需独立部署、水平扩展；`consumer` 是可选参考实现。
 - **Worker**：独立进程，通过 gRPC 会话接入，可任意扩缩。
 - **PostgreSQL**：唯一强依赖外部服务，任务状态、租约、attempt 与事件 outbox 均在数据库事务中保持一致。
 
@@ -31,6 +34,7 @@ flowchart LR
 - **Fencing Token 防陈旧写入**：Heartbeat / Complete / Fail 均校验 owner 与 fencing token，崩溃后"复活"的旧 Worker 写入一律返回 `STALE_LEASE`，绝不覆盖新状态。
 - **崩溃自愈**：租约过期由 Scheduler 自动回收重投；Scheduler 自身通过 PostgreSQL advisory lock 单活，leader 故障秒级切换。
 - **Outbox 可靠事件**：任务终态与事件写入同一事务，Outbox Publisher 以 at-least-once 语义对外发布，发布故障不影响任务状态；外部 transport 可选 `redis_streams` 耐久交付（envelope v1 + Redis Streams，默认 `notify` 兼容非耐久，ADR-0006）。
+- **事务性事件消费**：参考 Consumer 将 inbox schema 显式绑定到单一逻辑 group，使用 `consumer_inbox` 与业务效果同事务提交，提交后才 ACK；`XAUTOCLAIM` 恢复 pending，永久坏事件有界重试后进入不含 payload 的 poison stream。group/事件元数据冲突或已被裁剪的 pending payload 会 fail closed，不会静默 ACK。该协议只去重 PostgreSQL 同事务效果，不承诺端到端 exactly-once。
 - **租户隔离与背压**：租户级 inflight 硬配额由派生计数表在 Claim 事务内原子预留（running+cancelling 口径，并发下零超配，满额租户不阻塞他人，ADR-0007）+ 队列深度背压，单租户打满不影响他人。
 - **全链路可观测**：OpenTelemetry Trace 贯穿 API → Gateway → Worker；10 个 Prometheus 核心指标；pprof 在线诊断。
 - **故障注入全覆盖**：AT-01～AT-12 故障场景（并发领取、ACK 前崩溃、陈旧写入、心跳丢失、调度切换等）全部以真实 PostgreSQL + `go test -race` 验证。
@@ -72,6 +76,15 @@ curl -s http://localhost:8080/v1/jobs/{job_id} -H "X-API-Key: dev-api-key"
 默认端口：HTTP API `:8080` · gRPC Gateway `:9090` · `/metrics` + pprof `:6060`（进程默认仅绑定 localhost，生产环境不应暴露）。
 
 三分钟完整演示见 [demo-script.md](docs/demo-script.md)。
+
+耐久发布与参考消费闭环可选启动：
+
+```sh
+JOBFORGE_OUTBOX_TRANSPORT=redis_streams \
+docker compose -f deploy/compose.yaml --profile durable-events up -d --build
+```
+
+该 profile 增加 Redis AOF 与 `jobforge consumer`；默认 `docker compose up` 仍不依赖 Redis。生产从 `notify` 切换前必须执行[事件 transport 切换运行手册](docs/runbooks/event-transport-switch.md)。
 
 ## 文档导航
 
