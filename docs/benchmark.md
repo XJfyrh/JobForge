@@ -401,7 +401,23 @@ go test -tags scale -count=1 -timeout 30m -run TestScalePerfPromoteClaimLatency 
 
 改善来源：逐候选 `count(state='running')`（每候选一次 index-only 扫描，batch 50 即 50 次）被替换为每租户一次 counter 快照读 + 事务末尾一次条件 upsert。
 
-形态演进记录（NFR-304 协议要求结构性证据与口径可审计）：首轮“逐候选预留”（claim p95 ≈ 1.7s）与次轮“事务开头批量预留”（claim p95 ≈ 1.0~1.2s）均因 counter 行锁持有到提交而超标，最终采用“预留置后 + 快照定批 + 竞争回滚重试”，详见 [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) §2 与方案 B。M1 结构断言：`idx_jobs_tenant_inflight` 服务 inflight 口径计数（`enable_seqscan = off`），预留 upsert 的 EXPLAIN 命中 `tenant_quota_counters_pkey`（`assertCounterTableUsable`），不再引用 `explainQuotaCount`/`idx_jobs_tenant_running`。
+形态演进记录（NFR-304 协议要求结构性证据与口径可审计）：首轮“逐候选预留”（claim p95 ≈ 1.7s）与次轮“事务开头批量预留”（claim p95 ≈ 1.0~1.2s）均因 counter 行锁持有到提交而超标，最终采用“预留置后 + 快照定批 + 竞争回滚重试”，详见 [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) §2 与方案 B。当时的 M1 结构断言以 `enable_seqscan = off` 确认 `idx_jobs_tenant_inflight` 可服务 inflight 口径计数；预留 upsert 的 EXPLAIN 命中 `tenant_quota_counters_pkey`（`assertCounterTableUsable`），不再引用 `explainQuotaCount`/`idx_jobs_tenant_running`。
+
+### Quality Gate Debt Cleanup（2026-08-11）
+
+为消除 PostgreSQL 优化器合法选择漂移造成的假失败，`TestScalePerfPromoteClaimLatency` 将索引结构契约与执行计划性能性质拆开：catalog 门禁精确核对 `public.idx_jobs_tenant_inflight` 的所属表、唯一键列、partial predicate、valid/ready 状态；每轮在事务内删除索引并确认专用 missing-index 错误，回滚后再次确认结构恢复。执行计划门禁则在 4,096 条、32 租户、`running`/`cancelling` 交替的非空 fixture 上 `ANALYZE jobs` 后运行自然计划，只禁止 `Seq Scan on jobs`，允许优化器选择任一合法索引或 bitmap 路径。该 fixture 在 Claim 延迟采样前删除，不改变原有 20,000 jobs 口径。
+
+同一 Windows + PostgreSQL 16 Compose 环境连续五轮定向验收：
+
+| 轮次 | claim p50 | claim p95 | promote p50 | promote p95 |
+|------|-----------|-----------|-------------|-------------|
+| 1 | 84.65 ms | 100.33 ms | 18.57 ms | 21.73 ms |
+| 2 | 86.89 ms | 100.86 ms | 18.89 ms | 22.94 ms |
+| 3 | 87.03 ms | 98.51 ms | 18.98 ms | 22.40 ms |
+| 4 | 84.98 ms | 97.18 ms | 19.68 ms | 22.48 ms |
+| 5 | 85.61 ms | 97.77 ms | 18.63 ms | 27.25 ms |
+
+五轮命令全部通过（package 340.142s），每轮均实际覆盖删除索引负向探针。相同测试在 `-race` 下通过（package 60.826s；claim p50/p95 92.43/107.63ms）。完整 scale 套件通过（package 245.283s；无非预期 skip），其中该测试的单轮 claim p50/p95 为 84.82/96.43ms。上述延迟仅作可复现观测，不作为机器相关硬门槛。
 
 ### 多租户混合场景（NFR-304 第 4 步）
 
@@ -447,4 +463,3 @@ Redis 容器 stop 60s 后 start（保留命名 volume）：停机期间任务状
 | AT-20（`TestDurableAT20GroupIsolation`） | 双 group 各完整消费 40 事件，组内两实例各分摊 20，无跨组游标干扰（PASS） |
 
 Windows 约定按 PRD §10.2：`docker compose --profile durable-events up -d postgres redis` + `JOBFORGE_TEST_REDIS_URL`；重启验证用保留命名 volume 的 `docker stop/start`（容器 `deploy-redis-1`）。Linux CI 由 testcontainers 自动拉起同参数 AOF Redis。
-
