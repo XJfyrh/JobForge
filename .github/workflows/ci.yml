@@ -71,7 +71,6 @@ jobs:
       # which is what the restart-recovery tests rely on.
       redis:
         image: redis:7-alpine
-        command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
         ports:
           - 6379:6379
         options: >-
@@ -89,9 +88,15 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Resolve Redis container name for restart tests
+      - name: Configure Redis AOF and resolve container name
         run: |
-          echo "JOBFORGE_TEST_REDIS_CONTAINER=$(docker ps --filter ancestor=redis:7-alpine --format '{{.Names}}' | head -1)" >> "$GITHUB_ENV"
+          redis_container="$(docker ps --filter ancestor=redis:7-alpine --format '{{.Names}}' | head -1)"
+          test -n "$redis_container"
+          docker exec "$redis_container" redis-cli CONFIG SET appendonly yes
+          docker exec "$redis_container" redis-cli CONFIG SET appendfsync everysec
+          test "$(docker exec "$redis_container" redis-cli --raw CONFIG GET appendonly | tail -1)" = "yes"
+          test "$(docker exec "$redis_container" redis-cli --raw CONFIG GET appendfsync | tail -1)" = "everysec"
+          echo "JOBFORGE_TEST_REDIS_CONTAINER=$redis_container" >> "$GITHUB_ENV"
       - name: Test with race detector
         run: go test -race -count=1 ./...
 
