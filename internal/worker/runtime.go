@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -18,6 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/observability"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
@@ -69,6 +71,11 @@ type Runtime struct {
 	conn     *grpc.ClientConn
 	metrics  *observability.Metrics
 
+	// heartbeatIntervalExplicit preserves whether the Runtime caller supplied
+	// a local override. Unset Workers adopt RegisterResponse; explicit local
+	// configuration wins (ADR-0008).
+	heartbeatIntervalExplicit bool
+
 	mu       sync.Mutex
 	inflight int
 	wg       sync.WaitGroup
@@ -82,11 +89,12 @@ type Runtime struct {
 
 // NewRuntime creates a Worker Runtime with the given configuration and handlers.
 func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger, metrics *observability.Metrics) *Runtime {
+	heartbeatIntervalExplicit := cfg.HeartbeatInterval > 0
 	if cfg.Capacity <= 0 {
 		cfg.Capacity = 5
 	}
 	if cfg.HeartbeatInterval <= 0 {
-		cfg.HeartbeatInterval = 10 * time.Second
+		cfg.HeartbeatInterval = domain.DefaultHeartbeat
 	}
 	if cfg.PollTimeout <= 0 {
 		cfg.PollTimeout = 30 * time.Second
@@ -95,13 +103,14 @@ func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger, metr
 		cfg.ShutdownGrace = 30 * time.Second
 	}
 	return &Runtime{
-		cfg:                  cfg,
-		registry:             registry,
-		logger:               logger,
-		metrics:              metrics,
-		hbBackoffInitial:     1 * time.Second,
-		hbBackoffMax:         10 * time.Second,
-		reportBackoffInitial: 1 * time.Second,
+		cfg:                       cfg,
+		registry:                  registry,
+		logger:                    logger,
+		metrics:                   metrics,
+		heartbeatIntervalExplicit: heartbeatIntervalExplicit,
+		hbBackoffInitial:          1 * time.Second,
+		hbBackoffMax:              10 * time.Second,
+		reportBackoffInitial:      1 * time.Second,
 	}
 }
 
@@ -128,6 +137,7 @@ func (r *Runtime) Run(ctx context.Context) error {
 		"queues", r.cfg.Queues,
 		"types", r.registry.Types(),
 		"capacity", r.cfg.Capacity,
+		"heartbeat_interval", r.cfg.HeartbeatInterval,
 	)
 
 	// Main poll loop.
@@ -214,7 +224,7 @@ func (r *Runtime) register(ctx context.Context) error {
 	regCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	_, err := r.client.Register(regCtx, &workerv1.RegisterRequest{
+	resp, err := r.client.Register(regCtx, &workerv1.RegisterRequest{
 		WorkerId:       r.cfg.WorkerID,
 		InstanceId:     r.cfg.InstanceID,
 		Queues:         r.cfg.Queues,
@@ -222,7 +232,39 @@ func (r *Runtime) register(ctx context.Context) error {
 		Capacity:       int32(r.cfg.Capacity),
 		Version:        r.cfg.Version,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	suggested, suggestedOK := validHeartbeatRecommendation(resp)
+	source := "gateway"
+	if r.heartbeatIntervalExplicit {
+		source = "local"
+		if suggestedOK && suggested != r.cfg.HeartbeatInterval {
+			r.logger.Info("local heartbeat interval overrides gateway recommendation",
+				"heartbeat_interval", r.cfg.HeartbeatInterval,
+				"gateway_recommendation", suggested,
+			)
+		}
+	} else if suggestedOK {
+		r.cfg.HeartbeatInterval = suggested
+	} else {
+		r.cfg.HeartbeatInterval = domain.DefaultHeartbeat
+		source = "default_fallback"
+	}
+	r.logger.Info("worker heartbeat interval selected",
+		"heartbeat_interval", r.cfg.HeartbeatInterval,
+		"source", source,
+	)
+	return nil
+}
+
+func validHeartbeatRecommendation(resp *workerv1.RegisterResponse) (time.Duration, bool) {
+	if resp == nil || resp.HeartbeatInterval == nil || resp.HeartbeatInterval.CheckValid() != nil {
+		return 0, false
+	}
+	value := resp.HeartbeatInterval.AsDuration()
+	return value, value > 0
 }
 
 // poll requests jobs from the Gateway using long-polling.
@@ -318,9 +360,10 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 
 	// Start heartbeat goroutine.
 	var leaseLost atomic.Bool
+	cancelSignalAt := make(chan time.Time, 1)
 	hbCtx, hbCancel := context.WithCancel(ctx)
 	defer hbCancel()
-	go r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost)
+	go r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost, cancelSignalAt)
 
 	// Execute handler.
 	start := time.Now()
@@ -329,6 +372,9 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 
 	// Stop heartbeat before reporting result.
 	hbCancel()
+	if errors.Is(execCtx.Err(), context.Canceled) {
+		r.observeCancelHandlerStop(ctx, job.Type, cancelSignalAt)
+	}
 
 	// If the heartbeat loop lost the lease, the job may already be
 	// redelivered to another Worker. Discard the result: a stale Worker must
@@ -369,7 +415,7 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 // the Gateway passes. Once the lease is lost (deadline exceeded or a
 // STALE_LEASE rejection), execution is cancelled and leaseLost is set so the
 // result is discarded — a stale Worker must not overwrite the new lease.
-func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel context.CancelFunc, leaseLost *atomic.Bool) {
+func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel context.CancelFunc, leaseLost *atomic.Bool, cancelSignalAt chan<- time.Time) {
 	// Track the lease deadline as reported by the Gateway (server clock),
 	// avoiding local TTL/clock drift estimates.
 	leaseUntil := job.LeaseUntil
@@ -387,7 +433,7 @@ func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel
 		case <-time.After(wait):
 		}
 
-		hbCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		hbCtx, cancel := context.WithTimeout(withJobTraceParent(ctx, job), 5*time.Second)
 		resp, err := r.client.Heartbeat(hbCtx, &workerv1.HeartbeatRequest{
 			JobId:        job.ID,
 			WorkerId:     r.cfg.WorkerID,
@@ -402,6 +448,12 @@ func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel
 				leaseUntil = resp.LeaseUntil.AsTime()
 			}
 			if resp.Signal == workerv1.ControlSignal_CONTROL_SIGNAL_CANCEL {
+				if cancelSignalAt != nil {
+					select {
+					case cancelSignalAt <- time.Now():
+					default:
+					}
+				}
 				r.logger.Info("cancel signal received", "job_id", job.ID)
 				execCancel()
 				return
@@ -434,6 +486,28 @@ func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel
 			wait = remaining
 		}
 		backoff = min(backoff*2, r.hbBackoffMax)
+	}
+}
+
+func (r *Runtime) observeCancelHandlerStop(ctx context.Context, jobType string, cancelSignalAt <-chan time.Time) {
+	if cancelSignalAt == nil {
+		return
+	}
+	select {
+	case receivedAt := <-cancelSignalAt:
+		latency := time.Since(receivedAt)
+		if latency < 0 {
+			latency = 0
+		}
+		if r.metrics != nil {
+			r.metrics.CancelHandlerStopLatencySeconds.Record(ctx, latency.Seconds(),
+				metric.WithAttributes(attribute.String("type", jobType)))
+		}
+		r.logger.Info("handler stopped after cancel signal",
+			"type", jobType,
+			"latency", latency,
+		)
+	default:
 	}
 }
 

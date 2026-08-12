@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xjfyrh/jobforge/internal/domain"
 )
 
 var consumerIdentifierPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
@@ -29,6 +31,11 @@ type Config struct {
 
 	// HeartbeatInterval is the suggested Worker heartbeat interval.
 	HeartbeatInterval time.Duration
+
+	// HeartbeatIntervalExplicit reports whether JOBFORGE_HEARTBEAT_INTERVAL
+	// was explicitly configured. A Worker with false adopts the Gateway's
+	// RegisterResponse recommendation; true means the local value wins.
+	HeartbeatIntervalExplicit bool
 
 	// ScanInterval is the Scheduler scan period for promoting jobs.
 	ScanInterval time.Duration
@@ -125,16 +132,21 @@ type Config struct {
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() (*Config, error) {
+	heartbeatInterval, heartbeatExplicit, err := heartbeatIntervalFromEnv()
+	if err != nil {
+		return nil, err
+	}
 	cfg := &Config{
-		DatabaseURL:       getEnv("JOBFORGE_DATABASE_URL", "postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable"),
-		HTTPAddr:          getEnv("JOBFORGE_HTTP_ADDR", ":8080"),
-		GRPCAddr:          getEnv("JOBFORGE_GRPC_ADDR", ":9090"),
-		LeaseTTL:          getDurationEnv("JOBFORGE_LEASE_TTL", 30*time.Second),
-		HeartbeatInterval: getDurationEnv("JOBFORGE_HEARTBEAT_INTERVAL", 10*time.Second),
-		ScanInterval:      getDurationEnv("JOBFORGE_SCAN_INTERVAL", 1*time.Second),
-		QueueSoftLimit:    getIntEnv("JOBFORGE_QUEUE_SOFT_LIMIT", 10000),
-		QueueHardLimit:    getIntEnv("JOBFORGE_QUEUE_HARD_LIMIT", 50000),
-		TenantMaxInflight: getIntEnv("JOBFORGE_TENANT_MAX_INFLIGHT", 100),
+		DatabaseURL:               getEnv("JOBFORGE_DATABASE_URL", "postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable"),
+		HTTPAddr:                  getEnv("JOBFORGE_HTTP_ADDR", ":8080"),
+		GRPCAddr:                  getEnv("JOBFORGE_GRPC_ADDR", ":9090"),
+		LeaseTTL:                  getDurationEnv("JOBFORGE_LEASE_TTL", domain.DefaultLeaseTTL),
+		HeartbeatInterval:         heartbeatInterval,
+		HeartbeatIntervalExplicit: heartbeatExplicit,
+		ScanInterval:              getDurationEnv("JOBFORGE_SCAN_INTERVAL", 1*time.Second),
+		QueueSoftLimit:            getIntEnv("JOBFORGE_QUEUE_SOFT_LIMIT", 10000),
+		QueueHardLimit:            getIntEnv("JOBFORGE_QUEUE_HARD_LIMIT", 50000),
+		TenantMaxInflight:         getIntEnv("JOBFORGE_TENANT_MAX_INFLIGHT", 100),
 
 		TenantQuotaPrefilter:   getBoolEnv("JOBFORGE_TENANT_QUOTA_PREFILTER", true),
 		QuotaReconcileInterval: getDurationEnv("JOBFORGE_QUOTA_RECONCILE_INTERVAL", 5*time.Minute),
@@ -254,6 +266,21 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func heartbeatIntervalFromEnv() (time.Duration, bool, error) {
+	raw, ok := os.LookupEnv("JOBFORGE_HEARTBEAT_INTERVAL")
+	if !ok || strings.TrimSpace(raw) == "" {
+		return domain.DefaultHeartbeat, false, nil
+	}
+	value, err := time.ParseDuration(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, false, fmt.Errorf("JOBFORGE_HEARTBEAT_INTERVAL must be a valid duration")
+	}
+	if value <= 0 {
+		return 0, false, fmt.Errorf("JOBFORGE_HEARTBEAT_INTERVAL must be positive")
+	}
+	return value, true, nil
 }
 
 func defaultConsumerName() string {

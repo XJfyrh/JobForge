@@ -53,9 +53,12 @@ flowchart LR
 5. Worker → Poll RPC → Gateway → SELECT FOR UPDATE SKIP LOCKED → PostgreSQL
 6. Gateway → 返回 ClaimedJob (lease + fencing token) → Worker
 7. Worker → 执行 Handler → 外部副作用
-8. Worker → Heartbeat RPC (周期性) → Gateway → UPDATE lease_until
+8. Worker → Heartbeat RPC（默认 5s）→ Gateway → PostgreSQL 单次 UPDATE：
+   使用同一 clock_timestamp() 续租并检测 cancelling；若已取消则返回 CANCEL
 9. Worker → Complete/Fail RPC → Gateway → UPDATE state + INSERT job_attempts
 ```
+
+Gateway 的 `RegisterResponse.heartbeat_interval` 来自 `JOBFORGE_HEARTBEAT_INTERVAL`（默认 5s），不再硬编码。Worker 未显式配置本地间隔时采用该建议；显式本地配置优先。每次 job heartbeat 均更新 `lease_until`，不受 `workers.last_heartbeat_at` 的 `LeaseTTL/3` 附属存活写节流影响。取消信号延迟由上述 PostgreSQL 查询返回 `clock_timestamp() - cancel_requested_at`，避免混用 Gateway 主机时钟（ADR-0008）。
 
 ### 提交幂等与冲突检测
 
@@ -224,10 +227,14 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 
 | ADR | 决策 | 核心要点 |
 |---|---|---|
-| [ADR-0001](adr/0001-implementation-parameters.md) | 实现参数 | lease TTL 30s、heartbeat 10s、scan 1s；unary long-poll；人工重试克隆新 job_id |
+| [ADR-0001](adr/0001-implementation-parameters.md) | 实现参数 | lease TTL 30s、scan 1s；其 heartbeat 10s 取值已由 ADR-0008 修订；unary long-poll；人工重试克隆新 job_id |
 | [ADR-0002](adr/0002-error-classification.md) | 错误分类 | 4 类错误（client/server/business/transient）→ HTTP/gRPC 映射 |
 | [ADR-0003](adr/0003-event-notification.md) | 事件通知 | PostgreSQL LISTEN/NOTIFY fan-out；不引入外部 MQ |
 | [ADR-0004](adr/0004-observability-stack.md) | 可观测性 | OTel SDK + stdout exporter；Prometheus /metrics；pprof localhost |
+| [ADR-0005](adr/0005-scheduler-leadership-lease.md) | Scheduler 领导权租约 | advisory lock + epoch fencing；卡死 leader 可接管 |
+| [ADR-0006](adr/0006-durable-event-transport.md) | 耐久事件 | Redis Streams、envelope v1、inbox/ACK/pending/poison 语义 |
+| [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) | 租户配额 | PostgreSQL 原子 counter、全局锁序、reconcile |
+| [ADR-0008](adr/0008-cancel-control-channel-heartbeat.md) | 取消 SLO | P0 heartbeat 默认 5s、DB-clock 分段度量；P1 ControlStream 保留为可裁剪 M5 |
 
 ## 目录结构
 

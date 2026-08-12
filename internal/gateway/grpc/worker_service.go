@@ -57,7 +57,10 @@ type WorkerService struct {
 	waiter   PollWaiter
 	logger   *slog.Logger
 	leaseTTL time.Duration
-	metrics  *observability.Metrics
+	// heartbeatInterval is advertised to Workers during Register. Workers
+	// without an explicit local override adopt this value (ADR-0008).
+	heartbeatInterval time.Duration
+	metrics           *observability.Metrics
 
 	// tenantMaxInflight limits how many inflight (running + cancelling) jobs
 	// a tenant may have. Claim reserves slots on the derived counter and
@@ -80,12 +83,19 @@ type WorkerService struct {
 // per-tenant inflight-job quota enforced during claim (PRD v0.3 FR-720~726);
 // <= 0 disables the limit. quotaPrefilter toggles the full-tenant candidate
 // pre-filter (ADR-0007 §4).
-func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL time.Duration, tenantMaxInflight int, quotaPrefilter bool, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
+func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL, heartbeatInterval time.Duration, tenantMaxInflight int, quotaPrefilter bool, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
+	if leaseTTL <= 0 {
+		leaseTTL = domain.DefaultLeaseTTL
+	}
+	if heartbeatInterval <= 0 {
+		heartbeatInterval = domain.DefaultHeartbeat
+	}
 	return &WorkerService{
 		store:             s,
 		waiter:            waiter,
 		logger:            logger,
 		leaseTTL:          leaseTTL,
+		heartbeatInterval: heartbeatInterval,
 		metrics:           metrics,
 		tenantMaxInflight: tenantMaxInflight,
 		quotaPrefilter:    quotaPrefilter,
@@ -122,7 +132,7 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 
 	return &workerv1.RegisterResponse{
 		SessionId:         sessionID,
-		HeartbeatInterval: durationpb.New(10 * time.Second),
+		HeartbeatInterval: durationpb.New(svc.heartbeatInterval),
 	}, nil
 }
 
@@ -223,7 +233,7 @@ func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.Heartbeat
 		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
 	}
 
-	err := svc.store.Heartbeat(ctx, req.JobId, req.WorkerId, req.FencingToken, svc.leaseTTL)
+	result, err := svc.store.Heartbeat(ctx, req.JobId, req.WorkerId, req.FencingToken, svc.leaseTTL)
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -232,17 +242,25 @@ func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.Heartbeat
 	// (best-effort, throttled in SQL).
 	svc.refreshWorkerLiveness(ctx, req.WorkerId)
 
-	// Check if the job has a pending cancel request.
 	signal := workerv1.ControlSignal_CONTROL_SIGNAL_CONTINUE
-	state, err := svc.store.GetJobState(ctx, req.JobId)
-	if err == nil && state == domain.StateCancelling {
+	if result.CancelRequested {
 		signal = workerv1.ControlSignal_CONTROL_SIGNAL_CANCEL
+		traceCtx := traceContextFromMetadata(ctx)
+		traceCtx, span := observability.Tracer("jobforge.gateway").Start(traceCtx, "gateway.cancel_signal")
+		span.SetAttributes(
+			attribute.String("path", "heartbeat"),
+			attribute.Float64("cancel.signal_latency_seconds", result.CancelSignalLatency.Seconds()),
+		)
+		if svc.metrics != nil {
+			svc.metrics.CancelSignalLatencySeconds.Record(traceCtx, result.CancelSignalLatency.Seconds(),
+				metric.WithAttributes(attribute.String("path", "heartbeat")))
+		}
+		span.End()
 	}
 
-	leaseUntil := time.Now().Add(svc.leaseTTL)
 	return &workerv1.HeartbeatResponse{
 		Signal:     signal,
-		LeaseUntil: timestamppb.New(leaseUntil),
+		LeaseUntil: timestamppb.New(result.LeaseUntil),
 	}, nil
 }
 
@@ -379,8 +397,8 @@ func (svc *WorkerService) observeQuotaConflicts(ctx context.Context, conflicts i
 }
 
 // livenessRefreshInterval is the SQL-layer throttle for worker liveness
-// writes: one third of the lease TTL (10s at the 30s default), matching the
-// suggested worker heartbeat cadence.
+// writes: one third of the lease TTL (10s at the 30s default). This remains
+// deliberately independent of the 5s per-job lease renewal cadence.
 func (svc *WorkerService) livenessRefreshInterval() time.Duration {
 	if svc.leaseTTL/3 > 0 {
 		return svc.leaseTTL / 3

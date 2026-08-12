@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
@@ -23,12 +24,16 @@ type fakeWorkerClient struct {
 	completes  atomic.Int32
 	fails      atomic.Int32
 
+	register  func() (*workerv1.RegisterResponse, error)
 	heartbeat func(call int) (*workerv1.HeartbeatResponse, error)
 	complete  func(call int) (*workerv1.CompleteResponse, error)
 	fail      func(call int) (*workerv1.FailResponse, error)
 }
 
 func (f *fakeWorkerClient) Register(_ context.Context, _ *workerv1.RegisterRequest, _ ...grpc.CallOption) (*workerv1.RegisterResponse, error) {
+	if f.register != nil {
+		return f.register()
+	}
 	return &workerv1.RegisterResponse{}, nil
 }
 
@@ -112,7 +117,7 @@ func TestHeartbeatTransientFailureRetriesAndRecovers(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		r.heartbeatLoop(ctx, job, execCancel, &leaseLost)
+		r.heartbeatLoop(ctx, job, execCancel, &leaseLost, nil)
 		close(done)
 	}()
 
@@ -158,7 +163,7 @@ func TestHeartbeatLeaseExpiryCancelsExecution(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		r.heartbeatLoop(ctx, job, execCancel, &leaseLost)
+		r.heartbeatLoop(ctx, job, execCancel, &leaseLost, nil)
 		close(done)
 	}()
 
@@ -202,7 +207,7 @@ func TestHeartbeatStaleLeaseCancelsImmediately(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		r.heartbeatLoop(ctx, job, execCancel, &leaseLost)
+		r.heartbeatLoop(ctx, job, execCancel, &leaseLost, nil)
 		close(done)
 	}()
 
@@ -251,8 +256,9 @@ func TestHeartbeatCancelSignalCancelsExecution(t *testing.T) {
 	defer cancel()
 
 	done := make(chan struct{})
+	cancelSignalAt := make(chan time.Time, 1)
 	go func() {
-		r.heartbeatLoop(ctx, job, execCancel, &leaseLost)
+		r.heartbeatLoop(ctx, job, execCancel, &leaseLost, cancelSignalAt)
 		close(done)
 	}()
 
@@ -267,6 +273,48 @@ func TestHeartbeatCancelSignalCancelsExecution(t *testing.T) {
 	}
 	if leaseLost.Load() {
 		t.Fatal("CANCEL signal must not mark the lease lost")
+	}
+	select {
+	case receivedAt := <-cancelSignalAt:
+		if time.Since(receivedAt) > time.Second {
+			t.Fatalf("cancel receipt timestamp is unexpectedly old: %v", receivedAt)
+		}
+	default:
+		t.Fatal("CANCEL signal must publish the local receipt timestamp")
+	}
+}
+
+func TestRegisterHeartbeatIntervalNegotiation(t *testing.T) {
+	tests := []struct {
+		name        string
+		local       time.Duration
+		recommended *durationpb.Duration
+		want        time.Duration
+	}{
+		{name: "unset adopts gateway", recommended: durationpb.New(2 * time.Second), want: 2 * time.Second},
+		{name: "explicit local wins", local: 3 * time.Second, recommended: durationpb.New(2 * time.Second), want: 3 * time.Second},
+		{name: "missing recommendation uses safe default", want: 5 * time.Second},
+		{name: "non-positive recommendation uses safe default", recommended: durationpb.New(0), want: 5 * time.Second},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := &fakeWorkerClient{register: func() (*workerv1.RegisterResponse, error) {
+				return &workerv1.RegisterResponse{HeartbeatInterval: tt.recommended}, nil
+			}}
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			runtime := NewRuntime(RuntimeConfig{
+				WorkerID:          "registration-worker",
+				Queues:            []string{"default"},
+				HeartbeatInterval: tt.local,
+			}, NewRegistry(), logger, nil)
+			runtime.client = client
+			if err := runtime.register(context.Background()); err != nil {
+				t.Fatalf("register: %v", err)
+			}
+			if runtime.cfg.HeartbeatInterval != tt.want {
+				t.Fatalf("heartbeat interval = %v, want %v", runtime.cfg.HeartbeatInterval, tt.want)
+			}
+		})
 	}
 }
 

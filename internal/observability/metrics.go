@@ -91,6 +91,15 @@ type Metrics struct {
 	// ConsumerInboxDuplicatesTotal counts events absorbed by the PostgreSQL
 	// inbox after a previous transaction committed. Labels: consumer_group.
 	ConsumerInboxDuplicatesTotal metric.Int64Counter
+
+	// CancelSignalLatencySeconds measures cancel_requested_at to the Gateway
+	// heartbeat response that emits CANCEL, using one PostgreSQL clock sample
+	// (ADR-0008). Labels: path (currently heartbeat).
+	CancelSignalLatencySeconds metric.Float64Histogram
+
+	// CancelHandlerStopLatencySeconds measures the Worker-local interval from
+	// receiving CANCEL to the registered handler returning. Labels: type.
+	CancelHandlerStopLatencySeconds metric.Float64Histogram
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -231,6 +240,20 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Total number of event duplicates absorbed by the consumer inbox"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create consumer_inbox_duplicates_total: %w", err)
+	}
+
+	m.CancelSignalLatencySeconds, err = meter.Float64Histogram("jobforge_cancel_signal_latency_seconds",
+		metric.WithDescription("Cancel request to Gateway cancel signal latency in seconds, measured by PostgreSQL"),
+		metric.WithExplicitBucketBoundaries(0.1, 0.25, 0.5, 1, 2, 3, 4, 5, 6, 10, 30))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create cancel_signal_latency_seconds: %w", err)
+	}
+
+	m.CancelHandlerStopLatencySeconds, err = meter.Float64Histogram("jobforge_cancel_handler_stop_latency_seconds",
+		metric.WithDescription("Worker cancel signal receipt to handler return latency in seconds"),
+		metric.WithExplicitBucketBoundaries(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create cancel_handler_stop_latency_seconds: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

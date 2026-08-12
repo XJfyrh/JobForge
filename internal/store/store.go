@@ -46,9 +46,11 @@ type JobStore interface {
 	// derived counter in the same transaction (PRD v0.3 FR-721, ADR-0007).
 	Claim(ctx context.Context, params ClaimParams) (*ClaimResult, error)
 
-	// Heartbeat extends the lease for a running job. Only the current owner
-	// with the correct fencing token may extend.
-	Heartbeat(ctx context.Context, jobID, workerID string, fencingToken int64, ttl time.Duration) error
+	// Heartbeat extends the lease for a running/cancelling job. Only the
+	// current owner with the correct fencing token may extend. The result is
+	// derived from the same PostgreSQL clock sample used by the update so the
+	// Gateway never estimates lease or cancel latency with its host clock.
+	Heartbeat(ctx context.Context, jobID, workerID string, fencingToken int64, ttl time.Duration) (*HeartbeatResult, error)
 
 	// Complete marks a running job as succeeded. Must match owner and token.
 	// Writes job_attempts and outbox_events in the same transaction.
@@ -70,6 +72,14 @@ type JobStore interface {
 	// ListAttempts returns the attempt timeline of a job scoped to a tenant,
 	// ordered by attempt_no ascending (FR-002).
 	ListAttempts(ctx context.Context, tenantID, jobID string) ([]AttemptRecord, error)
+}
+
+// HeartbeatResult is the database-authored outcome of one successful lease
+// renewal. CancelSignalLatency is populated only when CancelRequested is true.
+type HeartbeatResult struct {
+	LeaseUntil          time.Time
+	CancelRequested     bool
+	CancelSignalLatency time.Duration
 }
 
 // ClaimParams holds the parameters for a claim operation.

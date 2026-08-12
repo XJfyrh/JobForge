@@ -190,16 +190,32 @@ insert into job_attempts (job_id, attempt_no, worker_id, fencing_token, started_
 values ($1, $2, $3, $4, now(), $5)
 `
 
-// heartbeatUpdate extends the lease. Matches owner + token + active state.
+// heartbeatUpdate extends the lease and observes cancellation from one
+// materialized clock_timestamp() sample (ADR-0008). This avoids mixing the
+// PostgreSQL clock used by cancel_requested_at with a Gateway host clock.
 // Returns 0 rows if the lease is stale (owner/token mismatch or state changed).
 const heartbeatUpdate = `
+with heartbeat_clock as materialized (
+    select clock_timestamp() as observed_at
+)
 update jobs
-set lease_until = $4,
-    updated_at = now()
+set lease_until = heartbeat_clock.observed_at + $4::interval,
+    updated_at = heartbeat_clock.observed_at
+from heartbeat_clock
 where id = $1
   and lease_owner = $2
   and fencing_token = $3
   and state in ('running', 'cancelling')
+returning jobs.lease_until,
+          jobs.state = 'cancelling' as cancel_requested,
+          case
+              when jobs.state = 'cancelling' and jobs.cancel_requested_at is not null
+                  then greatest(
+                      extract(epoch from heartbeat_clock.observed_at - jobs.cancel_requested_at),
+                      0
+                  )::double precision
+              else 0::double precision
+          end as cancel_signal_latency_seconds
 `
 
 // completeUpdate transitions running → succeeded. Returns the tenant_id so

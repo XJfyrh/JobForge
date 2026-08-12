@@ -710,13 +710,6 @@ func filterCtlDrift(drift []ctl.QuotaDriftRow, tenant string) []ctl.QuotaDriftRo
 	return rows
 }
 
-// TestCancelAT24HeartbeatSignalSLO is the M0 skeleton for AT-24 (PRD v0.3
-// §10). The 5s heartbeat default and the DB-clock signal latency metric are
-// M4 deliverables (FR-730~732, ADR-0008); the executable test lands with M4.
-func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
-	t.Skip("PRD v0.3 M4 (FR-730~732, NFR-307): 5s heartbeat cancel SLO not implemented in this increment; skeleton per M0 exit criteria")
-}
-
 // TestCancelAT25ControlStreamDegradation is the M0 skeleton for AT-25
 // (PRD v0.3 §10). The server-streaming Control RPC is the cuttable P1/M5
 // extension (FR-733/734, ADR-0008 §4); only required when M5 ships.

@@ -46,7 +46,6 @@ services:
       JOBFORGE_HTTP_ADDR: ":8080"
       JOBFORGE_API_KEYS: "dev-api-key=dev-tenant"
       JOBFORGE_LEASE_TTL: "30s"
-      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
       JOBFORGE_SCAN_INTERVAL: "1s"
       JOBFORGE_OTEL_EXPORTER: "stdout"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
@@ -80,6 +79,9 @@ services:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_GRPC_ADDR: ":9090"
       JOBFORGE_LEASE_TTL: "30s"
+      # Gateway-advertised cadence. Workers omit the local override and adopt
+      # this value from RegisterResponse (ADR-0008).
+      JOBFORGE_HEARTBEAT_INTERVAL: "${JOBFORGE_HEARTBEAT_INTERVAL:-5s}"
       JOBFORGE_OTEL_EXPORTER: "stdout"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
@@ -173,7 +175,6 @@ services:
       JOBFORGE_GATEWAY_ADDR: "gateway:9090"
       JOBFORGE_WORKER_ID: "worker-1"
       JOBFORGE_WORKER_QUEUE: "default"
-      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
       JOBFORGE_OTEL_EXPORTER: "stdout"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
@@ -190,7 +191,6 @@ services:
       JOBFORGE_GATEWAY_ADDR: "gateway:9090"
       JOBFORGE_WORKER_ID: "worker-2"
       JOBFORGE_WORKER_QUEUE: "default"
-      JOBFORGE_HEARTBEAT_INTERVAL: "10s"
       JOBFORGE_OTEL_EXPORTER: "stdout"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:

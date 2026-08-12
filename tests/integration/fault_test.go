@@ -183,7 +183,7 @@ func TestFaultAT04HeartbeatLoss(t *testing.T) {
 	oldToken := claimed[0].FencingToken
 
 	// 2. First heartbeat succeeds (Worker still connected).
-	err = js.Heartbeat(ctx, job.ID, "worker-isolated", oldToken, 100*time.Millisecond)
+	_, err = js.Heartbeat(ctx, job.ID, "worker-isolated", oldToken, 100*time.Millisecond)
 	if err != nil {
 		t.Fatalf("first heartbeat should succeed: %v", err)
 	}
@@ -361,7 +361,7 @@ func startFaultGateway(t *testing.T, leaseTTL time.Duration) (string, func(bool)
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, 0, true, logger, nil)
+	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, 5*time.Second, 0, true, logger, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor))
 	workerv1.RegisterWorkerServiceServer(server, service)
 

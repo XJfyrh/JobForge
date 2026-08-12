@@ -17,10 +17,10 @@ func NewID() string {
 	return uuid.New().String()
 }
 
-// Default configuration values per ADR-0001.
+// Default configuration values per ADR-0001 and ADR-0008.
 const (
 	DefaultLeaseTTL       = 30 * time.Second
-	DefaultHeartbeat      = 10 * time.Second
+	DefaultHeartbeat      = 5 * time.Second
 	DefaultScanInterval   = 1 * time.Second
 	DefaultMaxAttempts    = 3
 	DefaultTimeout        = 300 * time.Second
