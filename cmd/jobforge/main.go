@@ -314,7 +314,7 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	defer listener.Close()
 
 	// Create gRPC service and server.
-	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.TenantMaxInflight, cfg.TenantQuotaPrefilter, logger, metrics)
+	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.HeartbeatInterval, cfg.TenantMaxInflight, cfg.TenantQuotaPrefilter, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
 	// Periodically sample jobforge_workers_active so the gauge decays when
@@ -544,13 +544,17 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 	if len(queues) == 0 {
 		return fmt.Errorf("JOBFORGE_WORKER_QUEUE must contain at least one non-empty queue name")
 	}
+	var localHeartbeatInterval time.Duration
+	if cfg.HeartbeatIntervalExplicit {
+		localHeartbeatInterval = cfg.HeartbeatInterval
+	}
 	workerCfg := worker.RuntimeConfig{
 		WorkerID:          getEnvDefault("JOBFORGE_WORKER_ID", domain.NewID()),
 		InstanceID:        fmt.Sprintf("%s-%d", hostname(), os.Getpid()),
 		Queues:            queues,
 		Capacity:          5,
 		GatewayAddr:       gatewayAddr,
-		HeartbeatInterval: cfg.HeartbeatInterval,
+		HeartbeatInterval: localHeartbeatInterval,
 		PollTimeout:       30 * time.Second,
 		ShutdownGrace:     30 * time.Second,
 		Version:           "0.1.0",

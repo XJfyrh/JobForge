@@ -125,7 +125,7 @@ func TestGatewayHeartbeatCancelSignal(t *testing.T) {
 	}
 
 	// Heartbeat should still succeed (cancelling allows heartbeat).
-	err = s.Heartbeat(ctx, job.ID, "gw-worker-hb", token, 30*time.Second)
+	_, err = s.Heartbeat(ctx, job.ID, "gw-worker-hb", token, 30*time.Second)
 	if err != nil {
 		t.Fatalf("heartbeat on cancelling job: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestEndToEndSubmitExecuteComplete(t *testing.T) {
 	}
 
 	// 4. Worker heartbeats.
-	err = js.Heartbeat(ctx, job.ID, "e2e-worker", token, 30*time.Second)
+	_, err = js.Heartbeat(ctx, job.ID, "e2e-worker", token, 30*time.Second)
 	if err != nil {
 		t.Fatalf("heartbeat: %v", err)
 	}
@@ -625,7 +625,7 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, nil)
 
 	workerID := "liveness-worker-" + uuid.New().String()[:8]
 	_, err := svc.Register(ctx, &workerv1.RegisterRequest{
@@ -804,7 +804,7 @@ func TestGatewayPollMultiQueue(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 0, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, nil)
 
 	queueA := "poll-mq-a-" + uuid.New().String()[:8]
 	queueB := "poll-mq-b-" + uuid.New().String()[:8]

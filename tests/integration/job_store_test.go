@@ -539,13 +539,13 @@ func TestHeartbeatStaleToken(t *testing.T) {
 	token := claimed[0].FencingToken
 
 	// Valid heartbeat.
-	err = s.Heartbeat(ctx, job.ID, "worker-hb", token, 30*time.Second)
+	_, err = s.Heartbeat(ctx, job.ID, "worker-hb", token, 30*time.Second)
 	if err != nil {
 		t.Fatalf("valid heartbeat: %v", err)
 	}
 
 	// Stale token heartbeat.
-	err = s.Heartbeat(ctx, job.ID, "worker-hb", token+999, 30*time.Second)
+	_, err = s.Heartbeat(ctx, job.ID, "worker-hb", token+999, 30*time.Second)
 	if err == nil {
 		t.Fatal("expected error for stale token heartbeat")
 	}
@@ -554,7 +554,7 @@ func TestHeartbeatStaleToken(t *testing.T) {
 	}
 
 	// Wrong worker heartbeat.
-	err = s.Heartbeat(ctx, job.ID, "wrong-worker", token, 30*time.Second)
+	_, err = s.Heartbeat(ctx, job.ID, "wrong-worker", token, 30*time.Second)
 	if err == nil {
 		t.Fatal("expected error for wrong worker heartbeat")
 	}

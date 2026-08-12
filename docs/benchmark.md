@@ -463,3 +463,46 @@ Redis 容器 stop 60s 后 start（保留命名 volume）：停机期间任务状
 | AT-20（`TestDurableAT20GroupIsolation`） | 双 group 各完整消费 40 事件，组内两实例各分摊 20，无跨组游标干扰（PASS） |
 
 Windows 约定按 PRD §10.2：`docker compose --profile durable-events up -d postgres redis` + `JOBFORGE_TEST_REDIS_URL`；重启验证用保留命名 volume 的 `docker stop/start`（容器 `deploy-redis-1`）。Linux CI 由 testcontainers 自动拉起同参数 AOF Redis。
+
+## M4 取消 SLO 与 Heartbeat 写放大（PRD v0.3 NFR-306/307，ADR-0008）
+
+> 测量日期：2026-08-12；Windows 11、AMD Ryzen 7 7840HS、16 GB、Go 1.26.5、PostgreSQL 16 Compose；应用服务停止，仅保留 PostgreSQL/测试所需 Redis。
+
+### NFR-306 job lease 写放大
+
+`TestScaleNFR306HeartbeatWriteAmplification` 对 100 个持续运行 job 使用真实 PostgreSQL `UPDATE ... RETURNING`，在逻辑 30s 窗口分别执行 10s cadence 的 3 轮与 5s cadence 的 6 轮。它验证写入次数，不用 wall-clock sleep 模拟 30s，也不以本机延迟设硬门槛：
+
+| cadence | lease UPDATE | p50 | p95 | 放大 |
+|---|---:|---:|---:|---:|
+| 10s 基线 | 300 | 1.4410 ms | 2.4402 ms | 1.00× |
+| 5s M4 | 600 | 1.4558 ms | 2.4283 ms | **2.00×** |
+
+每次 heartbeat 都实际续租，未被 `workers.last_heartbeat_at` 的 `LeaseTTL/3` 条件刷新合并。完整 scale 套件 **PASS（240.528s）**；同轮 `TestScalePerfPromoteClaimLatency` claim p50/p95 为 88.716/102.177ms，相对 Quality Gate Cleanup 最近归档的 84.82/96.43ms 分别变化 +4.6%/+6.0%，低于 15% 当前基线门槛。NFR-302 为 2,316 events/sec、publish lag p95 129.464ms；AT-13/14 与多租户公平性同轮通过。
+
+### W4/W11 同参数端到端复测
+
+在重置 schema 的干净测试库运行 `go run ./benchmarks/e2e -jobs 100 -workers 4`：
+
+| 指标 | W4 基线 | W11 复测 | M4 实测 | 相对 W4 | 结果 |
+|---|---:|---:|---:|---:|---|
+| Submit 吞吐 | 278.01 jobs/sec | 288.10 jobs/sec | 342.21 jobs/sec | +23.1% | PASS |
+| Process 吞吐 | 347.82 jobs/sec | 366.53 jobs/sec | 380.95 jobs/sec | +9.5% | PASS |
+| 控制面 p95 | 14.23 ms | 13.20 ms | 12.8372 ms | -9.8% | PASS |
+| goroutine | 2→2 | 2→2 | 2→2 | 差异 0 | PASS |
+
+### 历史微基准绝对值核对
+
+同机 `-benchtime 10s` 的 Enqueue 路径通过历史阈值：`BenchmarkEnqueue=2.540972ms/op`（相对 W4 改善 6.4%），`BenchmarkEnqueueParallel=0.290935ms/op`（相对 W4 +1.7%）。Claim 的历史绝对值核对则未通过：重启 PostgreSQL、重置 schema 后的独立 `BenchmarkClaim=5.900438ms/op`，相对 W4 4.171091ms/op 增加 41.5%；完整微基准中的 batch1/batch10/batch20 分别为 5.551585/19.849866/30.301239ms/op，亦高于 W4 表中对应值。
+
+该偏差不能归因于 M4 heartbeat 代码路径：本增量未修改 Claim/Enqueue/Complete，且同轮端到端、20,000-job Claim scale 与最近当前基线均通过。不过，按“不得把未通过误报为通过”的规则，本报告不将历史 Claim 微基准绝对门禁标为 PASS；需要在冻结环境上复测或单列 Claim 性能调查后，才能宣称全部 W4/W11 绝对微基准收官。M4 的功能、SLO 与相对当前基线证据不受此记录替代。
+
+### 复现命令
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+$env:JOBFORGE_TEST_REDIS_URL = "redis://localhost:6379/0"
+go test -race -count=1 -v -run TestCancelAT24HeartbeatSignalSLO ./tests/integration/
+go test -tags scale -count=1 -v -timeout 60m ./tests/scale/
+go test -count=1 -bench Benchmark -benchmem -benchtime 10s ./benchmarks/micro/
+go run ./benchmarks/e2e -jobs 100 -workers 4
+```

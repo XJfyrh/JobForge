@@ -219,8 +219,14 @@ func TestObservabilityMetricsSetup(t *testing.T) {
 	if metrics.ConsumerInboxDuplicatesTotal == nil {
 		t.Error("ConsumerInboxDuplicatesTotal instrument is nil")
 	}
+	if metrics.CancelSignalLatencySeconds == nil {
+		t.Error("CancelSignalLatencySeconds instrument is nil")
+	}
+	if metrics.CancelHandlerStopLatencySeconds == nil {
+		t.Error("CancelHandlerStopLatencySeconds instrument is nil")
+	}
 
-	t.Log("Core and transactional-consumer metric instruments created successfully")
+	t.Log("Core, transactional-consumer and cancel-latency metric instruments created successfully")
 }
 
 // TestObservabilityTracingSetup verifies that tracing can be initialized

@@ -97,6 +97,23 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 
 以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
 
+## Heartbeat 与取消 SLO（PRD v0.3 M4）
+
+| 环境变量 | 默认值 | 说明 |
+|---|---:|---|
+| `JOBFORGE_LEASE_TTL` | `30s` | job lease TTL；不因 M4 改变 |
+| `JOBFORGE_HEARTBEAT_INTERVAL` | `5s` | Gateway 注册建议值；Worker 未显式配置时采用该值，Worker 显式本地配置优先 |
+
+Compose 只在 Gateway 设置 heartbeat 值，Worker 通过 `RegisterResponse.heartbeat_interval` 采用建议值；不要在 Worker 环境中遗留旧的显式 `10s`，否则它会按设计覆盖 Gateway 建议。job lease 每次 heartbeat 都续租；`workers.last_heartbeat_at` 仍按 `LeaseTTL/3` 条件节流。默认变化与滚动升级/回退步骤见 [5s Heartbeat 发布说明](runbooks/heartbeat-5s-rollout.md)。
+
+AT-24 使用真实 PostgreSQL、HTTP Cancel、gRPC Gateway 和 Worker Runtime，20 个确定性随机相位样本验证 DB-clock signal p95≤6s，并单独报告 API→context 与 Handler stop：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test -race -count=1 -v -run TestCancelAT24HeartbeatSignalSLO ./tests/integration/
+go test -tags scale -count=1 -v -run TestScaleNFR306HeartbeatWriteAmplification ./tests/scale/
+```
+
 ## 耐久事件与 Redis（Compose durable-events，PRD v0.3 §10.2）
 
 外部事件 transport 由 `JOBFORGE_OUTBOX_TRANSPORT` 选择：默认 `notify`（v0.2 兼容，非耐久）；耐久交付需 `redis_streams` 与 Redis：
@@ -223,7 +240,7 @@ go test -race ./tests/integration/...
 
 ## Scale 可靠性套件（-tags scale）
 
-`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，AT-13/AT-14）：AT-13 为 100 轮 Worker kill 零静默丢失，AT-14 为 10,000 任务重复投递零重复副作用。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
+`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，AT-13/AT-14）：AT-13 为 100 轮 Worker kill 零静默丢失，AT-14 为 10,000 任务重复投递零重复副作用；NFR-306 另以真实 PostgreSQL 量化 5s heartbeat 相对 10s 基线的 job lease 写放大。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
 
 ```sh
 # 字面规模运行（需 PostgreSQL；Windows 先设 JOBFORGE_TEST_DSN，见上文）
@@ -255,11 +272,11 @@ go test -tags scale -count=1 ./tests/scale/
 ## 测试分层
 
 - 单元测试：状态转换、错误分类、退避、配额和 Handler 生命周期。
-- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、幂等与 outbox。
+- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、幂等、outbox，以及 AT-24 DB-clock 取消 SLO、默认/非默认 heartbeat/TTL 与 liveness 节流。
 - 事件消费集成测试：使用真实 PostgreSQL + Redis 验证 commit-before-ACK、XAUTOCLAIM 多页 cursor、inbox group binding/去重、瞬时 read/processor/ACK 恢复、deleted pending fail-fast、默认五次 poison 和晚建 group backlog；migration 0017 另在独立临时 0016 数据库上通过正式 Migrator 前滚。
 - 契约测试：验证 HTTP/gRPC 错误映射、deadline、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。
-- scale 可靠性测试（`-tags scale`）：100 轮故障注入与万级幂等的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
+- scale 可靠性测试（`-tags scale`）：100 轮故障注入、万级幂等和 NFR-306 heartbeat 写放大的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
 - 性能测试：固定环境后报告吞吐、延迟、CPU、heap 与 goroutine 稳态。
 
 ## 配置来源

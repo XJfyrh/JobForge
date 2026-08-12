@@ -201,7 +201,7 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 	ctx := context.Background()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 1, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 1, true, logger, nil)
 
 	tenantA := "tenant-gw-A-" + uuid.New().String()[:8]
 	tenantB := "tenant-gw-B-" + uuid.New().String()[:8]

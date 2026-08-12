@@ -81,6 +81,8 @@ fencing token 只拦截陈旧的**结果提交**，无法阻止陈旧 Worker 继
 
 **心跳续租**：
 
+- 默认 cadence 为 5s、Lease TTL 为 30s。Gateway 注册响应返回自身配置；Worker 未显式配置时采用建议值，显式本地值优先。
+- PostgreSQL 在一次 `UPDATE ... RETURNING` 中以同一个 `clock_timestamp()` 设置 `lease_until`、检测 cancelling 并返回 `cancel_requested_at`→signal elapsed；Gateway 不以本机 `time.Now()`估算该跨进程时延。
 - 心跳瞬时失败（`Unavailable` / `DeadlineExceeded` / `Unknown` 等）**不**停止续租：按指数退避（1s/2s/4s…上限 10s）持续重试。
 - 租约截止时刻以 Gateway 返回的 `lease_until`（服务端时钟）为准，避免本地 TTL 估算的时钟漂移。
 - 仅当重试持续到 `lease_until` 仍无法续租时才放弃：取消执行上下文（让 Handler 收尾）并标记租约丢失，最小化双执行窗口。
@@ -102,8 +104,10 @@ Complete 与 Cancel 同时到达时，采用"事务先提交者生效"：
 | Cancel | state = cancelling | complete → CANCEL_REQUESTED |
 
 cancelling 状态下：
-- Worker 通过 Heartbeat 控制消息收到 cancel 信号 → 停止执行 → Fail(cancelled)
+- Worker 通过 Heartbeat 控制消息收到 cancel 信号 → 先记录本地接收时刻并取消执行 context → Handler 返回后单独记录 stop latency → Fail(cancelled)
 - 若 Worker 未响应 → lease 过期 → Scheduler 将 cancelling → cancelled
+
+健康 Heartbeat 路径的 SLO 只覆盖 PostgreSQL `cancel_requested_at` 到 Gateway 发出 CANCEL signal，p95 ≤6s。Cancel API 成功返回到 Worker context 取消、以及 context 取消到 Handler return 是独立报告段，不与 signal SLO 混算。瞬时 Gateway 故障恢复后继续查询 cancelling；若持续故障越过 lease deadline，则由原有 lease expiry 路径收敛。M4 不实现 P1 ControlStream。
 
 ## 租户配额计数（PRD v0.3）
 
@@ -199,7 +203,8 @@ poison 记录只包含 source stream/entry、固定 consumer group、可解析�
 | `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
 | `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock；卡死 leader 租约接管与 epoch fencing、优雅让位即时接管（`TestSchedulerStuckLeaderTakeover`、`TestSchedulerGracefulReleaseImmediateTakeover`） |
 | `tests/integration/tenant_test.go` | AT-10 |
-| `tests/integration/quota_test.go` | AT-21（64 并发硬上限，事务内/采样/终态三层断言，预筛开关双变体）、AT-22（满额租户不阻塞：单任务 ≤1s；30s 持续流量 p95≤1s/max≤2s）、AT-23（取消风暴占用 slot）、FR-724 漂移核对与修复（Scheduler 与 ctl 双路径）；AT-24/25 为 M4/M5 骨架 |
+| `tests/integration/quota_test.go` | AT-21（64 并发硬上限，事务内/采样/终态三层断言，预筛开关双变体）、AT-22（满额租户不阻塞：单任务 ≤1s；30s 持续流量 p95≤1s/max≤2s）、AT-23（取消风暴占用 slot）、FR-724 漂移核对与修复（Scheduler 与 ctl 双路径）；AT-25 保留为可裁剪 M5 骨架 |
+| `tests/integration/cancel_slo_test.go` | AT-24：真实 PostgreSQL + HTTP Cancel + gRPC Gateway + Worker Runtime，默认 5s 随机相位；DB-clock signal p95≤6s，API→context 与 Handler stop 分段报告；默认/非默认 interval/TTL、liveness 节流与 trace/metric 标签同时验证 |
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
@@ -207,6 +212,7 @@ poison 记录只包含 source stream/entry、固定 consumer group、可解析�
 | `tests/integration/durable_events_test.go` | AT-17（Redis stop/start AOF 重启恢复）、AT-18（XADD 后标记前崩溃窗重复 entry）、AT-20（双 consumer group 隔离与组内分摊）、NFR-303（60s broker 暂停恢复与任务事务不阻塞）；`JOBFORGE_TEST_REDIS_URL` 缺省时 skip |
 | `tests/integration/event_consumer_test.go` | AT-19（commit 后 ACK 前确定性退出、XAUTOCLAIM、inbox 单效果）、晚建 group backlog、poison 隔离/后续合法事件、消费指标与 traceparent 传播；Redis 缺省时 skip |
 | `tests/scale/nfr302_event_publish_test.go`（`-tags scale`） | NFR-302 事件发布 smoke floor（约 1,800 events/sec）与健康态 publish lag p95 ≤2s |
+| `tests/scale/heartbeat_write_test.go`（`-tags scale`） | NFR-306：逻辑 30s 窗口下 10s→5s cadence 的真实 lease UPDATE 为 300→600，精确 2.00×；只报告 p50/p95，不设机器相关延迟阈值 |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
 | `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |
 | `tests/scale/idempotent_test.go` | AT-14：10,000 任务重复投递零重复副作用（`-tags scale`） |

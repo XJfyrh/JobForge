@@ -89,3 +89,47 @@ func TestConsumerPoisonStreamDerivesFromEventStream(t *testing.T) {
 		t.Fatalf("poison stream = %q", config.ConsumerPoisonStream)
 	}
 }
+
+func TestHeartbeatIntervalConfiguration(t *testing.T) {
+	tests := []struct {
+		name          string
+		heartbeat     string
+		leaseTTL      string
+		wantHeartbeat time.Duration
+		wantLeaseTTL  time.Duration
+		wantExplicit  bool
+	}{
+		{name: "default", wantHeartbeat: 5 * time.Second, wantLeaseTTL: 30 * time.Second},
+		{name: "explicit non-default", heartbeat: "2s", leaseTTL: "17s", wantHeartbeat: 2 * time.Second, wantLeaseTTL: 17 * time.Second, wantExplicit: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConsumerEnvironment(t)
+			t.Setenv("JOBFORGE_HEARTBEAT_INTERVAL", tt.heartbeat)
+			t.Setenv("JOBFORGE_LEASE_TTL", tt.leaseTTL)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("load config: %v", err)
+			}
+			if cfg.HeartbeatInterval != tt.wantHeartbeat || cfg.HeartbeatIntervalExplicit != tt.wantExplicit {
+				t.Fatalf("heartbeat config = (%v, explicit=%v), want (%v, explicit=%v)",
+					cfg.HeartbeatInterval, cfg.HeartbeatIntervalExplicit, tt.wantHeartbeat, tt.wantExplicit)
+			}
+			if cfg.LeaseTTL != tt.wantLeaseTTL {
+				t.Fatalf("lease TTL = %v, want %v", cfg.LeaseTTL, tt.wantLeaseTTL)
+			}
+		})
+	}
+}
+
+func TestHeartbeatIntervalRejectsInvalidExplicitValue(t *testing.T) {
+	for _, value := range []string{"soon", "0s", "-1s"} {
+		t.Run(value, func(t *testing.T) {
+			clearConsumerEnvironment(t)
+			t.Setenv("JOBFORGE_HEARTBEAT_INTERVAL", value)
+			if _, err := Load(); err == nil {
+				t.Fatalf("expected %q to be rejected", value)
+			}
+		})
+	}
+}

@@ -410,18 +410,27 @@ func snapshotQuotaCounters(ctx context.Context, tx pgx.Tx, tenants []string) (ma
 	return counters, rows.Err()
 }
 
-// Heartbeat extends the lease for a running/cancelling job.
-func (s *JobStore) Heartbeat(ctx context.Context, jobID, workerID string, fencingToken int64, ttl time.Duration) error {
-	leaseUntil := time.Now().Add(ttl)
-	tag, err := s.pool.Exec(ctx, heartbeatUpdate, jobID, workerID, fencingToken, leaseUntil)
-	if err != nil {
-		return fmt.Errorf("heartbeat: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
+// Heartbeat extends the lease for a running/cancelling job. Lease renewal,
+// cancel detection and cancel latency all use one PostgreSQL clock sample.
+func (s *JobStore) Heartbeat(ctx context.Context, jobID, workerID string, fencingToken int64, ttl time.Duration) (*store.HeartbeatResult, error) {
+	var (
+		result         store.HeartbeatResult
+		latencySeconds float64
+	)
+	err := s.pool.QueryRow(ctx, heartbeatUpdate, jobID, workerID, fencingToken, ttl.String()).Scan(
+		&result.LeaseUntil,
+		&result.CancelRequested,
+		&latencySeconds,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
 			"heartbeat rejected: owner/token mismatch or job not in active state")
 	}
-	return nil
+	if err != nil {
+		return nil, fmt.Errorf("heartbeat: %w", err)
+	}
+	result.CancelSignalLatency = time.Duration(latencySeconds * float64(time.Second))
+	return &result, nil
 }
 
 // Complete transitions a running job to succeeded within a transaction that

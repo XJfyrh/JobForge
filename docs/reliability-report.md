@@ -105,6 +105,30 @@ Quality Gate Debt Cleanup 后的追加验收（2026-08-11）保留上述历史�
 
 SQLFluff 历史基线门禁追加验收（2026-08-11）同样保留 M3 当时的非 PASS 记录。冻结 allowlist 后，baseline validator **PASS**（有效条目严格为 0006 up/down、0013 up），全量 `sqlfluff lint migrations` **PASS**。负向探针 `0018_sqlfluff_negative_probe.up.sql` 以确定性 LT01 被 SQLFluff 拒绝；临时把该路径加入 ignore 后，baseline validator 亦按预期失败。探针与临时条目删除后再次全量 lint 通过，且 `git diff -- migrations` 为空。配套 Ruff check/format、mypy、go vet、golangci-lint（0 issues）、Buf lint 均通过；默认全仓 race 回归 **PASS**（130.4s，其中 `tests/integration` 122.800s）。
 
+## M4 取消 SLO 与收官（2026-08-12）
+
+M4 未新增 migration 或 Proto 字段；默认 heartbeat 由 10s 收敛为 5s，Lease TTL 保持 30s。Gateway 注册响应来自配置；Worker 未显式覆盖时采用建议值、显式本地值优先。Heartbeat 使用一个 PostgreSQL `clock_timestamp()` 样本完成续租、cancelling 检测和 elapsed 返回，lease/fencing、八状态状态机、错误码与 at-least-once 语义不变。
+
+真实 PostgreSQL + HTTP Cancel + gRPC Gateway + Worker Runtime 的 `-race` 定向验收：
+
+| 场景 | 实际结果 |
+|---|---|
+| AT-24，默认 5s、20 个确定性随机相位 | **PASS**：DB `cancel_requested_at`→Gateway signal p50/p95/max = 1.835/4.281/4.590s，p95≤6s |
+| 分段报告（不套 signal 阈值） | Cancel API return→context cancelled p50/p95/max = 1.982/4.602/4.933s；context cancelled→Handler return p50/p95/max = 2.122/2.492/2.646ms |
+| 指标与 Trace | 两个 histogram 各 20 样本；标签严格为 `path=heartbeat` / 预注册 `type`（另有 exporter scope 标签），无 job/worker/trace ID 或 payload；20 个 `gateway.cancel_signal` span 全部续接原 traceparent且只含 path/elapsed |
+| 默认/非默认参数 | config 30s/5s 默认与 17s/2s 显式组合通过；Gateway 5s/2s/fallback 注册建议通过；7s TTL 的 DB lease 与约 2s DB-clock cancel elapsed 通过 |
+| worker liveness | 默认 30s lease 保持 10s（TTL/3）条件刷新；非默认 6s lease + 500ms job heartbeat 下，job lease 每次续租但 liveness 只在 2s 后刷新 |
+| Heartbeat 瞬时故障 | `TestFaultGatewayBlipWithinTTLNoRedelivery` **PASS（6.22s）**：TTL 内恢复后继续 heartbeat，无重投、无丢取消语义 |
+| 取消竞争 | `TestCompleteCancelRace` **PASS（0.30s）**；AT-05/06 的先提交者生效、`CANCEL_REQUESTED`/`ALREADY_TERMINAL` 语义不变 |
+
+NFR-306 完整 scale 套件 **PASS（240.528s）**。100 个 active jobs 的逻辑 30s 窗口中，10s cadence 真实 lease UPDATE=300，5s=600（**2.00×**）；p50/p95 分别为 1.4410/2.4402ms 与 1.4558/2.4283ms，只作容量观测。AT-14 10,000 job 零重复副作用（48.02s）；AT-13 100轮×10 job 零静默丢失、恢复 max 22.7972ms；NFR-302 2,316 events/sec、publish lag p95 129.464ms；20,000-job Claim p50/p95 88.716/102.177ms；多租户 B/C/D ready→claim p95 均≤23.164ms、max≤30.169ms。
+
+NFR-306 定向 scale race 亦 **PASS（package 5.709s）**：300/600 次真实更新不变，10s p50/p95=1.5089/2.1913ms，5s p50/p95=1.5036/2.2572ms。最终代码树的完整 `go test -race -count=1 ./...` **PASS**，其中真实 PostgreSQL/Redis 集成包 128.671s；未发现数据竞争或 goroutine 生命周期回退。
+
+W4/W11 同参数端到端复测 **PASS**：100 jobs/4 workers，Submit 342.21 jobs/sec、Process 380.95 jobs/sec、p95 12.8372ms、goroutine 2→2；均满足相对 W4 的 -15%/+20%/±5 门槛。历史单操作 Claim 微基准绝对值在重启并重置测试库后仍为 5.900438ms/op（W4 为 4.171091ms/op），因此该单项明确记为 **非 PASS**；M4 未修改 Claim 路径，且当前基线的 20,000-job scale 仅 +6.0%，但在冻结环境复测/调查前不宣称全部历史微基准已收官。详见 [benchmark.md](benchmark.md) 的 M4 节。
+
+AT-25 仍为可裁剪 P1/M5 skeleton，未在 M4 中实现，也不计作 M4 skip。M4 不宣称 ControlStream 的 ≤1s SLO；Heartbeat 永久保留为取消兜底。
+
 ## Race 抽样（NFR-202）
 
 `go test -tags scale -race`：AT-13 以 100 轮字面规模运行，AT-14 以 `JOBFORGE_SCALE_IDEMPOTENT_JOBS=1000` 抽样运行。结果：`ok`，无数据竞争（19.5s）。

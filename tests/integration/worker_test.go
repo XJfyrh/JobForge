@@ -49,7 +49,7 @@ func TestWorkerAT11GracefulShutdown(t *testing.T) {
 
 		// Worker receives shutdown signal but continues in-flight work.
 		// Heartbeat still works during grace period.
-		err = js.Heartbeat(ctx, job.ID, "worker-graceful", token, 30*time.Second)
+		_, err = js.Heartbeat(ctx, job.ID, "worker-graceful", token, 30*time.Second)
 		if err != nil {
 			t.Fatalf("heartbeat during grace period: %v", err)
 		}
