@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,133 +23,62 @@ import (
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
-// TestFaultAT02CrashBeforeACK verifies AT-02: Worker crashes after executing
-// the handler (writing idempotent result) but before sending Complete RPC.
-// The task is re-delivered, but the business side effect happens only once.
-//
-// Scenario:
-//  1. Create and claim a job
-//  2. Simulate handler execution (increment idempotent counter)
-//  3. Worker crashes before Complete (context cancelled, no Complete RPC)
-//  4. Lease expires, scheduler recovers the job
-//  5. New worker re-claims and executes (idempotent handler skips duplicate)
-//  6. Verify: side effect counter = 1 (not 2)
+// TestFaultAT02CrashBeforeACK verifies AT-02 with real Worker OS processes.
+// Worker A commits the persistent business effect and enters the bounded
+// post-effect delay. The parent observes that database barrier, kills and
+// reaps A before Complete, then Worker B reclaims and deduplicates the effect.
 func TestFaultAT02CrashBeforeACK(t *testing.T) {
 	js := setupStore(t)
 	ss, _ := setupSchedulerStore(t)
 	ctx := context.Background()
+	queue := "fault-at02-" + uuid.NewString()[:8]
+	gatewayAddr := startTestWorkerGateway(t, 30*time.Second)
+	job := createPersistentEffectJob(t, js, queue, 60_000)
 
-	// Idempotent effect counter (simulates external side effect).
-	var sideEffectCount atomic.Int32
+	workerAID := "worker-A-crash-" + uuid.NewString()[:8]
+	workerA := startTestWorkerProcess(t, gatewayAddr, queue, workerAID, 1)
+	claimedA := waitForEffectOwnedBy(t, workerA, job.ID, workerAID, 15*time.Second)
+	tokenA := claimedA.FencingToken
+	workerA.killAndWait(t)
 
-	// Idempotent handler: only increments if not already done for this job.
-	idempotentExecute := func(_ string) {
-		// In a real system, this would check a database table.
-		// For this test, we use compare-and-swap semantics.
-		if sideEffectCount.Load() == 0 {
-			sideEffectCount.Add(1)
-		}
-		// Second execution: count is already 1, so no increment.
-	}
-
-	// 1. Create a job with short lease (simulates Worker that will crash).
-	job := createTestJob(t, js, "fault-at02", "demo.idempotent_effect")
-
-	// 2. Worker A claims the job.
-	claimed, err := claimJobs(ctx, js, store.ClaimParams{
-		Queues:   []string{"fault-at02"},
-		WorkerID: "worker-A-crash",
-		MaxJobs:  1,
-		LeaseTTL: 50 * time.Millisecond, // Short lease: will expire quickly
-	})
-	if err != nil || len(claimed) == 0 {
-		t.Fatalf("worker A claim: %v", err)
-	}
-	tokenA := claimed[0].FencingToken
-
-	// Verify running.
-	got, err := js.GetByID(ctx, "test-tenant", job.ID)
+	forceExpireJobAndRecover(t, ss, job.ID)
+	recovered, err := js.GetByID(ctx, "test-tenant", job.ID)
 	if err != nil {
-		t.Fatalf("get job: %v", err)
+		t.Fatalf("get job after Worker A recovery: %v", err)
 	}
-	if got.State != domain.StateRunning {
-		t.Fatalf("expected running, got %s", got.State)
-	}
-
-	// 3. Worker A executes handler (side effect happens).
-	idempotentExecute(job.ID)
-
-	// 4. Worker A crashes BEFORE sending Complete RPC.
-	// (We simply don't call Complete; the lease will expire.)
-	t.Log("Worker A crashes before ACK (no Complete RPC sent)")
-
-	// 5. Force lease expiry by setting lease_until in the past.
-	// This avoids Docker/WSL2 clock drift issues between Go and PostgreSQL.
-	_, err = testEnv.pool.Exec(ctx,
-		"update jobs set lease_until = now() - interval '1 second' where id = $1", job.ID)
-	if err != nil {
-		t.Fatalf("set lease_until past: %v", err)
+	if recovered.State != domain.StateReady {
+		t.Fatalf("job after Worker A recovery: state=%v", recovered.State)
 	}
 
-	// 6. Scheduler recovers the expired lease.
-	recovered, err := ss.RecoverExpiredLeases(ctx)
-	if err != nil {
-		t.Fatalf("recover: %v", err)
-	}
-	if recovered < 1 {
-		t.Fatal("expected at least 1 recovered job")
-	}
+	workerBID := "worker-B-recovery-" + uuid.NewString()[:8]
+	workerB := startTestWorkerProcess(t, gatewayAddr, queue, workerBID, 1)
+	finalJob := waitForSucceededByProcess(t, workerB, job.ID, 15*time.Second)
+	workerB.killAndWait(t)
 
-	// Verify job is back to ready.
-	got, err = js.GetByID(ctx, "test-tenant", job.ID)
-	if err != nil {
-		t.Fatalf("get job after recovery: %v", err)
+	if finalJob.FencingToken <= tokenA {
+		t.Errorf("fencing token must increase: tokenA=%d tokenB=%d", tokenA, finalJob.FencingToken)
 	}
-	if got.State != domain.StateReady {
-		t.Fatalf("expected ready after recovery, got %s", got.State)
+	if finalJob.Attempt != 2 {
+		t.Errorf("attempt=%d, want 2", finalJob.Attempt)
 	}
-
-	// 7. Worker B claims the re-delivered job.
-	claimed2, err := claimJobs(ctx, js, store.ClaimParams{
-		Queues:   []string{"fault-at02"},
-		WorkerID: "worker-B-recovery",
-		MaxJobs:  1,
-		LeaseTTL: 30 * time.Second,
-	})
-	if err != nil || len(claimed2) == 0 {
-		t.Fatalf("worker B claim: %v", err)
+	var effectRows int
+	var resultRef string
+	if err := testEnv.pool.QueryRow(ctx, `
+		select count(*), min(result_ref)
+		from demo_idempotent_effects
+		where job_id = $1`, job.ID).Scan(&effectRows, &resultRef); err != nil {
+		t.Fatalf("query persistent effect: %v", err)
 	}
-	tokenB := claimed2[0].FencingToken
-
-	// Fencing token must increase.
-	if tokenB <= tokenA {
-		t.Errorf("fencing token must increase: tokenA=%d, tokenB=%d", tokenA, tokenB)
+	if effectRows != 1 || resultRef != "effect:"+job.ID {
+		t.Fatalf("persistent effects=%d result_ref=%q", effectRows, resultRef)
 	}
-
-	// 8. Worker B executes handler (idempotent: no duplicate side effect).
-	idempotentExecute(job.ID)
-
-	// 9. Worker B completes successfully.
-	err = js.Complete(ctx, job.ID, "worker-B-recovery", tokenB, "result", 100)
-	if err != nil {
-		t.Fatalf("worker B complete: %v", err)
+	applied, deduplicated := countEffectOutcomes(workerA, workerB)
+	if applied != 1 || deduplicated < 1 {
+		t.Fatalf("effect outcomes applied=%d deduplicated=%d\nA: %s\nB: %s",
+			applied, deduplicated, workerA.output(), workerB.output())
 	}
-
-	// 10. Verify final state.
-	got, err = js.GetByID(ctx, "test-tenant", job.ID)
-	if err != nil {
-		t.Fatalf("get final job: %v", err)
-	}
-	if got.State != domain.StateSucceeded {
-		t.Errorf("expected succeeded, got %s", got.State)
-	}
-
-	// 11. CRITICAL: Side effect happened exactly once.
-	if count := sideEffectCount.Load(); count != 1 {
-		t.Errorf("AT-02 FAILED: side effect count = %d, expected 1 (idempotent)", count)
-	} else {
-		t.Log("AT-02 PASSED: business side effect happened exactly once despite re-delivery")
-	}
+	t.Logf("AT-02 PASSED: real Worker kill, token %d→%d, applied=%d deduplicated=%d",
+		tokenA, finalJob.FencingToken, applied, deduplicated)
 }
 
 // TestFaultAT04HeartbeatLoss verifies AT-04: Worker loses network connectivity
