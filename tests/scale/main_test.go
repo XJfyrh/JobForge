@@ -82,6 +82,10 @@ func envInt(key string, def int) int {
 
 // TestMain sets up the PostgreSQL connection once for all scale tests.
 func TestMain(m *testing.M) {
+	if os.Getenv("JOBFORGE_TEST_WORKER_HELPER") == "1" {
+		os.Exit(m.Run())
+	}
+
 	ctx := context.Background()
 
 	params = scaleParams{

@@ -101,9 +101,10 @@ func (r *effectRecorder) duplicateEffects() int {
 	return dup
 }
 
-// drainAndExecute lets a pool of simulated workers claim every ready job in
+// drainAndExecute lets a pool of delivery goroutines claim every ready job in
 // at14Queue, execute it via the recorder and (if ack is true) Complete it.
-// With ack=false the workers "crash" after executing: no Complete is sent.
+// With ack=false Complete is deliberately omitted to create redelivery; real
+// OS process termination is covered separately by AT-02 and AT-13.
 func drainAndExecute(t *testing.T, js store.JobStore, rec *effectRecorder, workersN int, ack bool) int {
 	t.Helper()
 	ctx := context.Background()
@@ -141,7 +142,7 @@ func drainAndExecute(t *testing.T, js store.JobStore, rec *effectRecorder, worke
 							return
 						}
 					}
-					// ack=false: worker crashes before Complete RPC.
+					// ack=false: Complete is omitted to force lease recovery.
 				}
 			}
 		}()
@@ -152,13 +153,13 @@ func drainAndExecute(t *testing.T, js store.JobStore, rec *effectRecorder, worke
 
 // TestScaleAT14IdempotentTenThousand verifies AT-14 / FR-602 (NFR-002 at
 // literal scale): 10,000 jobs of type demo.idempotent_effect each experience
-// a duplicate delivery (crash before ACK, lease recovery, re-delivery); the
+// a duplicate delivery (effect commit before ACK, lease recovery, re-delivery); the
 // duplicate business side effect count must be exactly zero.
 //
 // Each batch of at14BatchSize jobs:
 //  1. Enqueue batch
 //  2. Concurrent worker pool claims and executes (side effect fires), then
-//     every worker "crashes" before Complete
+//     every delivery omits Complete
 //  3. Leases are force-expired (PostgreSQL clock) and scheduler recovery
 //     returns all jobs to ready
 //  4. Worker pool re-claims and re-executes: the handler must deduplicate
@@ -200,7 +201,7 @@ func TestScaleAT14IdempotentTenThousand(t *testing.T) {
 			}
 		}
 
-		// 2. First delivery: execute, crash before ACK.
+		// 2. First delivery: execute, then omit ACK.
 		first := drainAndExecute(t, js, rec, workersN, false)
 		if first != batch {
 			t.Fatalf("batch at %d: first delivery processed %d, want %d", base, first, batch)

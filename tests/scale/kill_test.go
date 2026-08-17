@@ -35,13 +35,14 @@ func setupScaleSchedulerStore(t *testing.T) *postgres.SchedulerStore {
 	return postgres.NewSchedulerStore(testEnv.pool, lockConn)
 }
 
-// enqueueReadyJobs enqueues n ready jobs into the given queue and returns
-// their IDs. RunAt is re-anchored to the PostgreSQL clock after enqueue:
+// enqueueCrashWindowJobs enqueues n persistent-effect jobs into the given
+// queue. The 60s post-effect delay keeps each real Worker process alive after
+// the database effect commits and before Complete. RunAt is re-anchored:
 // the claim predicate run_at <= now() is evaluated by PostgreSQL, so a
 // host-anchored run_at can be filtered out when the Docker/WSL2 clock
 // drifts more than the 1s margin (root cause of the AT-13 round-36
 // intermittent claim-0 failure).
-func enqueueReadyJobs(t *testing.T, js store.JobStore, queue string, n int) []string {
+func enqueueCrashWindowJobs(t *testing.T, js store.JobStore, queue string, n int) []string {
 	t.Helper()
 	ctx := context.Background()
 	ids := make([]string, 0, n)
@@ -51,8 +52,8 @@ func enqueueReadyJobs(t *testing.T, js store.JobStore, queue string, n int) []st
 		job, err := domain.NewJob(id, domain.NewJobParams{
 			TenantID: "scale-tenant",
 			Queue:    queue,
-			Type:     "demo.echo",
-			Payload:  []byte(`{"scale":true}`),
+			Type:     "demo.idempotent_effect",
+			Payload:  []byte(`{"post_effect_delay_ms":60000}`),
 			RunAt:    &pastRunAt,
 		}, time.Now())
 		if err != nil {
@@ -138,11 +139,12 @@ func percentile(sorted []time.Duration, p int) time.Duration {
 //
 // Each round:
 //  1. Enqueue jobsPerRound jobs into a round-scoped queue
-//  2. Worker A claims all of them, then is "killed" (never sends Complete)
-//  3. Leases are force-expired using the PostgreSQL clock
-//  4. Scheduler recovery runs; duration is recorded
-//  5. Worker B re-claims and completes every job
-//  6. Loss check: every job must be succeeded (loss counter stays 0)
+//  2. A real Worker A process claims all jobs and commits their effects
+//  3. The parent observes the effect rows, then kills and Waits Worker A
+//  4. Leases are force-expired using the PostgreSQL clock
+//  5. Scheduler recovery runs; duration is recorded
+//  6. Worker B re-claims and completes every job
+//  7. Loss check: every job must be succeeded (loss counter stays 0)
 func TestScaleAT13WorkerKillRounds(t *testing.T) {
 	js := setupStore(t)
 	ss := setupScaleSchedulerStore(t)
@@ -154,32 +156,28 @@ func TestScaleAT13WorkerKillRounds(t *testing.T) {
 
 	recoveryTimes := make([]time.Duration, 0, rounds)
 	totalLost := 0
+	gatewayAddr := startScaleWorkerGateway(t, 30*time.Second)
 
 	for r := 1; r <= rounds; r++ {
 		queue := fmt.Sprintf("scale-at13-round-%03d", r)
 
 		// 1. Enqueue the round's jobs.
-		enqueueReadyJobs(t, js, queue, jobsPerRound)
+		enqueueCrashWindowJobs(t, js, queue, jobsPerRound)
 
-		// 2. Worker A claims all jobs, then crashes before ACK.
-		claimed, err := claimJobs(ctx, js, store.ClaimParams{
-			Queues:   []string{queue},
-			WorkerID: fmt.Sprintf("killer-A-r%d", r),
-			MaxJobs:  jobsPerRound,
-			LeaseTTL: 30 * time.Second,
-		})
-		if err != nil {
-			t.Fatalf("round %d: worker A claim: %v", r, err)
+		// 2-3. A real OS process commits each effect, then is killed and reaped.
+		workerAID := fmt.Sprintf("killer-A-r%d", r)
+		workerA := startScaleWorkerProcess(t, gatewayAddr, queue, workerAID, jobsPerRound)
+		waitForScaleEffectsOwnedBy(t, workerA, queue, workerAID, jobsPerRound, 20*time.Second)
+		workerA.killAndWait(t)
+		if applied := workerA.appliedOutcomes(); applied != jobsPerRound {
+			t.Fatalf("round %d: Worker A applied outcomes=%d, want %d\n%s",
+				r, applied, jobsPerRound, workerA.output())
 		}
-		if len(claimed) != jobsPerRound {
-			t.Fatalf("round %d: worker A claimed %d, want %d", r, len(claimed), jobsPerRound)
-		}
-		// Worker A is killed here: no Complete RPC is ever sent.
 
-		// 3. Force lease expiry (PostgreSQL clock anchored).
+		// 4. Force lease expiry (PostgreSQL clock anchored).
 		forceExpireRunningLeases(t, queue)
 
-		// 4. Scheduler recovery; measure duration.
+		// 5. Scheduler recovery; measure duration.
 		start := time.Now()
 		recovered := recoverUntilDrained(t, ss)
 		recoveryTimes = append(recoveryTimes, time.Since(start))
@@ -187,7 +185,7 @@ func TestScaleAT13WorkerKillRounds(t *testing.T) {
 			t.Fatalf("round %d: recovered %d, want >= %d", r, recovered, jobsPerRound)
 		}
 
-		// 5. Worker B re-claims and completes every job.
+		// 6. Worker B re-claims and completes every job.
 		reclaimed, err := claimJobs(ctx, js, store.ClaimParams{
 			Queues:   []string{queue},
 			WorkerID: fmt.Sprintf("recovery-B-r%d", r),
@@ -207,7 +205,7 @@ func TestScaleAT13WorkerKillRounds(t *testing.T) {
 			}
 		}
 
-		// 6. Silent-loss check: all jobs must have reached succeeded.
+		// 7. Silent-loss check: all jobs must have reached succeeded.
 		if lost := countNonSucceeded(t, queue); lost > 0 {
 			totalLost += lost
 			t.Errorf("round %d: %d jobs silently lost (not succeeded)", r, lost)

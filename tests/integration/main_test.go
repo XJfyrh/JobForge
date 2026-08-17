@@ -49,6 +49,13 @@ type testEnvironment struct {
 
 // TestMain sets up the PostgreSQL connection once for all tests.
 func TestMain(m *testing.M) {
+	// Worker crash helpers re-exec the current test binary. They must bypass
+	// suite-level container/schema setup and run only their selected helper
+	// test; all dependencies are provided explicitly by the parent process.
+	if os.Getenv("JOBFORGE_TEST_WORKER_HELPER") == "1" {
+		os.Exit(m.Run())
+	}
+
 	ctx := context.Background()
 
 	var pool *pgxpool.Pool
