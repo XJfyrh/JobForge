@@ -42,3 +42,4 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 | [ADR-0006](0006-durable-event-transport.md) | 耐久事件 transport 与 envelope（Redis Streams 首选） | Accepted | 2026-08-10 |
 | [ADR-0007](0007-tenant-quota-atomic-counter.md) | 租户配额原子计数（派生计数表 + 事务内原子预留） | Accepted | 2026-08-10 |
 | [ADR-0008](0008-cancel-control-channel-heartbeat.md) | 取消控制通道与 Heartbeat 参数（5s 默认，ControlStream 预留） | Accepted | 2026-08-10 |
+| [ADR-0009](0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久业务效果与真实进程崩溃证据边界 | Accepted | 2026-08-17 |

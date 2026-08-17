@@ -506,3 +506,25 @@ go test -tags scale -count=1 -v -timeout 60m ./tests/scale/
 go test -count=1 -bench Benchmark -benchmem -benchtime 10s ./benchmarks/micro/
 go run ./benchmarks/e2e -jobs 100 -workers 4
 ```
+
+## v0.4 实现前 Claim 冻结基线
+
+> 测量日期：2026-08-17；commit `1b31334`；Windows amd64、AMD Ryzen 7 7840HS、Go 1.26.5、PostgreSQL 16.14（`postgres:16-alpine`）、Docker Engine 29.6.2；容器无 CPU/内存限额；非 race。
+
+在 schema 0017 上执行以下同机五轮命令：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test ./benchmarks/micro -run '^$' -bench '^BenchmarkClaim$' -benchmem -benchtime=10s -count=5
+```
+
+| 轮次 | ns/op | B/op | allocs/op |
+|---:|---:|---:|---:|
+| 1 | 5,762,112 | 6,888 | 91 |
+| 2 | 6,644,814 | 6,886 | 91 |
+| 3 | 7,233,324 | 6,887 | 91 |
+| 4 | 8,566,824 | 6,890 | 91 |
+| 5 | 8,849,266 | 6,888 | 91 |
+| **中位数** | **7,233,324** | **6,888** | **91** |
+
+同一测试库中的历史 job 行会在五轮校准期间累积，实测值也随之上升。本组数据只用于 v0.4 以完全相同命令、容器和数据清理条件做前后中位数比较；它不替代 W4 4.171091ms/op 的历史绝对门禁，也不把当前历史偏差改标为 PASS。v0.4 的相对回归上限为 15%。
