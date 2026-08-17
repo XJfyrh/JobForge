@@ -97,6 +97,21 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 
 以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
 
+## Demo 持久业务效果（PRD v0.4，ADR-0009）
+
+默认 `jobforge worker` 为 `demo.idempotent_effect` 建立 `MaxConns=2` 的 PostgreSQL pool，因此 Demo Worker 与 Gateway 一样需要 `JOBFORGE_DATABASE_URL`。Worker 不运行 migration；启动 Worker 前由 `jobforge migrate`、API、Gateway 或 Scheduler 将 schema 升级到 0018。核心 `internal/worker` Runtime 与自定义 Handler API 不依赖 PostgreSQL。
+
+效果表查询：
+
+```sql
+select job_id, result_ref, applied_at
+from demo_idempotent_effects
+order by applied_at desc
+limit 20;
+```
+
+`post_effect_delay_ms` 仅供 Demo/故障测试稳定制造效果提交后、Complete 前的窗口，范围 0～60,000ms，且只在首次 applied 后等待；重复投递立即返回。不得把该同库示例解释为跨系统 exactly-once。
+
 ## Heartbeat 与取消 SLO（PRD v0.3 M4）
 
 | 环境变量 | 默认值 | 说明 |
@@ -240,7 +255,7 @@ go test -race ./tests/integration/...
 
 ## Scale 可靠性套件（-tags scale）
 
-`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，AT-13/AT-14）：AT-13 为 100 轮 Worker kill 零静默丢失，AT-14 为 10,000 任务重复投递零重复副作用；NFR-306 另以真实 PostgreSQL 量化 5s heartbeat 相对 10s 基线的 job lease 写放大。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
+`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，PRD v0.4 FR-806）：AT-13 每轮启动真实 Worker helper 子进程，在持久效果行作为数据库屏障后调用 OS Kill 并 Wait，默认 100 轮零静默丢失；AT-14 让 10,000 个任务各发生一次重投，以 `demo_idempotent_effects` 主键验证表恰 10,000 行、零重复效果。NFR-306 另以真实 PostgreSQL 量化 5s heartbeat 相对 10s 基线的 job lease 写放大。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
 
 ```sh
 # 字面规模运行（需 PostgreSQL；Windows 先设 JOBFORGE_TEST_DSN，见上文）
@@ -252,7 +267,7 @@ set JOBFORGE_SCALE_IDEMPOTENT_JOBS=200
 go test -tags scale -count=1 ./tests/scale/
 ```
 
-规模参数：`JOBFORGE_SCALE_KILL_ROUNDS`（默认 100）、`JOBFORGE_SCALE_KILL_JOBS_PER_ROUND`（默认 10）、`JOBFORGE_SCALE_IDEMPOTENT_JOBS`（默认 10000）、`JOBFORGE_SCALE_WORKERS`（默认 8）。运行前仅保留 postgres 服务（停止 compose 应用服务，避免争用）；运行结果与 race 抽样归档于 [可靠性报告](reliability-report.md)。
+规模参数：`JOBFORGE_SCALE_KILL_ROUNDS`（默认 100）、`JOBFORGE_SCALE_KILL_JOBS_PER_ROUND`（默认 10）、`JOBFORGE_SCALE_IDEMPOTENT_JOBS`（默认 10000）、`JOBFORGE_SCALE_WORKERS`（默认 8）。运行前停止 compose 应用服务，保留测试所需 PostgreSQL；需要 NFR-302 时同时保留 Redis。helper 只存在于 `_test.go`，直接重启当前 test binary，不给生产二进制增加 crash 开关；所有进程都有超时、Kill、Wait 与 cleanup。运行结果与 race 抽样归档于 [可靠性报告](reliability-report.md)。
 
 设置 `JOBFORGE_TEST_REDIS_URL` 时额外执行 NFR-302 事件发布 smoke（`TestScaleNFR302EventPublishSmoke`，参数 `JOBFORGE_SCALE_NFR302_EVENTS` 默认 10000、`JOBFORGE_SCALE_NFR302_WAVE` 默认 1000）；未设置时该测试 skip。
 
@@ -272,7 +287,7 @@ go test -tags scale -count=1 ./tests/scale/
 ## 测试分层
 
 - 单元测试：状态转换、错误分类、退避、配额和 Handler 生命周期。
-- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、幂等、outbox，以及 AT-24 DB-clock 取消 SLO、默认/非默认 heartbeat/TTL 与 liveness 节流。
+- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、持久业务幂等、0018 up/down、outbox，以及 AT-02 真实 Worker 进程 Kill/Wait、AT-24 DB-clock 取消 SLO、默认/非默认 heartbeat/TTL 与 liveness 节流。
 - 事件消费集成测试：使用真实 PostgreSQL + Redis 验证 commit-before-ACK、XAUTOCLAIM 多页 cursor、inbox group binding/去重、瞬时 read/processor/ACK 恢复、deleted pending fail-fast、默认五次 poison 和晚建 group backlog；migration 0017 另在独立临时 0016 数据库上通过正式 Migrator 前滚。
 - 契约测试：验证 HTTP/gRPC 错误映射、deadline、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。

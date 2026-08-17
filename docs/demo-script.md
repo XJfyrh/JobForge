@@ -49,18 +49,28 @@ curl -s http://localhost:8080/v1/jobs/{job_id} \
   -H "X-API-Key: dev-api-key" | python -m json.tool
 ```
 
-## 步骤 3：Kill Worker 演示崩溃恢复
+## 步骤 3：持久效果提交后 Kill Worker
 
-提交一个长时间运行的任务：
+先停止 worker-2，确保待故障任务由 worker-1 领取；随后提交一个在**首次持久效果提交后**等待 60 秒的任务：
 
 ```sh
+docker compose -f deploy/compose.yaml stop worker-2
+
 curl -s -X POST http://localhost:8080/v1/jobs \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.sleep","payload":{"duration_ms":30000},"timeout_seconds":60}'
+  -d '{"queue":"default","type":"demo.idempotent_effect","payload":{"post_effect_delay_ms":60000},"timeout_seconds":120}'
 ```
 
-在任务运行中 kill worker-1：
+记录返回的 `{job_id}`。用效果表作为同步屏障，确认业务效果已经提交：
+
+```sh
+docker compose -f deploy/compose.yaml exec -T postgres \
+  psql -U jobforge -d jobforge -c \
+  "select job_id, result_ref, applied_at from demo_idempotent_effects where job_id = '{job_id}'"
+```
+
+查询返回一行后，在 Complete 前实际 kill worker-1：
 
 ```sh
 docker compose -f deploy/compose.yaml kill worker-1
@@ -68,16 +78,26 @@ docker compose -f deploy/compose.yaml kill worker-1
 
 ## 步骤 4：观察 Lease 过期与重新领取
 
-等待 lease 过期（默认 30s）+ Scheduler 扫描（1s）：
+启动 worker-2，等待 lease 过期（默认 30s）+ Scheduler 扫描（1s）：
 
 ```sh
+docker compose -f deploy/compose.yaml start worker-2
+
 # 等待约 35 秒后查询任务状态
 sleep 35
 curl -s http://localhost:8080/v1/jobs/{job_id} \
   -H "X-API-Key: dev-api-key" | python -m json.tool
 ```
 
-预期：任务被 worker-2 重新领取（`lease_owner` 变为 worker-2，`attempt` 递增）。
+预期：任务被 worker-2 重新领取并进入 `succeeded`，`lease_owner` 变为 worker-2，`attempt` 与 fencing token 递增。重复执行命中既有 `result_ref`，不会再次等待 60 秒。
+
+再次查询效果表，仍必须恰好一行：
+
+```sh
+docker compose -f deploy/compose.yaml exec -T postgres \
+  psql -U jobforge -d jobforge -c \
+  "select count(*) as persistent_effects from demo_idempotent_effects where job_id = '{job_id}'"
+```
 
 重启 worker-1：
 
@@ -95,7 +115,7 @@ go test -run TestFaultAT03StaleWorkerLateComplete ./tests/integration/ -v -count
 
 预期输出包含：`STALE_LEASE` 错误被正确返回，新状态不被覆盖。
 
-## 步骤 6：幂等性演示
+## 步骤 6：提交幂等与执行幂等
 
 提交带幂等键的任务（重复提交不会创建新任务）：
 
@@ -115,11 +135,14 @@ curl -s -X POST http://localhost:8080/v1/jobs \
 
 预期：第二次返回 `"deduplicated": true`，job_id 相同。
 
-通过故障测试验证执行幂等（崩溃重投后副作用仅一次）：
+上述 `idempotency_key` 是提交 API 去重；执行幂等是另一层契约，范围为同一 job ID 的重复投递。通过故障测试验证真实 Worker 进程退出后持久效果仍仅一次：
 
-```sh
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
 go test -run TestFaultAT02CrashBeforeACK ./tests/integration/ -v -count=1
 ```
+
+预期包含 `real Worker kill`、fencing token 递增、`applied=1 deduplicated=1`。该 Demo 只证明同一 PostgreSQL 原子效果，不表示跨系统 exactly-once；人工 retry 克隆的新 job ID 也不会自动共享效果。
 
 ## 步骤 7：DLQ 与人工重试
 
@@ -170,10 +193,10 @@ cat docs/benchmark.md
 ```
 
 关键数据：
-- Enqueue: ~364 jobs/sec
-- Claim: ~429 jobs/sec
-- p50: 8.4ms / p95: 12.9ms / p99: 25.5ms
-- 热点：pgx 二进制协议解码（Claim 路径 ~45% CPU）
+- Submit: 313.36 jobs/sec（v0.4 收官，100 jobs / 4 workers）
+- Process: 354.49 jobs/sec
+- p50: 10.37ms / p95: 13.43ms / p99: 31.88ms
+- Claim 五轮中位数：6.680ms/op，相对 v0.4 实现前改善 7.65%；历史 W4 绝对门禁仍保留未通过披露
 
 ## 清理
 
