@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢关注 JobForge。项目已完成 [PRD v0.1](docs/product/JobForge_PRD_v0.1.md) 规划的全部范围（S0–W7）与 [PRD v0.2](docs/product/JobForge_PRD_v0.2.md) 的增量范围（scale 可靠性套件、outbox publisher、运维 CLI 与可选观测 profile），任何实现都必须先服从 PRD 中已经冻结的可靠性边界。
+感谢关注 JobForge。项目已交付 [PRD v0.1](docs/product/JobForge_PRD_v0.1.md)～[PRD v0.3](docs/product/JobForge_PRD_v0.3.md) 的已实现范围，并以 [PRD v0.4](docs/product/JobForge_PRD_v0.4.md) 补齐持久业务幂等与真实 Worker 崩溃证据；明确标为 P1/未实现的条目不在完成声明内。任何实现都必须先服从 PRD 中已经冻结的可靠性边界。
 
 ## 工作流
 

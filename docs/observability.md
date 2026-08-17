@@ -115,6 +115,14 @@
 
 signal 指标只接受 Heartbeat 查询以同一 PostgreSQL `clock_timestamp()` 返回的 elapsed，Gateway 不混用本地时钟；其直方图显式包含 6s bucket，健康 heartbeat 路径 p95 门禁为 ≤6s。Handler stop 是 Worker 单调本地时钟的独立段，受控测试另行报告 Cancel API 成功→context 取消，二者都不混入 signal SLO。指标不包含 job_id、worker_id、trace_id、payload 或凭据。
 
+### Demo 持久业务效果指标（PRD v0.4 FR-807，ADR-0009）
+
+| 指标名 | 类型 | 标签 | 说明 |
+|---|---|---|---|
+| `jobforge_demo_idempotent_effects_total` | Counter | outcome | `demo.idempotent_effect` 的持久效果结果；outcome 仅为 `applied`、`deduplicated`、`failed` |
+
+Handler 同时输出结构化 `job_id`、`effect_outcome` 与 duration，便于按单任务审计真实崩溃窗口；日志不记录 payload、数据库 URL 或凭据。job ID 只进入日志，不作为 metric label。`applied` 在持久效果提交后立即记录，即使进程随后在 Complete 前退出也保留证据；`deduplicated` 表示重投读到了既有 `result_ref`。
+
 ### 标签约束
 
 高基数字段 `event_id`、`job_id`、`trace_id`、`worker_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。

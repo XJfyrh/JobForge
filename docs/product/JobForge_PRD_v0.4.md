@@ -2,9 +2,11 @@
 
 > 文档版本：v0.4<br>
 > 文档状态：定稿（2026-08-17）<br>
+> 实施状态：已实现并完成本地验收（2026-08-17）<br>
 > 创建/确认日期：2026-08-17<br>
 > 基线版本：[PRD v0.3](JobForge_PRD_v0.3.md)<br>
 > 代码基线：`1b31334`（main，migrations 0001～0017）<br>
+> 实现合并：[PR #24](https://github.com/XJfyrh/JobForge/pull/24) `8da84ab`（持久效果）、[PR #25](https://github.com/XJfyrh/JobForge/pull/25) `d5ecc15`（真实进程崩溃与跨平台 Wait 证据）<br>
 > 前置决策：[ADR-0009](../adr/0009-demo-persistent-effects-and-real-crash-evidence.md)<br>
 > 相关文档：[PRD v0.1](JobForge_PRD_v0.1.md)、[PRD v0.2](JobForge_PRD_v0.2.md)、[架构](../architecture.md)、[故障语义](../failure-semantics.md)、[可靠性报告](../reliability-report.md)、[性能基线](../benchmark.md)
 
@@ -13,6 +15,8 @@
 ---
 
 ## 1. 基线差距核对
+
+本节记录 increment 启动前 commit `1b31334` 的冻结快照；完成状态与实测证据见[第 14 节](#14-实施与验收结果)。
 
 | 范围 | 结论 |
 |---|---|
@@ -122,7 +126,7 @@ AT-02R/13R/14R 是对既有 AT-02/13/14 证据口径的加强，不新建公开�
 - 不把 `pagewise.reindex` 升级为真实集成；
 - 不实现跨 job ID 去重、跨系统原子性或 exactly-once；
 - 不改变 jobs/outbox、lease、fencing、重试、取消和配额语义；
-- 不加入 Web UI、MCP、cron、队列暂停、mTLS、Kafka或新消息中间件；
+- 不加入 Web UI、MCP、cron、队列暂停、mTLS、Kafka 或新消息中间件；
 - 不为 Demo 效果表设计自动 retention。
 
 ## 10. 里程碑与交付顺序
@@ -168,3 +172,22 @@ go test ./benchmarks/micro -run '^$' -bench '^BenchmarkClaim$' -benchmem -bencht
 ```
 
 五轮为 5.762112、6.644814、7.233324、8.566824、8.849266 ms/op；中位数 **7.233324 ms/op**，6886～6890 B/op，91 allocs/op。该组值随同一数据库内基准累积行数上升，只作为本增量前后用完全相同命令和环境比较的当前基线；它不覆盖或重置 W4 历史绝对值门禁。
+
+## 14. 实施与验收结果
+
+v0.4 的 FR-801～807、NFR-401～407 与 AT-26/27/02R/13R/14R 均已实现并按本 PRD 的字面规模完成本地验收：
+
+| 条目 | 实施与证据 | 结果 |
+|---|---|---|
+| FR-801、AT-26 | 新增 migration 0018；独立 schema 完成 0017→0018→down→0018，并验证没有到 jobs 的外键；SQLFluff 全 migrations 通过 | PASS |
+| FR-802～804、AT-27 | PostgreSQL 原子效果存储、确定性 result ref、并发去重、错误分类、delay/cancel、默认 Demo Worker 小连接池与无内存回退均有测试 | PASS |
+| FR-805、NFR-401、AT-02R | 数据库屏障后实际 Kill/Wait Worker A，由 Worker B 重领完成；succeeded、token 1→2、效果表 1 行、applied=1、deduplicated=1；连续 10 次与 race 均通过 | PASS |
+| FR-806、NFR-402/404、AT-13R | 100 轮、每轮 10 任务的真实 Worker OS 进程终止；全部 helper 均 Wait，静默丢失 0；强制租约到期后的回收操作 p95/max 20.5892/22.9993ms | PASS |
+| FR-806、NFR-403、AT-14R | 10,000 job 各重复投递一次；效果表 10,000 行、dedup 10,000、重复业务效果 0、全部 succeeded | PASS |
+| FR-807、NFR-407 | outcome 仅 applied/deduplicated/failed；日志与指标测试验证不记录 payload、DSN 或凭据，job ID 不作为指标标签 | PASS |
+| NFR-405 | 完整 `go test -race -count=1 ./...`、完整 scale、AT-13/14 scale race 抽样和 AOF Redis NFR-302 均通过 | PASS |
+| NFR-406 | Claim 五轮中位数 6.679887ms/op，相对实现前改善 7.65%；20k Claim p50/p95 相对 M4 为 +7.9%/+12.7%；同参数 e2e Submit/Process/p95 相对 M4 为 -8.4%/-6.9%/+4.6% | PASS（当前增量门禁） |
+
+机械门禁全部通过：`go build ./...`、`go vet ./...`、golangci-lint、Ruff check/format、mypy、SQLFluff 历史 baseline + migrations、Buf lint 与 Buf breaking。完整命令、环境和原始结果见[可靠性报告](../reliability-report.md)与[性能报告](../benchmark.md)。
+
+历史 W4 单操作 Claim 绝对门禁 4.171091ms/op 仍未通过；v0.4 的同机相对回归通过不覆盖该披露。AT-25 ControlStream、未知 type/Worker 能力校验和 gRPC error details 等非目标仍未实现，不计入本增量完成范围。

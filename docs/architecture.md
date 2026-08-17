@@ -34,7 +34,7 @@ flowchart LR
 | API Server | 提交、查询、取消、人工重试；API key 鉴权；参数校验；队列背压 | 执行业务任务 |
 | Scheduler | scheduled/retry_wait → ready 推进；过期 lease 回收；advisory lock + 领导权租约（epoch fencing，ADR-0005）单活 | 存储业务结果 |
 | Worker Gateway | gRPC Worker 会话管理；Poll/Heartbeat/Complete/Fail 事务；fencing 验证 | 运行用户 Handler |
-| Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态 |
+| Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出；默认 Demo wiring 注入小容量业务效果连接池 | 决定任务最终状态；核心 Runtime 不直接读写 PostgreSQL |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
 | Outbox Publisher | 轮询发布 outbox_events（at-least-once，可选 notify/Redis Streams）；进度追踪与 retention 清理 | 改写任务核心状态 |
 | Reference Consumer | Redis consumer group 读取；inbox 去重与示例业务效果同事务；commit 后 ACK；pending/poison 恢复 | 动态加载 Handler；为跨系统副作用承诺 exactly-once |
@@ -52,13 +52,27 @@ flowchart LR
 4. Scheduler → 扫描 scheduled/retry_wait 到期 → UPDATE state=ready
 5. Worker → Poll RPC → Gateway → SELECT FOR UPDATE SKIP LOCKED → PostgreSQL
 6. Gateway → 返回 ClaimedJob (lease + fencing token) → Worker
-7. Worker → 执行 Handler → 外部副作用
+7. Worker → 执行 Handler → 外部副作用；`demo.idempotent_effect` 以 job_id
+   原子写 `demo_idempotent_effects`，重复投递返回首次 result_ref
 8. Worker → Heartbeat RPC（默认 5s）→ Gateway → PostgreSQL 单次 UPDATE：
    使用同一 clock_timestamp() 续租并检测 cancelling；若已取消则返回 CANCEL
 9. Worker → Complete/Fail RPC → Gateway → UPDATE state + INSERT job_attempts
 ```
 
 Gateway 的 `RegisterResponse.heartbeat_interval` 来自 `JOBFORGE_HEARTBEAT_INTERVAL`（默认 5s），不再硬编码。Worker 未显式配置本地间隔时采用该建议；显式本地配置优先。每次 job heartbeat 均更新 `lease_until`，不受 `workers.last_heartbeat_at` 的 `LeaseTTL/3` 附属存活写节流影响。取消信号延迟由上述 PostgreSQL 查询返回 `clock_timestamp() - cancel_requested_at`，避免混用 Gateway 主机时钟（ADR-0008）。
+
+### Demo 持久业务效果（PRD v0.4，ADR-0009）
+
+`demo.idempotent_effect` 不再使用 Worker 进程内 map。默认 Demo Worker 建立 `MaxConns=2` 的独立 PostgreSQL pool，并把 `PostgresEffectStore` 注入预注册 Handler；`internal/worker` Runtime 与自定义 Handler API 仍只通过 Gateway 领取和上报任务，不导入 pgx。
+
+```text
+首次投递：INSERT demo_idempotent_effects(job_id, result_ref)
+          ON CONFLICT DO NOTHING RETURNING result_ref → applied
+重复投递：INSERT 冲突 → 新 READ COMMITTED snapshot 读取 result_ref
+          → deduplicated → Complete
+```
+
+表没有到 jobs 的外键，也不参与任务状态、lease、fencing、outbox 或调度事务；它模拟独立业务效果存储。幂等范围仅为同一 job ID，人工 retry 克隆的新 job ID 不共享效果。`post_effect_delay_ms`（0～60,000）只在首次提交后等待，用于在测试/演示中稳定制造“效果已提交、Complete 未发送”窗口，并响应 context cancellation。PostgreSQL 错误为 retryable；无内存回退。跨系统副作用仍须目标系统接受业务 idempotency key，本设计不提供分布式 exactly-once。
 
 ### 提交幂等与冲突检测
 
@@ -121,7 +135,7 @@ Stream `MAXLEN` 仍为兼容配置且默认 0，但 Redis 裁剪不理解 PEL。
 ### 故障恢复流
 
 ```text
-1. Worker 崩溃 → 心跳停止 → lease 过期
+1. Worker OS 进程崩溃/被 kill → 心跳停止 → lease 过期
 2. Scheduler → 扫描 running WHERE lease_until < now() → UPDATE state=ready
 3. 新 Worker → Poll → 重新领取 (fencing_token 递增)
 4. 旧 Worker 恢复 → Complete with old token → Gateway 返回 STALE_LEASE
@@ -235,6 +249,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | [ADR-0006](adr/0006-durable-event-transport.md) | 耐久事件 | Redis Streams、envelope v1、inbox/ACK/pending/poison 语义 |
 | [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) | 租户配额 | PostgreSQL 原子 counter、全局锁序、reconcile |
 | [ADR-0008](adr/0008-cancel-control-channel-heartbeat.md) | 取消 SLO | P0 heartbeat 默认 5s、DB-clock 分段度量；P1 ControlStream 保留为可裁剪 M5 |
+| [ADR-0009](adr/0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久效果与崩溃证据 | job_id 原子业务幂等；Demo DB 依赖隔离；真实进程 Kill/Wait；不宣称 exactly-once |
 
 ## 目录结构
 

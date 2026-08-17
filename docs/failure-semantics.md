@@ -8,6 +8,8 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 
 **不承诺 exactly-once**：Worker 在完成外部副作用后、Complete RPC 前崩溃时，任务可能被重复执行。业务侧必须通过幂等键保护外部副作用。
 
+`demo.idempotent_effect` 是该协议的持久参考：同一 job ID 以 PostgreSQL 主键原子产生一次效果，重投读取首次 `result_ref`。它不与 jobs 状态做分布式原子提交，也不代表支付、邮件或其他外部系统自动 exactly-once；人工 retry 克隆的新 job ID 也不共享效果。
+
 ## 故障模型分类
 
 | 故障类型 | 描述 | 检测机制 |
@@ -25,7 +27,7 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | AT ID | 场景 | 故障注入 | 检测机制 | 恢复路径 | 一致性保证 | 测试 |
 |---|---|---|---|---|---|---|
 | AT-01 | 并发领取 | 两个 Worker 同时 claim 同一批任务 | FOR UPDATE SKIP LOCKED | 每个 fencing token 只有一个 owner | 无重复领取 | `TestConcurrentClaim` |
-| AT-02 | ACK 前崩溃 | Handler 执行后 kill Worker | lease 过期 | 任务重投；幂等 Handler 跳过重复 | 业务副作用仅一次 | `TestFaultAT02CrashBeforeACK` |
+| AT-02 | ACK 前崩溃 | Worker A 提交持久效果并进入 delay；父测试观察 DB 屏障后实际 Kill/Wait 进程 | lease 过期 | Worker B 重投；持久 Handler 返回首次 result_ref | 效果表恰一行；applied=1、deduplicated≥1；token 递增 | `TestFaultAT02CrashBeforeACK` |
 | AT-03 | 旧 Worker 晚到 | lease 过期后旧 Worker 发 Complete | fencing token 不匹配 | 返回 STALE_LEASE；新状态不被覆盖 | 新 owner 状态不变 | `TestFaultAT03StaleWorkerLateComplete` |
 | AT-04 | Heartbeat 丢失 | 阻断 Worker 网络直到 lease 过期 | lease_until < now() | Scheduler 回收 → 新 Worker 领取 | 旧 Worker 后续写入被拒 | `TestFaultAT04HeartbeatLoss` |
 | AT-05 | Cancel 先提交 | running 时 cancel，再 Complete | cancel_requested_at 已设置 | 状态进入 cancelling → cancelled | Complete 被拒绝 | `TestEndToEndSubmitExecuteComplete` |
@@ -36,8 +38,8 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | AT-10 | 租户隔离 | 租户 A 填满并发配额 | Claim 时检查 tenant running count | 租户 B 仍可在自身配额内执行 | 配额互不影响 | `TestTenantAT10Isolation` |
 | AT-11 | 优雅退出 | Worker 收到 SIGTERM | context 取消 | 停止领取；进行中任务完成或释放 | 无 goroutine 泄漏 | `TestWorkerAT11GracefulShutdown` |
 | AT-12 | Trace 串联 | 提交一个真实任务 | OTel span recorder | API/Gateway/Worker span 同一 trace | trace_id 一致 | `TestObservabilityAT12FullSpans` |
-| AT-13 | 循环故障注入（scale） | 100 轮 Worker kill / lease 过期 | lease 过期 → Scheduler 回收 | 每轮全部任务重领并完成 | 非终态任务零静默丢失；恢复时间符合 NFR-003 | `TestScaleAT13WorkerKillRounds`（`-tags scale`） |
-| AT-14 | 万级幂等（scale） | 10,000 任务 ACK 前崩溃后重复投递 | lease 过期 → 重投 → Handler 去重 | `demo.idempotent_effect` 按 job_id 幂等 | 重复业务副作用计数为 0 | `TestScaleAT14IdempotentTenThousand`（`-tags scale`） |
+| AT-13 | 循环故障注入（scale） | 100 轮启动 Worker 子进程；效果提交后实际 Kill/Wait | lease 过期 → Scheduler 回收 | 每轮全部任务重领并完成 | 非终态任务零静默丢失；恢复时间符合 NFR-003；无进程泄漏 | `TestScaleAT13WorkerKillRounds`（`-tags scale`） |
+| AT-14 | 万级幂等（scale） | 10,000 任务首次执行后省略 Complete，强制 lease 恢复并重投 | lease 过期 → 重投 → PostgreSQL 主键去重 | `demo.idempotent_effect` 按 job_id 持久幂等 | 效果表恰 10,000 行；10,000 次 dedup；重复效果 0 | `TestScaleAT14IdempotentTenThousand`（`-tags scale`） |
 
 ## 恢复时间保证
 
@@ -199,7 +201,7 @@ poison 记录只包含 source stream/entry、固定 consumer group、可解析�
 
 | 文件 | 覆盖场景 |
 |---|---|
-| `tests/integration/fault_test.go` | AT-02, AT-03, AT-04；Gateway 抖动（TTL 内恢复）零重投、租约丢失取消执行并丢弃结果（`TestFaultGatewayBlipWithinTTLNoRedelivery`、`TestFaultLeaseLostCancelsExecutionAndDiscardsResult`） |
+| `tests/integration/fault_test.go` + `worker_process_test.go` | AT-02 真实 Worker 进程 Kill/Wait、持久效果 DB 屏障、第二进程重领；AT-03/04；Gateway 抖动（TTL 内恢复）零重投、租约丢失取消执行并丢弃结果 |
 | `tests/integration/gateway_test.go` | AT-05, AT-06, AT-07, AT-08 |
 | `tests/integration/scheduler_test.go` | AT-09, lease 回收, advisory lock；卡死 leader 租约接管与 epoch fencing、优雅让位即时接管（`TestSchedulerStuckLeaderTakeover`、`TestSchedulerGracefulReleaseImmediateTakeover`） |
 | `tests/integration/tenant_test.go` | AT-10 |
@@ -214,8 +216,8 @@ poison 记录只包含 source stream/entry、固定 consumer group、可解析�
 | `tests/scale/nfr302_event_publish_test.go`（`-tags scale`） | NFR-302 事件发布 smoke floor（约 1,800 events/sec）与健康态 publish lag p95 ≤2s |
 | `tests/scale/heartbeat_write_test.go`（`-tags scale`） | NFR-306：逻辑 30s 窗口下 10s→5s cadence 的真实 lease UPDATE 为 300→600，精确 2.00×；只报告 p50/p95，不设机器相关延迟阈值 |
 | `tests/integration/ctl_test.go` | AT-16：ctl retry 克隆新 job_id、原任务终态不可变、retry_of_job_id 审计；鉴权失败、DLQ 列表、outbox 只读状态 |
-| `tests/scale/kill_test.go` | AT-13：100 轮 Worker kill 零静默丢失、恢复耗时分布（`-tags scale`） |
-| `tests/scale/idempotent_test.go` | AT-14：10,000 任务重复投递零重复副作用（`-tags scale`） |
+| `tests/scale/kill_test.go` + `worker_process_test.go` | AT-13：100 轮真实 Worker OS 进程 Kill/Wait，零静默丢失、恢复耗时分布（`-tags scale`） |
+| `tests/scale/idempotent_test.go` | AT-14：10,000 任务使用持久效果表重复投递，表行数恰 10,000、零重复效果（`-tags scale`） |
 
 scale 套件的规模参数、运行命令与结果归档见 [可靠性报告](reliability-report.md)。
 
