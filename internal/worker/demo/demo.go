@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/worker"
 )
 
@@ -79,38 +80,6 @@ func (h *FailHandler) Execute(_ context.Context, job *worker.ClaimedJob) (string
 	return "", err
 }
 
-// IdempotentEffectHandler simulates a side-effect that must only happen once.
-// It uses an in-memory set to track processed job IDs, demonstrating business
-// idempotency. In production, this would be a database table.
-// Safe for concurrent use (implements Handler contract).
-type IdempotentEffectHandler struct {
-	mu sync.Mutex
-	// processed tracks job IDs that have already produced their side effect.
-	// In production this would be a persistent store (e.g. PostgreSQL table).
-	processed map[string]bool
-}
-
-// NewIdempotentEffectHandler creates a handler with an empty processed set.
-func NewIdempotentEffectHandler() *IdempotentEffectHandler {
-	return &IdempotentEffectHandler{processed: make(map[string]bool)}
-}
-
-// Execute implements worker.Handler. The "side effect" is recorded only once
-// per job ID, even if the handler is called multiple times (at-least-once).
-func (h *IdempotentEffectHandler) Execute(_ context.Context, job *worker.ClaimedJob) (string, error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.processed[job.ID] {
-		// Already processed; idempotent return.
-		return "deduplicated", nil
-	}
-
-	// Simulate side effect (e.g. write to external system).
-	h.processed[job.ID] = true
-	return fmt.Sprintf("effect:%s", job.ID), nil
-}
-
 // HTTPHandler makes an HTTP request to an external endpoint.
 // Demonstrates external dependency integration and retryable errors.
 // 2xx → success; 5xx / network error → retryable; 4xx → non-retryable.
@@ -172,11 +141,18 @@ func (h *HTTPHandler) Execute(ctx context.Context, job *worker.ClaimedJob) (stri
 	return "", fmt.Errorf("http %d: %s", resp.StatusCode, string(body))
 }
 
-// RegisterAll registers all demo handlers with the given registry.
-func RegisterAll(reg *worker.Registry) {
+// RegisterAll registers all demo handlers with the given registry. The
+// idempotent-effect Handler requires a persistent store; there is deliberately
+// no in-memory fallback.
+func RegisterAll(
+	reg *worker.Registry,
+	effectStore EffectStore,
+	logger *slog.Logger,
+	metrics *observability.Metrics,
+) {
 	reg.Register("demo.echo", &EchoHandler{})
 	reg.Register("demo.sleep", &SleepHandler{})
 	reg.Register("demo.fail", &FailHandler{})
-	reg.Register("demo.idempotent_effect", NewIdempotentEffectHandler())
+	reg.Register("demo.idempotent_effect", NewIdempotentEffectHandler(effectStore, logger, metrics))
 	reg.Register("demo.http", NewHTTPHandler())
 }

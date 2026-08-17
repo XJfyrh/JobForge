@@ -526,9 +526,29 @@ func runConsumer(
 }
 
 func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
+	// The default demo worker persists demo.idempotent_effect in PostgreSQL.
+	// This small pool belongs only to demo wiring; the core Worker Runtime and
+	// custom Handler API remain Gateway-only (ADR-0009).
+	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("parse database url: %w", err)
+	}
+	poolCfg.MaxConns = 2
+	poolCfg.MinConns = 0
+	poolCfg.MaxConnIdleTime = 5 * time.Minute
+	effectPool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return fmt.Errorf("create demo effect connection pool: %w", err)
+	}
+	defer effectPool.Close()
+	if err := effectPool.Ping(ctx); err != nil {
+		return fmt.Errorf("ping demo effect database: %w", err)
+	}
+	logger.Info("demo effect store connected to PostgreSQL", "max_conns", poolCfg.MaxConns)
+
 	// Register demo handlers.
 	registry := worker.NewRegistry()
-	demo.RegisterAll(registry)
+	demo.RegisterAll(registry, demo.NewPostgresEffectStore(effectPool), logger, metrics)
 	// PageWise reindex demo handler (FR-403 / Appendix A).
 	demo.RegisterPagewise(registry)
 

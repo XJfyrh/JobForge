@@ -4,7 +4,8 @@ package scale
 
 import (
 	"context"
-	"strings"
+	"io"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -24,9 +25,9 @@ const at14BatchSize = 1000
 
 const at14Queue = "scale-at14"
 
-// effectRecorder wraps the real demo.IdempotentEffectHandler and counts how
-// many times the business side effect actually fired per job. Any job with a
-// count greater than 1 is a duplicate business side effect (NFR-002).
+// effectRecorder observes the real persistent EffectStore while the production
+// Handler executes it. The map is test instrumentation only; PostgreSQL is the
+// idempotency source and survives Worker process replacement (ADR-0009).
 type effectRecorder struct {
 	inner *demo.IdempotentEffectHandler
 
@@ -37,11 +38,35 @@ type effectRecorder struct {
 	dedupHits atomic.Int64
 }
 
-func newEffectRecorder() *effectRecorder {
-	return &effectRecorder{
-		inner:   demo.NewIdempotentEffectHandler(),
-		effects: make(map[string]int),
+type recordingEffectStore struct {
+	inner demo.EffectStore
+	rec   *effectRecorder
+}
+
+func (s *recordingEffectStore) Apply(ctx context.Context, jobID string) (demo.EffectResult, error) {
+	result, err := s.inner.Apply(ctx, jobID)
+	if err != nil {
+		return demo.EffectResult{}, err
 	}
+	if result.Applied {
+		s.rec.mu.Lock()
+		s.rec.effects[jobID]++
+		s.rec.mu.Unlock()
+	} else {
+		s.rec.dedupHits.Add(1)
+	}
+	return result, nil
+}
+
+func newEffectRecorder(store demo.EffectStore) *effectRecorder {
+	rec := &effectRecorder{effects: make(map[string]int)}
+	recordingStore := &recordingEffectStore{inner: store, rec: rec}
+	rec.inner = demo.NewIdempotentEffectHandler(
+		recordingStore,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		nil,
+	)
+	return rec
 }
 
 // execute runs the registered handler and records the outcome.
@@ -58,13 +83,6 @@ func (r *effectRecorder) execute(job *domain.Job, fencingToken int64) (string, e
 	result, err := r.inner.Execute(context.Background(), claimed)
 	if err != nil {
 		return "", err
-	}
-	if strings.HasPrefix(result, "effect:") {
-		r.mu.Lock()
-		r.effects[job.ID]++
-		r.mu.Unlock()
-	} else if result == "deduplicated" {
-		r.dedupHits.Add(1)
 	}
 	return result, nil
 }
@@ -155,7 +173,7 @@ func TestScaleAT14IdempotentTenThousand(t *testing.T) {
 	workersN := params.workers
 	t.Logf("AT-14: totalJobs=%d batchSize=%d workers=%d", total, at14BatchSize, workersN)
 
-	rec := newEffectRecorder()
+	rec := newEffectRecorder(demo.NewPostgresEffectStore(testEnv.pool))
 	start := time.Now()
 
 	for base := 0; base < total; base += at14BatchSize {
@@ -224,6 +242,17 @@ func TestScaleAT14IdempotentTenThousand(t *testing.T) {
 	}
 	if lost := countNonSucceeded(t, at14Queue); lost > 0 {
 		t.Fatalf("AT-14 FAILED: %d jobs not in succeeded state", lost)
+	}
+	var persistentEffects int
+	if err := testEnv.pool.QueryRow(ctx, `
+		select count(*)
+		from demo_idempotent_effects effect
+		join jobs job on job.id = effect.job_id
+		where job.queue = $1`, at14Queue).Scan(&persistentEffects); err != nil {
+		t.Fatalf("AT-14 count persistent effects: %v", err)
+	}
+	if persistentEffects != total {
+		t.Fatalf("AT-14 persistent effect rows = %d, want %d", persistentEffects, total)
 	}
 	t.Logf("AT-14 PASSED: %d jobs with duplicate delivery, zero duplicate business side effects", total)
 }
