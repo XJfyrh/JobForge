@@ -170,8 +170,11 @@ func (p *scaleWorkerProcess) killAndWait(t *testing.T) {
 	if !p.wait(scaleWorkerExitLimit) {
 		t.Fatalf("scale Worker did not exit within %s", scaleWorkerExitLimit)
 	}
-	if p.cmd.ProcessState == nil || !p.cmd.ProcessState.Exited() {
-		t.Fatal("scale Worker was killed but not reaped")
+	// The done channel closes only after Cmd.Wait returns, which is the reaping
+	// barrier. On Unix, ProcessState.Exited reports false for a process that was
+	// terminated by a signal even though Wait has successfully reaped it.
+	if p.cmd.ProcessState == nil {
+		t.Fatal("scale Worker Wait returned without process state")
 	}
 }
 
