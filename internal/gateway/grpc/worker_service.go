@@ -10,9 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -124,7 +122,7 @@ func NewWorkerService(
 // Register announces or refreshes a Worker's capabilities.
 func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRequest) (*workerv1.RegisterResponse, error) {
 	if reason, message := svc.validateRegister(req); message != "" {
-		return nil, svc.contractError(ctx, observability.ContractSurfaceRegister, reason, codes.InvalidArgument, message)
+		return nil, svc.contractError(ctx, observability.ContractSurfaceRegister, reason, domain.CodeInvalidArgument, message)
 	}
 
 	sessionID := domain.NewID()
@@ -151,7 +149,7 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 // Poll requests available job leases using long-polling with pg_notify wakeup.
 func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (*workerv1.PollResponse, error) {
 	if reason, message := svc.validatePoll(req); message != "" {
-		return nil, svc.contractError(ctx, observability.ContractSurfacePoll, reason, codes.InvalidArgument, message)
+		return nil, svc.contractError(ctx, observability.ContractSurfacePoll, reason, domain.CodeInvalidArgument, message)
 	}
 
 	// gateway.claim_jobs span (PRD 12.2).
@@ -289,11 +287,11 @@ func (svc *WorkerService) contractError(
 	ctx context.Context,
 	surface observability.ContractSurface,
 	reason observability.ContractRejectionReason,
-	code codes.Code,
+	code domain.ErrorCode,
 	message string,
 ) error {
 	svc.metrics.RecordContractRejection(ctx, surface, reason)
-	return status.Error(code, message)
+	return domainStatusError(code, message)
 }
 
 func (svc *WorkerService) claimRegistered(
@@ -333,7 +331,7 @@ func (svc *WorkerService) observeWorkerClaimRejection(ctx context.Context, err e
 // Heartbeat extends the lease and returns control signals.
 func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.HeartbeatRequest) (*workerv1.HeartbeatResponse, error) {
 	if req.JobId == "" || req.WorkerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
+		return nil, domainStatusError(domain.CodeInvalidArgument, "job_id and worker_id are required")
 	}
 
 	result, err := svc.store.Heartbeat(ctx, req.JobId, req.WorkerId, req.FencingToken, svc.leaseTTL)
@@ -370,7 +368,7 @@ func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.Heartbeat
 // Complete reports successful job execution. Idempotent.
 func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRequest) (*workerv1.CompleteResponse, error) {
 	if req.JobId == "" || req.WorkerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
+		return nil, domainStatusError(domain.CodeInvalidArgument, "job_id and worker_id are required")
 	}
 
 	// Restore the job's trace from incoming gRPC metadata so the
@@ -423,7 +421,7 @@ func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRe
 // Fail reports job execution failure. Idempotent.
 func (svc *WorkerService) Fail(ctx context.Context, req *workerv1.FailRequest) (*workerv1.FailResponse, error) {
 	if req.JobId == "" || req.WorkerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "job_id and worker_id are required")
+		return nil, domainStatusError(domain.CodeInvalidArgument, "job_id and worker_id are required")
 	}
 
 	var durationMs int64
@@ -634,33 +632,4 @@ func traceContextFromMetadata(ctx context.Context) context.Context {
 		return ctx
 	}
 	return observability.ContextWithTraceParent(ctx, vals[0])
-}
-
-// mapError converts domain errors to gRPC status errors per ADR-0002.
-func mapError(err error) error {
-	var de *domain.Error
-	if !errors.As(err, &de) {
-		return status.Error(codes.Internal, "internal error")
-	}
-
-	switch de.Code {
-	case domain.CodeInvalidArgument:
-		return status.Error(codes.InvalidArgument, de.Message)
-	case domain.CodeNotFound:
-		return status.Error(codes.NotFound, de.Message)
-	case domain.CodeForbidden:
-		return status.Error(codes.PermissionDenied, de.Message)
-	case domain.CodeStaleLease:
-		return status.Error(codes.FailedPrecondition, de.Message)
-	case domain.CodeAlreadyTerminal:
-		return status.Error(codes.FailedPrecondition, de.Message)
-	case domain.CodeCancelRequested:
-		return status.Error(codes.Aborted, de.Message)
-	case domain.CodeInvalidTransition:
-		return status.Error(codes.FailedPrecondition, de.Message)
-	case domain.CodeQueueOverloaded:
-		return status.Error(codes.ResourceExhausted, de.Message)
-	default:
-		return status.Error(codes.Internal, de.Message)
-	}
 }

@@ -14,9 +14,10 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/xjfyrh/jobforge/internal/domain"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
 )
 
@@ -30,7 +31,7 @@ type Server struct {
 // NewServer creates a gRPC server with the WorkerService registered.
 func NewServer(service *WorkerService, logger *slog.Logger) *Server {
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(deadlineInterceptor(logger)),
+		grpc.UnaryInterceptor(deadlineInterceptor(logger, service.metrics)),
 	)
 	workerv1.RegisterWorkerServiceServer(grpcServer, service)
 
@@ -57,15 +58,20 @@ func (s *Server) GracefulStop() {
 }
 
 // deadlineInterceptor rejects RPCs without a deadline and logs slow calls.
-func deadlineInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
+func deadlineInterceptor(logger *slog.Logger, metrics *observability.Metrics) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// All Worker RPCs must carry a deadline per PRD 10.2.
 		if _, ok := ctx.Deadline(); !ok {
-			return nil, status.Error(codes.InvalidArgument, "RPC must carry a deadline")
+			metrics.RecordContractRejection(ctx,
+				observability.ContractSurfaceGRPCInterceptor,
+				observability.ContractReasonMissingDeadline,
+			)
+			return nil, domainStatusError(domain.CodeInvalidArgument, "RPC must carry a deadline")
 		}
 
 		resp, err := handler(ctx, req)
 		if err != nil {
+			err = ensureDomainErrorDetail(err)
 			st, _ := status.FromError(err)
 			logger.Warn("rpc error",
 				"method", info.FullMethod,

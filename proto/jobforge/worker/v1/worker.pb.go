@@ -37,7 +37,9 @@ const (
 type ControlSignal int32
 
 const (
-	// Continue execution normally.
+	// Continue execution normally. The zero value deliberately means continue
+	// so that an absent signal never interrupts a running job.
+	// buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
 	ControlSignal_CONTROL_SIGNAL_CONTINUE ControlSignal = 0
 	// Cancel execution as soon as possible. The job has a pending cancel
 	// request. Worker should stop work and call Fail or simply stop heartbeating.
@@ -83,6 +85,63 @@ func (ControlSignal) EnumDescriptor() ([]byte, []int) {
 	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{0}
 }
 
+// DomainErrorDetail carries the stable JobForge error classification attached
+// to every unsuccessful Worker RPC. Clients should prefer this detail over
+// inferring behavior from the transport status alone.
+type DomainErrorDetail struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stable machine-readable code from ADR-0002 (for example STALE_LEASE).
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// Whether retrying this control-plane operation is safe after backoff.
+	Retryable     bool `protobuf:"varint,2,opt,name=retryable,proto3" json:"retryable,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DomainErrorDetail) Reset() {
+	*x = DomainErrorDetail{}
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DomainErrorDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DomainErrorDetail) ProtoMessage() {}
+
+func (x *DomainErrorDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DomainErrorDetail.ProtoReflect.Descriptor instead.
+func (*DomainErrorDetail) Descriptor() ([]byte, []int) {
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *DomainErrorDetail) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *DomainErrorDetail) GetRetryable() bool {
+	if x != nil {
+		return x.Retryable
+	}
+	return false
+}
+
 // RegisterRequest announces Worker identity and capabilities.
 type RegisterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -104,7 +163,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[0]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -116,7 +175,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[0]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -129,7 +188,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{0}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RegisterRequest) GetWorkerId() string {
@@ -187,7 +246,7 @@ type RegisterResponse struct {
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[1]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +258,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[1]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +271,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{1}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisterResponse) GetSessionId() string {
@@ -250,7 +309,7 @@ type PollRequest struct {
 
 func (x *PollRequest) Reset() {
 	*x = PollRequest{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[2]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -262,7 +321,7 @@ func (x *PollRequest) String() string {
 func (*PollRequest) ProtoMessage() {}
 
 func (x *PollRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[2]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -275,7 +334,7 @@ func (x *PollRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PollRequest.ProtoReflect.Descriptor instead.
 func (*PollRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{2}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *PollRequest) GetWorkerId() string {
@@ -324,7 +383,7 @@ type PollResponse struct {
 
 func (x *PollResponse) Reset() {
 	*x = PollResponse{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[3]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -336,7 +395,7 @@ func (x *PollResponse) String() string {
 func (*PollResponse) ProtoMessage() {}
 
 func (x *PollResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[3]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -349,7 +408,7 @@ func (x *PollResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PollResponse.ProtoReflect.Descriptor instead.
 func (*PollResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{3}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PollResponse) GetJobs() []*ClaimedJob {
@@ -392,7 +451,7 @@ type ClaimedJob struct {
 
 func (x *ClaimedJob) Reset() {
 	*x = ClaimedJob{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[4]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +463,7 @@ func (x *ClaimedJob) String() string {
 func (*ClaimedJob) ProtoMessage() {}
 
 func (x *ClaimedJob) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[4]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +476,7 @@ func (x *ClaimedJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimedJob.ProtoReflect.Descriptor instead.
 func (*ClaimedJob) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{4}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ClaimedJob) GetJobId() string {
@@ -514,7 +573,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[5]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +585,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[5]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +598,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{5}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *HeartbeatRequest) GetJobId() string {
@@ -583,7 +642,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[6]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -595,7 +654,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[6]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -608,7 +667,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{6}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *HeartbeatResponse) GetSignal() ControlSignal {
@@ -644,7 +703,7 @@ type CompleteRequest struct {
 
 func (x *CompleteRequest) Reset() {
 	*x = CompleteRequest{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[7]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +715,7 @@ func (x *CompleteRequest) String() string {
 func (*CompleteRequest) ProtoMessage() {}
 
 func (x *CompleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[7]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +728,7 @@ func (x *CompleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteRequest.ProtoReflect.Descriptor instead.
 func (*CompleteRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{7}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CompleteRequest) GetJobId() string {
@@ -718,7 +777,7 @@ type CompleteResponse struct {
 
 func (x *CompleteResponse) Reset() {
 	*x = CompleteResponse{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -730,7 +789,7 @@ func (x *CompleteResponse) String() string {
 func (*CompleteResponse) ProtoMessage() {}
 
 func (x *CompleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[8]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -743,7 +802,7 @@ func (x *CompleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteResponse.ProtoReflect.Descriptor instead.
 func (*CompleteResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{8}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CompleteResponse) GetState() string {
@@ -777,7 +836,7 @@ type FailRequest struct {
 
 func (x *FailRequest) Reset() {
 	*x = FailRequest{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -789,7 +848,7 @@ func (x *FailRequest) String() string {
 func (*FailRequest) ProtoMessage() {}
 
 func (x *FailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[9]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -802,7 +861,7 @@ func (x *FailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailRequest.ProtoReflect.Descriptor instead.
 func (*FailRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{9}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FailRequest) GetJobId() string {
@@ -867,7 +926,7 @@ type FailResponse struct {
 
 func (x *FailResponse) Reset() {
 	*x = FailResponse{}
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -879,7 +938,7 @@ func (x *FailResponse) String() string {
 func (*FailResponse) ProtoMessage() {}
 
 func (x *FailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[10]
+	mi := &file_jobforge_worker_v1_worker_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -892,7 +951,7 @@ func (x *FailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailResponse.ProtoReflect.Descriptor instead.
 func (*FailResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{10}
+	return file_jobforge_worker_v1_worker_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *FailResponse) GetState() string {
@@ -913,7 +972,10 @@ var File_jobforge_worker_v1_worker_proto protoreflect.FileDescriptor
 
 const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x1fjobforge/worker/v1/worker.proto\x12\x12jobforge.worker.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\"\xc6\x01\n" +
+	"\x1fjobforge/worker/v1/worker.proto\x12\x12jobforge.worker.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\"E\n" +
+	"\x11DomainErrorDetail\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x1c\n" +
+	"\tretryable\x18\x02 \x01(\bR\tretryable\"\xc6\x01\n" +
 	"\x0fRegisterRequest\x12\x1b\n" +
 	"\tworker_id\x18\x01 \x01(\tR\bworkerId\x12\x1f\n" +
 	"\vinstance_id\x18\x02 \x01(\tR\n" +
@@ -1002,43 +1064,44 @@ func file_jobforge_worker_v1_worker_proto_rawDescGZIP() []byte {
 }
 
 var file_jobforge_worker_v1_worker_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_jobforge_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_jobforge_worker_v1_worker_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_jobforge_worker_v1_worker_proto_goTypes = []any{
 	(ControlSignal)(0),            // 0: jobforge.worker.v1.ControlSignal
-	(*RegisterRequest)(nil),       // 1: jobforge.worker.v1.RegisterRequest
-	(*RegisterResponse)(nil),      // 2: jobforge.worker.v1.RegisterResponse
-	(*PollRequest)(nil),           // 3: jobforge.worker.v1.PollRequest
-	(*PollResponse)(nil),          // 4: jobforge.worker.v1.PollResponse
-	(*ClaimedJob)(nil),            // 5: jobforge.worker.v1.ClaimedJob
-	(*HeartbeatRequest)(nil),      // 6: jobforge.worker.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),     // 7: jobforge.worker.v1.HeartbeatResponse
-	(*CompleteRequest)(nil),       // 8: jobforge.worker.v1.CompleteRequest
-	(*CompleteResponse)(nil),      // 9: jobforge.worker.v1.CompleteResponse
-	(*FailRequest)(nil),           // 10: jobforge.worker.v1.FailRequest
-	(*FailResponse)(nil),          // 11: jobforge.worker.v1.FailResponse
-	(*durationpb.Duration)(nil),   // 12: google.protobuf.Duration
-	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(*DomainErrorDetail)(nil),     // 1: jobforge.worker.v1.DomainErrorDetail
+	(*RegisterRequest)(nil),       // 2: jobforge.worker.v1.RegisterRequest
+	(*RegisterResponse)(nil),      // 3: jobforge.worker.v1.RegisterResponse
+	(*PollRequest)(nil),           // 4: jobforge.worker.v1.PollRequest
+	(*PollResponse)(nil),          // 5: jobforge.worker.v1.PollResponse
+	(*ClaimedJob)(nil),            // 6: jobforge.worker.v1.ClaimedJob
+	(*HeartbeatRequest)(nil),      // 7: jobforge.worker.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),     // 8: jobforge.worker.v1.HeartbeatResponse
+	(*CompleteRequest)(nil),       // 9: jobforge.worker.v1.CompleteRequest
+	(*CompleteResponse)(nil),      // 10: jobforge.worker.v1.CompleteResponse
+	(*FailRequest)(nil),           // 11: jobforge.worker.v1.FailRequest
+	(*FailResponse)(nil),          // 12: jobforge.worker.v1.FailResponse
+	(*durationpb.Duration)(nil),   // 13: google.protobuf.Duration
+	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
 }
 var file_jobforge_worker_v1_worker_proto_depIdxs = []int32{
-	12, // 0: jobforge.worker.v1.RegisterResponse.heartbeat_interval:type_name -> google.protobuf.Duration
-	5,  // 1: jobforge.worker.v1.PollResponse.jobs:type_name -> jobforge.worker.v1.ClaimedJob
-	13, // 2: jobforge.worker.v1.ClaimedJob.lease_until:type_name -> google.protobuf.Timestamp
-	12, // 3: jobforge.worker.v1.ClaimedJob.timeout:type_name -> google.protobuf.Duration
+	13, // 0: jobforge.worker.v1.RegisterResponse.heartbeat_interval:type_name -> google.protobuf.Duration
+	6,  // 1: jobforge.worker.v1.PollResponse.jobs:type_name -> jobforge.worker.v1.ClaimedJob
+	14, // 2: jobforge.worker.v1.ClaimedJob.lease_until:type_name -> google.protobuf.Timestamp
+	13, // 3: jobforge.worker.v1.ClaimedJob.timeout:type_name -> google.protobuf.Duration
 	0,  // 4: jobforge.worker.v1.HeartbeatResponse.signal:type_name -> jobforge.worker.v1.ControlSignal
-	13, // 5: jobforge.worker.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
-	12, // 6: jobforge.worker.v1.CompleteRequest.duration:type_name -> google.protobuf.Duration
-	12, // 7: jobforge.worker.v1.FailRequest.duration:type_name -> google.protobuf.Duration
-	13, // 8: jobforge.worker.v1.FailResponse.next_retry_at:type_name -> google.protobuf.Timestamp
-	1,  // 9: jobforge.worker.v1.WorkerService.Register:input_type -> jobforge.worker.v1.RegisterRequest
-	3,  // 10: jobforge.worker.v1.WorkerService.Poll:input_type -> jobforge.worker.v1.PollRequest
-	6,  // 11: jobforge.worker.v1.WorkerService.Heartbeat:input_type -> jobforge.worker.v1.HeartbeatRequest
-	8,  // 12: jobforge.worker.v1.WorkerService.Complete:input_type -> jobforge.worker.v1.CompleteRequest
-	10, // 13: jobforge.worker.v1.WorkerService.Fail:input_type -> jobforge.worker.v1.FailRequest
-	2,  // 14: jobforge.worker.v1.WorkerService.Register:output_type -> jobforge.worker.v1.RegisterResponse
-	4,  // 15: jobforge.worker.v1.WorkerService.Poll:output_type -> jobforge.worker.v1.PollResponse
-	7,  // 16: jobforge.worker.v1.WorkerService.Heartbeat:output_type -> jobforge.worker.v1.HeartbeatResponse
-	9,  // 17: jobforge.worker.v1.WorkerService.Complete:output_type -> jobforge.worker.v1.CompleteResponse
-	11, // 18: jobforge.worker.v1.WorkerService.Fail:output_type -> jobforge.worker.v1.FailResponse
+	14, // 5: jobforge.worker.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
+	13, // 6: jobforge.worker.v1.CompleteRequest.duration:type_name -> google.protobuf.Duration
+	13, // 7: jobforge.worker.v1.FailRequest.duration:type_name -> google.protobuf.Duration
+	14, // 8: jobforge.worker.v1.FailResponse.next_retry_at:type_name -> google.protobuf.Timestamp
+	2,  // 9: jobforge.worker.v1.WorkerService.Register:input_type -> jobforge.worker.v1.RegisterRequest
+	4,  // 10: jobforge.worker.v1.WorkerService.Poll:input_type -> jobforge.worker.v1.PollRequest
+	7,  // 11: jobforge.worker.v1.WorkerService.Heartbeat:input_type -> jobforge.worker.v1.HeartbeatRequest
+	9,  // 12: jobforge.worker.v1.WorkerService.Complete:input_type -> jobforge.worker.v1.CompleteRequest
+	11, // 13: jobforge.worker.v1.WorkerService.Fail:input_type -> jobforge.worker.v1.FailRequest
+	3,  // 14: jobforge.worker.v1.WorkerService.Register:output_type -> jobforge.worker.v1.RegisterResponse
+	5,  // 15: jobforge.worker.v1.WorkerService.Poll:output_type -> jobforge.worker.v1.PollResponse
+	8,  // 16: jobforge.worker.v1.WorkerService.Heartbeat:output_type -> jobforge.worker.v1.HeartbeatResponse
+	10, // 17: jobforge.worker.v1.WorkerService.Complete:output_type -> jobforge.worker.v1.CompleteResponse
+	12, // 18: jobforge.worker.v1.WorkerService.Fail:output_type -> jobforge.worker.v1.FailResponse
 	14, // [14:19] is the sub-list for method output_type
 	9,  // [9:14] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
@@ -1057,7 +1120,7 @@ func file_jobforge_worker_v1_worker_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_jobforge_worker_v1_worker_proto_rawDesc), len(file_jobforge_worker_v1_worker_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
