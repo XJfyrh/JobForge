@@ -66,10 +66,11 @@ func startCancelSLOGateway(
 	s gatewaygrpc.WorkerStore,
 	leaseTTL, heartbeatInterval time.Duration,
 	metrics *observability.Metrics,
+	taskTypes ...string,
 ) string {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, heartbeatInterval, 0, true, logger, metrics)
+	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, testTaskTypeCatalog(t, taskTypes...), leaseTTL, heartbeatInterval, 0, true, logger, metrics)
 	server := grpc.NewServer()
 	workerv1.RegisterWorkerServiceServer(server, service)
 
@@ -99,7 +100,7 @@ func TestGatewayRegisterAdvertisesConfiguredHeartbeat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			jobStore := setupStore(t)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			service := gatewaygrpc.NewWorkerService(jobStore, stubPollWaiter{}, 30*time.Second, tt.configured, 0, true, logger, nil)
+			service := gatewaygrpc.NewWorkerService(jobStore, stubPollWaiter{}, testTaskTypeCatalog(t), 30*time.Second, tt.configured, 0, true, logger, nil)
 			response, err := service.Register(context.Background(), &workerv1.RegisterRequest{
 				WorkerId:       "heartbeat-config-" + uuid.New().String()[:8],
 				InstanceId:     "heartbeat-config-instance",
@@ -168,7 +169,7 @@ func TestGatewayNonDefaultLeaseLivenessThrottle(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	// A 6s lease produces a 2s liveness threshold. The advertised 500ms job
 	// heartbeat cadence must not multiply workers.last_heartbeat_at writes.
-	service := gatewaygrpc.NewWorkerService(jobStore, stubPollWaiter{}, 6*time.Second, 500*time.Millisecond, 0, true, logger, nil)
+	service := gatewaygrpc.NewWorkerService(jobStore, stubPollWaiter{}, testTaskTypeCatalog(t), 6*time.Second, 500*time.Millisecond, 0, true, logger, nil)
 	workerID := "liveness-nondefault-" + uuid.New().String()[:8]
 	queue := "liveness-nondefault-" + uuid.New().String()[:8]
 	if _, err := service.Register(ctx, &workerv1.RegisterRequest{
@@ -260,7 +261,7 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 	_, cancelClient, jobStore := setupCtlServer(t)
 	signalSamples := make(chan cancelSignalSample, sampleCount)
 	observedStore := &observingHeartbeatStore{JobStore: jobStore, signals: signalSamples}
-	gatewayAddr := startCancelSLOGateway(t, observedStore, 30*time.Second, heartbeatPeriod, metrics)
+	gatewayAddr := startCancelSLOGateway(t, observedStore, 30*time.Second, heartbeatPeriod, metrics, cancelHandlerType)
 
 	queue := "cancel-slo-" + uuid.New().String()[:8]
 	started := make(chan cancelHandlerSample, sampleCount)

@@ -41,6 +41,10 @@ var (
 	// INVALID_ARGUMENT.
 	ErrInvalidArgument = errors.New("invalid argument")
 
+	// ErrForbidden indicates that a caller attempted to exceed its declared
+	// capability. Maps to HTTP 403 / gRPC PERMISSION_DENIED.
+	ErrForbidden = errors.New("forbidden")
+
 	// ErrConflict indicates an idempotency key conflict where the same key was
 	// used with different parameters. Maps to HTTP 409 / gRPC ALREADY_EXISTS.
 	ErrConflict = errors.New("idempotency key conflict")

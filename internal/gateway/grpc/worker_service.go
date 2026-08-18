@@ -29,6 +29,10 @@ type WorkerStore interface {
 	// RegisterWorker upserts a worker registration record.
 	RegisterWorker(ctx context.Context, req *workerv1.RegisterRequest, sessionID string) error
 
+	// ClaimForWorker atomically validates persisted capabilities and capacity
+	// before executing Claim under the same workers row lock (ADR-0010).
+	ClaimForWorker(ctx context.Context, params store.WorkerClaimParams) (*store.ClaimResult, error)
+
 	// GetJobState returns the current state of a job (for control signal checks).
 	GetJobState(ctx context.Context, jobID string) (domain.JobState, error)
 
@@ -61,6 +65,7 @@ type WorkerService struct {
 	// without an explicit local override adopt this value (ADR-0008).
 	heartbeatInterval time.Duration
 	metrics           *observability.Metrics
+	catalog           *domain.TaskTypeCatalog
 
 	// tenantMaxInflight limits how many inflight (running + cancelling) jobs
 	// a tenant may have. Claim reserves slots on the derived counter and
@@ -83,7 +88,20 @@ type WorkerService struct {
 // per-tenant inflight-job quota enforced during claim (PRD v0.3 FR-720~726);
 // <= 0 disables the limit. quotaPrefilter toggles the full-tenant candidate
 // pre-filter (ADR-0007 §4).
-func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL, heartbeatInterval time.Duration, tenantMaxInflight int, quotaPrefilter bool, logger *slog.Logger, metrics *observability.Metrics) *WorkerService {
+func NewWorkerService(
+	s WorkerStore,
+	waiter PollWaiter,
+	catalog *domain.TaskTypeCatalog,
+	leaseTTL time.Duration,
+	heartbeatInterval time.Duration,
+	tenantMaxInflight int,
+	quotaPrefilter bool,
+	logger *slog.Logger,
+	metrics *observability.Metrics,
+) *WorkerService {
+	if catalog == nil {
+		panic("gateway: task type catalog is required")
+	}
 	if leaseTTL <= 0 {
 		leaseTTL = domain.DefaultLeaseTTL
 	}
@@ -97,6 +115,7 @@ func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL, heartbeatInter
 		leaseTTL:          leaseTTL,
 		heartbeatInterval: heartbeatInterval,
 		metrics:           metrics,
+		catalog:           catalog,
 		tenantMaxInflight: tenantMaxInflight,
 		quotaPrefilter:    quotaPrefilter,
 	}
@@ -104,15 +123,8 @@ func NewWorkerService(s WorkerStore, waiter PollWaiter, leaseTTL, heartbeatInter
 
 // Register announces or refreshes a Worker's capabilities.
 func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRequest) (*workerv1.RegisterResponse, error) {
-	if req.WorkerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "worker_id is required")
-	}
-	if req.Capacity <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "capacity must be positive")
-	}
-	if len(req.Queues) == 0 {
-		// Fail loud: a worker without queues could register but never claim.
-		return nil, status.Error(codes.InvalidArgument, "queues must not be empty")
+	if reason, message := svc.validateRegister(req); message != "" {
+		return nil, svc.contractError(ctx, observability.ContractSurfaceRegister, reason, codes.InvalidArgument, message)
 	}
 
 	sessionID := domain.NewID()
@@ -138,13 +150,9 @@ func (svc *WorkerService) Register(ctx context.Context, req *workerv1.RegisterRe
 
 // Poll requests available job leases using long-polling with pg_notify wakeup.
 func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (*workerv1.PollResponse, error) {
-	if req.WorkerId == "" {
-		return nil, status.Error(codes.InvalidArgument, "worker_id is required")
+	if reason, message := svc.validatePoll(req); message != "" {
+		return nil, svc.contractError(ctx, observability.ContractSurfacePoll, reason, codes.InvalidArgument, message)
 	}
-
-	// Idle workers only reach the Gateway through Poll, so every Poll also
-	// serves as a worker liveness signal (best-effort, throttled in SQL).
-	svc.refreshWorkerLiveness(ctx, req.WorkerId)
 
 	// gateway.claim_jobs span (PRD 12.2).
 	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.claim_jobs")
@@ -154,38 +162,22 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		attribute.Int("max_jobs", int(req.MaxJobs)),
 	)
 
-	maxJobs := int(req.MaxJobs)
-	if maxJobs <= 0 {
-		maxJobs = 1
-	}
-	if req.AvailableCapacity > 0 && int(req.AvailableCapacity) < maxJobs {
-		maxJobs = int(req.AvailableCapacity)
-	}
-
-	// Fail loud on missing or malformed queues instead of silently claiming
-	// nothing: every declared queue participates in the claim.
-	if len(req.Queues) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "queues must not be empty")
-	}
-	for _, q := range req.Queues {
-		if q == "" {
-			return nil, status.Error(codes.InvalidArgument, "queues must not contain empty entries")
-		}
-	}
-
-	claimParams := store.ClaimParams{
-		Queues:            req.Queues,
-		WorkerID:          req.WorkerId,
-		Types:             req.Types,
-		MaxJobs:           maxJobs,
-		LeaseTTL:          svc.leaseTTL,
-		TenantMaxInflight: svc.tenantMaxInflight, // PRD v0.3 tenant quota.
-		QuotaPrefilter:    svc.quotaPrefilter,
+	claimParams := store.WorkerClaimParams{
+		ClaimParams: store.ClaimParams{
+			Queues:            req.Queues,
+			WorkerID:          req.WorkerId,
+			Types:             req.Types,
+			MaxJobs:           int(req.MaxJobs),
+			LeaseTTL:          svc.leaseTTL,
+			TenantMaxInflight: svc.tenantMaxInflight, // PRD v0.3 tenant quota.
+			QuotaPrefilter:    svc.quotaPrefilter,
+		},
+		AvailableCapacity: int(req.AvailableCapacity),
 	}
 
 	// Try immediate claim.
 	start := time.Now()
-	res, err := svc.store.Claim(ctx, claimParams)
+	res, err := svc.claimRegistered(ctx, claimParams)
 	if err != nil {
 		span.SetStatus(otelcodes.Error, err.Error())
 		return nil, mapError(err)
@@ -194,7 +186,7 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 	svc.observeQuotaConflicts(ctx, res.QuotaConflicts)
 
 	// Long-poll: if no jobs, wait for notification or deadline.
-	for len(jobs) == 0 && ctx.Err() == nil {
+	for len(jobs) == 0 && !res.WorkerCapacityExhausted && ctx.Err() == nil {
 		// Wait with a short timeout to allow periodic re-check.
 		waitCtx, waitCancel := context.WithTimeout(ctx, 500*time.Millisecond)
 		svc.waiter.WaitForNotification(waitCtx)
@@ -204,7 +196,7 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 			break
 		}
 
-		res, err = svc.store.Claim(ctx, claimParams)
+		res, err = svc.claimRegistered(ctx, claimParams)
 		if err != nil {
 			span.SetStatus(otelcodes.Error, err.Error())
 			return nil, mapError(err)
@@ -225,6 +217,117 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 	return &workerv1.PollResponse{
 		Jobs: toClaimedJobs(jobs),
 	}, nil
+}
+
+func (svc *WorkerService) validateRegister(
+	req *workerv1.RegisterRequest,
+) (observability.ContractRejectionReason, string) {
+	if req == nil || req.WorkerId == "" {
+		return observability.ContractReasonMalformedCapability, "worker_id is required"
+	}
+	if req.Capacity <= 0 {
+		return observability.ContractReasonMalformedCapability, "capacity must be positive"
+	}
+	if message := validateCapabilityList("queues", req.Queues); message != "" {
+		return observability.ContractReasonMalformedCapability, message
+	}
+	if message := validateCapabilityList("supported_types", req.SupportedTypes); message != "" {
+		return observability.ContractReasonMalformedCapability, message
+	}
+	for _, taskType := range req.SupportedTypes {
+		if !svc.catalog.Contains(taskType) {
+			return observability.ContractReasonUnknownType, "supported_types contains an unregistered task type"
+		}
+	}
+	return "", ""
+}
+
+func (svc *WorkerService) validatePoll(
+	req *workerv1.PollRequest,
+) (observability.ContractRejectionReason, string) {
+	if req == nil || req.WorkerId == "" {
+		return observability.ContractReasonMalformedCapability, "worker_id is required"
+	}
+	if req.MaxJobs <= 0 {
+		return observability.ContractReasonMalformedCapability, "max_jobs must be positive"
+	}
+	if req.AvailableCapacity <= 0 {
+		return observability.ContractReasonMalformedCapability, "available_capacity must be positive"
+	}
+	if message := validateCapabilityList("queues", req.Queues); message != "" {
+		return observability.ContractReasonMalformedCapability, message
+	}
+	if message := validateCapabilityList("types", req.Types); message != "" {
+		return observability.ContractReasonMalformedCapability, message
+	}
+	for _, taskType := range req.Types {
+		if !svc.catalog.Contains(taskType) {
+			return observability.ContractReasonUnknownType, "types contains an unregistered task type"
+		}
+	}
+	return "", ""
+}
+
+func validateCapabilityList(name string, values []string) string {
+	if len(values) == 0 {
+		return name + " must not be empty"
+	}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if value == "" {
+			return name + " must not contain empty entries"
+		}
+		if _, duplicate := seen[value]; duplicate {
+			return name + " must not contain duplicate entries"
+		}
+		seen[value] = struct{}{}
+	}
+	return ""
+}
+
+func (svc *WorkerService) contractError(
+	ctx context.Context,
+	surface observability.ContractSurface,
+	reason observability.ContractRejectionReason,
+	code codes.Code,
+	message string,
+) error {
+	svc.metrics.RecordContractRejection(ctx, surface, reason)
+	return status.Error(code, message)
+}
+
+func (svc *WorkerService) claimRegistered(
+	ctx context.Context,
+	params store.WorkerClaimParams,
+) (*store.ClaimResult, error) {
+	result, err := svc.store.ClaimForWorker(ctx, params)
+	if err != nil {
+		svc.observeWorkerClaimRejection(ctx, err)
+		return nil, err
+	}
+	// A successfully validated Poll proves liveness. Invalid Poll requests
+	// never mutate workers.last_heartbeat_at (PRD v0.5 NFR-501).
+	svc.refreshWorkerLiveness(ctx, params.WorkerID)
+	return result, nil
+}
+
+func (svc *WorkerService) observeWorkerClaimRejection(ctx context.Context, err error) {
+	var rejection *store.WorkerClaimError
+	if !errors.As(err, &rejection) {
+		return
+	}
+	var reason observability.ContractRejectionReason
+	switch rejection.Reason {
+	case store.WorkerClaimUnregistered:
+		reason = observability.ContractReasonUnregisteredWorker
+	case store.WorkerClaimCapabilityMismatch:
+		reason = observability.ContractReasonCapabilityMismatch
+	case store.WorkerClaimCapacityExceeded:
+		reason = observability.ContractReasonCapacityExceeded
+	default:
+		return
+	}
+	svc.metrics.RecordContractRejection(ctx, observability.ContractSurfacePoll, reason)
 }
 
 // Heartbeat extends the lease and returns control signals.
@@ -545,6 +648,8 @@ func mapError(err error) error {
 		return status.Error(codes.InvalidArgument, de.Message)
 	case domain.CodeNotFound:
 		return status.Error(codes.NotFound, de.Message)
+	case domain.CodeForbidden:
+		return status.Error(codes.PermissionDenied, de.Message)
 	case domain.CodeStaleLease:
 		return status.Error(codes.FailedPrecondition, de.Message)
 	case domain.CodeAlreadyTerminal:

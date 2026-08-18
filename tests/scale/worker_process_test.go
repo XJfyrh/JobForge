@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
+	"github.com/xjfyrh/jobforge/internal/domain"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/worker"
 	"github.com/xjfyrh/jobforge/internal/worker/demo"
@@ -222,8 +223,12 @@ func (scalePollWaiter) WaitForNotification(ctx context.Context) bool {
 func startScaleWorkerGateway(t *testing.T, leaseTTL time.Duration) string {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	catalog, err := domain.NewTaskTypeCatalog(domain.DefaultTaskTypeNames())
+	if err != nil {
+		t.Fatalf("create task type catalog: %v", err)
+	}
 	service := gatewaygrpc.NewWorkerService(
-		setupStore(t), scalePollWaiter{}, leaseTTL, 200*time.Millisecond,
+		setupStore(t), scalePollWaiter{}, catalog, leaseTTL, 200*time.Millisecond,
 		0, true, logger, nil,
 	)
 	server := grpc.NewServer()

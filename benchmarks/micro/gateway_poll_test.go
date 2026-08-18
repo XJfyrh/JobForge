@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/xjfyrh/jobforge/internal/domain"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
@@ -22,13 +23,20 @@ func (benchmarkPollWaiter) WaitForNotification(context.Context) bool { return fa
 func BenchmarkGatewayPollClaim(b *testing.B) {
 	ctx := context.Background()
 	jobStore := postgres.NewJobStore(benchPool)
-	queue := "bench-gateway-poll"
-	workerID := "bench-gateway-worker"
+	// Each count iteration gets isolated registration/inflight state now that
+	// server-side capacity is enforced across the entire workers row.
+	queue := "bench-gateway-poll-" + domain.NewID()
+	workerID := "bench-gateway-worker-" + domain.NewID()
 	seedJobs(ctx, b, jobStore, queue, b.N+100)
+	catalog, err := domain.NewTaskTypeCatalog(domain.DefaultTaskTypeNames())
+	if err != nil {
+		b.Fatalf("create task type catalog: %v", err)
+	}
 
 	service := gatewaygrpc.NewWorkerService(
 		jobStore,
 		benchmarkPollWaiter{},
+		catalog,
 		30*time.Second,
 		5*time.Second,
 		0,

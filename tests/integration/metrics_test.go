@@ -130,7 +130,7 @@ func TestGatewayRegisterEmitsWorkersActive(t *testing.T) {
 
 	js := setupStore(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, metrics)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, testTaskTypeCatalog(t), 30*time.Second, 5*time.Second, 0, true, logger, metrics)
 
 	workerID := "gauge-worker-" + uuid.New().String()[:8]
 	_, err = svc.Register(ctx, &workerv1.RegisterRequest{
@@ -182,7 +182,7 @@ func TestWorkersActiveGaugeDecaysToZero(t *testing.T) {
 
 	js := setupStore(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, metrics)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, testTaskTypeCatalog(t), 30*time.Second, 5*time.Second, 0, true, logger, metrics)
 
 	version := "7.7.7-decay-" + uuid.New().String()[:8]
 	workerID := "decay-worker-" + uuid.New().String()[:8]

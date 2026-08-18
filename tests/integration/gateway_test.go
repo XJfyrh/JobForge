@@ -625,7 +625,7 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, testTaskTypeCatalog(t), 30*time.Second, 5*time.Second, 0, true, logger, nil)
 
 	workerID := "liveness-worker-" + uuid.New().String()[:8]
 	_, err := svc.Register(ctx, &workerv1.RegisterRequest{
@@ -671,10 +671,11 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	// semantics). Timestamps are compared exactly; both come from the DB.
 	pollCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 	_, _ = svc.Poll(pollCtx, &workerv1.PollRequest{
-		WorkerId: workerID,
-		MaxJobs:  1,
-		Queues:   []string{"liveness-hb"},
-		Types:    []string{"demo.echo"},
+		WorkerId:          workerID,
+		MaxJobs:           1,
+		AvailableCapacity: 1,
+		Queues:            []string{"liveness-hb"},
+		Types:             []string{"demo.echo"},
 	})
 	cancel()
 	if ts2 := getWorkerLastHeartbeat(t, workerID); !ts2.Equal(ts1) {
@@ -686,10 +687,11 @@ func TestGatewayLivenessRefreshOnRPCs(t *testing.T) {
 	backdateWorkerHeartbeat(t, workerID, "1 hour")
 	pollCtx, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
 	_, _ = svc.Poll(pollCtx, &workerv1.PollRequest{
-		WorkerId: workerID,
-		MaxJobs:  1,
-		Queues:   []string{"liveness-hb"},
-		Types:    []string{"demo.echo"},
+		WorkerId:          workerID,
+		MaxJobs:           1,
+		AvailableCapacity: 1,
+		Queues:            []string{"liveness-hb"},
+		Types:             []string{"demo.echo"},
 	})
 	cancel()
 	if ts3 := getWorkerLastHeartbeat(t, workerID); time.Since(ts3) > time.Minute {
@@ -804,7 +806,7 @@ func TestGatewayPollMultiQueue(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 0, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, testTaskTypeCatalog(t), 30*time.Second, 5*time.Second, 0, true, logger, nil)
 
 	queueA := "poll-mq-a-" + uuid.New().String()[:8]
 	queueB := "poll-mq-b-" + uuid.New().String()[:8]
@@ -827,10 +829,11 @@ func TestGatewayPollMultiQueue(t *testing.T) {
 	pollCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	resp, err := svc.Poll(pollCtx, &workerv1.PollRequest{
-		WorkerId: workerID,
-		MaxJobs:  2,
-		Queues:   []string{queueA, queueB},
-		Types:    []string{"demo.echo"},
+		WorkerId:          workerID,
+		MaxJobs:           2,
+		AvailableCapacity: 2,
+		Queues:            []string{queueA, queueB},
+		Types:             []string{"demo.echo"},
 	})
 	if err != nil {
 		t.Fatalf("poll: %v", err)
@@ -850,10 +853,15 @@ func TestGatewayPollMultiQueue(t *testing.T) {
 	}
 
 	// Fail loud: no queues, or an empty entry, must be rejected.
-	if _, err := svc.Poll(ctx, &workerv1.PollRequest{WorkerId: workerID, MaxJobs: 1}); status.Code(err) != codes.InvalidArgument {
+	if _, err := svc.Poll(ctx, &workerv1.PollRequest{
+		WorkerId: workerID, MaxJobs: 1, AvailableCapacity: 1, Types: []string{"demo.echo"},
+	}); status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("expected InvalidArgument for missing queues, got %v", err)
 	}
-	if _, err := svc.Poll(ctx, &workerv1.PollRequest{WorkerId: workerID, MaxJobs: 1, Queues: []string{queueA, ""}}); status.Code(err) != codes.InvalidArgument {
+	if _, err := svc.Poll(ctx, &workerv1.PollRequest{
+		WorkerId: workerID, MaxJobs: 1, AvailableCapacity: 1,
+		Queues: []string{queueA, ""}, Types: []string{"demo.echo"},
+	}); status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("expected InvalidArgument for empty queue entry, got %v", err)
 	}
 	if _, err := svc.Register(ctx, &workerv1.RegisterRequest{

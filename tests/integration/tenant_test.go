@@ -201,11 +201,23 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 	ctx := context.Background()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, 30*time.Second, 5*time.Second, 1, true, logger, nil)
+	svc := gatewaygrpc.NewWorkerService(js, blockingWaiter{}, testTaskTypeCatalog(t), 30*time.Second, 5*time.Second, 1, true, logger, nil)
 
 	tenantA := "tenant-gw-A-" + uuid.New().String()[:8]
 	tenantB := "tenant-gw-B-" + uuid.New().String()[:8]
 	queue := "gw-quota-queue"
+	for _, workerID := range []string{"gw-poll-worker", "gw-poll-worker-2", "gw-poll-worker-3"} {
+		if _, err := svc.Register(ctx, &workerv1.RegisterRequest{
+			WorkerId:       workerID,
+			InstanceId:     "gw-quota-instance",
+			Queues:         []string{queue},
+			SupportedTypes: []string{"demo.echo"},
+			Capacity:       5,
+			Version:        "test",
+		}); err != nil {
+			t.Fatalf("register %s: %v", workerID, err)
+		}
+	}
 
 	// Tenant A submits 2 jobs; the WorkerService quota is 1.
 	_ = createTestJobForTenant(t, js, tenantA, queue, "demo.echo")
@@ -213,9 +225,11 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 
 	// 1. First Poll claims exactly 1 job (tenant quota).
 	resp, err := svc.Poll(ctx, &workerv1.PollRequest{
-		WorkerId: "gw-poll-worker",
-		MaxJobs:  5,
-		Queues:   []string{queue},
+		WorkerId:          "gw-poll-worker",
+		MaxJobs:           5,
+		AvailableCapacity: 5,
+		Queues:            []string{queue},
+		Types:             []string{"demo.echo"},
 	})
 	if err != nil {
 		t.Fatalf("first poll: %v", err)
@@ -229,9 +243,11 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 	pollCtx, cancel := context.WithTimeout(ctx, 800*time.Millisecond)
 	defer cancel()
 	resp2, err := svc.Poll(pollCtx, &workerv1.PollRequest{
-		WorkerId: "gw-poll-worker-2",
-		MaxJobs:  5,
-		Queues:   []string{queue},
+		WorkerId:          "gw-poll-worker-2",
+		MaxJobs:           5,
+		AvailableCapacity: 5,
+		Queues:            []string{queue},
+		Types:             []string{"demo.echo"},
 	})
 	if err != nil {
 		t.Fatalf("second poll: %v", err)
@@ -243,9 +259,11 @@ func TestTenantQuotaViaGatewayPoll(t *testing.T) {
 	// 3. Tenant B is unaffected by tenant A's quota.
 	jobB := createTestJobForTenant(t, js, tenantB, queue, "demo.echo")
 	resp3, err := svc.Poll(ctx, &workerv1.PollRequest{
-		WorkerId: "gw-poll-worker-3",
-		MaxJobs:  5,
-		Queues:   []string{queue},
+		WorkerId:          "gw-poll-worker-3",
+		MaxJobs:           5,
+		AvailableCapacity: 5,
+		Queues:            []string{queue},
+		Types:             []string{"demo.echo"},
 	})
 	if err != nil {
 		t.Fatalf("third poll: %v", err)

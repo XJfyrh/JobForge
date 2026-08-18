@@ -332,7 +332,7 @@ func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, me
 	defer listener.Close()
 
 	// Create gRPC service and server.
-	service := gatewaygrpc.NewWorkerService(jobStore, listener, cfg.LeaseTTL, cfg.HeartbeatInterval, cfg.TenantMaxInflight, cfg.TenantQuotaPrefilter, logger, metrics)
+	service := gatewaygrpc.NewWorkerService(jobStore, listener, catalog, cfg.LeaseTTL, cfg.HeartbeatInterval, cfg.TenantMaxInflight, cfg.TenantQuotaPrefilter, logger, metrics)
 	server := gatewaygrpc.NewServer(service, logger)
 
 	// Periodically sample jobforge_workers_active so the gauge decays when
