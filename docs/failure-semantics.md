@@ -40,6 +40,10 @@ JobForge 保证 **at-least-once** 投递：任务在未进入终态前可再次�
 | AT-12 | Trace 串联 | 提交一个真实任务 | OTel span recorder | API/Gateway/Worker span 同一 trace | trace_id 一致 | `TestObservabilityAT12FullSpans` |
 | AT-13 | 循环故障注入（scale） | 100 轮启动 Worker 子进程；效果提交后实际 Kill/Wait | lease 过期 → Scheduler 回收 | 每轮全部任务重领并完成 | 非终态任务零静默丢失；恢复时间符合 NFR-003；无进程泄漏 | `TestScaleAT13WorkerKillRounds`（`-tags scale`） |
 | AT-14 | 万级幂等（scale） | 10,000 任务首次执行后省略 Complete，强制 lease 恢复并重投 | lease 过期 → 重投 → PostgreSQL 主键去重 | `demo.idempotent_effect` 按 job_id 持久幂等 | 效果表恰 10,000 行；10,000 次 dedup；重复效果 0 | `TestScaleAT14IdempotentTenThousand`（`-tags scale`） |
+| AT-28 | 未知任务类型提交 | type 不在部署目录 | API 在事务前查 TaskTypeCatalog | HTTP 400 + INVALID_ARGUMENT | job/attempt/outbox 零写入 | `TestAT28TaskTypeSubmissionContract` |
+| AT-29 | 非法 Worker 登记 | 空/重复/目录外能力覆盖 | Gateway 在 upsert 前校验 | gRPC INVALID_ARGUMENT + stable detail | workers 行不存在或保持旧值 | `TestAT29RegisterCapabilityValidation` |
+| AT-30 | Poll 能力越权/容量竞争 | 未登记、queue/type 越权或 8 路并发 Poll | workers 行锁 + 同事务 owner inflight | 拒绝越权；capacity 释放后继续领取 | 零越权领取；inflight 不超过登记值 | `TestAT30PollCapabilitiesAndConcurrentCapacity`、`TestAT30PollAndReregisterSerialize` |
+| AT-31 | Worker RPC 错误解释 | validation、stale lease、cancel、internal/deadline | 标准 status + DomainErrorDetail | Runtime 按 retryable 决策，旧端按 status 回退 | CANCEL_REQUESTED 为 FAILED_PRECONDITION；内部细节不泄露 | `TestAT31DomainErrorStatusMatrix`、`TestAT31LeaseAndCancelDomainDetails` |
 
 ## 恢复时间保证
 
@@ -85,16 +89,24 @@ fencing token 只拦截陈旧的**结果提交**，无法阻止陈旧 Worker 继
 
 - 默认 cadence 为 5s、Lease TTL 为 30s。Gateway 注册响应返回自身配置；Worker 未显式配置时采用建议值，显式本地值优先。
 - PostgreSQL 在一次 `UPDATE ... RETURNING` 中以同一个 `clock_timestamp()` 设置 `lease_until`、检测 cancelling 并返回 `cancel_requested_at`→signal elapsed；Gateway 不以本机 `time.Now()`估算该跨进程时延。
-- 心跳瞬时失败（`Unavailable` / `DeadlineExceeded` / `Unknown` 等）**不**停止续租：按指数退避（1s/2s/4s…上限 10s）持续重试。
+- 新 Gateway 返回 `DomainErrorDetail` 时，Runtime 优先使用其中的 `retryable`；只有 ADR-0002 明确的 `QUEUE_OVERLOADED` / `INTERNAL` 控制面错误可重试。连接旧 Gateway、没有 detail 时，继续以 `Unavailable` / `DeadlineExceeded` / `Unknown` / `ResourceExhausted` 为兼容回退，并按指数退避（1s/2s/4s…上限 10s）。
 - 租约截止时刻以 Gateway 返回的 `lease_until`（服务端时钟）为准，避免本地 TTL 估算的时钟漂移。
 - 仅当重试持续到 `lease_until` 仍无法续租时才放弃：取消执行上下文（让 Handler 收尾）并标记租约丢失，最小化双执行窗口。
-- 心跳被拒 `STALE_LEASE`（租约已被新 Worker 持有）时立即放弃，不做重试。
+- 带 detail 的永久心跳拒绝（包括 `STALE_LEASE`）立即放弃，不做重试；旧 Gateway 的 `FAILED_PRECONDITION` 保持同样行为。
 
 **租约丢失后的结果处理**：租约丢失后 Worker **丢弃**执行结果，不上报 Complete/Fail——陈旧 Worker 不得覆盖新租约状态，任务由 Scheduler 正常重投。
 
-**结果上报**：Complete/Fail RPC 对瞬时故障最多重试 3 次（退避 1s/2s）；Gateway 对同一租约的重复上报幂等吸收（`isIdempotentComplete` / `isIdempotentFail`）。`STALE_LEASE` 等永久性错误不重试。
+**结果上报**：Complete/Fail RPC 对 detail 标记为 retryable 的错误最多重试 3 次（退避 1s/2s）；旧 Gateway 使用标准 status 回退。Gateway 对同一租约的重复上报幂等吸收（`isIdempotentComplete` / `isIdempotentFail`）。`STALE_LEASE` 等永久性错误不重试。
 
 **语义边界**：上述机制缩小但不能消除双执行窗口（lease 过期即可能重投），at-least-once 交付保证与业务幂等要求不变。
+
+## 执行资格与容量故障语义（PRD v0.5，ADR-0010）
+
+- 未知 type 在 API 创建 Job、attempt 或 outbox 前返回 `INVALID_ARGUMENT`；目录合法性不依赖在线 Worker。
+- Register 的 worker ID、capacity、queues/types 或目录子集校验失败时不写入 workers；非法重新登记不会覆盖旧能力。
+- Poll 每次实际 Claim 前锁定 workers 行，验证 active 状态、登记子集和请求容量，随后以 jobs 中该 owner 的 `running+cancelling` 计算剩余 slot。能力检查、容量核算与 Claim 同事务，避免 Poll/重新登记 TOCTOU。
+- 未注册 Worker 返回 `NOT_FOUND`，能力越权返回 `FORBIDDEN`，容量字段越界返回 `INVALID_ARGUMENT`；都不领取任务。已用满登记容量是合法空结果，不进入 long-poll。
+- Worker RPC 失败携带恰一个 `DomainErrorDetail{code,retryable}`；未知实现错误归一为不泄露原因的 `INTERNAL`。该协议不认证 Worker 身份，Gateway 仍以可信网络为部署前提。
 
 ## 取消竞争规则
 
@@ -210,6 +222,9 @@ poison 记录只包含 source stream/entry、固定 consumer group、可解析�
 | `tests/integration/worker_test.go` | AT-11, goroutine 稳态 |
 | `tests/integration/observability_test.go` | AT-12 |
 | `tests/integration/job_store_test.go` | AT-01, Claim 并发, 幂等键, 状态转换 |
+| `tests/integration/task_type_contract_test.go` + `internal/api/http/job_handler_test.go` | AT-28：默认目录类型在 Worker 离线时可提交；未知 type 返回 400/INVALID_ARGUMENT 且 job/outbox 零写入；配置与 Registry fail-fast |
+| `tests/integration/worker_capability_contract_test.go` | AT-29/30：Register 全字段与目录子集、Poll queue/type/capacity、8 路并发 capacity=2、Poll/重新登记串行化、释放 slot 后继续领取 |
+| `tests/integration/grpc_error_contract_test.go` + `internal/gateway/grpc/errors_test.go` + `internal/worker/runtime_error_test.go` | AT-31：真实 PostgreSQL stale/cancel 状态、完整领域码映射、deadline detail、内部错误隐藏，以及 Runtime detail 优先/旧 Gateway status 回退 |
 | `tests/integration/outbox_test.go` | AT-15：发布失败重试、publisher 崩溃恢复（批量标记崩溃窗语义）、重复投递幂等、retention 边界；双 publisher 并发零重复 NOTIFY、僵尸领取回收（`TestOutboxConcurrentPublishersNoDuplicateNotify`、`TestOutboxStaleClaimReclaimed`） |
 | `tests/integration/durable_events_test.go` | AT-17（Redis stop/start AOF 重启恢复）、AT-18（XADD 后标记前崩溃窗重复 entry）、AT-20（双 consumer group 隔离与组内分摊）、NFR-303（60s broker 暂停恢复与任务事务不阻塞）；`JOBFORGE_TEST_REDIS_URL` 缺省时 skip |
 | `tests/integration/event_consumer_test.go` | AT-19（commit 后 ACK 前确定性退出、XAUTOCLAIM、inbox 单效果）、晚建 group backlog、poison 隔离/后续合法事件、消费指标与 traceparent 传播；Redis 缺省时 skip |

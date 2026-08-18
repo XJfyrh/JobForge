@@ -70,6 +70,7 @@
 | `jobforge_lease_expired_total` | Counter | queue |
 | `jobforge_workers_active` | Gauge | version, status |
 | `jobforge_tenant_throttled_total` | Counter | tenant, reason |
+| `jobforge_contract_rejections_total` | Counter | surface, reason |
 
 ### Outbox 发布指标（PRD v0.2 §8）
 
@@ -123,9 +124,22 @@ signal 指标只接受 Heartbeat 查询以同一 PostgreSQL `clock_timestamp()` 
 
 Handler 同时输出结构化 `job_id`、`effect_outcome` 与 duration，便于按单任务审计真实崩溃窗口；日志不记录 payload、数据库 URL 或凭据。job ID 只进入日志，不作为 metric label。`applied` 在持久效果提交后立即记录，即使进程随后在 Complete 前退出也保留证据；`deduplicated` 表示重投读到了既有 `result_ref`。
 
+### 执行契约拒绝指标（PRD v0.5 FR-907，ADR-0010）
+
+`jobforge_contract_rejections_total{surface,reason}` 只记录固定枚举，不把实际 type、queue、worker ID 或 job ID 放入标签：
+
+| surface | 可出现的 reason | 触发点 |
+|---|---|---|
+| `submit` | `unknown_type` | API 在 job/outbox 持久化前拒绝目录外 type |
+| `register` | `malformed_capability`、`unknown_type` | Worker 登记字段非法或类型不在目录 |
+| `poll` | `malformed_capability`、`unknown_type`、`capability_mismatch`、`unregistered_worker`、`capacity_exceeded` | Poll 本地字段校验或数据库同事务能力/容量核对 |
+| `grpc_interceptor` | `missing_deadline` | Worker RPC 未携带 deadline，handler 不执行 |
+
+API 与 Gateway 启动时记录 `catalog_size` 与 `catalog_sha256`。指纹基于排序目录，不受配置输入顺序影响，可在发布 smoke 中比较两进程配置；日志不输出目录原文、payload、DSN 或凭据。
+
 ### 标签约束
 
-高基数字段 `event_id`、`job_id`、`trace_id`、`worker_id` **不得**作为 metrics label（PRD 12.1 + code-standards）。
+高基数字段 `event_id`、`job_id`、`trace_id`、`worker_id` 以及用户提供的 type/queue **不得**作为契约拒绝 metrics label（PRD 12.1 + code-standards）。既有任务指标的受控 type/queue 维度不因本增量改变。
 
 ### Gauge 发射点
 

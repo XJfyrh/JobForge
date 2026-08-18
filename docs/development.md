@@ -32,7 +32,7 @@ jobforge/
 | 工具 | 版本 | 安装位置/来源 |
 |---|---:|---|
 | Go | 1.26.5 | 本机环境，仅作为首次验证记录 |
-| Python | 3.12.10 | 本机环境，仅作为首次验证记录 |
+| Python | 3.12.10；v0.5 门禁另验证 3.14.7 | 本机环境记录；检查工具版本由锁文件固定 |
 | golangci-lint | 2.12.2 | `.tools/bin`，官方 Windows amd64 发布包 |
 | Buf | 1.72.0 | `.tools/bin`，官方 Windows amd64 发布包 |
 | Ruff | 0.16.0 | `.venv`，由 `tools/requirements-lint.txt` 锁定 |
@@ -96,6 +96,27 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 ```
 
 以上账号密码仅用于本地开发与演示，与 `deploy/compose.yaml` 中的配置一致，不代表任何真实环境凭据。集成测试可通过 `JOBFORGE_TEST_DSN` 环境变量覆盖连接串；未设置时（如 Linux CI）会自动使用 testcontainers 启动临时 PostgreSQL。
+
+## 任务类型目录与 Worker 契约（PRD v0.5，ADR-0010）
+
+API 与 Gateway 都必须设置相同的 `JOBFORGE_TASK_TYPES`。值为逗号分隔静态 allowlist，默认及 Compose 显式值为：
+
+```text
+demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,pagewise.reindex
+```
+
+空目录、空项、重复项或不匹配 `^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$` 的名称会使进程启动失败。启动日志中的 `catalog_size` / `catalog_sha256` 应在 API 与 Gateway 间一致。新增类型可以先发布目录再上线 Worker；移除类型前必须先停止提交、查询并 drain 该类型全部非终态任务，再依次更新 Worker、Gateway 与 API，避免合法存量任务失去消费者。
+
+Register 要求非空 worker ID、正 capacity，以及非空无重复 queues/types；types 必须属于目录。Poll 的 queues/types 必须是登记子集，`max_jobs` 与 `available_capacity` 均在 1..registered capacity；服务端另以 `running+cancelling` 核算剩余 slot。Worker Proto v1 的失败状态附带 `DomainErrorDetail`，stock Runtime 优先读取 `retryable`，旧 Gateway status 回退仍受支持。该能力约束不是身份认证，Gateway 仍只能放在可信网络。
+
+Windows 下定向验证：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test -count=1 -run 'TestAT2(8|9)|TestAT30|TestAT31' ./tests/integration/
+.\.tools\bin\buf.exe lint
+.\.tools\bin\buf.exe breaking --against ".git#branch=main"
+```
 
 ## Demo 持久业务效果（PRD v0.4，ADR-0009）
 
@@ -201,6 +222,7 @@ jobforge ctl quota-reconcile [--repair]
 | `--api-key` | `JOBFORGE_API_KEY` | 无（必填） | list/get/cancel/retry |
 | `--output` | — | `table`（可选 `json`） | 全部 |
 | — | `JOBFORGE_DATABASE_URL` | `postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`（代码默认值） | outbox-status / workers-status |
+| — | `JOBFORGE_TASK_TYPES` | 六种内置 Demo/PageWise 类型 | API/Gateway 部署目录；两者必须同值 |
 | `--stale-after` | — | `3×JOBFORGE_LEASE_TTL` | workers-status |
 | `--repair` | — | `false` | quota-reconcile |
 | — | `JOBFORGE_TENANT_QUOTA_PREFILTER` | `true` | 服务配置：Claim 候选预筛开关（关闭仅损失公平性性能，硬上限不受影响，ADR-0007 §4） |
@@ -255,7 +277,7 @@ go test -race ./tests/integration/...
 
 ## Scale 可靠性套件（-tags scale）
 
-`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，PRD v0.4 FR-806）：AT-13 每轮启动真实 Worker helper 子进程，在持久效果行作为数据库屏障后调用 OS Kill 并 Wait，默认 100 轮零静默丢失；AT-14 让 10,000 个任务各发生一次重投，以 `demo_idempotent_effects` 主键验证表恰 10,000 行、零重复效果。NFR-306 另以真实 PostgreSQL 量化 5s heartbeat 相对 10s 基线的 job lease 写放大。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
+`tests/scale/` 以 PRD v0.1 NFR-001/002 字面规模验证可靠性（PRD v0.2 FR-601/602/603，PRD v0.4 FR-806，v0.5 NFR-504/505）：AT-13 每轮启动真实 Worker helper 子进程，在持久效果行作为数据库屏障后调用 OS Kill 并 Wait，默认 100 轮零静默丢失；AT-14 让 10,000 个任务各发生一次重投，以 `demo_idempotent_effects` 主键验证表恰 10,000 行、零重复效果。NFR-306 另以真实 PostgreSQL 量化 5s heartbeat 相对 10s 基线的 job lease 写放大；20k Claim 与多租户公平性守护执行契约改造不影响既有热路径。套件通过 build tag `scale` 与默认测试物理隔离：默认 `go test ./...` 与 CI 均不执行，默认套件时长不受影响（FR-603）。
 
 ```sh
 # 字面规模运行（需 PostgreSQL；Windows 先设 JOBFORGE_TEST_DSN，见上文）
@@ -287,9 +309,9 @@ go test -tags scale -count=1 ./tests/scale/
 ## 测试分层
 
 - 单元测试：状态转换、错误分类、退避、配额和 Handler 生命周期。
-- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、持久业务幂等、0018 up/down、outbox，以及 AT-02 真实 Worker 进程 Kill/Wait、AT-24 DB-clock 取消 SLO、默认/非默认 heartbeat/TTL 与 liveness 节流。
+- 数据库集成测试：使用真实 PostgreSQL 验证 claim、事务、租约、持久业务幂等、0018 up/down、outbox，以及 AT-02 真实 Worker 进程 Kill/Wait、AT-24 DB-clock 取消 SLO、AT-28～31 类型/能力/错误契约、默认/非默认 heartbeat/TTL 与 liveness 节流。
 - 事件消费集成测试：使用真实 PostgreSQL + Redis 验证 commit-before-ACK、XAUTOCLAIM 多页 cursor、inbox group binding/去重、瞬时 read/processor/ACK 恢复、deleted pending fail-fast、默认五次 poison 和晚建 group backlog；migration 0017 另在独立临时 0016 数据库上通过正式 Migrator 前滚。
-- 契约测试：验证 HTTP/gRPC 错误映射、deadline、重复提交和 Proto 兼容性。
+- 契约测试：验证 HTTP/gRPC 错误映射、每个 Worker 错误的稳定 detail、deadline、未知 type 零副作用、Register/Poll 子集与容量、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。
 - scale 可靠性测试（`-tags scale`）：100 轮故障注入、万级幂等和 NFR-306 heartbeat 写放大的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
 - 性能测试：固定环境后报告吞吐、延迟、CPU、heap 与 goroutine 稳态。

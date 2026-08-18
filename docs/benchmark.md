@@ -603,3 +603,72 @@ go test ./benchmarks/micro -run '^$' -bench '^BenchmarkClaim$' -benchmem -bencht
 20,000-job scale 定向基线：Promote p50/p95 20.8472/24.6098ms；Claim p50/p95 **103.7507/120.8718ms**。同参数 e2e 100 jobs/4 workers：Submit **301.50 jobs/sec**、Process **336.40 jobs/sec**、p50/p95/p99 **10.8192/15.1353/31.9063ms**、goroutine 2→2。
 
 v0.5 同时新增 `BenchmarkGatewayPollClaim` harness，覆盖经 Worker Register 与 Gateway Poll 的完整入口。实施前五轮为 6.713446、7.035100、8.348057、8.792114、9.571607ms/op，中位数 **8.348057ms/op**，7970～7971 B/op、112 allocs/op。实现前后均用相同 harness、数据库清理和五轮中位数比较；它用于隔离新增能力验证开销，不替代 20k/e2e 发布门禁。
+
+## v0.5 执行契约硬化收官
+
+> 测量日期：2026-08-18；功能收官代码 `main@b46a696`；Windows amd64、AMD Ryzen 7 7840HS、Go 1.26.5、PostgreSQL 16（`postgres:16-alpine`）、Docker Desktop；非 race 微基准。PR #27～#30 已按序 squash 合并。
+
+### 清洁 schema 五轮微基准
+
+先执行 `go test -count=1 -run '^$' ./tests/integration`，使用 integration TestMain 的正式 drop/migrate 流程重建 migrations 0001～0018；随后以实施前相同命令和顺序运行 Claim、Gateway Poll：
+
+| 轮次 | Claim ns/op | B/op | allocs/op | Gateway Poll ns/op | B/op | allocs/op |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 5,643,770 | 6,887 | 91 | 8,653,919 | 9,356 | 144 |
+| 2 | 6,558,761 | 6,887 | 91 | 9,046,946 | 9,357 | 144 |
+| 3 | 7,070,779 | 6,887 | 91 | 9,457,896 | 9,355 | 144 |
+| 4 | 7,932,793 | 6,888 | 91 | 9,580,683 | 9,356 | 144 |
+| 5 | 7,857,785 | 6,891 | 91 | 9,963,299 | 9,354 | 144 |
+| **中位数** | **7,070,779** | **6,887** | **91** | **9,457,896** | **9,356** | **144** |
+
+| 口径 | 实施前中位数 | 实施后中位数 | 变化 | 结论 |
+|---|---:|---:|---:|---|
+| Claim latency | 7.694718ms/op | 7.070779ms/op | **-8.1%** | PASS |
+| Gateway Register→Poll latency | 8.348057ms/op | 9.457896ms/op | **+13.3%** | PASS（<15%） |
+| Gateway B/op | 7,970～7,971 | 9,356 | 约 +17.4% | 观察项 |
+| Gateway allocs/op | 112 | 144 | **+28.6%** | 观察项；不属于延迟 PASS |
+
+Gateway 路径新增 workers 行锁、能力数组读取与 owner inflight 统计，分配上升与功能边界一致，但仍应在后续性能增量中剖析。不得为降低分配而绕过事务能力/容量约束。
+
+### 20,000-job、scale 与数据基数观察
+
+完整非 race scale PASS（267.876s）：
+
+| 口径 | 实施前 | v0.5 | 变化/结果 |
+|---|---:|---:|---|
+| 20k Claim p50 | 103.7507ms | 96.3484ms | -7.1%，PASS |
+| 20k Claim p95 | 120.8718ms | 107.9253ms | -10.7%，PASS |
+| Promote p50/p95 | 20.8472/24.6098ms | 26.3284/87.3794ms | 只报告；测试 PASS，p95 波动继续披露 |
+| NFR-302 | — | 2,141 events/sec；lag p95 142.767ms | floor/lag PASS |
+| AT-13 | — | 100×10 kill，recovery p95/max 17.1191/19.0968ms | PASS |
+| AT-14 | — | 10,000 dedup，0 重复效果 | PASS |
+
+完整字面规模 race-scale 也 PASS（278.501s）：20k Claim p50/p95 103.7111/119.0444ms；AT-13 p95/max 19.6355/27.5017ms；AT-14 10,000/10,000 dedup；Redis 2,046 events/sec、lag p95 178.683ms；无数据竞争。
+
+在上述两轮 scale 后、未清理 schema 的诊断运行中，Gateway Poll 五轮中位数先为 9.784539ms/op（相对清洁实施前 +17.2%），再次独立运行达到 11.223363ms/op（+34.4%）。该数据不满足实施前的清理条件，不能替代正式门禁，但暴露 `countWorkerInflight` 对 inflight jobs 基数敏感；生产高并发前应单独评审 `(lease_owner)` inflight partial index 或等价 schema 方案。v0.5 明确不临时启用未维护的 `workers.inflight`，也不通过放松 capacity 正确性掩盖此观察。
+
+### 同参数 e2e
+
+再次用 integration TestMain 重建 schema 后运行 `go run ./benchmarks/e2e -jobs=100 -workers=4`：
+
+| 指标 | 实施前 | v0.5 | 变化 | 结果 |
+|---|---:|---:|---:|---|
+| Submit throughput | 301.50 jobs/sec | 307.94 jobs/sec | +2.1% | PASS |
+| Process throughput | 336.40 jobs/sec | 395.09 jobs/sec | +17.5% | PASS |
+| p50 | 10.8192ms | 8.8385ms | -18.3% | PASS |
+| p95 | 15.1353ms | 14.4352ms | -4.6% | PASS |
+| p99 | 31.9063ms | 31.6526ms | -0.8% | PASS |
+| goroutine | 2→2 | 2→2 | 0 | PASS |
+
+历史 W4 Claim `4.171091ms/op` 绝对门禁仍为**未通过**。v0.5 只通过相对实施前的同环境门禁，不重置或覆盖该历史债务。
+
+复现命令：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test -count=1 -run '^$' ./tests/integration
+go test ./benchmarks/micro -run '^$' `
+  -bench '^(BenchmarkClaim|BenchmarkGatewayPollClaim)$' `
+  -benchmem -benchtime=10s -count=5
+go run ./benchmarks/e2e -jobs=100 -workers=4
+```

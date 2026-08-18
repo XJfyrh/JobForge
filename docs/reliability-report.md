@@ -1,7 +1,7 @@
 # JobForge 可靠性报告（Scale 套件与真实进程崩溃）
 
-> 对应需求：PRD v0.4 FR-801～807、AT-02R/13R/14R；PRD v0.2 FR-601/602/603（AT-13/AT-14）；v0.1 NFR-001/NFR-002。
-> 首次报告：2026-08-04（W11）；本次更新：2026-08-17（v0.4）
+> 对应需求：PRD v0.5 FR-901～907、NFR-501～506、AT-28～31；PRD v0.4 FR-801～807、AT-02R/13R/14R；PRD v0.2 FR-601/602/603；v0.1 NFR-001/NFR-002。
+> 首次报告：2026-08-04（W11）；本次更新：2026-08-18（v0.5）
 > 套件位置：`tests/scale/`（`//go:build scale` 隔离，FR-603：默认 CI 不执行）
 
 ## 结论
@@ -11,8 +11,9 @@
 | AT-02R / NFR-401 | 效果提交后真实 Kill/Wait Worker A，Worker B 重领 | **PASS**：succeeded；token 1→2；持久效果 1 行；applied=1、deduplicated=1；连续 10 次与 race 均通过 |
 | AT-13 / NFR-001 | 100 轮真实 Worker OS 进程 kill（每轮 10 任务） | **PASS**：每轮数据库屏障后 Kill + Wait；非终态任务零静默丢失 |
 | AT-14 / NFR-002 | 10,000 个含重复投递的持久幂等任务 | **PASS**：效果表 10,000 行、dedup 10,000、重复业务效果 0 |
-| NFR-204 / NFR-003 | 每轮恢复时间 ≤ lease_ttl + scan_interval + 2s | **PASS**：完整套件 max 22.9993ms ≪ 35s 上界 |
-| NFR-202 | scale 套件 race 抽样 | **PASS**：AT-13 全量真实 kill + AT-14（1,000 任务）`-race` 无数据竞争（38.179s） |
+| AT-28～31 / NFR-501～503 | type 提交、Register/Poll 能力容量、稳定 gRPC detail | **PASS**：未知/越权零状态副作用；capacity=2 的 8 路 Poll 最大 inflight=2；CANCEL_REQUESTED=FAILED_PRECONDITION |
+| NFR-204 / NFR-003 | 每轮恢复时间 ≤ lease_ttl + scan_interval + 2s | **PASS**：v0.5 完整套件 max 19.0968ms ≪ 35s 上界 |
+| NFR-202 / NFR-504 | 默认 race + 完整字面规模 race-scale | **PASS**：integration 131.792s；AT-13 全量 kill + AT-14 10,000 任务 race-scale 278.501s，无数据竞争 |
 
 ## 环境
 
@@ -35,9 +36,9 @@
 | 指标 | 值 |
 |---|---|
 | 静默丢失任务数 | **0** |
-| 恢复耗时 min / p50 / p95 / max | 13.7569ms / 16.2563ms / 20.5892ms / 22.9993ms |
+| 恢复耗时 min / p50 / p95 / max | 13.9029ms / 15.3433ms / 17.1191ms / 19.0968ms |
 | NFR-003 上界（30s lease_ttl + 3s scan_interval + 2s） | 35s（全部满足） |
-| AT-13 用例耗时 | 24.14s |
+| AT-13 用例耗时 | 22.97s |
 
 注：测试通过强制过期 + 直接触发回收测量恢复耗时，等价于 scan_interval 趋近 0 的最坏注入场景；生产语义上界仍为 lease_ttl + scan_interval + 2s（默认 33s）。
 
@@ -53,7 +54,7 @@
 | `demo_idempotent_effects` 行数 | **10,000** |
 | 重复业务副作用计数 | **0** |
 | 未达 succeeded 的任务数 | 0 |
-| 完整 scale 中 AT-14 用例耗时 | 106.92s |
+| 完整 scale 中 AT-14 用例耗时 | 53.77s |
 
 ## v0.4 完整回归与性能证据（2026-08-17）
 
@@ -73,6 +74,27 @@
 机械门禁全部 PASS：`go build ./...`、`go vet ./...`、golangci-lint（0 issues）、Ruff check/format、mypy、SQLFluff 历史 baseline + 全 migrations、Buf lint 与 Buf breaking。0018 的独立 schema 测试完成 0017→0018→down→0018，并验证无 jobs 外键。
 
 性能收官：Claim 五轮中位数从实现前 7.233324ms/op 降至 6.679887ms/op（改善 7.65%）；同参数 e2e 为 Submit 313.36 jobs/sec、Process 354.49 jobs/sec、p95 13.4332ms、goroutine 2→2，相对 M4 同机结果分别 -8.4%、-6.9%、+4.6%，均在 15% 当前回归门槛内。历史 W4 单操作 Claim 4.171091ms/op 的绝对门禁仍未通过，不以 v0.4 当前基线覆盖，详见 [benchmark.md](benchmark.md)。
+
+## v0.5 执行契约与完整回归（2026-08-18）
+
+功能收官代码为 `main@b46a696`（PR #27～#30 依次 squash 合并）。本增量不新增 migration 0019，0001～0018 无改写；不改变八状态状态机、lease/fencing、at-least-once 或 Worker 可信网络边界。
+
+| 项 | 实际结果 | 结论 |
+|---|---|---|
+| AT-28 | 默认目录类型离线可入队；未知 type 400/INVALID_ARGUMENT；job/outbox 零写入 | PASS |
+| AT-29 | Register 空/重复/目录外能力全部拒绝；非法覆盖保持旧 workers 行 | PASS |
+| AT-30 | 未登记/越权 Poll 零领取；capacity=2、8 路并发最大 inflight=2；Poll/重新登记无 TOCTOU | PASS |
+| AT-31 | 完整领域码矩阵与真实 stale/cancel 状态均有一个 detail；CANCEL_REQUESTED=FAILED_PRECONDITION；Runtime 兼容旧 Gateway | PASS |
+| 默认 race | `go test -race -count=1 -timeout 30m ./...`，真实 PostgreSQL + AOF Redis；integration 131.792s | PASS |
+| 完整 scale | 267.876s；AT-13 p95/max 17.1191/19.0968ms；AT-14 10,000/10,000/0；Redis 2,141 events/sec、lag p95 142.767ms | PASS |
+| 完整 race-scale | 278.501s；AT-13 p95/max 19.6355/27.5017ms；AT-14 10,000/10,000/0；Redis 2,046 events/sec、lag p95 178.683ms | PASS，无数据竞争 |
+| 20k Claim | 非 race p50/p95 96.3484/107.9253ms；race 103.7111/119.0444ms | 相对实施前非 race 103.7507/120.8718ms 无回退，PASS |
+| 多租户公平性 | 非 race B/C/D p95 23.5455/23.1465/22.7118ms，max≤31.0348ms；race p95≤24.8008ms，max≤32.5112ms | PASS |
+| NFR-306 | 10s/5s cadence 300/600 updates，2.00×；非 race p95 2.4724/2.5113ms | PASS（延迟只报告） |
+
+机械门禁本轮实际 PASS：Go build/vet/golangci-lint、Ruff check/format、mypy、SQLFluff 冻结历史 baseline + 全 migrations、Buf lint/breaking。`go build` 在受限 Windows 用户 module stat cache 上输出写入警告但退出码为 0；Python 首次因旧 `.venv` 指向缺失的 3.12 而未执行，随后以 Python 3.14.7 在 Git 忽略的隔离 venv 中按锁文件实际通过，二者未被混记。
+
+性能门禁与数据基数风险见 [benchmark.md](benchmark.md) 的 v0.5 章节：清洁 schema 下 Claim 改善 8.1%，Gateway Register→Poll 延迟 +13.3%（<15%），e2e 与 20k Claim 均不回退；Gateway allocations 112→144 以及脏库 owner inflight 扫描超过 15% 的诊断结果单独披露，后续优化不得绕过容量正确性。Promote p95 的本机波动与历史 W4 Claim 绝对失败也继续保持非 PASS/只报告状态。
 
 ## 耐久事件恢复（PRD v0.3 M2，ADR-0006）
 
@@ -151,9 +173,9 @@ W4/W11 同参数端到端复测 **PASS**：100 jobs/4 workers，Submit 342.21 jo
 
 AT-25 仍为可裁剪 P1/M5 skeleton，未在 M4 中实现，也不计作 M4 skip。M4 不宣称 ControlStream 的 ≤1s SLO；Heartbeat 永久保留为取消兜底。
 
-## Race 抽样（NFR-202）
+## Race 证据（NFR-202 / NFR-504）
 
-v0.4 执行 `go test -tags scale -race`：AT-13 以 100 轮真实 Worker 进程 kill 字面规模运行，AT-14 以 `JOBFORGE_SCALE_IDEMPOTENT_JOBS=1000` 抽样运行。结果：`ok`，无数据竞争（38.179s）；AT-13 recovery p95/max 22.3441/24.7763ms，AT-14 1,000/1,000 dedup、零重复效果。
+v0.4 历史抽样：AT-13 100 轮、AT-14 1,000 任务 `-race` PASS（38.179s）。v0.5 在同机提升为完整字面规模：AT-13 100 轮、AT-14 10,000 任务以及 NFR-302、20k Claim、公平性全部在 `-race` 下 PASS（278.501s）；未发现数据竞争。
 
 ## 复现命令
 
@@ -166,11 +188,8 @@ $env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?s
 $env:JOBFORGE_TEST_REDIS_URL = "redis://localhost:6379/0"
 go test -tags scale -count=1 -v -timeout 60m ./tests/scale/
 
-# 3. race 抽样（AT-14 降采样到 1,000 任务）
-$env:JOBFORGE_SCALE_IDEMPOTENT_JOBS = "1000"
-go test -tags scale -race -count=1 -timeout 60m `
-  -run '^(TestScaleAT13WorkerKillRounds|TestScaleAT14IdempotentTenThousand)$' `
-  ./tests/scale/
+# 3. 完整字面规模 race-scale（v0.5 收官口径）
+go test -tags scale -race -count=1 -v -timeout 60m ./tests/scale/
 ```
 
 规模参数（均可通过环境变量降采样，见 `docs/development.md`）：

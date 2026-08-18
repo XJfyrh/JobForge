@@ -33,7 +33,7 @@ curl -s -X POST http://localhost:8080/v1/jobs \
   -d '{"queue":"default","type":"demo.echo","payload":{"message":"hello jobforge"}}' | python -m json.tool
 ```
 
-提交一个 PageWise 索引重建任务（Agent 真实负载演示）：
+提交一个 PageWise 索引重建任务（当前为模拟 Agent Handler 骨架，不连接真实 PageWise 服务）：
 
 ```sh
 curl -s -X POST http://localhost:8080/v1/jobs \
@@ -48,6 +48,17 @@ curl -s -X POST http://localhost:8080/v1/jobs \
 curl -s http://localhost:8080/v1/jobs/{job_id} \
   -H "X-API-Key: dev-api-key" | python -m json.tool
 ```
+
+验证部署任务类型目录：Worker 是否在线不影响合法 type 入队；未知 type 必须在 job/outbox 写入前拒绝。
+
+```sh
+curl -s -X POST http://localhost:8080/v1/jobs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-api-key" \
+  -d '{"queue":"default","type":"demo.unknown","payload":{}}' | python -m json.tool
+```
+
+预期 HTTP 400：`{"error":{"code":"INVALID_ARGUMENT","message":"task type is not registered"}}`。API 与 Gateway 启动日志中的 `catalog_size=6` 和 `catalog_sha256` 应一致；Compose 已为二者显式设置相同 `JOBFORGE_TASK_TYPES`。
 
 ## 步骤 3：持久效果提交后 Kill Worker
 
@@ -114,6 +125,13 @@ go test -run TestFaultAT03StaleWorkerLateComplete ./tests/integration/ -v -count
 ```
 
 预期输出包含：`STALE_LEASE` 错误被正确返回，新状态不被覆盖。
+
+v0.5 还要求 gRPC status 带稳定领域 detail，且取消先提交时 `CANCEL_REQUESTED` 映射为 `FAILED_PRECONDITION`。真实 PostgreSQL 契约验证：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+go test -run TestAT31LeaseAndCancelDomainDetails ./tests/integration/ -v -count=1
+```
 
 ## 步骤 6：提交幂等与执行幂等
 
@@ -192,11 +210,14 @@ go tool pprof http://localhost:6060/debug/pprof/profile?seconds=5
 cat docs/benchmark.md
 ```
 
-关键数据：
-- Submit: 313.36 jobs/sec（v0.4 收官，100 jobs / 4 workers）
-- Process: 354.49 jobs/sec
-- p50: 10.37ms / p95: 13.43ms / p99: 31.88ms
-- Claim 五轮中位数：6.680ms/op，相对 v0.4 实现前改善 7.65%；历史 W4 绝对门禁仍保留未通过披露
+关键数据（v0.5 收官）：
+
+- Submit: 307.94 jobs/sec（100 jobs / 4 workers）
+- Process: 395.09 jobs/sec
+- p50: 8.84ms / p95: 14.44ms / p99: 31.65ms
+- Claim 五轮中位数：7.071ms/op，相对 v0.5 实施前改善 8.1%
+- Gateway Register→Poll 五轮中位数：9.458ms/op，相对实施前 +13.3%，低于 15% 门禁；144 allocs/op 作为后续优化观察项
+- 历史 W4 Claim 4.171ms/op 绝对门禁仍保留未通过披露
 
 ## 清理
 

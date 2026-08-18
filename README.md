@@ -37,28 +37,33 @@ flowchart LR
 - **5 秒级取消信号 SLO**：Gateway 默认向未显式覆盖的 Worker 下发 5s heartbeat 建议值；每次续租在 PostgreSQL 同一时钟采样中同时检测 cancelling，DB-clock `cancel_requested_at`→CANCEL signal p95 门禁为 ≤6s。Heartbeat 始终是可靠兜底，取消竞争、lease 与 fencing 语义不变（ADR-0008）。
 - **崩溃自愈**：租约过期由 Scheduler 自动回收重投；Scheduler 自身通过 PostgreSQL advisory lock 单活，leader 故障秒级切换。
 - **持久业务幂等证据**：`demo.idempotent_effect` 以 `job_id` 在独立效果表中原子 `INSERT ... ON CONFLICT`；Worker 进程被实际终止后，另一进程重领仍返回首次 `result_ref`。这只证明同一 PostgreSQL 原子效果，不把 at-least-once 升级为 exactly-once（ADR-0009）。
+- **部署级任务类型目录**：API 与 Gateway 共用 `JOBFORGE_TASK_TYPES` 静态 allowlist；未知 type 在 job/outbox 入库前返回 `INVALID_ARGUMENT`，合法性不依赖 Worker 当前是否在线（ADR-0010）。
+- **Worker 执行资格硬约束**：Register 只能声明目录内类型；Poll 的 queue/type 必须是已登记子集，登记能力、当前 `running+cancelling` 与 Claim 在同一事务核对，并发 Poll 不会突破 Worker capacity。
+- **稳定 Worker 错误契约**：所有 Worker RPC 失败附带兼容新增的 `DomainErrorDetail{code,retryable}`；Runtime 优先按稳定领域码决定重试，旧 Gateway 仍按标准 gRPC status 回退。`CANCEL_REQUESTED` 映射为 `FAILED_PRECONDITION`。
 - **Outbox 可靠事件**：任务终态与事件写入同一事务，Outbox Publisher 以 at-least-once 语义对外发布，发布故障不影响任务状态；外部 transport 可选 `redis_streams` 耐久交付（envelope v1 + Redis Streams，默认 `notify` 兼容非耐久，ADR-0006）。
 - **事务性事件消费**：参考 Consumer 将 inbox schema 显式绑定到单一逻辑 group，使用 `consumer_inbox` 与业务效果同事务提交，提交后才 ACK；`XAUTOCLAIM` 恢复 pending，永久坏事件有界重试后进入不含 payload 的 poison stream。group/事件元数据冲突或已被裁剪的 pending payload 会 fail closed，不会静默 ACK。该协议只去重 PostgreSQL 同事务效果，不承诺端到端 exactly-once。
 - **租户隔离与背压**：租户级 inflight 硬配额由派生计数表在 Claim 事务内原子预留（running+cancelling 口径，并发下零超配，满额租户不阻塞他人，ADR-0007）+ 队列深度背压，单租户打满不影响他人。
 - **全链路可观测**：OpenTelemetry Trace 贯穿 API → Gateway → Worker，并覆盖 `gateway.cancel_signal`；Prometheus 分段报告取消信号和 Handler 停止延迟；pprof 在线诊断。
-- **故障注入全覆盖**：AT-01～AT-24 已实现范围以真实 PostgreSQL/Redis + `go test -race` 验证；AT-02 会实际 Kill/Wait Worker 子进程，AT-13 在 scale 套件执行 100 轮真实进程终止。AT-25 ControlStream 仍是未实现的可裁剪 P1。
+- **故障与契约证据**：AT-01～AT-24、AT-28～31 已实现范围以真实 PostgreSQL/Redis + `go test -race` 验证；AT-02 会实际 Kill/Wait Worker 子进程，AT-13 在 scale 套件执行 100 轮真实进程终止。AT-25 ControlStream 仍是未实现的可裁剪 P1。
 - **只运行预注册 Handler**：无任意代码执行入口，安全边界清晰。
 
 ## 量化证据
 
 | 指标 | 数值 | 说明 |
 |---|---|---|
-| Submit 吞吐 | **313.36 jobs/sec** | v0.4 收官，100 jobs × 4 workers |
-| Process 吞吐 | **354.49 jobs/sec** | v0.4 收官，100 jobs × 4 workers |
-| 控制面延迟 p50 / p95 / p99 | **10.37 / 13.43 / 31.88 ms** | v0.4 同参数 e2e；相对 M4 p95 +4.6% |
-| Claim 微基准 | **6.680 ms/op** | v0.4 五轮中位数；相对实现前 7.233ms 改善 7.65%；历史 W4 绝对门禁仍单列未通过 |
+| Submit 吞吐 | **307.94 jobs/sec** | v0.5 收官，100 jobs × 4 workers；相对实施前 +2.1% |
+| Process 吞吐 | **395.09 jobs/sec** | v0.5 收官，100 jobs × 4 workers；相对实施前 +17.5% |
+| 控制面延迟 p50 / p95 / p99 | **8.84 / 14.44 / 31.65 ms** | v0.5 同参数 e2e；p95 相对实施前改善 4.6% |
+| Claim 微基准 | **7.071 ms/op** | v0.5 清洁 schema 后五轮中位数；相对实施前 7.695ms 改善 8.1%；历史 W4 绝对门禁仍单列未通过 |
+| Gateway Poll 微基准 | **9.458 ms/op** | Register→Poll 完整入口五轮中位数；相对实施前 8.348ms +13.3%，低于 15% 门禁 |
+| 20,000-job Claim p50 / p95 | **96.35 / 107.93 ms** | v0.5 完整 scale；相对实施前均改善 |
 | 任务崩溃恢复 | **≤ 33 s** | lease TTL 30s + 扫描周期 + 余量，集成测试验证 |
 | Scheduler 故障接管 | **≤ 12 s** | advisory lock 切换，双实例故障测试验证 |
 | Heartbeat 取消信号 p95 | **4.281 s（20 样本）** | 默认 5s、随机相位、PostgreSQL DB-clock；门禁 ≤6s，见[可靠性报告](docs/reliability-report.md) |
 | Goroutine 稳态 | 差异 **0**（容差 ±5） | 万级任务后无泄漏 |
-| 故障注入场景 | **AT-01 ～ AT-24 已实现范围全通过** | 真实 PostgreSQL/Redis + race；AT-25 未实现且不计通过 |
+| 故障与契约场景 | **AT-01～24、AT-28～31 已实现范围全通过** | 真实 PostgreSQL/Redis + race；AT-25 未实现且不计通过 |
 | 规模化可靠性（AT-13/14） | **100 轮真实 Worker 进程 kill 零丢失 / 10,000 持久效果重投零重复** | `-tags scale` 套件，见[可靠性报告](docs/reliability-report.md) |
-| 性能回归门禁 | 吞吐 -15% / p95 -20% 即失败 | 基线已冻结，持续守护 |
+| v0.5 性能回归门禁 | 同环境 Claim / 20k Claim / e2e 恶化 **<15%** | 当前门禁通过；脏库 Gateway 扫描与历史 W4 绝对失败另行披露 |
 
 完整数据与复现命令见[性能基线报告](docs/benchmark.md)。从旧版本升级时请先阅读 [5s Heartbeat 发布与滚动升级说明](docs/runbooks/heartbeat-5s-rollout.md)。
 
@@ -95,7 +100,7 @@ docker compose -f deploy/compose.yaml --profile durable-events up -d --build
 
 | 文档 | 用途 |
 |---|---|
-| [产品需求文档](docs/product/JobForge_PRD_v0.4.md) | v0.4 持久业务幂等、真实进程崩溃证据与验收标准 |
+| [产品需求文档](docs/product/JobForge_PRD_v0.5.md) | v0.5 任务类型目录、Worker 能力与稳定 gRPC 错误契约 |
 | [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
