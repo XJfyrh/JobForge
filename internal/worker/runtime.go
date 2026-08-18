@@ -462,9 +462,10 @@ func (r *Runtime) heartbeatLoop(ctx context.Context, job *ClaimedJob, execCancel
 			continue
 		}
 
-		// STALE_LEASE (or another precondition failure) means the lease is
-		// already gone: abandon execution immediately.
-		if status.Code(err) == codes.FailedPrecondition {
+		// Stable details take precedence: any permanent heartbeat rejection
+		// means this process must stop using the lease. Old Gateways without
+		// details retain the FailedPrecondition compatibility fallback.
+		if isPermanentHeartbeatRejection(err) {
 			r.logger.Warn("heartbeat rejected, lease lost", "job_id", job.ID, "error", err)
 			r.abandonLease(job, execCancel, leaseLost)
 			return
@@ -598,12 +599,35 @@ func (r *Runtime) retryRPC(ctx context.Context, rpcName string, fn func(attemptC
 // retry. FailedPrecondition (STALE_LEASE / terminal state), NotFound and
 // InvalidArgument are permanent and must not be retried.
 func isTransientRPCError(err error) bool {
+	if detail, ok := workerDomainErrorDetail(err); ok {
+		return detail.Retryable
+	}
 	switch status.Code(err) {
 	case codes.Unavailable, codes.DeadlineExceeded, codes.Unknown, codes.ResourceExhausted:
 		return true
 	default:
 		return false
 	}
+}
+
+func isPermanentHeartbeatRejection(err error) bool {
+	if detail, ok := workerDomainErrorDetail(err); ok {
+		return !detail.Retryable
+	}
+	return status.Code(err) == codes.FailedPrecondition
+}
+
+func workerDomainErrorDetail(err error) (*workerv1.DomainErrorDetail, bool) {
+	grpcStatus, ok := status.FromError(err)
+	if !ok {
+		return nil, false
+	}
+	for _, detail := range grpcStatus.Details() {
+		if domainDetail, ok := detail.(*workerv1.DomainErrorDetail); ok {
+			return domainDetail, true
+		}
+	}
+	return nil, false
 }
 
 // withJobTraceParent attaches the job's W3C traceparent to outgoing gRPC

@@ -43,6 +43,17 @@ service WorkerService {
   rpc Fail(FailRequest) returns (FailResponse);
 }
 
+// DomainErrorDetail carries the stable JobForge error classification attached
+// to every unsuccessful Worker RPC. Clients should prefer this detail over
+// inferring behavior from the transport status alone.
+message DomainErrorDetail {
+  // Stable machine-readable code from ADR-0002 (for example STALE_LEASE).
+  string code = 1;
+
+  // Whether retrying this control-plane operation is safe after backoff.
+  bool retryable = 2;
+}
+
 // RegisterRequest announces Worker identity and capabilities.
 message RegisterRequest {
   // Unique Worker instance identifier (UUID). Assigned by the Worker process.
