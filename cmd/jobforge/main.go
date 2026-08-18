@@ -135,6 +135,15 @@ func main() {
 }
 
 func runAPI(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
+	catalog, err := domain.NewTaskTypeCatalog(cfg.TaskTypes)
+	if err != nil {
+		return fmt.Errorf("create task type catalog: %w", err)
+	}
+	logger.Info("task type catalog loaded",
+		"catalog_size", catalog.Size(),
+		"catalog_sha256", catalog.Fingerprint(),
+	)
+
 	// Create PostgreSQL connection pool.
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
@@ -165,7 +174,7 @@ func runAPI(ctx context.Context, logger *slog.Logger, cfg *config.Config, metric
 
 	// Create store and router.
 	jobStore := postgres.NewJobStore(pool)
-	router := apihttp.NewRouter(jobStore, jobStore, cfg, logger, metrics)
+	router := apihttp.NewRouter(jobStore, jobStore, catalog, cfg, logger, metrics)
 
 	// Create HTTP server.
 	srv := &http.Server{
@@ -280,6 +289,15 @@ func runScheduler(ctx context.Context, logger *slog.Logger, cfg *config.Config, 
 }
 
 func runGateway(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
+	catalog, err := domain.NewTaskTypeCatalog(cfg.TaskTypes)
+	if err != nil {
+		return fmt.Errorf("create task type catalog: %w", err)
+	}
+	logger.Info("task type catalog loaded",
+		"catalog_size", catalog.Size(),
+		"catalog_sha256", catalog.Fingerprint(),
+	)
+
 	// Create PostgreSQL connection pool.
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {

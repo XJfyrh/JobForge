@@ -190,6 +190,15 @@ func setupStore(t *testing.T) *postgres.JobStore {
 	return postgres.NewJobStore(testEnv.pool)
 }
 
+func testTaskTypeCatalog(t *testing.T) *domain.TaskTypeCatalog {
+	t.Helper()
+	catalog, err := domain.NewTaskTypeCatalog(domain.DefaultTaskTypeNames())
+	if err != nil {
+		t.Fatalf("create task type catalog: %v", err)
+	}
+	return catalog
+}
+
 // claimJobs unwraps the store.ClaimResult for tests that only need the
 // claimed jobs. Tests asserting quota internals call Claim directly.
 func claimJobs(ctx context.Context, s store.JobStore, params store.ClaimParams) ([]*domain.Job, error) {

@@ -121,7 +121,7 @@ func TestGetJobReturnsAttemptTimeline(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	handler := apihttp.NewJobHandler(js, js, slog.Default(), nil)
+	handler := apihttp.NewJobHandler(js, js, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/jobs/"+job.ID, nil)
 	rctx := chi.NewRouteContext()

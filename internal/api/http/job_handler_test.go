@@ -24,9 +24,18 @@ func (f *fakePinger) Ping(_ context.Context) error {
 	return f.err
 }
 
+func testTaskTypeCatalog(t *testing.T) *domain.TaskTypeCatalog {
+	t.Helper()
+	catalog, err := domain.NewTaskTypeCatalog(domain.DefaultTaskTypeNames())
+	if err != nil {
+		t.Fatalf("create task type catalog: %v", err)
+	}
+	return catalog
+}
+
 func TestHealthReady_Success(t *testing.T) {
 	pinger := &fakePinger{err: nil}
-	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
+	handler := NewJobHandler(nil, pinger, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -48,7 +57,7 @@ func TestHealthReady_Success(t *testing.T) {
 
 func TestHealthReady_PingFails_Returns503(t *testing.T) {
 	pinger := &fakePinger{err: errors.New("connection refused")}
-	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
+	handler := NewJobHandler(nil, pinger, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -70,7 +79,7 @@ func TestHealthReady_PingFails_Returns503(t *testing.T) {
 
 func TestHealthReady_ResponseStructureCompatible(t *testing.T) {
 	pinger := &fakePinger{err: nil}
-	handler := NewJobHandler(nil, pinger, slog.Default(), nil)
+	handler := NewJobHandler(nil, pinger, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	rec := httptest.NewRecorder()
@@ -97,7 +106,7 @@ func TestHealthReady_ResponseStructureCompatible(t *testing.T) {
 }
 
 func TestHealthLive_Unchanged(t *testing.T) {
-	handler := NewJobHandler(nil, &fakePinger{}, slog.Default(), nil)
+	handler := NewJobHandler(nil, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 	rec := httptest.NewRecorder()
@@ -149,7 +158,7 @@ func newSubmitRequest(t *testing.T) *http.Request {
 // threshold configured via SetQueueLimits (JOBFORGE_QUEUE_HARD_LIMIT).
 func TestCreateJob_QueueHardLimit_Returns429(t *testing.T) {
 	fs := &backpressureStore{depth: 100}
-	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+	handler := NewJobHandler(fs, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
 	handler.SetQueueLimits(5, 100)
 
 	rec := httptest.NewRecorder()
@@ -179,7 +188,7 @@ func TestCreateJob_QueueHardLimit_Returns429(t *testing.T) {
 // configured thresholds are accepted normally.
 func TestCreateJob_BelowLimits_Accepted(t *testing.T) {
 	fs := &backpressureStore{depth: 9}
-	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+	handler := NewJobHandler(fs, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
 	handler.SetQueueLimits(5, 100)
 
 	rec := httptest.NewRecorder()
@@ -190,6 +199,27 @@ func TestCreateJob_BelowLimits_Accepted(t *testing.T) {
 	}
 	if !fs.enqueued {
 		t.Error("expected the job to be enqueued below the hard limit")
+	}
+}
+
+func TestCreateJob_UnknownTypeRejectedBeforeStoreAccess(t *testing.T) {
+	fs := &backpressureStore{depth: 1}
+	handler := NewJobHandler(fs, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
+
+	body := `{"queue":"bp-queue","type":"demo.unknown","payload":{"k":"v"}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/jobs", bytes.NewBufferString(body))
+	ctx := context.WithValue(req.Context(), TenantIDKey, "bp-tenant")
+	rec := httptest.NewRecorder()
+	handler.CreateJob(rec, req.WithContext(ctx))
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec.Body.String() != "{\"error\":{\"code\":\"INVALID_ARGUMENT\",\"message\":\"task type is not registered\"}}\n" {
+		t.Fatalf("unexpected error response: %s", rec.Body.String())
+	}
+	if fs.enqueued {
+		t.Fatal("unknown task type must not reach the store")
 	}
 }
 
@@ -229,7 +259,7 @@ func TestCreateJob_IdempotentResubmit_ReturnsExistingJob(t *testing.T) {
 			return true, nil
 		},
 	}
-	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+	handler := NewJobHandler(fs, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	rec := httptest.NewRecorder()
 	body := `{"queue":"idem-queue","type":"demo.echo","payload":{"k":"v"},"idempotency_key":"k1"}`
@@ -261,7 +291,7 @@ func TestCreateJob_IdempotencyConflict_Returns409(t *testing.T) {
 				"idempotency key conflict: existing job orig-job-id was submitted with different parameters")
 		},
 	}
-	handler := NewJobHandler(fs, &fakePinger{}, slog.Default(), nil)
+	handler := NewJobHandler(fs, &fakePinger{}, testTaskTypeCatalog(t), slog.Default(), nil)
 
 	rec := httptest.NewRecorder()
 	body := `{"queue":"idem-queue","type":"demo.echo","payload":{"k":"other"},"idempotency_key":"k1"}`

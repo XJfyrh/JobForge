@@ -34,7 +34,7 @@ func setupCtlServer(t *testing.T) (*httptest.Server, *ctl.Client, *postgres.JobS
 		QueueSoftLimit: 10000,
 		QueueHardLimit: 50000,
 	}
-	router := apihttp.NewRouter(js, js, cfg, testLogger(t), nil)
+	router := apihttp.NewRouter(js, js, testTaskTypeCatalog(t), cfg, testLogger(t), nil)
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 

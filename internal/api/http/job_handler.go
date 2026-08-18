@@ -30,6 +30,7 @@ type Pinger interface {
 type JobHandler struct {
 	store   store.JobStore
 	pinger  Pinger
+	catalog *domain.TaskTypeCatalog
 	logger  *slog.Logger
 	metrics *observability.Metrics
 
@@ -39,10 +40,20 @@ type JobHandler struct {
 }
 
 // NewJobHandler creates a new job handler.
-func NewJobHandler(s store.JobStore, p Pinger, logger *slog.Logger, metrics *observability.Metrics) *JobHandler {
+func NewJobHandler(
+	s store.JobStore,
+	p Pinger,
+	catalog *domain.TaskTypeCatalog,
+	logger *slog.Logger,
+	metrics *observability.Metrics,
+) *JobHandler {
+	if catalog == nil {
+		panic("http: task type catalog is required")
+	}
 	return &JobHandler{
 		store:          s,
 		pinger:         p,
+		catalog:        catalog,
 		logger:         logger,
 		metrics:        metrics,
 		queueSoftLimit: 10000, // default, can be overridden
@@ -100,6 +111,14 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Type == "" {
 		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "type is required")
+		return
+	}
+	if !h.catalog.Contains(req.Type) {
+		h.metrics.RecordContractRejection(ctx,
+			observability.ContractSurfaceSubmit,
+			observability.ContractReasonUnknownType,
+		)
+		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "task type is not registered")
 		return
 	}
 	if len(req.Payload) > domain.MaxPayloadSize {
@@ -371,6 +390,14 @@ func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
 	if origJob.State != domain.StateDead && origJob.State != domain.StateCancelled {
 		h.writeDomainError(w, domain.NewError(domain.CodeInvalidTransition, domain.ErrInvalidTransition,
 			"only dead or cancelled jobs can be retried, current state: %s", origJob.State))
+		return
+	}
+	if !h.catalog.Contains(origJob.Type) {
+		h.metrics.RecordContractRejection(r.Context(),
+			observability.ContractSurfaceSubmit,
+			observability.ContractReasonUnknownType,
+		)
+		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "task type is not registered")
 		return
 	}
 

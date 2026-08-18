@@ -9,7 +9,11 @@ package worker
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"time"
+
+	"github.com/xjfyrh/jobforge/internal/domain"
 )
 
 // ClaimedJob represents a job lease granted by the Gateway via Poll RPC.
@@ -59,6 +63,12 @@ func NewRegistry() *Registry {
 // Register adds a Handler for the given task type. Panics on duplicate
 // registration to catch configuration errors at startup.
 func (r *Registry) Register(taskType string, h Handler) {
+	if err := domain.ValidateTaskTypeName(taskType); err != nil {
+		panic(fmt.Sprintf("worker: invalid handler task type: %v", err))
+	}
+	if h == nil || isNilHandler(h) {
+		panic(fmt.Sprintf("worker: nil handler registration for type %q", taskType))
+	}
 	if _, exists := r.handlers[taskType]; exists {
 		panic(fmt.Sprintf("worker: duplicate handler registration for type %q", taskType))
 	}
@@ -76,7 +86,18 @@ func (r *Registry) Types() []string {
 	for t := range r.handlers {
 		types = append(types, t)
 	}
+	sort.Strings(types)
 	return types
+}
+
+func isNilHandler(h Handler) bool {
+	value := reflect.ValueOf(h)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 // RetryableError wraps an error to indicate it is transient and the job

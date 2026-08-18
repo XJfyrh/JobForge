@@ -6,6 +6,7 @@ import (
 
 	promclient "github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -105,6 +106,58 @@ type Metrics struct {
 	// outcomes (PRD v0.4 FR-807). Labels: outcome (applied, deduplicated,
 	// failed).
 	DemoIdempotentEffectsTotal metric.Int64Counter
+
+	// ContractRejectionsTotal counts execution-contract validation failures
+	// using only the fixed surface/reason enums from PRD v0.5 FR-907.
+	ContractRejectionsTotal metric.Int64Counter
+}
+
+// ContractSurface is a fixed low-cardinality validation boundary.
+type ContractSurface string
+
+const (
+	// ContractSurfaceSubmit identifies HTTP job submission and retry.
+	ContractSurfaceSubmit ContractSurface = "submit"
+	// ContractSurfaceRegister identifies the Worker Register RPC.
+	ContractSurfaceRegister ContractSurface = "register"
+	// ContractSurfacePoll identifies the Worker Poll RPC.
+	ContractSurfacePoll ContractSurface = "poll"
+	// ContractSurfaceGRPCInterceptor identifies server interceptor rejection.
+	ContractSurfaceGRPCInterceptor ContractSurface = "grpc_interceptor"
+)
+
+// ContractRejectionReason is a fixed low-cardinality rejection category.
+type ContractRejectionReason string
+
+const (
+	// ContractReasonUnknownType rejects a type outside the deployment catalog.
+	ContractReasonUnknownType ContractRejectionReason = "unknown_type"
+	// ContractReasonMalformedCapability rejects an invalid capability shape.
+	ContractReasonMalformedCapability ContractRejectionReason = "malformed_capability"
+	// ContractReasonCapabilityMismatch rejects capability escalation.
+	ContractReasonCapabilityMismatch ContractRejectionReason = "capability_mismatch"
+	// ContractReasonUnregisteredWorker rejects an unknown Worker identity.
+	ContractReasonUnregisteredWorker ContractRejectionReason = "unregistered_worker"
+	// ContractReasonCapacityExceeded rejects a capacity declaration overflow.
+	ContractReasonCapacityExceeded ContractRejectionReason = "capacity_exceeded"
+	// ContractReasonMissingDeadline rejects a Worker RPC without a deadline.
+	ContractReasonMissingDeadline ContractRejectionReason = "missing_deadline"
+)
+
+// RecordContractRejection records one validation failure without including
+// user-controlled identifiers in metric labels.
+func (m *Metrics) RecordContractRejection(
+	ctx context.Context,
+	surface ContractSurface,
+	reason ContractRejectionReason,
+) {
+	if m == nil || m.ContractRejectionsTotal == nil {
+		return
+	}
+	m.ContractRejectionsTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("surface", string(surface)),
+		attribute.String("reason", string(reason)),
+	))
 }
 
 // SetupMetrics initializes the global MeterProvider with a Prometheus
@@ -265,6 +318,12 @@ func SetupMetrics(_ context.Context, reg promclient.Registerer) (*Metrics, func(
 		metric.WithDescription("Total number of persistent demo idempotent effect outcomes"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("create demo_idempotent_effects_total: %w", err)
+	}
+
+	m.ContractRejectionsTotal, err = meter.Int64Counter("jobforge_contract_rejections_total",
+		metric.WithDescription("Total number of execution contract validation rejections"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create contract_rejections_total: %w", err)
 	}
 
 	return m, mp.Shutdown, nil

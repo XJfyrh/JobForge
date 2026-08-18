@@ -26,6 +26,10 @@ type Config struct {
 	// GRPCAddr is the listen address for the gRPC Worker Gateway.
 	GRPCAddr string
 
+	// TaskTypes is the validated, sorted deployment allowlist shared by the
+	// API and Gateway (PRD v0.5 FR-901, ADR-0010).
+	TaskTypes []string
+
 	// LeaseTTL is the duration of a job lease before it expires.
 	LeaseTTL time.Duration
 
@@ -136,10 +140,15 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	taskTypes, err := taskTypesFromEnv()
+	if err != nil {
+		return nil, err
+	}
 	cfg := &Config{
 		DatabaseURL:               getEnv("JOBFORGE_DATABASE_URL", "postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable"),
 		HTTPAddr:                  getEnv("JOBFORGE_HTTP_ADDR", ":8080"),
 		GRPCAddr:                  getEnv("JOBFORGE_GRPC_ADDR", ":9090"),
+		TaskTypes:                 taskTypes,
 		LeaseTTL:                  getDurationEnv("JOBFORGE_LEASE_TTL", domain.DefaultLeaseTTL),
 		HeartbeatInterval:         heartbeatInterval,
 		HeartbeatIntervalExplicit: heartbeatExplicit,
@@ -266,6 +275,23 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func taskTypesFromEnv() ([]string, error) {
+	raw, configured := os.LookupEnv("JOBFORGE_TASK_TYPES")
+	if !configured {
+		return domain.DefaultTaskTypeNames(), nil
+	}
+
+	parts := strings.Split(raw, ",")
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	catalog, err := domain.NewTaskTypeCatalog(parts)
+	if err != nil {
+		return nil, fmt.Errorf("invalid JOBFORGE_TASK_TYPES: %w", err)
+	}
+	return catalog.Types(), nil
 }
 
 func heartbeatIntervalFromEnv() (time.Duration, bool, error) {
