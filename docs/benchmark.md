@@ -582,3 +582,24 @@ go test ./benchmarks/micro -run '^$' -bench '^BenchmarkClaim$' -benchmem -bencht
 | goroutine | 2→2 | 2→2 | 0 | PASS |
 
 该 e2e 是与 M4 相同参数、同机环境的单次收官样本，不伪装为多轮中位数；硬门禁同时由五轮 Claim 与完整 20k scale 结果交叉验证。v0.4 没有修改 Enqueue/Claim/Complete SQL 路径，所有当前回归指标均在 15% 内。
+
+## v0.5 实施前执行契约基线
+
+> 测量日期：2026-08-18；commit `881ddad`；Windows amd64、AMD Ryzen 7 7840HS、Go 1.26.5、PostgreSQL 16（`postgres:16-alpine`）、Docker Desktop；非 race。
+
+`BenchmarkClaim` 以 v0.4 相同命令运行五轮：
+
+| 轮次 | ns/op | B/op | allocs/op |
+|---:|---:|---:|---:|
+| 1 | 6,156,913 | 6,887 | 91 |
+| 2 | 8,966,757 | 6,889 | 91 |
+| 3 | 7,492,314 | 6,887 | 91 |
+| 4 | 7,694,718 | 6,887 | 91 |
+| 5 | 9,038,335 | 6,886 | 91 |
+| **中位数** | **7,694,718** | **6,887** | **91** |
+
+同一数据库中的历史行会在五轮间累积，因此只以相同环境和清理条件的前后中位数判断 v0.5 回归，不覆盖 W4 `4.171091ms/op` 的历史绝对失败。
+
+20,000-job scale 定向基线：Promote p50/p95 20.8472/24.6098ms；Claim p50/p95 **103.7507/120.8718ms**。同参数 e2e 100 jobs/4 workers：Submit **301.50 jobs/sec**、Process **336.40 jobs/sec**、p50/p95/p99 **10.8192/15.1353/31.9063ms**、goroutine 2→2。
+
+v0.5 同时新增 `BenchmarkGatewayPollClaim` harness，覆盖经 Worker Register 与 Gateway Poll 的完整入口。实施前五轮为 6.713446、7.035100、8.348057、8.792114、9.571607ms/op，中位数 **8.348057ms/op**，7970～7971 B/op、112 allocs/op。实现前后均用相同 harness、数据库清理和五轮中位数比较；它用于隔离新增能力验证开销，不替代 20k/e2e 发布门禁。
