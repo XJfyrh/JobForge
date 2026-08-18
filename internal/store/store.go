@@ -104,6 +104,46 @@ type ClaimParams struct {
 	QuotaPrefilter bool
 }
 
+// WorkerClaimParams binds a Gateway claim request to the Worker's persisted
+// registration. The PostgreSQL implementation validates these fields while
+// holding the workers row lock before it calls the normal claim algorithm.
+type WorkerClaimParams struct {
+	ClaimParams
+
+	// AvailableCapacity is the caller's current free-slot declaration. It is
+	// independently capped by both the registered capacity and the jobs table.
+	AvailableCapacity int
+}
+
+// WorkerClaimRejectionReason identifies a persisted Worker-contract failure.
+type WorkerClaimRejectionReason string
+
+const (
+	// WorkerClaimUnregistered means no workers row exists for the identity.
+	WorkerClaimUnregistered WorkerClaimRejectionReason = "unregistered_worker"
+	// WorkerClaimCapabilityMismatch means queue/type/status exceeded the row.
+	WorkerClaimCapabilityMismatch WorkerClaimRejectionReason = "capability_mismatch"
+	// WorkerClaimCapacityExceeded means a requested batch exceeded registration.
+	WorkerClaimCapacityExceeded WorkerClaimRejectionReason = "capacity_exceeded"
+)
+
+// WorkerClaimError carries a metric-safe rejection category while unwrapping
+// to the stable domain error used by the transport mapping.
+type WorkerClaimError struct {
+	Reason WorkerClaimRejectionReason
+	Err    error
+}
+
+// Error implements error.
+func (e *WorkerClaimError) Error() string {
+	return e.Err.Error()
+}
+
+// Unwrap exposes the stable domain error to errors.As.
+func (e *WorkerClaimError) Unwrap() error {
+	return e.Err
+}
+
 // ClaimResult carries the outcome of a claim operation.
 type ClaimResult struct {
 	// Jobs are the successfully claimed jobs.
@@ -119,6 +159,11 @@ type ClaimResult struct {
 	// tests assert the hard cap held inside every claim transaction (AT-21);
 	// 0 when no quota reservation ran.
 	MaxObservedInflight int
+
+	// WorkerCapacityExhausted is true when the registered Worker already owns
+	// its maximum running+cancelling leases. Gateway Poll must return
+	// immediately instead of entering long-poll in this case.
+	WorkerCapacityExhausted bool
 }
 
 // OutboxEvent represents one row of the outbox_events table. Events are

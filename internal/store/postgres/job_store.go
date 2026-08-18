@@ -238,11 +238,26 @@ func (s *JobStore) claimOnce(ctx context.Context, params store.ClaimParams) (*st
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	result, retriable, err := claimInTx(ctx, tx, params)
+	if err != nil || retriable {
+		return result, retriable, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, false, fmt.Errorf("commit claim tx: %w", err)
+	}
+	return result, false, nil
+}
+
+// claimInTx executes the existing Claim state transition using a caller-owned
+// transaction. Gateway claims use this hook after locking and validating the
+// registered Worker in the same transaction (ADR-0010 §3).
+func claimInTx(ctx context.Context, tx pgx.Tx, params store.ClaimParams) (*store.ClaimResult, bool, error) {
 	// Select ready jobs with row-level locking. Queues are claimed in
 	// declaration order (see claimSelect). With an active quota and enabled
 	// pre-filter, claimSelectQuota additionally excludes full tenants before
 	// the LIMIT window so other tenants' candidates backfill it (FR-725).
 	var rows pgx.Rows
+	var err error
 	if params.TenantMaxInflight > 0 && params.QuotaPrefilter {
 		rows, err = tx.Query(ctx, claimSelectQuota, params.Queues, params.Types, params.MaxJobs, params.TenantMaxInflight)
 	} else {
@@ -376,10 +391,6 @@ func (s *JobStore) claimOnce(ctx context.Context, params store.ClaimParams) (*st
 		if inflight > maxObservedInflight {
 			maxObservedInflight = inflight
 		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, false, fmt.Errorf("commit claim tx: %w", err)
 	}
 
 	return &store.ClaimResult{

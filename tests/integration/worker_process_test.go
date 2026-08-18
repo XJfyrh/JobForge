@@ -221,7 +221,7 @@ func startTestWorkerGateway(t *testing.T, leaseTTL time.Duration) string {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	service := gatewaygrpc.NewWorkerService(
-		setupStore(t), stubPollWaiter{}, leaseTTL, 200*time.Millisecond,
+		setupStore(t), stubPollWaiter{}, testTaskTypeCatalog(t), leaseTTL, 200*time.Millisecond,
 		0, true, logger, nil,
 	)
 	server := grpc.NewServer()

@@ -291,7 +291,7 @@ func startFaultGateway(t *testing.T, leaseTTL time.Duration) (string, func(bool)
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, leaseTTL, 5*time.Second, 0, true, logger, nil)
+	service := gatewaygrpc.NewWorkerService(s, stubPollWaiter{}, testTaskTypeCatalog(t, "demo.blip", "demo.lost"), leaseTTL, 5*time.Second, 0, true, logger, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor))
 	workerv1.RegisterWorkerServiceServer(server, service)
 

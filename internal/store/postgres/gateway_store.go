@@ -2,8 +2,11 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/store"
@@ -24,6 +27,20 @@ on conflict (worker_id) do update set
     session_id = excluded.session_id,
     last_heartbeat_at = now(),
     status = 'active'
+`
+
+const lockWorkerCapabilities = `
+select supported_types, queues, capacity, status
+from workers
+where worker_id = $1
+for update
+`
+
+const countWorkerInflight = `
+select count(*)
+from jobs
+where lease_owner = $1
+  and state in ('running', 'cancelling')
 `
 
 const getJobState = `
@@ -82,6 +99,138 @@ func (s *JobStore) RegisterWorker(ctx context.Context, req *workerv1.RegisterReq
 		return fmt.Errorf("register worker %s: %w", req.WorkerId, err)
 	}
 	return nil
+}
+
+// ClaimForWorker locks one registered Worker, validates the requested
+// queue/type/capacity subset, derives remaining capacity from jobs, and runs
+// Claim in the same transaction (PRD v0.5 FR-904/905, ADR-0010 §3).
+func (s *JobStore) ClaimForWorker(ctx context.Context, params store.WorkerClaimParams) (*store.ClaimResult, error) {
+	const maxQuotaAttempts = 3
+	for attempt := 0; ; attempt++ {
+		result, retriable, err := s.claimForWorkerOnce(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+		if !retriable || attempt+1 >= maxQuotaAttempts {
+			return result, nil
+		}
+	}
+}
+
+func (s *JobStore) claimForWorkerOnce(
+	ctx context.Context,
+	params store.WorkerClaimParams,
+) (*store.ClaimResult, bool, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, false, fmt.Errorf("begin worker claim tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var registeredTypes, registeredQueues []string
+	var registeredCapacity int
+	var workerStatus string
+	err = tx.QueryRow(ctx, lockWorkerCapabilities, params.WorkerID).Scan(
+		&registeredTypes,
+		&registeredQueues,
+		&registeredCapacity,
+		&workerStatus,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, newWorkerClaimError(
+			store.WorkerClaimUnregistered,
+			domain.CodeNotFound,
+			domain.ErrNotFound,
+			"worker is not registered",
+		)
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("lock worker capabilities: %w", err)
+	}
+	if workerStatus != "active" {
+		return nil, false, newWorkerClaimError(
+			store.WorkerClaimCapabilityMismatch,
+			domain.CodeInvalidTransition,
+			domain.ErrInvalidTransition,
+			"worker is not active",
+		)
+	}
+	if !isNonEmptySubset(params.Queues, registeredQueues) ||
+		!isNonEmptySubset(params.Types, registeredTypes) {
+		return nil, false, newWorkerClaimError(
+			store.WorkerClaimCapabilityMismatch,
+			domain.CodeForbidden,
+			domain.ErrForbidden,
+			"poll capabilities exceed worker registration",
+		)
+	}
+	if params.MaxJobs < 1 || params.AvailableCapacity < 1 ||
+		params.MaxJobs > registeredCapacity || params.AvailableCapacity > registeredCapacity {
+		return nil, false, newWorkerClaimError(
+			store.WorkerClaimCapacityExceeded,
+			domain.CodeInvalidArgument,
+			domain.ErrInvalidArgument,
+			"poll capacity exceeds worker registration",
+		)
+	}
+
+	var inflight int
+	if err := tx.QueryRow(ctx, countWorkerInflight, params.WorkerID).Scan(&inflight); err != nil {
+		return nil, false, fmt.Errorf("count worker inflight: %w", err)
+	}
+	serverAvailable := registeredCapacity - inflight
+	if serverAvailable <= 0 {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, false, fmt.Errorf("commit worker capacity check: %w", err)
+		}
+		return &store.ClaimResult{WorkerCapacityExhausted: true}, false, nil
+	}
+
+	params.MaxJobs = min(params.MaxJobs, params.AvailableCapacity, serverAvailable)
+	result, retriable, err := claimInTx(ctx, tx, params.ClaimParams)
+	if err != nil || retriable {
+		return result, retriable, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, false, fmt.Errorf("commit worker claim tx: %w", err)
+	}
+	return result, false, nil
+}
+
+func isNonEmptySubset(requested, registered []string) bool {
+	if len(requested) == 0 {
+		return false
+	}
+	allowed := make(map[string]struct{}, len(registered))
+	for _, value := range registered {
+		allowed[value] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(requested))
+	for _, value := range requested {
+		if value == "" {
+			return false
+		}
+		if _, duplicate := seen[value]; duplicate {
+			return false
+		}
+		seen[value] = struct{}{}
+		if _, ok := allowed[value]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func newWorkerClaimError(
+	reason store.WorkerClaimRejectionReason,
+	code domain.ErrorCode,
+	sentinel error,
+	message string,
+) *store.WorkerClaimError {
+	return &store.WorkerClaimError{
+		Reason: reason,
+		Err:    domain.NewError(code, sentinel, "%s", message),
+	}
 }
 
 // GetJobState returns the current state of a job.
