@@ -9,13 +9,21 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/xjfyrh/jobforge/internal/config"
+	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
 
 // NewRouter creates the HTTP router with all middleware and routes configured.
-func NewRouter(jobStore store.JobStore, pinger Pinger, cfg *config.Config, logger *slog.Logger, metrics *observability.Metrics) http.Handler {
-	handler := NewJobHandler(jobStore, pinger, logger, metrics)
+func NewRouter(
+	jobStore store.JobStore,
+	pinger Pinger,
+	catalog *domain.TaskTypeCatalog,
+	cfg *config.Config,
+	logger *slog.Logger,
+	metrics *observability.Metrics,
+) http.Handler {
+	handler := NewJobHandler(jobStore, pinger, catalog, logger, metrics)
 	// Apply configured queue backpressure thresholds (FR-303).
 	handler.SetQueueLimits(cfg.QueueSoftLimit, cfg.QueueHardLimit)
 

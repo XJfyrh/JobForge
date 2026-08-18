@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,48 @@ func clearConsumerEnvironment(t *testing.T) {
 		"JOBFORGE_REDIS_STREAM_KEY",
 	} {
 		t.Setenv(key, "")
+	}
+}
+
+func TestTaskTypeCatalogConfiguration(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		t.Setenv("JOBFORGE_TASK_TYPES", "demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,pagewise.reindex")
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("load config: %v", err)
+		}
+		want := []string{"demo.echo", "demo.fail", "demo.http", "demo.idempotent_effect", "demo.sleep", "pagewise.reindex"}
+		if !slices.Equal(cfg.TaskTypes, want) {
+			t.Fatalf("task types = %v, want %v", cfg.TaskTypes, want)
+		}
+	})
+
+	t.Run("trims entries and sorts", func(t *testing.T) {
+		t.Setenv("JOBFORGE_TASK_TYPES", " pagewise.reindex , demo.echo ")
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("load config: %v", err)
+		}
+		if !slices.Equal(cfg.TaskTypes, []string{"demo.echo", "pagewise.reindex"}) {
+			t.Fatalf("task types = %v", cfg.TaskTypes)
+		}
+	})
+}
+
+func TestTaskTypeCatalogConfigurationRejectsInvalidInput(t *testing.T) {
+	for _, value := range []string{
+		"",
+		"demo.echo,",
+		"demo.echo,,demo.fail",
+		"demo.echo,demo.echo",
+		"demo echo",
+	} {
+		t.Run(strings.ReplaceAll(value, ",", "_"), func(t *testing.T) {
+			t.Setenv("JOBFORGE_TASK_TYPES", value)
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), "JOBFORGE_TASK_TYPES") {
+				t.Fatalf("expected invalid task type catalog, got %v", err)
+			}
+		})
 	}
 }
 
