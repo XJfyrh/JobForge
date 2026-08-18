@@ -2,10 +2,11 @@
 
 > 文档版本：v0.5<br>
 > 文档状态：定稿（2026-08-18）<br>
-> 实施状态：待实现<br>
+> 实施状态：已实现并完成 M4 验收（2026-08-18）<br>
 > 创建/确认日期：2026-08-18<br>
 > 基线版本：[PRD v0.4](JobForge_PRD_v0.4.md)<br>
 > 代码基线：`881ddad`（main，migrations 0001～0018）<br>
+> 功能收官代码：`b46a696`（PR #27～#30 已按序 squash 合入 main；migration 仍为 0001～0018）<br>
 > 前置决策：[ADR-0010](../adr/0010-task-type-catalog-and-worker-capability-binding.md)<br>
 > 继承决策：[ADR-0002](../adr/0002-error-classification.md)<br>
 
@@ -176,4 +177,45 @@ Register 在 upsert 前完成全部字段和目录子集校验。Poll 每次实�
 
 ## 15. 实施与验收结果
 
-待 M4 收官后填写。未运行或缺少依赖的检查不得标为 PASS。
+2026-08-18 在 `main@b46a696`、Windows amd64、AMD Ryzen 7 7840HS、Go 1.26.5、PostgreSQL 16、Redis 7 AOF 与 Docker Desktop 上完成验收。PR #27～#30 依次交付文档/ADR、静态目录、Worker 能力原子绑定和稳定 gRPC details；每个 PR 均以 `main` 为 base、四项强制 CI 通过后 squash 合并。最终证据文档由后续独立 PR 提交。
+
+### 15.1 功能与契约
+
+| 验收项 | 实际证据 | 结果 |
+|---|---|---|
+| FR-901/902、AT-28 | 默认六类型可在 Worker 离线时提交；未知 type 返回 400/INVALID_ARGUMENT；真实 PostgreSQL 查询确认 job/outbox 零写入；非法/空/重复目录 fail fast | PASS |
+| FR-903、AT-29 | Register 的 worker ID、正 capacity、queues/types 完整性与目录子集均在 upsert 前验证；非法覆盖保持旧 workers 行 | PASS |
+| FR-904/905、AT-30 | 未登记/越权 Poll 零领取；8 路并发、capacity=2 时 `running+cancelling` 最大值为 2；释放后继续领取；Poll/重新登记由 workers 行锁串行 | PASS |
+| FR-906、AT-31 | Proto 兼容新增 `DomainErrorDetail`；领域码矩阵与真实 stale/cancel 状态均有恰一个 detail；`CANCEL_REQUESTED` 为 `FAILED_PRECONDITION`；Runtime detail 优先且保留旧 status 回退 | PASS |
+| FR-907、NFR-506 | 契约拒绝指标只使用固定 surface/reason；启动日志只记录目录 size/hash；敏感输入不作标签 | PASS |
+| migration/依赖 | 0001～0018 无改写，未新增 0019；SQLFluff 历史基线仍为 3 项且全 migrations 通过；未新增第三方 Go 依赖 | PASS |
+
+### 15.2 回归与规模可靠性
+
+- `go test -race -count=1 -timeout 30m ./...` 在真实 PostgreSQL 与 AOF Redis 下 PASS，integration 包 131.792s；AT-01～24、AT-28～31 与 Redis 故障路径无回退、无数据竞争。
+- 完整 `go test -tags scale -count=1 -v -timeout 60m ./tests/scale/` PASS（267.876s）：AT-13 100×10 真实 Worker kill 零静默丢失，恢复 p95/max 17.1191/19.0968ms；AT-14 10,000 行、10,000 dedup、零重复效果；NFR-302 为 2,141 events/sec、publish lag p95 142.767ms。
+- 完整字面规模 `go test -tags scale -race -count=1 -v -timeout 60m ./tests/scale/` 亦 PASS（278.501s），不是降采样：AT-13 恢复 p95/max 19.6355/27.5017ms，AT-14 10,000/10,000 dedup、零重复效果，未发现数据竞争。
+
+### 15.3 性能门禁
+
+实施后先通过 integration TestMain 的正式 drop/migrate 流程重建 0001～0018 schema，再按实施前相同顺序运行五轮 Claim 与 Gateway Poll：
+
+| 口径 | 实施前 | 实施后 | 变化 | 结果 |
+|---|---:|---:|---:|---|
+| `BenchmarkClaim` 中位数 | 7.694718ms/op | 7.070779ms/op | -8.1%（改善） | PASS |
+| Gateway Register→Poll 中位数 | 8.348057ms/op | 9.457896ms/op | +13.3% | PASS（<15%） |
+| Gateway Poll allocations | 112 allocs/op | 144 allocs/op | +28.6% | 观察项；不冒充延迟 PASS，进入后续优化债务 |
+| 20k Claim p50/p95 | 103.7507/120.8718ms | 96.3484/107.9253ms | -7.1%/-10.7% | PASS |
+| e2e Submit/Process | 301.50/336.40 jobs/sec | 307.94/395.09 jobs/sec | +2.1%/+17.5% | PASS |
+| e2e p50/p95/p99 | 10.8192/15.1353/31.9063ms | 8.8385/14.4352/31.6526ms | 均改善 | PASS |
+| goroutine | 2→2 | 2→2 | 0 | PASS |
+
+在连续 scale 后未清理 schema 的诊断运行中，Gateway Poll 中位数曾为 9.784539ms/op（+17.2%），随后独立脏库运行达到 11.223363ms/op（+34.4%）。原因边界是 owner inflight 统计会随 inflight 表规模增加扫描成本；它不能与清洁条件的实施前基线直接比较，但说明该查询对数据库基数敏感。v0.5 按相同清理条件的发布门禁通过，且 20k Claim/e2e 不回退；后续若要优化该观察项，必须单独评审索引/migration，不能改用未维护的 `workers.inflight` 或放松容量正确性。
+
+同轮 Promote p50/p95 为 26.3284/87.3794ms（race 为 24.2230/85.6024ms），p95 高于实施前单轮 24.6098ms。Promote 不在 v0.5 改动路径或 NFR-505 门禁内，且结构/延迟测试本身 PASS，但该环境波动继续单列披露。历史 W4 Claim `4.171091ms/op` 绝对门禁仍为**未通过**，不被本增量相对基线覆盖。
+
+### 15.4 机械门禁与环境限制
+
+本轮实际通过：`go build ./...`（退出码 0；受限 Windows 用户 module stat cache 写入产生警告）、`go vet ./...`、golangci-lint（0 issues）、Ruff check/format、mypy、SQLFluff 历史 baseline + 全 migrations、Buf lint 与 Buf breaking。原仓库 `.venv` 指向已不存在的 Python 3.12，首次 Python 命令未执行；随后在被 Git 忽略的 `.tmp/venv-v05` 中以 Python 3.14.7 按 `tools/requirements-lint.txt` 锁定版本重建环境并实际通过全部 Python/SQL 检查，未把最初环境错误记为 PASS。
+
+因此 FR-901～907、NFR-501～506 与 AT-28～31 均达到本 PRD 的最小验收标准。非目标仍为空白：Worker 身份认证/mTLS、ControlStream/AT-25、动态目录、真实 PageWise 集成和 Complete/Fail 完整标签均未被本增量宣称完成。

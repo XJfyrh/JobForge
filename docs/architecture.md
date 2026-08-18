@@ -31,9 +31,9 @@ flowchart LR
 
 | 组件 | 职责 | 不负责 |
 |---|---|---|
-| API Server | 提交、查询、取消、人工重试；API key 鉴权；参数校验；队列背压 | 执行业务任务 |
+| API Server | 提交、查询、取消、人工重试；API key 鉴权；部署任务类型目录校验；队列背压 | 执行业务任务 |
 | Scheduler | scheduled/retry_wait → ready 推进；过期 lease 回收；advisory lock + 领导权租约（epoch fencing，ADR-0005）单活 | 存储业务结果 |
-| Worker Gateway | gRPC Worker 会话管理；Poll/Heartbeat/Complete/Fail 事务；fencing 验证 | 运行用户 Handler |
+| Worker Gateway | gRPC Worker 会话管理；Register/Poll 能力与容量约束；Heartbeat/Complete/Fail 事务；fencing 与稳定领域错误 | 运行用户 Handler |
 | Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出；默认 Demo wiring 注入小容量业务效果连接池 | 决定任务最终状态；核心 Runtime 不直接读写 PostgreSQL |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
 | Outbox Publisher | 轮询发布 outbox_events（at-least-once，可选 notify/Redis Streams）；进度追踪与 retention 清理 | 改写任务核心状态 |
@@ -47,10 +47,11 @@ flowchart LR
 
 ```text
 1. Client → POST /v1/jobs → API Server
-2. API Server → INSERT jobs (state=ready/scheduled) → PostgreSQL
-3. API Server → NOTIFY jobforge_events → PostgreSQL
+2. API Server → 用部署 TaskTypeCatalog 验证 type；未知 type 在事务前拒绝
+3. API Server → INSERT jobs + outbox (state=ready/scheduled)，提交后 NOTIFY jobforge_events → PostgreSQL
 4. Scheduler → 扫描 scheduled/retry_wait 到期 → UPDATE state=ready
-5. Worker → Poll RPC → Gateway → SELECT FOR UPDATE SKIP LOCKED → PostgreSQL
+5. Worker → Register/Poll RPC → Gateway；锁 workers 行，核对登记 queue/type/capacity
+   并统计 owner inflight 后，在同一事务 SELECT FOR UPDATE SKIP LOCKED → PostgreSQL
 6. Gateway → 返回 ClaimedJob (lease + fencing token) → Worker
 7. Worker → 执行 Handler → 外部副作用；`demo.idempotent_effect` 以 job_id
    原子写 `demo_idempotent_effects`，重复投递返回首次 result_ref
@@ -73,6 +74,25 @@ Gateway 的 `RegisterResponse.heartbeat_interval` 来自 `JOBFORGE_HEARTBEAT_INT
 ```
 
 表没有到 jobs 的外键，也不参与任务状态、lease、fencing、outbox 或调度事务；它模拟独立业务效果存储。幂等范围仅为同一 job ID，人工 retry 克隆的新 job ID 不共享效果。`post_effect_delay_ms`（0～60,000）只在首次提交后等待，用于在测试/演示中稳定制造“效果已提交、Complete 未发送”窗口，并响应 context cancellation。PostgreSQL 错误为 retryable；无内存回退。跨系统副作用仍须目标系统接受业务 idempotency key，本设计不提供分布式 exactly-once。
+
+### 任务类型目录与 Worker 执行资格（PRD v0.5，ADR-0010）
+
+`TaskTypeCatalog` 是进程启动时冻结的部署 allowlist。API 与 Gateway 从同一 `JOBFORGE_TASK_TYPES` 语义构造目录，Compose 显式注入相同值；两者启动日志输出 `catalog_size` 与排序目录的 SHA-256 指纹，用于发现配置漂移。目录默认包含 `demo.echo`、`demo.sleep`、`demo.fail`、`demo.idempotent_effect`、`demo.http` 和 `pagewise.reindex`。目录不依赖在线 Worker，因此合法任务可以先排队、Worker 后上线。
+
+Register 在写 workers 前校验非空 worker ID、正 capacity、非空无重复 queues/types，以及 types 为目录子集。每次 Poll 的实际领取尝试执行一个短事务：
+
+```text
+SELECT worker capabilities FOR UPDATE
+  → 验证 active、请求 queue/type 子集与容量范围
+  → COUNT jobs WHERE lease_owner=worker AND state IN (running,cancelling)
+  → available = registered_capacity - inflight
+  → Claim min(max_jobs, available_capacity, available) jobs
+  → COMMIT
+```
+
+同一 Worker 的并发 Poll 与重新注册由 workers 行锁串行；无服务端 slot 时立即返回空响应，不在持锁状态进入 long-poll。`workers.inflight` 仍不作为正确性来源，schema 与 migration 最新版本保持 0018。
+
+Worker Proto v1 兼容新增 `DomainErrorDetail{code,retryable}`。所有服务实现返回的 Worker RPC 错误都附带一个稳定 detail；`CANCEL_REQUESTED` 使用 `FAILED_PRECONDITION`。Runtime 优先解析 detail，连接旧 Gateway 时继续按标准 gRPC code 回退。该契约约束执行资格和错误解释，不提供 Worker 身份认证；Gateway 仍须部署在可信网络。
 
 ### 提交幂等与冲突检测
 
@@ -171,11 +191,13 @@ stateDiagram-v2
 
 ### 多队列领取语义
 
-Worker 在 Register/Poll 中声明队列列表，Poll 对**全部**声明队列参与领取（`queue = any($queues)`）：
+Worker 在 Register 中声明队列能力，Poll 只能请求其非空子集；所请求的全部队列参与领取（`queue = any($queues)`）：
 
 - **队列间**按声明顺序优先——先声明的队列先被领空，再轮到后续队列；
 - **队列内**保持 `priority DESC, created_at ASC`；
 - Poll/Register 对空队列列表（或含空串）返回 `INVALID_ARGUMENT`，不做静默忽略；
+- Poll 请求的 queue/type 超出登记能力时返回稳定 `FORBIDDEN` detail，且不领取任务；
+- `max_jobs`、`available_capacity` 与当前 owner inflight 同时受登记 capacity 硬约束；
 - `idx_jobs_claim` 部分索引逐队列命中，SKIP LOCKED 与单队列语义一致。
 
 ### 租户配额原子计数（PRD v0.3，ADR-0007）
@@ -242,7 +264,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | ADR | 决策 | 核心要点 |
 |---|---|---|
 | [ADR-0001](adr/0001-implementation-parameters.md) | 实现参数 | lease TTL 30s、scan 1s；其 heartbeat 10s 取值已由 ADR-0008 修订；unary long-poll；人工重试克隆新 job_id |
-| [ADR-0002](adr/0002-error-classification.md) | 错误分类 | 4 类错误（client/server/business/transient）→ HTTP/gRPC 映射 |
+| [ADR-0002](adr/0002-error-classification.md) | 错误分类 | 4 类错误（client/server/business/transient）→ HTTP/gRPC 映射；Worker RPC 携带稳定 detail |
 | [ADR-0003](adr/0003-event-notification.md) | 事件通知 | PostgreSQL LISTEN/NOTIFY fan-out；不引入外部 MQ |
 | [ADR-0004](adr/0004-observability-stack.md) | 可观测性 | OTel SDK + stdout exporter；Prometheus /metrics；pprof localhost |
 | [ADR-0005](adr/0005-scheduler-leadership-lease.md) | Scheduler 领导权租约 | advisory lock + epoch fencing；卡死 leader 可接管 |
@@ -250,6 +272,7 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | [ADR-0007](adr/0007-tenant-quota-atomic-counter.md) | 租户配额 | PostgreSQL 原子 counter、全局锁序、reconcile |
 | [ADR-0008](adr/0008-cancel-control-channel-heartbeat.md) | 取消 SLO | P0 heartbeat 默认 5s、DB-clock 分段度量；P1 ControlStream 保留为可裁剪 M5 |
 | [ADR-0009](adr/0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久效果与崩溃证据 | job_id 原子业务幂等；Demo DB 依赖隔离；真实进程 Kill/Wait；不宣称 exactly-once |
+| [ADR-0010](adr/0010-task-type-catalog-and-worker-capability-binding.md) | 类型目录与 Worker 能力绑定 | 静态部署 allowlist；Register 子集；workers 行锁内容量核算与 Claim；无 migration |
 
 ## 目录结构
 
