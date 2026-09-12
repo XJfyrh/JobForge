@@ -65,6 +65,7 @@ go run . -jobs=10000 -workers=4
 | BenchmarkClaimBatch | 批量领取（1/5/10/20） |
 | BenchmarkClaimParallel | 多 Worker 并发领取 |
 | BenchmarkClaimContention | 高竞争场景（16 Workers） |
+| BenchmarkGatewayPollClaim | Register→Poll 完整入口；可注入 owner inflight 脏库夹具 |
 
 ### 端到端基准（E2E Benchmark）
 
@@ -89,9 +90,39 @@ W4 阶段冻结的性能基线记录在 `docs/benchmark.md`。
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | JOBFORGE_TEST_DSN | PostgreSQL 连接串 | postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable |
+| JOBFORGE_BENCH_GATEWAY_DIRTY_INFLIGHT | Gateway Poll 计时前注入的无关 inflight jobs 数；仅用于 benchmark | 0 |
+
+### Gateway Poll clean/dirty 对照
+
+正式脏库口径固定为 20,000 条 `running/cancelling` jobs，平均分布到 8 个非目标 owner。夹具通过服务端 `generate_series` 在计时前写入并执行 `ANALYZE jobs`；它不改变生产配置或 Poll 语义。每轮必须重建 schema，不能用同一数据库上的 `-count=5` 代替五个独立轮次：
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+
+# clean：将下一行改为 20000 即为 dirty；两组分别运行五轮
+$env:JOBFORGE_BENCH_GATEWAY_DIRTY_INFLIGHT = "0"
+1..5 | ForEach-Object {
+  go test -count=1 -run '^$' ./tests/integration
+  go test ./benchmarks/micro -run '^$' `
+    -bench '^BenchmarkGatewayPollClaim$' -benchmem -benchtime=10s -count=1
+}
+```
 
 ## 注意事项
 
-1. 基准测试会向数据库写入大量数据，建议使用独立的测试数据库
+1. 基准测试会向数据库写入大量数据，必须使用可重建的独立测试数据库
 2. 端到端基准的 goroutine 稳态检查需要等待 60 秒
 3. Docker 环境下的性能数据可能与原生环境有差异，记录环境规格用于对比
+
+## Worker Runtime 容量复用基准
+
+`BenchmarkWorkerRuntimeThroughput` 经过真实 Runtime、loopback gRPC Gateway 和 PostgreSQL，测量 1ms 短任务在 capacity=1/4 时的吞吐。它覆盖 Worker 满载后的补位等待；上面的存储层 E2E 基准不经过 Runtime。
+
+```powershell
+docker compose -f deploy/compose.yaml up -d postgres
+$env:JOBFORGE_TEST_DSN = 'postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
+go test ./tests/integration -run '^$' `
+  -bench '^BenchmarkWorkerRuntimeThroughput$' -benchtime=32x -count=5 -benchmem
+```
+
+该命令由集成测试 TestMain 重建测试库 schema。fixture 创建不计时，注册及完整处理计时；每轮核对全部任务成功且 attempt 总数正确。五轮前后对照、分配开销和测试边界见 [Worker 容量释放唤醒报告](../docs/worker-capacity-performance.md)，[原始输出](results/worker-capacity-2026-09-12.txt) 已归档。

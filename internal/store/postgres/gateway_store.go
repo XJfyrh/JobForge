@@ -36,6 +36,10 @@ where worker_id = $1
 for update
 `
 
+// countWorkerInflight intentionally derives capacity from jobs inside the
+// workers-row-locked Claim transaction. Migration 0019's owner partial index
+// makes this exact count selective; workers.inflight is not a correctness
+// source and must not replace this query.
 const countWorkerInflight = `
 select count(*)
 from jobs

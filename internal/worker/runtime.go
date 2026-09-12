@@ -81,6 +81,11 @@ type Runtime struct {
 	wg       sync.WaitGroup
 	stopping bool
 
+	// capacityAvailable is a coalesced wakeup for the single poll loop.
+	// inflight under mu remains authoritative; the channel is never closed
+	// because executions may finish after the shutdown grace expires.
+	capacityAvailable chan struct{}
+
 	// Heartbeat retry tuning (unexported so tests can shrink them).
 	hbBackoffInitial     time.Duration
 	hbBackoffMax         time.Duration
@@ -108,6 +113,7 @@ func NewRuntime(cfg RuntimeConfig, registry *Registry, logger *slog.Logger, metr
 		logger:                    logger,
 		metrics:                   metrics,
 		heartbeatIntervalExplicit: heartbeatIntervalExplicit,
+		capacityAvailable:         make(chan struct{}, 1),
 		hbBackoffInitial:          1 * time.Second,
 		hbBackoffMax:              10 * time.Second,
 		reportBackoffInitial:      1 * time.Second,
@@ -184,10 +190,8 @@ func (r *Runtime) Run(ctx context.Context) error {
 			go func(j *ClaimedJob) {
 				defer func() {
 					<-sem
+					r.releaseCapacity()
 					r.wg.Done()
-					r.mu.Lock()
-					r.inflight--
-					r.mu.Unlock()
 				}()
 				r.executeJob(ctx, j)
 			}(job)
@@ -217,6 +221,19 @@ func (r *Runtime) Run(ctx context.Context) error {
 
 	r.logger.Info("worker runtime stopped")
 	return nil
+}
+
+// releaseCapacity runs after execution and result reporting have both ended.
+// Publish the updated count before waking Poll, and never block a finishing
+// execution when several completions share one pending wakeup.
+func (r *Runtime) releaseCapacity() {
+	r.mu.Lock()
+	r.inflight--
+	r.mu.Unlock()
+	select {
+	case r.capacityAvailable <- struct{}{}:
+	default:
+	}
 }
 
 // register announces this Worker to the Gateway.
@@ -269,18 +286,30 @@ func validHeartbeatRecommendation(resp *workerv1.RegisterResponse) (time.Duratio
 
 // poll requests jobs from the Gateway using long-polling.
 func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
-	r.mu.Lock()
-	available := r.cfg.Capacity - r.inflight
-	stopping := r.stopping
-	r.mu.Unlock()
-
-	if stopping || available <= 0 {
-		// No capacity or shutting down; wait briefly.
-		select {
-		case <-time.After(500 * time.Millisecond):
-		case <-ctx.Done():
+	var available int
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-		return nil, nil
+		r.mu.Lock()
+		available = r.cfg.Capacity - r.inflight
+		stopping := r.stopping
+		r.mu.Unlock()
+		if stopping {
+			return nil, nil
+		}
+		if available > 0 {
+			break
+		}
+
+		// A completion between the count check and this select leaves a
+		// buffered hint. Recheck the count after every hint: it may be stale
+		// or represent several completions, and must never grant capacity.
+		select {
+		case <-r.capacityAvailable:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 
 	pollCtx, cancel := context.WithTimeout(ctx, r.cfg.PollTimeout)
