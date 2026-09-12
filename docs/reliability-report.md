@@ -105,6 +105,7 @@
 | 验证项 | 实际结果 | 结论 |
 |---|---|---|
 | EXPLAIN 回归 | 20k 无关 inflight + 4 条目标 owner；自然计划和禁用 seq scan 均命中 `idx_jobs_owner_inflight`，无 jobs seq scan；fixture 在同事务 rollback | PASS |
+| 2026-09-12 审查回归 | 修复 helper 的会话设置泄漏；单连接池初始 on/off 均恢复；owner 自然计划显式启用 seq scan 后仍命中部分索引；旧实现负向回归失败、修复后三类计划 race 通过 | PASS |
 | Gateway Poll clean/dirty | clean 7.511→7.179ms/op；dirty 9.823→7.200ms/op；修复后 dirty/clean +0.3%；144 allocs/op 不变 | PASS |
 | AT-30 race | capacity=2、8 路并发 Poll；Poll/重新登记串行化；与计划测试同轮通过 | PASS |
 | 20k Claim | p50/p95 93.6859/106.3644ms；相对 v0.5 的 96.3484/107.9253ms 改善 2.8%/1.4% | PASS |

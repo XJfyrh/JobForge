@@ -724,6 +724,8 @@ and state in ('running', 'cancelling');
 
 真实 PostgreSQL 回归测试在一个事务内插入 20,000 条无关 inflight 和 4 条目标 owner inflight，执行 `EXPLAIN (ANALYZE, BUFFERS)`。自然计划与 `enable_seqscan=off` 计划均命中 `idx_jobs_owner_inflight` 且无 jobs sequential scan；事务随后 rollback，避免测试夹具污染共享数据库。该用例在 race 下 0.27s PASS。
 
+2026-09-12 审查补充：此前共用的 `explainWithSeqScanOff` 会把会话级 `enable_seqscan=off` 留在连接池中，因此上述“自然计划”断言可能继承该设置。现已改为事务内 `SET LOCAL` 并 rollback，owner 自然计划显式使用 `SET LOCAL enable_seqscan=on`。新增单连接池回归分别验证初始 on/off 设置及同一 PostgreSQL 会话复用；旧实现如预期因 on→off 泄漏失败，修复后回归与三类索引计划均在 race 下通过。重新验证的 owner 自然计划使用 `Bitmap Index Scan on idx_jobs_owner_inflight`，未扫描无关 owner 的全部 inflight 行；本次只修复测试隔离，未改动生产查询、索引或性能采样数据。
+
 同机 20,000-job 定向 scale 结果：Promote p50/p95 **18.7726/20.91ms**；Claim p50/p95 **93.6859/106.3644ms**。相对 v0.5 的 96.3484/107.9253ms，Claim 分别改善 **2.8%/1.4%**，新增部分索引没有造成 Claim 写入回退。
 
 Poll 仍先锁 workers 行，再从 jobs 精确统计 owner 的 `running+cancelling`，最后在同一事务 Claim；`workers.inflight` 仍未被读取或维护。AT-30 capacity=2 的 8 路并发 Poll 与 Poll/重新登记串行化在 race 下 PASS，因此性能修复没有放松 Worker capacity 硬约束。

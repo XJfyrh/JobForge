@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type explainQuerier interface {
@@ -69,21 +70,59 @@ func explainQuery(t *testing.T, querier explainQuerier, q string) string {
 }
 
 // explainWithSeqScanOff runs EXPLAIN (ANALYZE, BUFFERS) on a dedicated
-// connection with enable_seqscan = off, forcing the planner to use an index
+// transaction with enable_seqscan = off, forcing the planner to use an index
 // when one can serve the query. This makes the index-coverage assertion
 // deterministic regardless of table statistics in the shared test database.
-func explainWithSeqScanOff(t *testing.T, q string) string {
+// SET LOCAL and rollback preserve the session setting when the pool reuses it.
+func explainWithSeqScanOff(t *testing.T, pool *pgxpool.Pool, q string) string {
 	t.Helper()
 	ctx := context.Background()
-	conn, err := testEnv.pool.Acquire(ctx)
+	tx, err := pool.Begin(ctx)
 	if err != nil {
-		t.Fatalf("acquire conn: %v", err)
+		t.Fatalf("begin explain transaction: %v", err)
 	}
-	defer conn.Release()
-	if _, err := conn.Exec(ctx, "set enable_seqscan = off"); err != nil {
-		t.Fatalf("set enable_seqscan: %v", err)
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, "set local enable_seqscan = off"); err != nil {
+		t.Fatalf("set local enable_seqscan: %v", err)
 	}
-	return explainQuery(t, conn, "explain (analyze, buffers) "+q)
+	return explainQuery(t, tx, "explain (analyze, buffers) "+q)
+}
+
+func TestExplainWithSeqScanOffRestoresSessionSetting(t *testing.T) {
+	for _, initial := range []string{"on", "off"} {
+		t.Run(initial, func(t *testing.T) {
+			// A single-connection pool makes reuse deterministic without
+			// changing the shared suite pool or its planner configuration.
+			config := testEnv.pool.Config()
+			config.MaxConns = 1
+			config.MinConns = 0
+			config.ConnConfig.RuntimeParams["enable_seqscan"] = initial
+			pool, err := pgxpool.NewWithConfig(t.Context(), config)
+			if err != nil {
+				t.Fatalf("create planner test pool: %v", err)
+			}
+			t.Cleanup(pool.Close)
+			var beforePID, afterPID int
+			var before, after string
+			const settingsQuery = `select pg_backend_pid(), current_setting('enable_seqscan')`
+			if err := pool.QueryRow(t.Context(), settingsQuery).Scan(&beforePID, &before); err != nil {
+				t.Fatalf("read initial planner setting: %v", err)
+			}
+			if before != initial {
+				t.Fatalf("initial enable_seqscan=%s, want %s", before, initial)
+			}
+			explainWithSeqScanOff(t, pool, "select 1")
+			if err := pool.QueryRow(t.Context(), settingsQuery).Scan(&afterPID, &after); err != nil {
+				t.Fatalf("read reused planner setting: %v", err)
+			}
+			if afterPID != beforePID {
+				t.Fatal("planner test did not reuse the same PostgreSQL session")
+			}
+			if after != before {
+				t.Fatalf("planner setting leaked into reused session: before=%s after=%s", before, after)
+			}
+		})
+	}
 }
 
 // promoteInnerSelect mirrors the candidates CTE of promoteReady
@@ -110,7 +149,7 @@ func TestPromoteScanUsesPartialIndex(t *testing.T) {
 	// Deterministic coverage: with sequential scans disabled, the promote
 	// scan must be served by the partial index (and without a Sort node,
 	// since run_at leads the index).
-	plan := explainWithSeqScanOff(t, promoteInnerSelect)
+	plan := explainWithSeqScanOff(t, testEnv.pool, promoteInnerSelect)
 	if !strings.Contains(plan, "idx_jobs_promote_ready") {
 		t.Errorf("promote scan does not use idx_jobs_promote_ready:\n%s", plan)
 	}
@@ -143,7 +182,7 @@ func TestTenantInflightCountUsesPartialIndex(t *testing.T) {
 
 	const q = `select count(*) from jobs where tenant_id = 'idx-quota-tenant' and state in ('running', 'cancelling')`
 
-	plan := explainWithSeqScanOff(t, q)
+	plan := explainWithSeqScanOff(t, testEnv.pool, q)
 	if !strings.Contains(plan, "idx_jobs_tenant_inflight") {
 		t.Errorf("inflight count does not use idx_jobs_tenant_inflight:\n%s", plan)
 	}
@@ -221,7 +260,12 @@ func TestWorkerInflightCountUsesOwnerPartialIndex(t *testing.T) {
 
 	const q = `select count(*) from jobs where lease_owner = 'idx-owner-target' and state in ('running', 'cancelling')`
 
+	// Test the natural plan even if the pool's session default was changed.
+	if _, err := tx.Exec(ctx, "set local enable_seqscan = on"); err != nil {
+		t.Fatalf("enable sequential scans for natural plan: %v", err)
+	}
 	plan := explainQuery(t, tx, "explain (analyze, buffers) "+q)
+	t.Logf("natural owner inflight plan:\n%s", plan)
 	if !strings.Contains(plan, "idx_jobs_owner_inflight") {
 		t.Errorf("natural owner inflight plan does not pick idx_jobs_owner_inflight:\n%s", plan)
 	}
