@@ -1,0 +1,34 @@
+Worker capacity wakeup benchmark, 2026-09-12
+Base HEAD: 172e863, including pre-existing uncommitted Gateway/0019 changes on both sides.
+Windows 11 10.0.26200; Go 1.26.5 windows/amd64; GOMAXPROCS=16.
+CPU: AMD Ryzen 7 7840HS w/ Radeon 780M Graphics; memory: 33585242112 bytes.
+PostgreSQL 16.14 Alpine; shared_buffers=128MB; synchronous_commit=on; fsync=on; max_connections=100.
+One real Runtime, loopback gRPC Gateway, PostgreSQL, 1ms handler, 32 jobs/sample, five samples/capacity.
+Fixture setup excluded; Runtime registration and execution through final committed result included.
+Raw Go benchmark lines below. See docs/worker-capacity-performance.md for scope and limitations.
+
+BEFORE
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  491713053 ns/op  2.034 jobs/s  54834 B/op  688 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  491604656 ns/op  2.034 jobs/s  49608 B/op  686 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  491473981 ns/op  2.035 jobs/s  53650 B/op  686 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  491605238 ns/op  2.034 jobs/s  51186 B/op  685 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  491595081 ns/op  2.034 jobs/s  50379 B/op  686 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  113029384 ns/op  8.847 jobs/s  47008 B/op  492 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  112407966 ns/op  8.896 jobs/s  44903 B/op  462 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  112377150 ns/op  8.899 jobs/s  42585 B/op  460 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  112257347 ns/op  8.908 jobs/s  41823 B/op  460 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  112194038 ns/op  8.913 jobs/s  44474 B/op  457 allocs/op
+PASS
+
+AFTER
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  12201309 ns/op  81.96 jobs/s  57593 B/op  685 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  11993322 ns/op  83.38 jobs/s  53125 B/op  682 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  11459116 ns/op  87.27 jobs/s  56409 B/op  684 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  11598906 ns/op  86.22 jobs/s  51121 B/op  683 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity1-16  32  11540734 ns/op  86.65 jobs/s  50013 B/op  682 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  5011800 ns/op  199.5 jobs/s  53569 B/op  596 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  4547788 ns/op  219.9 jobs/s  49762 B/op  565 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  4488206 ns/op  222.8 jobs/s  50750 B/op  578 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  4462428 ns/op  224.1 jobs/s  46789 B/op  586 allocs/op
+BenchmarkWorkerRuntimeThroughput/capacity4-16  32  4333750 ns/op  230.7 jobs/s  58773 B/op  573 allocs/op
+PASS

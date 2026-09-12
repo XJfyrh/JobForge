@@ -113,3 +113,16 @@ $env:JOBFORGE_BENCH_GATEWAY_DIRTY_INFLIGHT = "0"
 1. 基准测试会向数据库写入大量数据，必须使用可重建的独立测试数据库
 2. 端到端基准的 goroutine 稳态检查需要等待 60 秒
 3. Docker 环境下的性能数据可能与原生环境有差异，记录环境规格用于对比
+
+## Worker Runtime 容量复用基准
+
+`BenchmarkWorkerRuntimeThroughput` 经过真实 Runtime、loopback gRPC Gateway 和 PostgreSQL，测量 1ms 短任务在 capacity=1/4 时的吞吐。它覆盖 Worker 满载后的补位等待；上面的存储层 E2E 基准不经过 Runtime。
+
+```powershell
+docker compose -f deploy/compose.yaml up -d postgres
+$env:JOBFORGE_TEST_DSN = 'postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
+go test ./tests/integration -run '^$' `
+  -bench '^BenchmarkWorkerRuntimeThroughput$' -benchtime=32x -count=5 -benchmem
+```
+
+该命令由集成测试 TestMain 重建测试库 schema。fixture 创建不计时，注册及完整处理计时；每轮核对全部任务成功且 attempt 总数正确。五轮前后对照、分配开销和测试边界见 [Worker 容量释放唤醒报告](../docs/worker-capacity-performance.md)，[原始输出](results/worker-capacity-2026-09-12.txt) 已归档。
