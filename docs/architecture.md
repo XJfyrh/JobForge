@@ -90,7 +90,7 @@ SELECT worker capabilities FOR UPDATE
   → COMMIT
 ```
 
-同一 Worker 的并发 Poll 与重新注册由 workers 行锁串行；无服务端 slot 时立即返回空响应，不在持锁状态进入 long-poll。`workers.inflight` 仍不作为正确性来源，schema 与 migration 最新版本保持 0018。
+同一 Worker 的并发 Poll 与重新注册由 workers 行锁串行；无服务端 slot 时立即返回空响应，不在持锁状态进入 long-poll。`workers.inflight` 仍不作为正确性来源。migration 0019 新增 `(lease_owner)` inflight 部分索引，只缩短 jobs 聚合扫描，不改变上述事务或容量语义；当前 schema 最新版本为 0019。
 
 Worker Proto v1 兼容新增 `DomainErrorDetail{code,retryable}`。所有服务实现返回的 Worker RPC 错误都附带一个稳定 detail；`CANCEL_REQUESTED` 使用 `FAILED_PRECONDITION`。Runtime 优先解析 detail，连接旧 Gateway 时继续按标准 gRPC code 回退。该契约约束执行资格和错误解释，不提供 Worker 身份认证；Gateway 仍须部署在可信网络。
 
@@ -232,6 +232,7 @@ jobs 表的热路径查询均由部分索引服务，避免随表增长退化为
 | `idx_jobs_lease_expiry` | `(lease_until) WHERE state IN ('running','cancelling')` | Scheduler 过期 lease 回收（0001） |
 | `idx_jobs_promote_ready` | `(run_at) WHERE state IN ('scheduled','retry_wait')` | Scheduler promote 扫描（0011）：`run_at` 打头使扫描有序且命中 limit 即停，免排序 |
 | `idx_jobs_tenant_inflight` | `(tenant_id) WHERE state IN ('running','cancelling')` | 配额核对聚合与采样断言（0014，ADR-0007）；取代 0012 的 `idx_jobs_tenant_running`（其消费者逐候选 count 被计数表替代，索引已在 0015 删除） |
+| `idx_jobs_owner_inflight` | `(lease_owner) WHERE lease_owner IS NOT NULL AND state IN ('running','cancelling')` | Gateway Poll 在 workers 行锁事务内执行的 owner inflight 精确计数（0019）；避免扫描其他 Worker 的 inflight jobs |
 
 ## 部署拓扑
 

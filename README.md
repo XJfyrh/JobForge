@@ -55,15 +55,15 @@ flowchart LR
 | Process 吞吐 | **395.09 jobs/sec** | v0.5 收官，100 jobs × 4 workers；相对实施前 +17.5% |
 | 控制面延迟 p50 / p95 / p99 | **8.84 / 14.44 / 31.65 ms** | v0.5 同参数 e2e；p95 相对实施前改善 4.6% |
 | Claim 微基准 | **7.071 ms/op** | v0.5 清洁 schema 后五轮中位数；相对实施前 7.695ms 改善 8.1%；历史 W4 绝对门禁仍单列未通过 |
-| Gateway Poll 微基准 | **9.458 ms/op** | Register→Poll 完整入口五轮中位数；相对实施前 8.348ms +13.3%，低于 15% 门禁 |
-| 20,000-job Claim p50 / p95 | **96.35 / 107.93 ms** | v0.5 完整 scale；相对实施前均改善 |
+| Gateway Poll 微基准 | **7.179 clean / 7.200 dirty ms/op** | 0019 后独立五轮中位数；20k dirty 仅比 clean +0.3%，较修复前 dirty 改善 26.7% |
+| 20,000-job Claim p50 / p95 | **93.69 / 106.36 ms** | 0019 定向 scale；相对 v0.5 的 96.35/107.93ms 均改善 |
 | 任务崩溃恢复 | **≤ 33 s** | lease TTL 30s + 扫描周期 + 余量，集成测试验证 |
 | Scheduler 故障接管 | **≤ 12 s** | advisory lock 切换，双实例故障测试验证 |
 | Heartbeat 取消信号 p95 | **4.281 s（20 样本）** | 默认 5s、随机相位、PostgreSQL DB-clock；门禁 ≤6s，见[可靠性报告](docs/reliability-report.md) |
 | Goroutine 稳态 | 差异 **0**（容差 ±5） | 万级任务后无泄漏 |
 | 故障与契约场景 | **AT-01～24、AT-28～31 已实现范围全通过** | 真实 PostgreSQL/Redis + race；AT-25 未实现且不计通过 |
 | 规模化可靠性（AT-13/14） | **100 轮真实 Worker 进程 kill 零丢失 / 10,000 持久效果重投零重复** | `-tags scale` 套件，见[可靠性报告](docs/reliability-report.md) |
-| v0.5 性能回归门禁 | 同环境 Claim / 20k Claim / e2e 恶化 **<15%** | 当前门禁通过；脏库 Gateway 扫描与历史 W4 绝对失败另行披露 |
+| v0.5 性能回归门禁 | 同环境 Claim / 20k Claim / e2e 恶化 **<15%** | 当前门禁通过；0019 已修复脏库 Gateway 扫描，历史 W4 绝对失败仍单列披露 |
 
 完整数据与复现命令见[性能基线报告](docs/benchmark.md)。从旧版本升级时请先阅读 [5s Heartbeat 发布与滚动升级说明](docs/runbooks/heartbeat-5s-rollout.md)。
 

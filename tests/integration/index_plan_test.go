@@ -4,7 +4,13 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
+
+type explainQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
 
 // Fixture inserts for the index plan tests. Tenant, state and row count are
 // bound parameters; the run_at placement is selected between two constant
@@ -34,10 +40,15 @@ func insertIndexTestJobs(t *testing.T, tenant, state string, n int, runAtPast bo
 	}
 }
 
-// explainAnalyze runs EXPLAIN (ANALYZE) and returns the plan as one string.
+// explainAnalyze runs EXPLAIN (ANALYZE, BUFFERS) and returns the plan as one string.
 func explainAnalyze(t *testing.T, q string) string {
 	t.Helper()
-	rows, err := testEnv.pool.Query(context.Background(), "explain (analyze) "+q)
+	return explainQuery(t, testEnv.pool, "explain (analyze, buffers) "+q)
+}
+
+func explainQuery(t *testing.T, querier explainQuerier, q string) string {
+	t.Helper()
+	rows, err := querier.Query(context.Background(), q)
 	if err != nil {
 		t.Fatalf("explain %q: %v", q, err)
 	}
@@ -57,10 +68,10 @@ func explainAnalyze(t *testing.T, q string) string {
 	return b.String()
 }
 
-// explainWithSeqScanOff runs EXPLAIN (ANALYZE) on a dedicated connection with
-// enable_seqscan = off, forcing the planner to use an index when one can
-// serve the query. This makes the index-coverage assertion deterministic
-// regardless of table statistics in the shared test database.
+// explainWithSeqScanOff runs EXPLAIN (ANALYZE, BUFFERS) on a dedicated
+// connection with enable_seqscan = off, forcing the planner to use an index
+// when one can serve the query. This makes the index-coverage assertion
+// deterministic regardless of table statistics in the shared test database.
 func explainWithSeqScanOff(t *testing.T, q string) string {
 	t.Helper()
 	ctx := context.Background()
@@ -72,24 +83,7 @@ func explainWithSeqScanOff(t *testing.T, q string) string {
 	if _, err := conn.Exec(ctx, "set enable_seqscan = off"); err != nil {
 		t.Fatalf("set enable_seqscan: %v", err)
 	}
-	rows, err := conn.Query(ctx, "explain (analyze) "+q)
-	if err != nil {
-		t.Fatalf("explain %q: %v", q, err)
-	}
-	defer rows.Close()
-	var b strings.Builder
-	for rows.Next() {
-		var line string
-		if err := rows.Scan(&line); err != nil {
-			t.Fatalf("scan explain row: %v", err)
-		}
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("explain rows: %v", err)
-	}
-	return b.String()
+	return explainQuery(t, conn, "explain (analyze, buffers) "+q)
 }
 
 // promoteInnerSelect mirrors the candidates CTE of promoteReady
@@ -160,5 +154,89 @@ func TestTenantInflightCountUsesPartialIndex(t *testing.T) {
 	plan = explainAnalyze(t, q)
 	if !strings.Contains(plan, "idx_jobs_tenant_inflight") {
 		t.Errorf("natural inflight plan does not pick idx_jobs_tenant_inflight:\n%s", plan)
+	}
+}
+
+const insertOwnerInflightPlanNoise = `
+insert into jobs (
+    id, tenant_id, queue, type, state, run_at, attempt,
+    lease_owner, lease_until, fencing_token
+)
+select gen_random_uuid(),
+       'idx-owner-noise-tenant-' || (fixture.n % $2)::text,
+       'idx-owner-inflight-q',
+       'demo.echo',
+       case when fixture.n % 2 = 0 then 'running' else 'cancelling' end,
+       now() - interval '1 hour',
+       1,
+       'idx-owner-noise-' || (fixture.n % $2)::text,
+       now() + interval '5 minutes',
+       1
+from generate_series(1, $1) as fixture(n)`
+
+const insertOwnerInflightPlanTarget = `
+insert into jobs (
+    id, tenant_id, queue, type, state, run_at, attempt,
+    lease_owner, lease_until, fencing_token
+)
+select gen_random_uuid(),
+       'idx-owner-target-tenant',
+       'idx-owner-inflight-q',
+       'demo.echo',
+       case when fixture.n % 2 = 0 then 'running' else 'cancelling' end,
+       now() - interval '1 hour',
+       1,
+       'idx-owner-target',
+       now() + interval '5 minutes',
+       1
+from generate_series(1, $1) as fixture(n)`
+
+// TestWorkerInflightCountUsesOwnerPartialIndex reproduces the v0.5 dirty-
+// database shape: 20,000 unrelated inflight jobs and only a few rows for the
+// polled owner. The exact production predicate must naturally select the 0019
+// owner partial index instead of scanning all inflight jobs while the Worker
+// row lock is held.
+func TestWorkerInflightCountUsesOwnerPartialIndex(t *testing.T) {
+	ctx := context.Background()
+	tx, err := testEnv.pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin owner inflight plan fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = tx.Rollback(context.Background())
+		if _, err := testEnv.pool.Exec(context.Background(), "analyze jobs"); err != nil {
+			t.Errorf("analyze jobs after owner inflight plan rollback: %v", err)
+		}
+	})
+
+	if _, err := tx.Exec(ctx, insertOwnerInflightPlanNoise, 20000, 8); err != nil {
+		t.Fatalf("insert owner inflight plan noise: %v", err)
+	}
+	if _, err := tx.Exec(ctx, insertOwnerInflightPlanTarget, 4); err != nil {
+		t.Fatalf("insert owner inflight plan target: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "analyze jobs"); err != nil {
+		t.Fatalf("analyze jobs: %v", err)
+	}
+
+	const q = `select count(*) from jobs where lease_owner = 'idx-owner-target' and state in ('running', 'cancelling')`
+
+	plan := explainQuery(t, tx, "explain (analyze, buffers) "+q)
+	if !strings.Contains(plan, "idx_jobs_owner_inflight") {
+		t.Errorf("natural owner inflight plan does not pick idx_jobs_owner_inflight:\n%s", plan)
+	}
+	if strings.Contains(plan, "Seq Scan") {
+		t.Errorf("natural owner inflight plan scans the jobs table:\n%s", plan)
+	}
+
+	if _, err := tx.Exec(ctx, "set local enable_seqscan = off"); err != nil {
+		t.Fatalf("disable sequential scans: %v", err)
+	}
+	plan = explainQuery(t, tx, "explain (analyze, buffers) "+q)
+	if !strings.Contains(plan, "idx_jobs_owner_inflight") {
+		t.Errorf("owner inflight count does not use idx_jobs_owner_inflight:\n%s", plan)
+	}
+	if strings.Contains(plan, "Seq Scan") {
+		t.Errorf("owner inflight count falls back to Seq Scan with the index present:\n%s", plan)
 	}
 }

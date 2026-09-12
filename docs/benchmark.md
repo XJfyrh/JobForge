@@ -645,7 +645,7 @@ Gateway 路径新增 workers 行锁、能力数组读取与 owner inflight 统�
 
 完整字面规模 race-scale 也 PASS（278.501s）：20k Claim p50/p95 103.7111/119.0444ms；AT-13 p95/max 19.6355/27.5017ms；AT-14 10,000/10,000 dedup；Redis 2,046 events/sec、lag p95 178.683ms；无数据竞争。
 
-在上述两轮 scale 后、未清理 schema 的诊断运行中，Gateway Poll 五轮中位数先为 9.784539ms/op（相对清洁实施前 +17.2%），再次独立运行达到 11.223363ms/op（+34.4%）。该数据不满足实施前的清理条件，不能替代正式门禁，但暴露 `countWorkerInflight` 对 inflight jobs 基数敏感；生产高并发前应单独评审 `(lease_owner)` inflight partial index 或等价 schema 方案。v0.5 明确不临时启用未维护的 `workers.inflight`，也不通过放松 capacity 正确性掩盖此观察。
+在上述两轮 scale 后、未清理 schema 的诊断运行中，Gateway Poll 五轮中位数先为 9.784539ms/op（相对清洁实施前 +17.2%），再次独立运行达到 11.223363ms/op（+34.4%）。该数据不满足实施前的清理条件，不能替代正式门禁，但暴露 `countWorkerInflight` 对 inflight jobs 基数敏感；生产高并发前应单独评审 `(lease_owner)` inflight partial index 或等价 schema 方案。v0.5 明确不临时启用未维护的 `workers.inflight`，也不通过放松 capacity 正确性掩盖此观察。该历史观察的确定性复现与 migration 0019 修复见后文。
 
 ### 同参数 e2e
 
@@ -672,3 +672,79 @@ go test ./benchmarks/micro -run '^$' `
   -benchmem -benchtime=10s -count=5
 go run ./benchmarks/e2e -jobs=100 -workers=4
 ```
+
+## v0.5 Gateway Poll 脏库回归修复（migration 0019）
+
+> 测量日期：2026-08-24；修复前生产基线 `172e863`，仅先加入 benchmark-only dirty fixture harness；修复后为同一 base 上的验收工作树（最终合并 SHA 待 PR 后补录）。Windows amd64、AMD Ryzen 7 7840HS、31.3 GiB RAM、Go 1.26.5、PostgreSQL 16.14（`postgres:16-alpine`）、Docker Desktop；微基准非 race。
+
+### 对照协议
+
+`BenchmarkGatewayPollClaim` 新增 `JOBFORGE_BENCH_GATEWAY_DIRTY_INFLIGHT`，默认 0。正式 dirty 口径在计时前用 PostgreSQL `generate_series` 写入 20,000 条无关 owner 的 `running/cancelling` jobs，平均分布到 8 个 owner，并执行 `ANALYZE jobs`。benchmark Worker 使用独立 owner，因此夹具只改变全库 inflight 基数。
+
+修复前后各执行五个独立进程轮次；每轮先运行 integration TestMain 的 drop/migrate 流程，避免 `-count=5` 在同一数据库累积行数。修复前 schema 止于 0018，修复后应用 0019；benchmark harness、硬件、容器、命令和顺序均相同。生产 `countWorkerInflight` 在两组中都保持 `jobs WHERE lease_owner=$1 AND state IN ('running','cancelling')` 精确聚合，唯一生产差异是 0019 的部分索引。
+
+### 五轮 clean/dirty 微基准
+
+| 轮次 | 修复前 clean ns/op | B/op | allocs/op | 修复前 dirty ns/op | B/op | allocs/op |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 7,288,179 | 9,356 | 144 | 9,579,804 | 9,359 | 144 |
+| 2 | 7,511,119 | 9,358 | 144 | 9,636,469 | 9,355 | 144 |
+| 3 | 7,571,106 | 9,356 | 144 | 9,828,750 | 9,360 | 144 |
+| 4 | 7,663,962 | 9,356 | 144 | 9,823,039 | 9,355 | 144 |
+| 5 | 7,320,742 | 9,358 | 144 | 10,007,130 | 9,356 | 144 |
+| **中位数** | **7,511,119** | **9,356** | **144** | **9,823,039** | **9,356** | **144** |
+
+修复前确定性 dirty 比 clean 中位数慢 **30.8%**，复现了 v0.5 收官后的基数敏感问题；B/op 和 allocs/op 没有相应变化，支持数据库扫描而非 Go 分配是主因。
+
+| 轮次 | 修复后 clean ns/op | B/op | allocs/op | 修复后 dirty ns/op | B/op | allocs/op |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 7,179,364 | 9,356 | 144 | 7,400,647 | 9,358 | 144 |
+| 2 | 7,434,227 | 9,356 | 144 | 7,200,228 | 9,355 | 144 |
+| 3 | 7,184,909 | 9,355 | 144 | 7,131,549 | 9,357 | 144 |
+| 4 | 7,110,051 | 9,356 | 144 | 7,237,797 | 9,358 | 144 |
+| 5 | 7,139,231 | 9,357 | 144 | 7,104,037 | 9,356 | 144 |
+| **中位数** | **7,179,364** | **9,356** | **144** | **7,200,228** | **9,357** | **144** |
+
+| 验收口径 | 结果 | 门禁 |
+|---|---:|---|
+| 修复后 clean vs 修复前 clean | **-4.4%** | PASS；无 ≥15% 回退 |
+| 修复后 dirty vs 修复前 dirty | **-26.7%** | PASS；脏库显著改善 |
+| 修复后 dirty vs 修复后 clean | **+0.3%** | PASS；低于 15% |
+| B/op / allocs/op | 约 9,356 / 144，前后不变 | 只报告；修复不以 Go 分配换延迟 |
+
+### 执行计划、20k Claim 与正确性边界
+
+migration 0019 新增：
+
+```sql
+create index if not exists idx_jobs_owner_inflight on jobs (lease_owner)
+where lease_owner is not null
+and state in ('running', 'cancelling');
+```
+
+真实 PostgreSQL 回归测试在一个事务内插入 20,000 条无关 inflight 和 4 条目标 owner inflight，执行 `EXPLAIN (ANALYZE, BUFFERS)`。自然计划与 `enable_seqscan=off` 计划均命中 `idx_jobs_owner_inflight` 且无 jobs sequential scan；事务随后 rollback，避免测试夹具污染共享数据库。该用例在 race 下 0.27s PASS。
+
+同机 20,000-job 定向 scale 结果：Promote p50/p95 **18.7726/20.91ms**；Claim p50/p95 **93.6859/106.3644ms**。相对 v0.5 的 96.3484/107.9253ms，Claim 分别改善 **2.8%/1.4%**，新增部分索引没有造成 Claim 写入回退。
+
+Poll 仍先锁 workers 行，再从 jobs 精确统计 owner 的 `running+cancelling`，最后在同一事务 Claim；`workers.inflight` 仍未被读取或维护。AT-30 capacity=2 的 8 路并发 Poll 与 Poll/重新登记串行化在 race 下 PASS，因此性能修复没有放松 Worker capacity 硬约束。
+
+### 复现命令
+
+```powershell
+$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
+
+# clean；dirty 只需把值改为 20000。两组分别执行五个独立轮次。
+$env:JOBFORGE_BENCH_GATEWAY_DIRTY_INFLIGHT = "0"
+1..5 | ForEach-Object {
+  go test -count=1 -run '^$' ./tests/integration
+  go test ./benchmarks/micro -run '^$' `
+    -bench '^BenchmarkGatewayPollClaim$' -benchmem -benchtime=10s -count=1
+}
+
+go test -race -count=1 -v `
+  -run '^(TestAT30PollCapabilitiesAndConcurrentCapacity|TestAT30PollAndReregisterSerialize|TestWorkerInflightCountUsesOwnerPartialIndex)$' `
+  ./tests/integration/
+go test -tags scale -count=1 -v -run '^TestScalePerfPromoteClaimLatency$' ./tests/scale/
+```
+
+历史 W4 Claim `4.171091ms/op` 绝对门禁仍为**未通过**；0019 只关闭 Gateway Poll dirty-database 回归，不重置该历史债务，也不覆盖 v0.5 原始验收数据。

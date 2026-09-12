@@ -210,13 +210,14 @@ go tool pprof http://localhost:6060/debug/pprof/profile?seconds=5
 cat docs/benchmark.md
 ```
 
-关键数据（v0.5 收官）：
+关键数据（v0.5 收官 + 0019 Gateway Poll 脏库修复）：
 
 - Submit: 307.94 jobs/sec（100 jobs / 4 workers）
 - Process: 395.09 jobs/sec
 - p50: 8.84ms / p95: 14.44ms / p99: 31.65ms
 - Claim 五轮中位数：7.071ms/op，相对 v0.5 实施前改善 8.1%
-- Gateway Register→Poll 五轮中位数：9.458ms/op，相对实施前 +13.3%，低于 15% 门禁；144 allocs/op 作为后续优化观察项
+- Gateway Register→Poll 独立五轮中位数：clean 7.179ms/op、20k dirty 7.200ms/op；dirty/clean 仅 +0.3%，dirty 较修复前改善 26.7%；144 allocs/op 不变
+- 20k Claim p50/p95：93.69/106.36ms，相对 v0.5 的 96.35/107.93ms 均改善
 - 历史 W4 Claim 4.171ms/op 绝对门禁仍保留未通过披露
 
 ## 清理

@@ -1,7 +1,7 @@
 # JobForge 可靠性报告（Scale 套件与真实进程崩溃）
 
-> 对应需求：PRD v0.5 FR-901～907、NFR-501～506、AT-28～31；PRD v0.4 FR-801～807、AT-02R/13R/14R；PRD v0.2 FR-601/602/603；v0.1 NFR-001/NFR-002。
-> 首次报告：2026-08-04（W11）；本次更新：2026-08-18（v0.5）
+> 对应需求：PRD v0.5 FR-901～907、NFR-501～506、AT-28～31 及 FR-905 owner inflight 性能后续；PRD v0.4 FR-801～807、AT-02R/13R/14R；PRD v0.2 FR-601/602/603；v0.1 NFR-001/NFR-002。
+> 首次报告：2026-08-04（W11）；本次更新：2026-08-24（Gateway Poll dirty-database 修复）
 > 套件位置：`tests/scale/`（`//go:build scale` 隔离，FR-603：默认 CI 不执行）
 
 ## 结论
@@ -12,6 +12,7 @@
 | AT-13 / NFR-001 | 100 轮真实 Worker OS 进程 kill（每轮 10 任务） | **PASS**：每轮数据库屏障后 Kill + Wait；非终态任务零静默丢失 |
 | AT-14 / NFR-002 | 10,000 个含重复投递的持久幂等任务 | **PASS**：效果表 10,000 行、dedup 10,000、重复业务效果 0 |
 | AT-28～31 / NFR-501～503 | type 提交、Register/Poll 能力容量、稳定 gRPC detail | **PASS**：未知/越权零状态副作用；capacity=2 的 8 路 Poll 最大 inflight=2；CANCEL_REQUESTED=FAILED_PRECONDITION |
+| FR-905 性能后续 | 20,000 条无关 owner inflight 的 Gateway Poll | **PASS**：dirty 中位数 9.823→7.200ms/op（-26.7%）；修复后 dirty/clean 仅 +0.3%；AT-30 race 不回退 |
 | NFR-204 / NFR-003 | 每轮恢复时间 ≤ lease_ttl + scan_interval + 2s | **PASS**：v0.5 完整套件 max 19.0968ms ≪ 35s 上界 |
 | NFR-202 / NFR-504 | 默认 race + 完整字面规模 race-scale | **PASS**：integration 131.792s；AT-13 全量 kill + AT-14 10,000 任务 race-scale 278.501s，无数据竞争 |
 
@@ -23,6 +24,7 @@
 | PostgreSQL | 16.14（`postgres:16-alpine`，localhost:5433） |
 | Redis | 7.4.10，AOF `appendonly yes` / `appendfsync everysec`（完整 scale 的 NFR-302） |
 | Go | 1.26.5 windows/amd64，`-tags scale` |
+| CPU / 内存 | AMD Ryzen 7 7840HS / 31.3 GiB |
 | 隔离 | build tag `scale`；默认 `go test ./...` 与 CI 均不执行本套件 |
 
 运行前置：停止 api/scheduler/gateway/publisher/worker 等应用服务，保留测试 PostgreSQL；运行 NFR-302 时同时启动 durable-events Redis。v0.4 helper 直接重启当前 test binary，除数据库/Gateway 参数外不接受任务 payload 或任意代码；helper 只存在于 `_test.go`。
@@ -95,6 +97,23 @@
 机械门禁本轮实际 PASS：Go build/vet/golangci-lint、Ruff check/format、mypy、SQLFluff 冻结历史 baseline + 全 migrations、Buf lint/breaking。`go build` 在受限 Windows 用户 module stat cache 上输出写入警告但退出码为 0；Python 首次因旧 `.venv` 指向缺失的 3.12 而未执行，随后以 Python 3.14.7 在 Git 忽略的隔离 venv 中按锁文件实际通过，二者未被混记。
 
 性能门禁与数据基数风险见 [benchmark.md](benchmark.md) 的 v0.5 章节：清洁 schema 下 Claim 改善 8.1%，Gateway Register→Poll 延迟 +13.3%（<15%），e2e 与 20k Claim 均不回退；Gateway allocations 112→144 以及脏库 owner inflight 扫描超过 15% 的诊断结果单独披露，后续优化不得绕过容量正确性。Promote p95 的本机波动与历史 W4 Claim 绝对失败也继续保持非 PASS/只报告状态。
+
+## v0.5 Gateway Poll 脏库回归修复（2026-08-24）
+
+修复基于 `172e863`。migration 0019 新增 `idx_jobs_owner_inflight (lease_owner) WHERE lease_owner IS NOT NULL AND state IN ('running','cancelling')`；生产 `countWorkerInflight` 的 jobs 聚合、workers 行锁、Claim 事务与 `min(max_jobs, available_capacity, server_available)` 均未改变，`workers.inflight` 仍不是正确性来源。普通 `CREATE INDEX` 由事务型 migrator 执行，部署时会在构建期间阻塞 jobs 写入；回滚只删除索引并恢复旧扫描成本，不改变容量语义。
+
+| 验证项 | 实际结果 | 结论 |
+|---|---|---|
+| EXPLAIN 回归 | 20k 无关 inflight + 4 条目标 owner；自然计划和禁用 seq scan 均命中 `idx_jobs_owner_inflight`，无 jobs seq scan；fixture 在同事务 rollback | PASS |
+| Gateway Poll clean/dirty | clean 7.511→7.179ms/op；dirty 9.823→7.200ms/op；修复后 dirty/clean +0.3%；144 allocs/op 不变 | PASS |
+| AT-30 race | capacity=2、8 路并发 Poll；Poll/重新登记串行化；与计划测试同轮通过 | PASS |
+| 20k Claim | p50/p95 93.6859/106.3644ms；相对 v0.5 的 96.3484/107.9253ms 改善 2.8%/1.4% | PASS |
+| 全仓 race | `go test -race -count=1 -timeout 30m ./...`；integration 64.597s | PASS，无数据竞争 |
+| 机械门禁 | Go build/vet、golangci-lint（0 issues）、Ruff check/format、mypy、SQLFluff baseline + 全 migrations、Buf lint/breaking | PASS |
+
+首次全仓 race 在新增计划测试清理 20k fixture 时被人工中止：直接 `DELETE` 在较大共享 jobs 表上触发 `retry_of_job_id` 自外键逐行检查，属于测试清理退化，不是生产锁死。用例随后改为事务内插入/`ANALYZE`/`EXPLAIN` 并 rollback；计划测试自身 race 耗时 0.27s，重新运行的全仓 race 正常完成。首次 Python/SQL 命令也因仓库旧 `.venv` 指向已删除的 Python 3.12 而未执行，随后在 Git 忽略的 `.tmp/venv-gateway-perf` 中用 Python 3.14.7 和锁定 requirements 实际通过；Go build/vet/lint 的沙箱内首次尝试因用户 Go cache 权限失败，沙箱外原命令实际通过。这些环境失败均未记为 PASS。
+
+本次聚焦修复没有重新运行 AT-13/14、Redis 故障矩阵或完整 race-scale；上文 v0.5 的完整 scale/race-scale 数据保持历史证据，未冒充本轮结果。当前全仓 race 使用真实 PostgreSQL；未配置 `JOBFORGE_TEST_REDIS_URL`，Redis 专属 integration 用例按设计 skip。完整微基准逐轮数据、环境与命令见 [benchmark.md](benchmark.md) 的 migration 0019 章节。
 
 ## 耐久事件恢复（PRD v0.3 M2，ADR-0006）
 
