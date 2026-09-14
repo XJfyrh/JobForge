@@ -6,10 +6,10 @@
 | 阶段 | 状态 | 完成证据 | 剩余 |
 |---|---|---|---|
 | M0 调查/文档/基线 | 完成 | 初始无未提交改动；规则/文档/实现已核对；同环境 Claim/Complete/Fail 基线已保存 | 无 |
-| M1 接入契约 | 已实现并验证 | SDK 34 项测试；独立环境安装；真实 HTTP/Python/Gateway/Worker 联调；AT-34 PostgreSQL 结果事务/竞争/迁移测试；全量 race 通过（集成 132.4 s） | 后续阶段变更后复验 |
+| M1 接入契约 | 已实现并验证 | SDK 34 项测试；独立环境安装；真实 HTTP/Python/Gateway/Worker 联调；AT-34 PostgreSQL 结果事务/竞争/迁移测试；初轮及最终全量 race 通过 | 无 |
 | M2 真实任务 | 已实现并验证 | 两个真实模型、SDK、产物、12 类生命周期；干净 Compose / SDK 安装；发布前后真实 kill；已移除专属 Handler/注册/当前示例 | 无实现缺口 |
 | M3 观测与运维 | 已实现并验证 | Jaeger 实际链路查询；Compose 停 Collector、模型和 Worker；指标/告警触发恢复；Grafana 11 面板实际检查 | 无实现缺口 |
-| M4 全量验证/交付 | 本地通过，远端检查待运行 | 最终全量 race（含 Compose CPU 模型/Jaeger，集成 211.350s）；lint/SQL/Buf/Python 通过 | PR CI 与最终审查记录 |
+| M4 全量验证/交付 | 本地通过，远端复验中 | 最终全量 race（含 Compose CPU 模型/Jaeger，集成 211.350s）；lint/SQL/Buf/Python 通过；首轮普通 PR CI 通过 | 修正真实模型 CI 退出码和测试密钥碰撞后复验 |
 
 所有模型替身只计快速测试；真实模型结果、真实进程 kill 和观测查询另列。历史 W4 Claim 绝对门禁未通过的既有披露继续有效，不以本轮相对性能比较覆盖。
 
@@ -39,6 +39,9 @@
 - Worker 热路径同环境 100 jobs × 3 轮（固定 1ms Handler、实际 Gateway/PG、每任务一成功 attempt）：capacity=1 中位 78.59→80.55 jobs/s；capacity=4 为 181.0→244.6 jobs/s，基线样本 127.8～209.7 波动较大，不解释为稳定提速，只报告未见定向回归。原始 `m3-worker-baseline.txt` / `m3-worker-current.txt`。历史 W4 Claim 绝对门禁未重跑，原有失败披露继续保留。
 
 ## 跳过、限制与复现范围
+
+- 首轮 Linux CI：普通工程检查全部通过（run `34841059677`）；真实模型 run `34841059870` 的 12 场景中一个 Trace 隐私断言失败，不能计作通过。测试密钥 `business-a` 与随机 `business-<UUID>` Worker ID 存在前缀碰撞；现改用明确的密钥标记并同时检测两租户密钥，仍禁止记录凭据。原 `go test | tee` 未启用 pipefail，导致该工作流错误显示绿色；现显式开启，失败必须传递到 CI。原始失败日志保留在仓库外 `ci-real-first.txt`。
+- 补修后本地 `go test -race ./tests/integration -run '^TestRealTasks(SDK|Lifecycle)$' -count=2 -v` 连续两轮全部通过（147.620s），包括实际 Jaeger 隐私断言；日志为 `final-real-recheck.txt`。另实测 Bash 失败管道退出码为 1，产物服务启动错误脱敏回归与 golangci-lint 均通过。
 
 - 明确跳过：既有 AT-25 ControlStream 可裁剪 P1 骨架；helper 测试主进程标记 skip、真实场景会作为 OS 子进程实际执行。全量这次没有因缺 PostgreSQL、Redis、Python 或真实模型而跳过相应验收。
 - 未运行：可信远程模型配置、不同硬件/未知文档准确率、生产观测持久留存与容量评估。这些不作为本轮本地验收前提。

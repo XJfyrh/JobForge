@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,11 +14,11 @@ import (
 func runArtifacts(ctx context.Context, cfg *config.Config) error {
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
-		return err
+		return errors.New("artifact database configuration invalid")
 	}
 	defer pool.Close()
 	if err = pool.Ping(ctx); err != nil {
-		return err
+		return errors.New("artifact database unavailable")
 	}
 	model, err := tasks.NewOllama(cfg.OllamaURL, cfg.OllamaAPIKey)
 	if err != nil {

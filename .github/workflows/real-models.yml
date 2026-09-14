@@ -58,7 +58,10 @@ jobs:
           docker exec '${{ job.services.ollama.id }}' ollama pull all-minilm:22m
           docker exec '${{ job.services.ollama.id }}' ollama pull qwen2.5:0.5b
       - name: Real models, artifacts, SDK and process crash recovery
-        run: go test -race ./tests/integration -run '^TestRealTasks(SDK|Lifecycle)$' -count=1 -v | tee real-models.txt
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -race ./tests/integration -run '^TestRealTasks(SDK|Lifecycle)$' -count=1 -v | tee real-models.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

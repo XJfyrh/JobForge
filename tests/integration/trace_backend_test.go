@@ -45,7 +45,7 @@ func assertTraceBackend(t *testing.T, traceID string, completeGraph bool, requir
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, forbidden := range []string{"Northwind Components", "PO-2026-0042", "dev-api-key", "fault-key", "business-a", "\"payload\"", "\"Authorization\""} {
+		for _, forbidden := range []string{"Northwind Components", "PO-2026-0042", "dev-api-key", "fault-key", businessTestAPIKey, businessTestForeignAPIKey, "\"payload\"", "\"Authorization\""} {
 			if strings.Contains(string(body), forbidden) {
 				t.Fatalf("sensitive content found in trace: %q", forbidden)
 			}

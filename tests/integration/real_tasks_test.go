@@ -28,6 +28,10 @@ import (
 const businessHelperModel = "JOBFORGE_TEST_BUSINESS_MODEL"
 const businessHelperAfterPublish = "JOBFORGE_TEST_BUSINESS_AFTER_PUBLISH"
 
+// Distinct secret markers cannot collide with traced business-<UUID> worker IDs.
+const businessTestAPIKey = "acceptance-secret-business-tenant-a"
+const businessTestForeignAPIKey = "acceptance-secret-business-tenant-b"
+
 // TestBusinessWorkerProcessHelper is test-only fault wiring around real
 // production handlers. No production payload or binary contains these hooks.
 func TestBusinessWorkerProcessHelper(t *testing.T) {
@@ -141,7 +145,7 @@ func TestRealTasksSDK(t *testing.T) {
 		t.Fatal("real SDK acceptance requires JOBFORGE_TEST_PYTHON")
 	}
 	js := setupStore(t)
-	cfg := &config.Config{APIKeys: map[string]string{"business-a": "business-tenant-a", "business-b": "business-tenant-b"}}
+	cfg := &config.Config{APIKeys: map[string]string{businessTestAPIKey: "business-tenant-a", businessTestForeignAPIKey: "business-tenant-b"}}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	api := httptest.NewServer(apihttp.NewRouter(js, js, testTaskTypeCatalog(t), cfg, logger, nil))
 	defer api.Close()
@@ -156,7 +160,7 @@ func TestRealTasksSDK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, python, filepath.Join("..", "..", "examples", "agent_rag.py"), "--api-url", api.URL, "--artifact-url", artifacts.URL, "--queue", queue)
-	cmd.Env = helperEnvironment(map[string]string{"JOBFORGE_API_KEY": "business-a", "JOBFORGE_FOREIGN_API_KEY": "business-b"})
+	cmd.Env = helperEnvironment(map[string]string{"JOBFORGE_API_KEY": businessTestAPIKey, "JOBFORGE_FOREIGN_API_KEY": businessTestForeignAPIKey})
 	output, err := cmd.CombinedOutput()
 	process.stopAndWait(t)
 	if err != nil {

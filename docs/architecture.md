@@ -1,6 +1,6 @@
 # JobForge 系统架构
 
-本文档描述 JobForge 分布式任务编排平台的系统架构。产品边界与验收语义见 [PRD](product/JobForge_PRD_v0.1.md)，架构决策见 [ADR 目录](adr/README.md)。
+本文档描述 JobForge 分布式任务编排平台的系统架构。当前产品边界与验收语义见 [PRD v0.6](product/JobForge_PRD_v0.6.md)，其上游可靠性不变量继续生效；架构决策见 [ADR 目录](adr/README.md)。
 
 ## 架构概览
 
@@ -12,6 +12,12 @@ flowchart LR
     Worker1[Worker 1] -->|gRPC| Gateway[Worker Gateway]
     Worker2[Worker 2] -->|gRPC| Gateway
     Gateway --> PG
+    Worker1 --> Tasks[预注册 Agent/RAG 适配器]
+    Worker2 --> Tasks
+    Tasks --> Ollama[本地模型后端]
+    Tasks -->|独立业务表 task_artifacts| PG
+    Client --> Artifacts[产物 API / 检索]
+    Artifacts -->|租户鉴权| PG
     Scheduler -.->|LISTEN/NOTIFY| Gateway
     API -.->|LISTEN/NOTIFY| Gateway
     Publisher[Outbox Publisher] --> PG
@@ -34,7 +40,9 @@ flowchart LR
 | API Server | 提交、查询、取消、人工重试；API key 鉴权；部署任务类型目录校验；队列背压 | 执行业务任务 |
 | Scheduler | scheduled/retry_wait → ready 推进；过期 lease 回收；advisory lock + 领导权租约（epoch fencing，ADR-0005）单活 | 存储业务结果 |
 | Worker Gateway | gRPC Worker 会话管理；Register/Poll 能力与容量约束；Heartbeat/Complete/Fail 事务；fencing 与稳定领域错误 | 运行用户 Handler |
-| Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出；默认 Demo wiring 注入小容量业务效果连接池 | 决定任务最终状态；核心 Runtime 不直接读写 PostgreSQL |
+| Worker Runtime | 并发池执行；Handler 注册；context/deadline 传播；心跳维持；优雅退出 | 决定任务最终状态；核心 Runtime 不直接读写 PostgreSQL |
+| Agent/RAG 业务适配器 | 固定语料、模型调用与 Schema 校验；独立连接池唯一发布业务产物 | 领取租约、调度或改变任务状态 |
+| Artifacts API | 租户鉴权后查询产物、对持久向量索引执行检索 | 绕过任务权限或访问任意用户 URL |
 | PostgreSQL | 任务状态、租约、attempt、Worker、outbox 的唯一事实源 | 执行任意业务代码 |
 | Outbox Publisher | 轮询发布 outbox_events（at-least-once，可选 notify/Redis Streams）；进度追踪与 retention 清理 | 改写任务核心状态 |
 | Reference Consumer | Redis consumer group 读取；inbox 去重与示例业务效果同事务；commit 后 ACK；pending/poison 恢复 | 动态加载 Handler；为跨系统副作用承诺 exactly-once |
@@ -53,11 +61,12 @@ flowchart LR
 5. Worker → Register/Poll RPC → Gateway；锁 workers 行，核对登记 queue/type/capacity
    并统计 owner inflight 后，在同一事务 SELECT FOR UPDATE SKIP LOCKED → PostgreSQL
 6. Gateway → 返回 ClaimedJob (lease + fencing token) → Worker
-7. Worker → 执行 Handler → 外部副作用；`demo.idempotent_effect` 以 job_id
-   原子写 `demo_idempotent_effects`，重复投递返回首次 result_ref
+7. Worker → 预注册 Handler → 模型推理、校验 → 按 tenant/type/business_key
+   唯一发布 task_artifacts；重复执行复用首次 result_ref
 8. Worker → Heartbeat RPC（默认 5s）→ Gateway → PostgreSQL 单次 UPDATE：
    使用同一 clock_timestamp() 续租并检测 cancelling；若已取消则返回 CANCEL
-9. Worker → Complete/Fail RPC → Gateway → UPDATE state + INSERT job_attempts
+9. Worker → Complete/Fail RPC → Gateway → 同一事务更新 state、attempt、配额与 outbox；
+   Complete 同时保存 result_ref，重复确认不覆盖首次结果
 ```
 
 Gateway 的 `RegisterResponse.heartbeat_interval` 来自 `JOBFORGE_HEARTBEAT_INTERVAL`（默认 5s），不再硬编码。Worker 未显式配置本地间隔时采用该建议；显式本地配置优先。每次 job heartbeat 均更新 `lease_until`，不受 `workers.last_heartbeat_at` 的 `LeaseTTL/3` 附属存活写节流影响。取消信号延迟由上述 PostgreSQL 查询返回 `clock_timestamp() - cancel_requested_at`，避免混用 Gateway 主机时钟（ADR-0008）。
@@ -90,7 +99,7 @@ SELECT worker capabilities FOR UPDATE
   → COMMIT
 ```
 
-同一 Worker 的并发 Poll 与重新注册由 workers 行锁串行；无服务端 slot 时立即返回空响应，不在持锁状态进入 long-poll。`workers.inflight` 仍不作为正确性来源。migration 0019 新增 `(lease_owner)` inflight 部分索引，只缩短 jobs 聚合扫描，不改变上述事务或容量语义；当前 schema 最新版本为 0019。
+同一 Worker 的并发 Poll 与重新注册由 workers 行锁串行；无服务端 slot 时立即返回空响应，不在持锁状态进入 long-poll。`workers.inflight` 仍不作为正确性来源。migration 0019 新增 `(lease_owner)` inflight 部分索引，只缩短 jobs 聚合扫描，不改变上述事务或容量语义；当前 schema 最新版本为 0022。
 
 Worker Proto v1 兼容新增 `DomainErrorDetail{code,retryable}`。所有服务实现返回的 Worker RPC 错误都附带一个稳定 detail；`CANCEL_REQUESTED` 使用 `FAILED_PRECONDITION`。Runtime 优先解析 detail，连接旧 Gateway 时继续按标准 gRPC code 回退。该契约约束执行资格和错误解释，不提供 Worker 身份认证；Gateway 仍须部署在可信网络。
 
@@ -274,12 +283,14 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | [ADR-0008](adr/0008-cancel-control-channel-heartbeat.md) | 取消 SLO | P0 heartbeat 默认 5s、DB-clock 分段度量；P1 ControlStream 保留为可裁剪 M5 |
 | [ADR-0009](adr/0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久效果与崩溃证据 | job_id 原子业务幂等；Demo DB 依赖隔离；真实进程 Kill/Wait；不宣称 exactly-once |
 | [ADR-0010](adr/0010-task-type-catalog-and-worker-capability-binding.md) | 类型目录与 Worker 能力绑定 | 静态部署 allowlist；Register 子集；workers 行锁内容量核算与 Claim；无 migration |
+| [ADR-0011](adr/0011-general-task-results-and-model-adapters.md) | 通用结果与模型适配器（Proposed） | Go 持有唯一任务租约；有界结果引用；独立业务键与产物发布 |
+| [ADR-0012](adr/0012-task-observability-and-otlp.md) | 任务可观测闭环（Proposed） | 提交后按状态转换计数；可选 OTLP；遥测不参与可靠性判断 |
 
 ## 目录结构
 
 ```text
 jobforge/
-├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/publisher/ctl/migrate 子命令）
+├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/artifacts/publisher/consumer/ctl/migrate）
 ├── internal/
 │   ├── api/http/           # HTTP 控制面 API（chi router）
 │   ├── config/             # 环境变量配置
@@ -293,6 +304,7 @@ jobforge/
 │   ├── outbox/             # Outbox publisher（at-least-once 发布 + retention 清理）
 │   ├── scheduler/          # 调度器（promote + recover 循环）
 │   ├── store/postgres/     # PostgreSQL 存储层（pgx v5）
+│   ├── tasks/              # 预注册 Agent/RAG 适配器、模型 HTTP、业务产物与查询
 │   └── worker/             # Worker Runtime + demo handlers
 ├── proto/jobforge/worker/v1/  # gRPC proto 定义
 ├── sdk/python/             # Python SDK（httpx）
@@ -312,7 +324,8 @@ jobforge/
 | gRPC | google.golang.org/grpc + protobuf |
 | 数据库 | PostgreSQL 16 + jackc/pgx v5 |
 | Proto 管理 | buf v2 |
-| 可观测性 | OpenTelemetry SDK + Prometheus client_golang |
+| 可观测性 | OpenTelemetry SDK + 可选 OTLP/Collector/Jaeger + Prometheus/Grafana |
+| 本地模型 | Ollama 0.32.5；all-minilm:22m / qwen2.5:0.5b，manifest digest 固定 |
 | Python SDK | httpx |
 | 容器化 | Docker + Docker Compose |
 | Lint | golangci-lint + ruff (Python) |
