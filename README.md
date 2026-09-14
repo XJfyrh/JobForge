@@ -69,23 +69,19 @@ flowchart LR
 
 ## 快速开始
 
-```sh
-# 一条命令启动全栈：PostgreSQL + API + Scheduler + Gateway + Outbox Publisher + 2 Worker
-docker compose -f deploy/compose.yaml up -d --build
-
-# 提交第一个任务
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.echo","payload":{"message":"hello"}}'
-
-# 查询任务状态
-curl -s http://localhost:8080/v1/jobs/{job_id} -H "X-API-Key: dev-api-key"
+```powershell
+# 启动服务和免费的本地 CPU 模型后端
+ docker compose -f deploy/compose.yaml --profile models up -d --build
+ docker compose -f deploy/compose.yaml --profile models exec ollama ollama pull all-minilm:22m
+ docker compose -f deploy/compose.yaml --profile models exec ollama ollama pull qwen2.5:0.5b
+ python -m venv .venv
+ .venv/Scripts/python.exe -m pip install './sdk/python[demo]'
+ .venv/Scripts/python.exe examples/agent_rag.py
 ```
 
 默认端口：HTTP API `:8080` · gRPC Gateway `:9090` · `/metrics` + pprof `:6060`（进程默认仅绑定 localhost，生产环境不应暴露）。
 
-三分钟完整演示见 [demo-script.md](docs/demo-script.md)。
+脚本会检查真实索引、检索命中和采购单抽取字段，并输出受租户鉴权保护的产物引用。首次模型下载/加载需要额外时间；Linux 使用 `.venv/bin/python`。启动、资源上限和清理见[真实任务指南](docs/real-tasks.md)，三分钟完整演示见 [demo-script.md](docs/demo-script.md)，当前验证状态见[实施记录](docs/agent-rag-progress.md)。
 
 耐久发布与参考消费闭环可选启动：
 
@@ -100,7 +96,7 @@ docker compose -f deploy/compose.yaml --profile durable-events up -d --build
 
 | 文档 | 用途 |
 |---|---|
-| [产品需求文档](docs/product/JobForge_PRD_v0.5.md) | v0.5 任务类型目录、Worker 能力与稳定 gRPC 错误契约 |
+| [产品需求文档](docs/product/JobForge_PRD_v0.6.md) | 通用接入、真实 Agent/RAG 与可观测闭环 |
 | [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |

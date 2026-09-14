@@ -9,8 +9,9 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-from opentelemetry import propagate, trace
+from opentelemetry import trace
 from opentelemetry.trace import StatusCode
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from jobforge.errors import (
     InternalError,
@@ -32,7 +33,9 @@ class JobForgeClient:
 
     Example:
         >>> client = JobForgeClient("http://localhost:8080", "dev-api-key")
-        >>> job = client.submit("default", "demo.echo", {"msg": "hi"})
+        >>> payload = {"version": 1, "business_key": "handbook-v1",
+        ...            "corpus_version": "handbook-v1"}
+        >>> job = client.submit("default", "rag.index", payload)
         >>> print(job.job_id, job.state)
     """
 
@@ -91,7 +94,7 @@ class JobForgeClient:
     ) -> httpx.Response:
         """Perform exactly one HTTP exchange with bounded, content-free tracing."""
         parent = (
-            propagate.extract({"traceparent": self._traceparent})
+            TraceContextTextMapPropagator().extract({"traceparent": self._traceparent})
             if self._traceparent
             else None
         )
@@ -102,7 +105,7 @@ class JobForgeClient:
             set_status_on_exception=False,
         ) as span:
             headers: dict[str, str] = {}
-            propagate.inject(headers)
+            TraceContextTextMapPropagator().inject(headers)
             try:
                 response = self._client.request(method, path, headers=headers, **kwargs)
             except httpx.TimeoutException as exc:

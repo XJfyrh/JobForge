@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -19,6 +20,7 @@ import (
 
 	apihttp "github.com/xjfyrh/jobforge/internal/api/http"
 	"github.com/xjfyrh/jobforge/internal/config"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/worker"
 	"github.com/xjfyrh/jobforge/internal/worker/demo"
 )
@@ -47,7 +49,13 @@ func TestPythonHTTPContract(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	js := setupStore(t)
 	cfg := &config.Config{APIKeys: map[string]string{"contract-a": "contract-tenant-a", "contract-b": "contract-tenant-b"}, QueueHardLimit: 2}
-	server := httptest.NewServer(apihttp.NewRouter(js, js, testTaskTypeCatalog(t), cfg, logger, nil))
+	reg := prometheus.NewRegistry()
+	metrics, shutdownMetrics, err := observability.SetupMetrics(ctx, reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = shutdownMetrics(context.Background()) }()
+	server := httptest.NewServer(apihttp.NewRouter(js, js, testTaskTypeCatalog(t), cfg, logger, metrics))
 	defer server.Close()
 	registry := worker.NewRegistry()
 	registry.Register("demo.echo", &demo.EchoHandler{})
@@ -65,6 +73,13 @@ func TestPythonHTTPContract(t *testing.T) {
 		t.Fatalf("Python HTTP contract: %v\n%s", err, output)
 	}
 	t.Logf("%s", output)
+	var submitted int
+	if err := testEnv.pool.QueryRow(ctx, `select count(*) from jobs where tenant_id='contract-tenant-a' and queue in ($1,$2)`, queue, queue+"-overloaded").Scan(&submitted); err != nil {
+		t.Fatal(err)
+	}
+	if got := sumMetric(t, reg, "jobforge_jobs_submitted_total", map[string]string{"tenant": "contract-tenant-a"}); got != float64(submitted) {
+		t.Fatalf("submission metrics=%v persisted=%d (idempotent replay and manual retry)", got, submitted)
+	}
 	// A real Python SDK parent must survive HTTP -> persisted job -> Worker.
 	seen := map[string]bool{}
 	for _, span := range exporter.GetSpans() {

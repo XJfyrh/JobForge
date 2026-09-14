@@ -6,7 +6,7 @@
 
 类型名遵循 ADR-0010，API/Gateway `JOBFORGE_TASK_TYPES` 同值，Worker Registry 注册相应 Handler。两种真实类型是 `rag.index`、`agent.extract`；`demo.*` 保留为快速确定性测试能力。
 
-业务 payload 由 Handler 严格校验，最少包含 `input_version` 和 `business_key`，其余为业务注册的资源 ID / 版本。队列内核不知道文档、模型、索引或抽取 Schema。业务 payload 不能选择 shell、代码、执行路径、网络 endpoint、模型工具或租户。
+业务 payload 由 Handler 严格校验，最少包含 `version` 和 `business_key`，其余为业务注册的资源 ID / 版本。队列内核不知道文档、模型、索引或抽取 Schema。业务 payload 不能选择 shell、代码、执行路径、网络 endpoint、模型工具或租户。
 
 ```go
 registry.Register("example.task", worker.HandlerFunc(func(ctx context.Context, job *worker.ClaimedJob) (string, error) {
@@ -43,3 +43,25 @@ Go Runtime 是唯一 lease 持有者。业务 HTTP 服务/模型后端不领取 
 ## 5. 验证分层
 
 快速测试验证版本、输入边界、超时/取消传播、输出校验、持久幂等与核心故障恢复；固定替身只能证明这些协议。真实模型验收必须检查真实向量、检索命中、实际模型抽取字段、产物读取，以及两个任务的 OS Worker kill / 租约恢复。结果引用、日志/trace 和业务存储形成可核对的证据链。
+
+## 6. 当前适配器输入与产物 API
+
+实现位于 `internal/tasks`，固定文档和 Schema 位于其 `fixtures`。`rag.index` 输入：
+
+```json
+{"version":1,"business_key":"handbook-run-1","corpus_version":"handbook-v1"}
+```
+
+索引版本 `paragraph-runes480-overlap80-cosine-v1`：去标题、按段落解析，长段落每 480 Unicode 字符切分，重叠 80 字符；语料产生 6 个分块，每个向量 384 维。产物保存文本、来源、向量、模型 digest 与真实检索断言。
+
+`agent.extract` 输入：
+
+```json
+{"version":1,"business_key":"order-run-1","document_version":"purchase-order-v1","schema_version":"purchase-order-v1"}
+```
+
+严格验证 Schema、必填字段、正数、USD、日期、来源引文以及订单号/供应商/日期的来源依据；最多修正一次。修正提示不拼接错误响应，不宣称对未知文档的准确率。
+
+`jobforge artifacts` 提供 `GET /v1/artifacts/{hex_id}` 与 `POST /v1/artifacts/{hex_id}/search`。后者接收 `{"query":"...","k":1}`（query≤2048 字节、k=1..10、四路并发、60s 上限），对持久向量执行真实查询向量检索。两者按 Bearer key 鉴权，其他租户返回 404。引用格式 `jobforge-artifact:<hex_id>` 不含凭据。
+
+稳定业务错误码见 `internal/tasks/contracts.go` 和适配器：输入/版本/Schema/检索验证/业务键冲突不可重试；`MODEL_UNAVAILABLE`、`ARTIFACT_UNAVAILABLE` 可重试。Handler 可实现 `ErrorCode() string` 返回固定机器码，错误文本必须脱敏。业务键、query、文档和产物不进入日志/Trace。

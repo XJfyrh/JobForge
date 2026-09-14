@@ -77,7 +77,7 @@ Gateway 的 `RegisterResponse.heartbeat_interval` 来自 `JOBFORGE_HEARTBEAT_INT
 
 ### 任务类型目录与 Worker 执行资格（PRD v0.5，ADR-0010）
 
-`TaskTypeCatalog` 是进程启动时冻结的部署 allowlist。API 与 Gateway 从同一 `JOBFORGE_TASK_TYPES` 语义构造目录，Compose 显式注入相同值；两者启动日志输出 `catalog_size` 与排序目录的 SHA-256 指纹，用于发现配置漂移。目录默认包含 `demo.echo`、`demo.sleep`、`demo.fail`、`demo.idempotent_effect`、`demo.http` 和 `pagewise.reindex`。目录不依赖在线 Worker，因此合法任务可以先排队、Worker 后上线。
+`TaskTypeCatalog` 是进程启动时冻结的部署 allowlist。API 与 Gateway 从同一 `JOBFORGE_TASK_TYPES` 语义构造目录，Compose 显式注入相同值；两者启动日志输出 `catalog_size` 与排序目录的 SHA-256 指纹，用于发现配置漂移。目录默认包含 `demo.echo`、`demo.sleep`、`demo.fail`、`demo.idempotent_effect`、`demo.http` 以及 `rag.index`、`agent.extract`。目录不依赖在线 Worker，因此合法任务可以先排队、Worker 后上线。
 
 Register 在写 workers 前校验非空 worker ID、正 capacity、非空无重复 queues/types，以及 types 为目录子集。每次 Poll 的实际领取尝试执行一个短事务：
 
@@ -324,3 +324,7 @@ jobforge/
 - [性能基线](benchmark.md) — W4 冻结基线 + 最终发布数据
 - [演示脚本](demo-script.md) — 3 分钟可复现演示
 - [开发环境](development.md) — 本地开发、测试和检查命令
+
+## v0.6 业务适配器与结果引用
+
+详见 [ADR-0011](adr/0011-general-task-results-and-model-adapters.md)。Go Runtime 独占任务租约，预注册业务 Handler 通过固定 Ollama HTTP 接口执行推理，模型端不参与调度。0020 将有界结果引用与成功状态原子持久化；0021 的独立业务产物表没有 jobs 外键，按 tenant/type/business_key 唯一发布。独立 artifacts HTTP 服务进行租户鉴权和向量检索，核心 API 只返回引用。发布和 Complete 是两个事务，持久业务幂等覆盖两者之间的崩溃窗口。

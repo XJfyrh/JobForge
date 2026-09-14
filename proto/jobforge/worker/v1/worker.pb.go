@@ -151,7 +151,7 @@ type RegisterRequest struct {
 	InstanceId string `protobuf:"bytes,2,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
 	// Queue names this Worker polls from.
 	Queues []string `protobuf:"bytes,3,rep,name=queues,proto3" json:"queues,omitempty"`
-	// Task types this Worker can execute (e.g. "demo.echo", "pagewise.reindex").
+	// Task types this Worker can execute (e.g. "rag.index", "agent.extract").
 	SupportedTypes []string `protobuf:"bytes,4,rep,name=supported_types,json=supportedTypes,proto3" json:"supported_types,omitempty"`
 	// Maximum concurrent jobs this Worker can handle.
 	Capacity int32 `protobuf:"varint,5,opt,name=capacity,proto3" json:"capacity,omitempty"`
@@ -444,7 +444,10 @@ type ClaimedJob struct {
 	// Serialized W3C TraceContext (traceparent header value) captured at job
 	// submission. Workers extract it to attach worker.execute spans to the
 	// original submit trace (FR-503 / AT-12). Empty for legacy jobs.
-	TraceContext  string `protobuf:"bytes,11,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
+	TraceContext string `protobuf:"bytes,11,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
+	// Authenticated tenant copied from the stored job, never from payload.
+	// Trusted business adapters use it to scope artifact publication.
+	TenantId      string `protobuf:"bytes,12,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -552,6 +555,13 @@ func (x *ClaimedJob) GetTraceId() string {
 func (x *ClaimedJob) GetTraceContext() string {
 	if x != nil {
 		return x.TraceContext
+	}
+	return ""
+}
+
+func (x *ClaimedJob) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
 	}
 	return ""
 }
@@ -693,7 +703,9 @@ type CompleteRequest struct {
 	WorkerId string `protobuf:"bytes,2,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
 	// Fencing token proving lease ownership.
 	FencingToken int64 `protobuf:"varint,3,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
-	// Optional reference to the result (e.g. storage URI). Not stored inline.
+	// Optional UTF-8 result reference: at most 2048 bytes, no C0/DEL controls.
+	// Empty means no reference. Stored atomically with success, never replaced
+	// by duplicate completion. Large business artifacts remain outside jobs.
 	ResultRef string `protobuf:"bytes,4,opt,name=result_ref,json=resultRef,proto3" json:"result_ref,omitempty"`
 	// Actual execution duration for metrics.
 	Duration      *durationpb.Duration `protobuf:"bytes,5,opt,name=duration,proto3" json:"duration,omitempty"`
@@ -972,7 +984,7 @@ var File_jobforge_worker_v1_worker_proto protoreflect.FileDescriptor
 
 const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x1fjobforge/worker/v1/worker.proto\x12\x12jobforge.worker.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\"E\n" +
+	"\x1fjobforge/worker/v1/worker.proto\x12\x12jobforge.worker.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"E\n" +
 	"\x11DomainErrorDetail\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x1c\n" +
 	"\tretryable\x18\x02 \x01(\bR\tretryable\"\xc6\x01\n" +
@@ -995,7 +1007,7 @@ const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"\x06queues\x18\x04 \x03(\tR\x06queues\x12\x14\n" +
 	"\x05types\x18\x05 \x03(\tR\x05types\"B\n" +
 	"\fPollResponse\x122\n" +
-	"\x04jobs\x18\x01 \x03(\v2\x1e.jobforge.worker.v1.ClaimedJobR\x04jobs\"\xfb\x02\n" +
+	"\x04jobs\x18\x01 \x03(\v2\x1e.jobforge.worker.v1.ClaimedJobR\x04jobs\"\x98\x03\n" +
 	"\n" +
 	"ClaimedJob\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x14\n" +
@@ -1010,7 +1022,8 @@ const file_jobforge_worker_v1_worker_proto_rawDesc = "" +
 	"\atimeout\x18\t \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x19\n" +
 	"\btrace_id\x18\n" +
 	" \x01(\tR\atraceId\x12#\n" +
-	"\rtrace_context\x18\v \x01(\tR\ftraceContext\"\x96\x01\n" +
+	"\rtrace_context\x18\v \x01(\tR\ftraceContext\x12\x1b\n" +
+	"\ttenant_id\x18\f \x01(\tR\btenantId\"\x96\x01\n" +
 	"\x10HeartbeatRequest\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1b\n" +
 	"\tworker_id\x18\x02 \x01(\tR\bworkerId\x12#\n" +

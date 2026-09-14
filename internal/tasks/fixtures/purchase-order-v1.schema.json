@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["order_id", "supplier", "quantity", "currency", "total_amount", "delivery_date", "source_quote"],
+  "properties": {
+    "order_id": {"type": "string"},
+    "supplier": {"type": "string"},
+    "quantity": {"type": "integer"},
+    "currency": {"type": "string", "enum": ["USD"]},
+    "total_amount": {"type": "number"},
+    "delivery_date": {"type": "string"},
+    "source_quote": {"type": "string"}
+  }
+}

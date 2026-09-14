@@ -17,7 +17,8 @@ var defaultTaskTypeNames = []string{
 	"demo.http",
 	"demo.idempotent_effect",
 	"demo.sleep",
-	"pagewise.reindex",
+	"rag.index",
+	"agent.extract",
 }
 
 // TaskTypeCatalog is an immutable deployment allowlist for task types. Its

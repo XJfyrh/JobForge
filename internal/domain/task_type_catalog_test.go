@@ -7,13 +7,13 @@ import (
 )
 
 func TestTaskTypeCatalogCanonicalizesAndCopies(t *testing.T) {
-	input := []string{"pagewise.reindex", "demo.echo", "demo.fail"}
+	input := []string{"rag.index", "demo.echo", "demo.fail"}
 	catalog, err := NewTaskTypeCatalog(input)
 	if err != nil {
 		t.Fatalf("new catalog: %v", err)
 	}
 
-	want := []string{"demo.echo", "demo.fail", "pagewise.reindex"}
+	want := []string{"demo.echo", "demo.fail", "rag.index"}
 	if !slices.Equal(catalog.Types(), want) {
 		t.Fatalf("types = %v, want %v", catalog.Types(), want)
 	}
@@ -73,8 +73,8 @@ func TestDefaultTaskTypeCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("default catalog: %v", err)
 	}
-	if catalog.Size() != 6 {
-		t.Fatalf("default catalog size = %d, want 6", catalog.Size())
+	if catalog.Size() != 7 {
+		t.Fatalf("default catalog size = %d, want 7", catalog.Size())
 	}
 	for _, taskType := range []string{
 		"demo.echo",
@@ -82,7 +82,7 @@ func TestDefaultTaskTypeCatalog(t *testing.T) {
 		"demo.fail",
 		"demo.idempotent_effect",
 		"demo.http",
-		"pagewise.reindex",
+		"rag.index",
 	} {
 		if !catalog.Contains(taskType) {
 			t.Errorf("default catalog missing %q", taskType)

@@ -33,6 +33,7 @@ import (
 	"github.com/xjfyrh/jobforge/internal/outbox"
 	"github.com/xjfyrh/jobforge/internal/scheduler"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
+	"github.com/xjfyrh/jobforge/internal/tasks"
 	"github.com/xjfyrh/jobforge/internal/worker"
 	"github.com/xjfyrh/jobforge/internal/worker/demo"
 )
@@ -55,7 +56,7 @@ func main() {
 	}
 
 	obsCfg := observability.Config{
-		ServiceName:    "jobforge",
+		ServiceName:    "jobforge-" + os.Args[1],
 		ServiceVersion: "0.1.0",
 		Environment:    "development",
 		ExporterType:   cfg.OTelExporterType,
@@ -71,7 +72,11 @@ func main() {
 		logger.Error("setup tracing", "error", err)
 		os.Exit(1)
 	}
-	defer func() { _ = traceShutdown(context.Background()) }()
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = traceShutdown(flushCtx)
+	}()
 
 	metrics, metricsShutdown, err := observability.SetupMetrics(ctx, nil)
 	if err != nil {
@@ -106,6 +111,11 @@ func main() {
 	case "worker":
 		if err := runWorker(ctx, logger, cfg, metrics); err != nil {
 			logger.Error("worker failed", "error", err)
+			os.Exit(1)
+		}
+	case "artifacts":
+		if err := runArtifacts(ctx, cfg); err != nil {
+			logger.Error("artifact server failed", "error", err)
 			os.Exit(1)
 		}
 	case "gateway":
@@ -544,9 +554,8 @@ func runConsumer(
 }
 
 func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, metrics *observability.Metrics) error {
-	// The default demo worker persists demo.idempotent_effect in PostgreSQL.
-	// This small pool belongs only to demo wiring; the core Worker Runtime and
-	// custom Handler API remain Gateway-only (ADR-0009).
+	// Business adapters own this artifact/effect pool; the core Worker Runtime
+	// remains Gateway-only (ADR-0009/0011).
 	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("parse database url: %w", err)
@@ -567,8 +576,11 @@ func runWorker(ctx context.Context, logger *slog.Logger, cfg *config.Config, met
 	// Register demo handlers.
 	registry := worker.NewRegistry()
 	demo.RegisterAll(registry, demo.NewPostgresEffectStore(effectPool), logger, metrics)
-	// PageWise reindex demo handler (FR-403 / Appendix A).
-	demo.RegisterPagewise(registry)
+	model, err := tasks.NewOllama(cfg.OllamaURL, cfg.OllamaAPIKey)
+	if err != nil {
+		return err
+	}
+	tasks.NewService(tasks.NewPostgresArtifacts(effectPool), model).Register(registry)
 
 	// Determine gateway address.
 	gatewayAddr := getEnvDefault("JOBFORGE_GATEWAY_ADDR", "localhost:9090")

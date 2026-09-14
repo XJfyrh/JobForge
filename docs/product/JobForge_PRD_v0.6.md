@@ -29,7 +29,7 @@ PostgreSQL 仍是任务唯一事实源；at-least-once、原子 Claim、owner/to
 ## 3. 接入与结果约束
 
 - HTTP 保持 ADR-0002 的 `{"error":{"code":"...","message":"..."}}`；SDK 稳定异常类型，不自动重试业务提交。`INVALID_TRANSITION` 补齐为 HTTP 409。
-- `result_ref` 为可选、不透明 UTF-8 文本，空串转换 SQL NULL / JSON null；非空最多 2048 字节，禁止控制字符。兼容现有 `effect:...`、`slept:...` 等引用；新业务用不携带凭据的 URI。禁止放置文档、模型内容或签名访问密钥。
+- `result_ref` 为可选、不透明 UTF-8 文本，空串转换 SQL NULL / JSON null；非空最多 2048 字节，禁止 C0/DEL 控制字符。兼容现有 `effect:...`、`slept:...` 等引用；新业务用不携带凭据的 URI。禁止放置文档、模型内容或签名访问密钥。
 - 查询沿用 tenant 过滤。引用本身不授予访问权限，业务存储独立鉴权；SDK 不自动请求引用 URL。
 - Complete 的首次有效事务保存引用，重复同 lease RPC 只回 ACK；旧 token/owner 不得因“当前已终态”变为成功。
 - 业务 payload 只含明确版本和预注册资源 ID / 业务键，不接受 shell、代码、文件路径、URL 或工具名作为执行指令。

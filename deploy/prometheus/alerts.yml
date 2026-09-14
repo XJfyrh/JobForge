@@ -1,0 +1,41 @@
+groups:
+  - name: jobforge
+    rules:
+      - alert: JobForgeServiceDown
+        expr: up{job=~"jobforge-.+"} == 0
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "JobForge service scrape unavailable"
+          description: "Inspect the service process and /metrics endpoint; task state remains in PostgreSQL."
+      - alert: JobForgeBacklogWithoutWorkers
+        expr: sum(jobforge_queue_depth{state="ready"}) > 0 and (sum(jobforge_workers_active) or vector(0)) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ready jobs have no live workers"
+          description: "Check Worker processes, Gateway connectivity, registration catalog and capacity."
+      - alert: JobForgeBacklogHigh
+        expr: sum by (queue) (jobforge_queue_depth{state="ready"}) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ready backlog exceeds the local example threshold"
+          description: "Inspect handler latency, capacity and tenant quota; tune this threshold for the deployment."
+      - alert: JobForgeDeadLetter
+        expr: sum by (queue, type) ((increase(jobforge_dlq_total[5m]) > 0) or (jobforge_dlq_total unless jobforge_dlq_total offset 5m)) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tasks entered dead state"
+          description: "Inspect the tenant-scoped attempt timeline and trace before retrying."
+      - alert: JobForgeLeaseRecovery
+        expr: sum by (queue, type) ((increase(jobforge_lease_expired_total[5m]) > 0) or (jobforge_lease_expired_total unless jobforge_lease_expired_total offset 5m)) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Worker leases expired and were recovered"
+          description: "Check killed/disconnected workers; verify attempt fencing and business artifact reuse."

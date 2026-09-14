@@ -392,7 +392,7 @@ func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRe
 	span.SetAttributes(attribute.String("job_id", req.JobId), attribute.String("worker_id", req.WorkerId))
 	var durationMs int64
 	if req.Duration != nil {
-		if err := req.Duration.CheckValid(); err != nil {
+		if err := req.Duration.CheckValid(); err != nil || req.Duration.AsDuration() < 0 {
 			return nil, domainStatusError(domain.CodeInvalidArgument, "invalid duration")
 		}
 		durationMs = req.Duration.AsDuration().Milliseconds()
@@ -417,7 +417,7 @@ func (svc *WorkerService) Fail(ctx context.Context, req *workerv1.FailRequest) (
 	span.SetAttributes(attribute.String("job_id", req.JobId), attribute.String("worker_id", req.WorkerId))
 	var durationMs int64
 	if req.Duration != nil {
-		if err := req.Duration.CheckValid(); err != nil {
+		if err := req.Duration.CheckValid(); err != nil || req.Duration.AsDuration() < 0 {
 			return nil, domainStatusError(domain.CodeInvalidArgument, "invalid duration")
 		}
 		durationMs = req.Duration.AsDuration().Milliseconds()
@@ -444,7 +444,7 @@ func (svc *WorkerService) recordFinishedAttempt(ctx context.Context, result *sto
 	svc.metrics.JobAttemptsTotal.Add(ctx, 1, attrs)
 	svc.metrics.JobLatencySeconds.Record(ctx, float64(result.DurationMs)/1000, attrs)
 	if result.State == domain.StateRetryWait {
-		svc.metrics.RetriesTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("error_code", errorCode)))
+		svc.metrics.RetriesTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type), attribute.String("error_code", observability.RetryErrorCategory(errorCode))))
 	}
 	if result.State == domain.StateDead {
 		svc.metrics.DLQTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type)))
@@ -539,6 +539,7 @@ func toClaimedJobs(jobs []*domain.Job) []*workerv1.ClaimedJob {
 	for _, j := range jobs {
 		cj := &workerv1.ClaimedJob{
 			JobId:        j.ID,
+			TenantId:     j.TenantID,
 			Queue:        j.Queue,
 			Type:         j.Type,
 			Payload:      j.Payload,

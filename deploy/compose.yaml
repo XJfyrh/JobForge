@@ -27,7 +27,7 @@ services:
       POSTGRES_DB: jobforge
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5433:5432"
+      - "${JOBFORGE_POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -44,11 +44,12 @@ services:
     environment:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_HTTP_ADDR: ":8080"
-      JOBFORGE_API_KEYS: "dev-api-key=dev-tenant"
-      JOBFORGE_TASK_TYPES: "demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,pagewise.reindex"
+      JOBFORGE_API_KEYS: "dev-api-key=dev-tenant,other-api-key=other-tenant"
+      JOBFORGE_TASK_TYPES: "demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,rag.index,agent.extract"
       JOBFORGE_LEASE_TTL: "30s"
       JOBFORGE_SCAN_INTERVAL: "1s"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "8080:8080"
@@ -65,7 +66,8 @@ services:
     environment:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_SCAN_INTERVAL: "1s"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       postgres:
@@ -79,12 +81,13 @@ services:
     environment:
       JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
       JOBFORGE_GRPC_ADDR: ":9090"
-      JOBFORGE_TASK_TYPES: "demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,pagewise.reindex"
+      JOBFORGE_TASK_TYPES: "demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,rag.index,agent.extract"
       JOBFORGE_LEASE_TTL: "30s"
       # Gateway-advertised cadence. Workers omit the local override and adopt
       # this value from RegisterResponse (ADR-0008).
       JOBFORGE_HEARTBEAT_INTERVAL: "${JOBFORGE_HEARTBEAT_INTERVAL:-5s}"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "9090:9090"
@@ -109,7 +112,8 @@ services:
       JOBFORGE_OUTBOX_TRANSPORT: "${JOBFORGE_OUTBOX_TRANSPORT:-notify}"
       JOBFORGE_REDIS_URL: "${JOBFORGE_REDIS_URL:-redis://redis:6379/0}"
       JOBFORGE_REDIS_STREAM_KEY: "${JOBFORGE_REDIS_STREAM_KEY:-jobforge:events}"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       postgres:
@@ -157,7 +161,8 @@ services:
       JOBFORGE_CONSUMER_RETRY_MAX: "${JOBFORGE_CONSUMER_RETRY_MAX:-30s}"
       # Empty delegates to the binary's <stream>:poison derivation.
       JOBFORGE_CONSUMER_POISON_STREAM: "${JOBFORGE_CONSUMER_POISON_STREAM:-}"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     ports:
       - "127.0.0.1::6060"
@@ -177,7 +182,9 @@ services:
       JOBFORGE_GATEWAY_ADDR: "gateway:9090"
       JOBFORGE_WORKER_ID: "worker-1"
       JOBFORGE_WORKER_QUEUE: "default"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OLLAMA_URL: "${JOBFORGE_OLLAMA_URL:-http://ollama:11434}"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       gateway:
@@ -193,20 +200,64 @@ services:
       JOBFORGE_GATEWAY_ADDR: "gateway:9090"
       JOBFORGE_WORKER_ID: "worker-2"
       JOBFORGE_WORKER_QUEUE: "default"
-      JOBFORGE_OTEL_EXPORTER: "stdout"
+      JOBFORGE_OLLAMA_URL: "${JOBFORGE_OLLAMA_URL:-http://ollama:11434}"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
       JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
     depends_on:
       gateway:
         condition: service_started
 
+  artifacts:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["artifacts"]
+    environment:
+      JOBFORGE_DATABASE_URL: "postgres://jobforge:jobforge@postgres:5432/jobforge?sslmode=disable"
+      JOBFORGE_ARTIFACT_ADDR: ":8081"
+      JOBFORGE_OTEL_EXPORTER: "${JOBFORGE_OTEL_EXPORTER:-stdout}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+      JOBFORGE_API_KEYS: "dev-api-key=dev-tenant,other-api-key=other-tenant"
+      JOBFORGE_OLLAMA_URL: "${JOBFORGE_OLLAMA_URL:-http://ollama:11434}"
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6060"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Optional CPU model backend; remote/host Ollama may be configured instead.
+  ollama:
+    image: ollama/ollama:0.32.5
+    profiles: ["models"]
+    volumes:
+      - modeldata:/root/.ollama
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.160.0
+    profiles: ["obs"]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4318:4318"
+
+  jaeger:
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.20.0
+    profiles: ["obs"]
+    ports:
+      - "127.0.0.1:16686:16686"
+
   # Optional observability stack (PRD v0.2 FR-632): only started with
   # --profile obs. Prometheus scrapes each service's debug-server metrics;
   # Grafana is provisioned with the Prometheus datasource.
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.14.0
     profiles: ["obs"]
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     ports:
       # Host port 9091: 9090 is already used by the gateway gRPC mapping.
       - "9091:9090"
@@ -217,13 +268,15 @@ services:
       - publisher
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.2.1
     profiles: ["obs"]
     environment:
       # Local demo credentials only; not for any real environment.
       GF_SECURITY_ADMIN_PASSWORD: "jobforge"
     volumes:
       - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/jobforge.yaml:ro
+      - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/jobforge.yaml:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "3000:3000"
     depends_on:
@@ -232,3 +285,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  modeldata:

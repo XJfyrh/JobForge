@@ -255,10 +255,10 @@ where id = $1
 returning state_version, trace_context
 `
 
-// checkTerminal checks if a job is already in a terminal state.
-const checkTerminal = `
+// checkCancelState distinguishes a duplicate request from terminal rejection.
+const checkCancelState = `
 select state from jobs
-where id = $1 and tenant_id = $2 and state in ('succeeded', 'dead', 'cancelled')
+where id = $1 and tenant_id = $2 and state in ('cancelling', 'succeeded', 'dead', 'cancelled')
 `
 
 // listJobs retrieves jobs with keyset pagination ordered by created_at DESC.

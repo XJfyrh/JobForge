@@ -223,7 +223,7 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	// Clean slate: drop tables in reverse dependency order for direct DSN mode.
-	cleanup := `drop table if exists demo_idempotent_effects,
+	cleanup := `drop table if exists task_artifacts, demo_idempotent_effects,
 		consumer_demo_effects, consumer_inbox, consumer_inbox_binding,
 		tenant_quota_counters, scheduler_leadership, outbox_events,
 		job_attempts, workers, jobs cascade`

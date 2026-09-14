@@ -93,7 +93,7 @@ func TestAT34ResultFirstCommitWins(t *testing.T) {
 
 func TestAT34ResultBoundsAndCancel(t *testing.T) {
 	js := setupStore(t)
-	for _, ref := range []string{"", strings.Repeat("x", 2048), strings.Repeat("界", 682)} {
+	for _, ref := range []string{"", strings.Repeat("x", 2048), strings.Repeat("界", 682), "opaque:\u0085\u009f"} {
 		job, owner := claimResultJob(t, js)
 		if err := js.Complete(t.Context(), job.ID, owner, job.FencingToken, ref, 0); err != nil {
 			t.Fatal(err)
@@ -104,7 +104,7 @@ func TestAT34ResultBoundsAndCancel(t *testing.T) {
 		}
 	}
 	job, owner := claimResultJob(t, js)
-	for _, ref := range []string{strings.Repeat("x", 2049), strings.Repeat("界", 683), "bad\nref", string([]byte{0xff})} {
+	for _, ref := range []string{strings.Repeat("x", 2049), strings.Repeat("界", 683), "bad\nref", "bad\x00", "bad\x1f", "bad\x7f", string([]byte{0xff})} {
 		if _, err := js.CompleteAttempt(t.Context(), job.ID, owner, job.FencingToken, ref, 1); !errors.Is(err, domain.ErrInvalidArgument) {
 			t.Fatalf("invalid reference: %v", err)
 		}
@@ -192,7 +192,7 @@ func TestAT34Migration0020(t *testing.T) {
 	if _, err := tx.Exec(t.Context(), "create temporary table jobs (state text not null); insert into jobs values ('ready')"); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"0020_add_job_result_ref.up.sql", "0020_add_job_result_ref.down.sql", "0020_add_job_result_ref.up.sql"} {
+	for _, name := range []string{"0020_add_job_result_ref.up.sql", "0020_add_job_result_ref.down.sql", "0020_add_job_result_ref.up.sql", "0022_align_result_ref_controls.up.sql", "0022_align_result_ref_controls.down.sql", "0022_align_result_ref_controls.up.sql"} {
 		content, err := migrations.FS.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
@@ -205,7 +205,10 @@ func TestAT34Migration0020(t *testing.T) {
 	if err := tx.QueryRow(t.Context(), "select result_ref from jobs").Scan(&ref); err != nil || ref != nil {
 		t.Fatalf("legacy reference: %v %v", ref, err)
 	}
-	for _, ref := range []string{"", "bad\nref", strings.Repeat("界", 683)} {
+	if _, err := tx.Exec(t.Context(), "update jobs set state='succeeded', result_ref=$1", "opaque:\u0085"); err != nil {
+		t.Fatal("C1 is not excluded by C0/DEL contract:", err)
+	}
+	for _, ref := range []string{"", "bad\nref", "bad\x7f", strings.Repeat("界", 683)} {
 		if _, err := tx.Exec(t.Context(), "savepoint invalid_ref"); err != nil {
 			t.Fatal(err)
 		}

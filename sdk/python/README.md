@@ -15,8 +15,8 @@ with JobForgeClient("http://localhost:8080", os.environ["JOBFORGE_API_KEY"]) as 
         queue="default",
         type="rag.index",
         payload={
-            "input_version": 1,
-            "corpus_id": "handbook-v1",
+            "version": 1,
+            "corpus_version": "handbook-v1",
             "business_key": "handbook-v1",
         },
         idempotency_key="submit-handbook-v1",
@@ -33,4 +33,4 @@ with JobForgeClient("http://localhost:8080", os.environ["JOBFORGE_API_KEY"]) as 
 
 安装 `opentelemetry-sdk` 并配置自己的 TracerProvider 后，SDK 自动创建 `sdk.submit/get/cancel/retry` span 并传播当前 W3C context。也可通过 `traceparent=` 接入外部上下文；旧 `trace_id=` 继续写 X-Trace-ID，仅作兼容关联。SDK 不配置 exporter、不输出 payload/密钥。
 
-快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。真实模型任务与故障演示见仓库任务扩展指南。
+快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。上述 get 可能仍返回执行中状态；安装 `[demo]` extra 后运行 `examples/agent_rag.py` 可等待两个真实任务并验证产物。启动和清理见[真实任务指南](../../docs/real-tasks.md)，Trace/故障演练见[可观测性指南](../../docs/observability.md)。

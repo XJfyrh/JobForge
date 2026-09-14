@@ -45,10 +45,10 @@ type Store interface {
 	// Returns the number of jobs promoted.
 	PromoteReady(ctx context.Context, batchSize int) (int, error)
 
-	// RecoverExpiredLeases recovers running jobs with expired leases
+	// RecoverExpiredAttempts recovers running jobs with expired leases
 	// (back to ready) and cancelling jobs with expired leases (to cancelled).
-	// Returns the total number of jobs recovered.
-	RecoverExpiredLeases(ctx context.Context) (int, error)
+	// Returns metadata for the committed transitions, for metrics and tracing.
+	RecoverExpiredAttempts(ctx context.Context) ([]store.RecoveredAttempt, error)
 
 	// QueueDepthMetrics samples pending jobs per (tenant, queue, state) for
 	// the jobforge_queue_depth gauge (PRD 12.1 / FR-502).
@@ -127,7 +127,10 @@ type Scheduler struct {
 	// lastQuotaReconcile gates the periodic quota reconcile so it runs at
 	// most once per QuotaReconcileInterval instead of every scan cycle.
 	lastQuotaReconcile time.Time
+	lastQueueDepth     map[queueDepthKey]struct{}
 }
+
+type queueDepthKey struct{ tenant, queue, state string }
 
 // New creates a Scheduler with the given dependencies.
 func New(store Store, notifier Notifier, listener Listener, cfg Config, logger *slog.Logger, metrics *observability.Metrics) *Scheduler {
@@ -294,19 +297,17 @@ func (s *Scheduler) scanCycle(ctx context.Context, epoch int64) bool {
 	}
 
 	// Recover expired leases.
-	recovered, err := s.store.RecoverExpiredLeases(ctx)
+	recovered, err := s.store.RecoverExpiredAttempts(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			return true
 		}
 		s.logger.Error("lease recovery failed", "error", err)
-	} else if recovered > 0 {
-		span.SetAttributes(attribute.Int("jobs.recovered", recovered))
-		s.logger.Info("recovered expired leases", "count", recovered)
-		// Record lease expired metric (PRD 12.1).
-		if s.metrics != nil {
-			s.metrics.LeaseExpiredTotal.Add(ctx, int64(recovered),
-				metric.WithAttributes(attribute.String("queue", "")))
+	} else if len(recovered) > 0 {
+		span.SetAttributes(attribute.Int("jobs.recovered", len(recovered)))
+		s.logger.Info("recovered expired leases", "count", len(recovered))
+		for _, job := range recovered {
+			s.metrics.RecordRecovery(ctx, job)
 		}
 		// Notify gateway that recovered jobs are available.
 		if s.notifier != nil {
@@ -393,7 +394,9 @@ func (s *Scheduler) recordQueueDepth(ctx context.Context) {
 		}
 		return
 	}
+	current := make(map[queueDepthKey]struct{}, len(rows))
 	for _, r := range rows {
+		current[queueDepthKey{r.TenantID, r.Queue, r.State}] = struct{}{}
 		s.metrics.QueueDepth.Record(ctx, r.Count,
 			metric.WithAttributes(
 				attribute.String("tenant", r.TenantID),
@@ -401,6 +404,12 @@ func (s *Scheduler) recordQueueDepth(ctx context.Context) {
 				attribute.String("state", r.State),
 			))
 	}
+	for key := range s.lastQueueDepth {
+		if _, present := current[key]; !present {
+			s.metrics.QueueDepth.Record(ctx, 0, metric.WithAttributes(attribute.String("tenant", key.tenant), attribute.String("queue", key.queue), attribute.String("state", key.state)))
+		}
+	}
+	s.lastQueueDepth = current
 }
 
 // sleep waits for the given duration or until context is cancelled.

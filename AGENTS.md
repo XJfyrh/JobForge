@@ -48,5 +48,6 @@ Agent 在执行任何修改任务前，必须先读取以下关键文件以获�
 - Windows 上运行集成测试（`go test ./tests/integration/...`）前，必须先执行 `docker compose -f deploy/compose.yaml up -d postgres` 并设置 `JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable`（testcontainers 不支持 Windows 上的 Docker Desktop rootless/WSL2 后端；Linux CI 无需该变量，testcontainers 会自动启动临时 PostgreSQL）。
 - 其中机械检查子集（golangci-lint、`go test -race ./...`、ruff、mypy、SQLFluff 历史基线校验、`sqlfluff lint migrations`、buf lint）由 [.github/workflows/ci.yml](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行，检查项清单与 [CONTRIBUTING.md](CONTRIBUTING.md) 验证要求保持一致，详见 [docs/development.md](docs/development.md) 的 “CI 质量门禁” 一节。
 - Python SDK 单测与真实 HTTP 跨语言契约也属于 CI 门禁；安装 SDK 后设置 `JOBFORGE_TEST_PYTHON`，否则 Go 契约测试的 skip 不计通过。
+- 可观测配置变更还需通过 promtool 配置/告警规则测试，以及 Grafana 仪表盘生成一致性检查；这些检查在 PR CI 中执行。依赖真实模型的验收在独立工作流与本地真实模型层运行，不用替身替代。
 - 不得把缺少代码、服务或依赖误报为检查通过；明确区分已运行、未适用和无法运行。
 - 提交前检查 staged diff、敏感信息、迁移安全和文档链接。

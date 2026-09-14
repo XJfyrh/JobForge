@@ -1,0 +1,1 @@
+Purchase order PO-2026-0042. Buyer: Aster Research Lab. Supplier: Northwind Components. Quantity: 12 sensor modules. Unit price: USD 25.00. Total: USD 300.00. Delivery date: 2026-10-01.

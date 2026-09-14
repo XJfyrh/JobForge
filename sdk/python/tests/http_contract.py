@@ -50,6 +50,9 @@ def main() -> None:
             unauthorized.get(str(uuid4()))
         with pytest.raises(NotFoundError):
             client.get(str(uuid4()))
+        for operation in (client.get, client.cancel, client.retry):
+            with pytest.raises(InvalidArgumentError):
+                operation("not-a-uuid")
         with pytest.raises(InvalidArgumentError):
             client.submit(queue, "unregistered.type", {})
         with pytest.raises(InvalidArgumentError):

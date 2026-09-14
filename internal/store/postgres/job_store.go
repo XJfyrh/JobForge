@@ -481,12 +481,16 @@ func (s *JobStore) Cancel(ctx context.Context, tenantID, jobID string) error {
 		return fmt.Errorf("cancel running: %w", err)
 	}
 
-	// Check if already terminal.
+	// Repeated cancellation of a still-cancelling job is an acknowledgement;
+	// the domain contract rejects terminal jobs without mutating either case.
 	var state string
-	err = tx.QueryRow(ctx, checkTerminal, jobID, tenantID).Scan(&state)
+	err = tx.QueryRow(ctx, checkCancelState, jobID, tenantID).Scan(&state)
 	if err == nil {
-		return domain.NewError(domain.CodeAlreadyTerminal, domain.ErrAlreadyTerminal,
-			"job already in terminal state %q", state)
+		job := domain.Job{State: domain.JobState(state)}
+		return job.Cancel(time.Now())
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("read cancellation state: %w", err)
 	}
 
 	return domain.NewError(domain.CodeNotFound, domain.ErrNotFound,

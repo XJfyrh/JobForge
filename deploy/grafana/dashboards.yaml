@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: JobForge
+    folder: JobForge
+    type: file
+    disableDeletion: false
+    # >10 forces polling; Docker Desktop may not propagate file watch events.
+    updateIntervalSeconds: 20
+    options:
+      path: /var/lib/grafana/dashboards

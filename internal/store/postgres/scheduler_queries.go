@@ -126,7 +126,7 @@ set state = 'ready',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context, jobs.type, jobs.state
 `
 
 // recoverCancellingLeases transitions cancelling jobs with expired leases to
@@ -150,7 +150,7 @@ set state = 'cancelled',
     updated_at = now()
 from expired
 where jobs.id = expired.id
-returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context
+returning expired.id, expired.tenant_id, expired.queue, expired.lease_owner, expired.attempt, expired.fencing_token, jobs.state_version, jobs.trace_context, jobs.type, jobs.state
 `
 
 // insertRecoveryAttempt records a lease-expired recovery event in job_attempts.

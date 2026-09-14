@@ -330,6 +330,7 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 	for _, cj := range resp.Jobs {
 		job := &ClaimedJob{
 			ID:           cj.JobId,
+			TenantID:     cj.TenantId,
 			Queue:        cj.Queue,
 			Type:         cj.Type,
 			Payload:      cj.Payload,
@@ -364,6 +365,8 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	ctx, span := observability.Tracer("jobforge.worker").Start(ctx, "worker.execute")
 	defer span.End()
 	span.SetAttributes(
+		attribute.String("job_id", job.ID),
+		attribute.String("tenant_id", job.TenantID),
 		attribute.String("queue", job.Queue),
 		attribute.String("type", job.Type),
 		attribute.Int("attempt", job.Attempt),
@@ -392,7 +395,11 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	cancelSignalAt := make(chan time.Time, 1)
 	hbCtx, hbCancel := context.WithCancel(ctx)
 	defer hbCancel()
-	go r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost, cancelSignalAt)
+	hbDone := make(chan struct{})
+	go func() {
+		defer close(hbDone)
+		r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost, cancelSignalAt)
+	}()
 
 	// Execute handler.
 	start := time.Now()
@@ -401,6 +408,12 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 
 	// Stop heartbeat before reporting result.
 	hbCancel()
+	<-hbDone
+	// A Handler cannot turn an expired/cancelled execution into success by
+	// returning nil, or hide the deadline behind a dependency-specific error.
+	if execCtx.Err() != nil {
+		err = execCtx.Err()
+	}
 	if errors.Is(execCtx.Err(), context.Canceled) {
 		r.observeCancelHandlerStop(ctx, job.Type, cancelSignalAt)
 	}
@@ -418,6 +431,10 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	if err != nil {
 		retryable := IsRetryable(err)
 		errCode := "EXECUTION_ERROR"
+		var classified interface{ ErrorCode() string }
+		if errors.As(err, &classified) {
+			errCode = classified.ErrorCode()
+		}
 		if errors.Is(err, context.DeadlineExceeded) {
 			errCode = "TIMEOUT"
 			retryable = true
@@ -425,9 +442,9 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 			errCode = "CANCELLED"
 			retryable = false
 		}
-		span.SetStatus(otelcodes.Error, err.Error())
+		span.SetStatus(otelcodes.Error, errCode)
 		span.SetAttributes(attribute.String("error_code", errCode))
-		logger.Warn("job failed", "error", err, "retryable", retryable, "duration_ms", durationMs)
+		logger.Warn("job failed", "error_code", errCode, "retryable", retryable, "duration_ms", durationMs)
 		r.reportFail(ctx, job, errCode, err.Error(), retryable, durationMs)
 		return
 	}

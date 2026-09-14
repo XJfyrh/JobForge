@@ -148,3 +148,18 @@ jobs:
           version: 1.72.0
       - name: Buf lint
         run: buf lint
+
+  observability-config:
+    name: Prometheus rules & generated dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify dashboard generation
+        run: |
+          python tools/generate_task_dashboard.py
+          git diff --exit-code -- deploy/grafana/dashboards/jobforge-tasks.json
+      - name: Validate and test alert rules
+        run: |
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml

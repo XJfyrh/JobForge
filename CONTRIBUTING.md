@@ -67,6 +67,9 @@ go vet ./...
 .venv/bin/ruff format --check .
 .venv/bin/mypy sdk/python
 .venv/bin/python -m pytest sdk/python/tests
+.venv/bin/python tools/generate_task_dashboard.py
+# 检查生成后的 dashboard diff；CI 另通过固定 Prometheus 镜像运行 promtool。
+docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
 .venv/bin/python tools/check_sqlfluff_baseline.py
 .venv/bin/sqlfluff lint migrations
 .tools/bin/buf lint

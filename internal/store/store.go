@@ -10,6 +10,21 @@ import (
 	"github.com/xjfyrh/jobforge/internal/domain"
 )
 
+// RecoveredAttempt is returned only after a lease-recovery transaction commits.
+// It carries trusted dimensions and the persisted trace parent for observers.
+type RecoveredAttempt struct {
+	ID           string
+	TenantID     string
+	Queue        string
+	Type         string
+	State        domain.JobState
+	LeaseOwner   *string
+	Attempt      int
+	FencingToken int64
+	StateVersion int64
+	Traceparent  *string
+}
+
 // ListFilter specifies pagination and filtering options for job listing.
 type ListFilter struct {
 	TenantID string

@@ -102,7 +102,7 @@ postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable
 API 与 Gateway 都必须设置相同的 `JOBFORGE_TASK_TYPES`。值为逗号分隔静态 allowlist，默认及 Compose 显式值为：
 
 ```text
-demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,pagewise.reindex
+demo.echo,demo.sleep,demo.fail,demo.idempotent_effect,demo.http,rag.index,agent.extract
 ```
 
 空目录、空项、重复项或不匹配 `^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$` 的名称会使进程启动失败。启动日志中的 `catalog_size` / `catalog_sha256` 应在 API 与 Gateway 间一致。新增类型可以先发布目录再上线 Worker；移除类型前必须先停止提交、查询并 drain 该类型全部非终态任务，再依次更新 Worker、Gateway 与 API，避免合法存量任务失去消费者。
@@ -120,7 +120,7 @@ go test -count=1 -run 'TestAT2(8|9)|TestAT30|TestAT31' ./tests/integration/
 
 ## Demo 持久业务效果（PRD v0.4，ADR-0009）
 
-默认 `jobforge worker` 为 `demo.idempotent_effect` 建立 `MaxConns=2` 的 PostgreSQL pool，因此 Demo Worker 与 Gateway 一样需要 `JOBFORGE_DATABASE_URL`。Worker 不运行 migration；启动服务前由 `jobforge migrate`、API、Gateway 或 Scheduler 将 schema 升级到 0019（0018 为持久效果表，0019 为 Gateway Poll owner inflight 性能索引）。核心 `internal/worker` Runtime 与自定义 Handler API 不依赖 PostgreSQL。
+默认 `jobforge worker` 为 `demo.idempotent_effect` 与真实任务业务存储建立 PostgreSQL pool，因此默认 Worker 与 Gateway 一样需要 `JOBFORGE_DATABASE_URL`。Worker 不运行 migration；启动服务前由 `jobforge migrate`、API、Gateway 或 Scheduler 升级 schema：0018 持久效果表，0019 Poll 索引，0020 有界结果引用，0021 独立业务产物表，0022 对齐 C0/DEL 约束。核心 `internal/worker` Runtime 与自定义 Handler API 不依赖 PostgreSQL。
 
 效果表查询：
 
@@ -222,7 +222,7 @@ jobforge ctl quota-reconcile [--repair]
 | `--api-key` | `JOBFORGE_API_KEY` | 无（必填） | list/get/cancel/retry |
 | `--output` | — | `table`（可选 `json`） | 全部 |
 | — | `JOBFORGE_DATABASE_URL` | `postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable`（代码默认值） | outbox-status / workers-status |
-| — | `JOBFORGE_TASK_TYPES` | 六种内置 Demo/PageWise 类型 | API/Gateway 部署目录；两者必须同值 |
+| — | `JOBFORGE_TASK_TYPES` | rag.index、agent.extract 与五种诊断 Demo 类型 | API/Gateway 部署目录；两者必须同值 |
 | `--stale-after` | — | `3×JOBFORGE_LEASE_TTL` | workers-status |
 | `--repair` | — | `false` | quota-reconcile |
 | — | `JOBFORGE_TENANT_QUOTA_PREFILTER` | `true` | 服务配置：Claim 候选预筛开关（关闭仅损失公平性性能，硬上限不受影响，ADR-0007 §4） |
@@ -244,10 +244,12 @@ obs profile 额外拉起：
 
 | 服务 | 宿主机端口 | 说明 |
 |---|---|---|
-| prometheus | 9091（容器内 9090；9090 已被 gateway gRPC 占用） | 抓取六个服务的 `:6060/metrics`，配置见 `deploy/prometheus/prometheus.yml` |
-| grafana | 3000 | 自动 provision Prometheus 数据源（admin/jobforge，仅本地演示），通过 Explore 查询 jobforge_* 指标 |
+| prometheus | 9091（容器内 9090；9090 已被 gateway gRPC 占用） | 抓取七个服务的 `:6060/metrics`，配置见 `deploy/prometheus/prometheus.yml` |
+| grafana | 3000 | 预置任务仪表盘与 Prometheus / Jaeger 数据源（admin/jobforge，仅本地演示） |
+| otel-collector | 4318（localhost） | OTLP/HTTP 接收与有界批量转发 |
+| jaeger | 16686（localhost） | Trace 查询；开发内存存储，重启清空 |
 
-验证：Prometheus targets 页（http://localhost:9091/targets）六个 jobforge-* 目标应为 UP；PromQL 示例 `jobforge_jobs_submitted_total`、`jobforge_outbox_pending`。仅停止观测组件：`docker compose -f deploy/compose.yaml --profile obs stop prometheus grafana`。
+验证：Prometheus targets 页（http://localhost:9091/targets）七个 jobforge-* 目标应为 UP。需导出 Trace 时额外设置 `JOBFORGE_OTEL_EXPORTER=otlp`，主机 Python 设置 `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`。完整命令、故障脚本、指标口径与仪表盘见[可观测性指南](observability.md#agentrag-本地观测闭环)。Grafana 文件 provider 每 20s 轮询，兼容 Docker Desktop 挂载。仅停止观测组件：`docker compose -f deploy/compose.yaml --profile obs stop prometheus grafana otel-collector jaeger`。
 
 ## 常用检查
 
@@ -303,8 +305,11 @@ go test -tags scale -count=1 ./tests/scale/
 | `go-test` | `go test -race -count=1 ./...`（真实 PostgreSQL 16、Redis、安装后的 Python SDK；覆盖单元、集成、故障与真实 HTTP 跨语言契约） | 安装 SDK，设置 `JOBFORGE_TEST_PYTHON` 后 `go test -race ./...` |
 | `python-lint` | SQLFluff 历史基线校验、`sqlfluff lint migrations`、`ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/python tools/check_sqlfluff_baseline.py`、`.venv/bin/sqlfluff lint migrations`、`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
+| `observability-config` | 固定 Prometheus 镜像运行 promtool config/rule tests；重建仪表盘无 diff | `python tools/generate_task_dashboard.py`；Docker promtool 命令见 CONTRIBUTING.md |
 
 `python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
+
+独立 [real-models 工作流](../.github/workflows/real-models.yml) 使用固定 Ollama 模型与真实 PostgreSQL，实际运行 SDK/产物/进程 kill 场景；本地完整观测故障脚本另查询 Collector、Jaeger、Prometheus、Grafana。CI 和本地结果分别记在[实施记录](agent-rag-progress.md)。
 
 该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表、AGENTS.md 与 CONTRIBUTING.md。
 
@@ -368,7 +373,7 @@ JobForge 使用 OpenTelemetry + Prometheus + pprof 提供完整可观测性（AD
 开发环境默认将 span JSON 输出到 stderr。生产可切换 OTLP：
 
 ```sh
-JOBFORGE_OTEL_EXPORTER=stdout go run ./cmd/jobforge api
+JOBFORGE_OTEL_EXPORTER=otlp OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 go run ./cmd/jobforge api
 ```
 
 ### Metrics 查看
@@ -401,3 +406,7 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
 | `gateway.complete_job` | Gateway | worker_id |
 | `event.consume` | Reference Consumer | consumer group、redelivered、delivery_count、ACK/pending/poison 结果 |
 | `event.process` | Reference Consumer | inbox duplicate、业务事务结果 |
+
+## 通用 Agent/RAG 业务开发
+
+真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。
