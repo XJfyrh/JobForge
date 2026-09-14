@@ -61,6 +61,7 @@ type Job struct {
 	RetryOfJobID *string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	ResultRef    *string
 }
 
 // NewJobParams holds the parameters for creating a new job.
@@ -124,6 +125,9 @@ func NewJob(id string, params NewJobParams, now time.Time) (*Job, error) {
 	timeoutSeconds := params.TimeoutSeconds
 	if timeoutSeconds == 0 {
 		timeoutSeconds = int(DefaultTimeout.Seconds())
+	}
+	if timeoutSeconds < 1 || timeoutSeconds > 86400 {
+		return nil, NewError(CodeInvalidArgument, ErrInvalidArgument, "timeout_seconds must be between 1 and 86400")
 	}
 
 	runAt := now

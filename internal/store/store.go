@@ -82,6 +82,18 @@ type HeartbeatResult struct {
 	CancelSignalLatency time.Duration
 }
 
+// AttemptResult is authored by the state transaction, never by a later read.
+// Changed is false only for an acknowledged duplicate of the same lease/RPC.
+type AttemptResult struct {
+	Changed    bool
+	Queue      string
+	Type       string
+	State      domain.JobState
+	Outcome    string
+	DurationMs int64
+	RunAt      time.Time
+}
+
 // ClaimParams holds the parameters for a claim operation.
 type ClaimParams struct {
 	// Queues lists the queues to claim from, in priority order: jobs from

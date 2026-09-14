@@ -16,6 +16,7 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/domain"
 	gatewaygrpc "github.com/xjfyrh/jobforge/internal/gateway/grpc"
+	"github.com/xjfyrh/jobforge/internal/store"
 	"github.com/xjfyrh/jobforge/internal/store/postgres"
 	"github.com/xjfyrh/jobforge/internal/worker"
 	workerv1 "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
@@ -28,20 +29,20 @@ type capacityCompletionStore struct {
 	completed chan string
 }
 
-func (s *capacityCompletionStore) Complete(ctx context.Context, jobID, workerID string, token int64, result string, durationMS int64) error {
-	err := s.JobStore.Complete(ctx, jobID, workerID, token, result, durationMS)
-	if err == nil {
+func (s *capacityCompletionStore) CompleteAttempt(ctx context.Context, jobID, workerID string, token int64, ref string, durationMS int64) (*store.AttemptResult, error) {
+	result, err := s.JobStore.CompleteAttempt(ctx, jobID, workerID, token, ref, durationMS)
+	if err == nil && result.Changed {
 		s.completed <- jobID
 	}
-	return err
+	return result, err
 }
 
-func (s *capacityCompletionStore) Fail(ctx context.Context, jobID, workerID string, token int64, code, message string, retryable bool, durationMS int64) error {
-	err := s.JobStore.Fail(ctx, jobID, workerID, token, code, message, retryable, durationMS)
-	if err == nil {
+func (s *capacityCompletionStore) FailAttempt(ctx context.Context, jobID, workerID string, token int64, code, message string, retryable bool, durationMS int64) (*store.AttemptResult, error) {
+	result, err := s.JobStore.FailAttempt(ctx, jobID, workerID, token, code, message, retryable, durationMS)
+	if err == nil && result.Changed {
 		s.completed <- jobID
 	}
-	return err
+	return result, err
 }
 
 func newCapacityRuntime(tb testing.TB, capacity, jobs int, handler worker.Handler) (*worker.Runtime, <-chan string, string) {

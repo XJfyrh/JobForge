@@ -51,6 +51,7 @@ class Job:
         created_at: Creation timestamp.
         updated_at: Last update timestamp.
         attempts: Execution timeline (one entry per attempt, FR-002).
+        result_ref: Opaque business artifact reference; never fetched automatically.
     """
 
     id: str
@@ -73,6 +74,7 @@ class Job:
     created_at: datetime | None = None
     updated_at: datetime | None = None
     attempts: list[Attempt] = field(default_factory=list)
+    result_ref: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Job:
@@ -98,6 +100,7 @@ class Job:
             created_at=_parse_datetime(data.get("created_at")),
             updated_at=_parse_datetime(data.get("updated_at")),
             attempts=[Attempt.from_dict(a) for a in data.get("attempts") or []],
+            result_ref=data.get("result_ref") or None,
         )
 
 

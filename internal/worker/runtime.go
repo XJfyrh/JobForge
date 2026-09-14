@@ -663,8 +663,12 @@ func workerDomainErrorDetail(err error) (*workerv1.DomainErrorDetail, bool) {
 // metadata so the Gateway can join its spans to the original submit trace
 // (FR-503). Returns ctx unchanged when the job carries no trace context.
 func withJobTraceParent(ctx context.Context, job *ClaimedJob) context.Context {
-	if job.TraceContext == "" {
+	parent := observability.InjectTraceParent(ctx)
+	if parent == "" {
+		parent = job.TraceContext
+	}
+	if parent == "" {
 		return ctx
 	}
-	return metadata.AppendToOutgoingContext(ctx, observability.TraceParentKey, job.TraceContext)
+	return metadata.AppendToOutgoingContext(ctx, observability.TraceParentKey, parent)
 }

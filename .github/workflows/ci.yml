@@ -84,12 +84,20 @@ jobs:
       # Credentials mirror deploy/compose.yaml local development values only.
       JOBFORGE_TEST_DSN: postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable
       JOBFORGE_TEST_REDIS_URL: redis://localhost:6379/0
+      JOBFORGE_TEST_PYTHON: python
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install SDK for real HTTP contract
+        run: |
+          python -m pip install --requirement tools/requirements-lint.txt
+          python -m pip install --no-deps ./sdk/python
       - name: Configure Redis AOF and resolve container name
         run: |
           redis_container="$(docker ps --filter ancestor=redis:7-alpine --format '{{.Names}}' | head -1)"
@@ -115,6 +123,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install --requirement tools/requirements-lint.txt
+          python -m pip install --no-deps ./sdk/python
+      - name: Python SDK tests
+        run: python -m pytest sdk/python/tests
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations

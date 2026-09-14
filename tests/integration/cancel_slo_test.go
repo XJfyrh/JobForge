@@ -401,6 +401,12 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 	}
 
 	cancelSpans := 0
+	executionParents := make(map[string]bool)
+	for _, span := range spanRecorder.Started() {
+		if span.Name() == "worker.execute" {
+			executionParents[span.SpanContext().SpanID().String()] = true
+		}
+	}
 	for _, span := range spanRecorder.Ended() {
 		if span.Name() != "gateway.cancel_signal" {
 			continue
@@ -409,8 +415,8 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		if got := span.SpanContext().TraceID().String(); got != "4bf92f3577b34da6a3ce929d0e0e4736" {
 			t.Fatalf("cancel signal trace ID = %s", got)
 		}
-		if got := span.Parent().SpanID().String(); got != "00f067aa0ba902b7" {
-			t.Fatalf("cancel signal parent span ID = %s", got)
+		if got := span.Parent().SpanID().String(); !executionParents[got] {
+			t.Fatalf("cancel signal parent %s is not a worker.execute span", got)
 		}
 		for _, attr := range span.Attributes() {
 			key := strings.ToLower(string(attr.Key))

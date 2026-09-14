@@ -137,7 +137,11 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	// Trace ID propagation (AT-12): use X-Trace-ID header or generate new.
 	traceID := r.Header.Get("X-Trace-ID")
 	if traceID == "" {
-		traceID = uuid.New().String()
+		if span.SpanContext().IsValid() {
+			traceID = span.SpanContext().TraceID().String()
+		} else {
+			traceID = uuid.New().String()
+		}
 	}
 
 	// W3C TraceContext propagation (FR-503): serialize the current submit
@@ -248,6 +252,7 @@ type JobResponse struct {
 	RetryOfJobID   *string         `json:"retry_of_job_id"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+	ResultRef      *string         `json:"result_ref"`
 	// Attempts is the execution timeline (FR-002). Populated by GetJob only;
 	// omitted in list responses.
 	Attempts []AttemptResponse `json:"attempts,omitempty"`
@@ -483,7 +488,7 @@ func domainCodeToHTTPStatus(code domain.ErrorCode) int {
 		return http.StatusForbidden
 	case domain.CodeNotFound:
 		return http.StatusNotFound
-	case domain.CodeConflict, domain.CodeAlreadyTerminal, domain.CodeStaleLease, domain.CodeCancelRequested:
+	case domain.CodeConflict, domain.CodeAlreadyTerminal, domain.CodeStaleLease, domain.CodeCancelRequested, domain.CodeInvalidTransition:
 		return http.StatusConflict
 	case domain.CodeQueueOverloaded:
 		return http.StatusTooManyRequests
@@ -514,6 +519,7 @@ func toJobResponse(j *domain.Job) JobResponse {
 		RetryOfJobID:   j.RetryOfJobID,
 		CreatedAt:      j.CreatedAt,
 		UpdatedAt:      j.UpdatedAt,
+		ResultRef:      j.ResultRef,
 	}
 }
 

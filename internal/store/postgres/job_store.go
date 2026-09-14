@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"sort"
 	"time"
 
@@ -70,7 +69,7 @@ func (s *JobStore) Enqueue(ctx context.Context, job *domain.Job) (bool, error) {
 		&job.MaxAttempts, &job.TimeoutSeconds, &job.IdempotencyKey,
 		&job.LeaseOwner, &job.LeaseUntil, &job.FencingToken,
 		&job.CancelRequestedAt, &job.TraceID, &job.TraceContext, &job.StateVersion,
-		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &inserted,
+		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &job.ResultRef, &inserted,
 	)
 	if err == nil {
 		// Notify listeners if a new ready job was inserted.
@@ -121,7 +120,7 @@ func (s *JobStore) selectByIdempotencyKey(ctx context.Context, tenantID, key str
 		&job.MaxAttempts, &job.TimeoutSeconds, &job.IdempotencyKey,
 		&job.LeaseOwner, &job.LeaseUntil, &job.FencingToken,
 		&job.CancelRequestedAt, &job.TraceID, &job.TraceContext, &job.StateVersion,
-		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &hash,
+		&job.RetryOfJobID, &job.CreatedAt, &job.UpdatedAt, &job.ResultRef, &hash,
 	)
 	if err != nil {
 		return nil, err
@@ -444,139 +443,6 @@ func (s *JobStore) Heartbeat(ctx context.Context, jobID, workerID string, fencin
 	return &result, nil
 }
 
-// Complete transitions a running job to succeeded within a transaction that
-// also updates the attempt record, releases the tenant's quota slot and
-// writes an outbox event.
-func (s *JobStore) Complete(ctx context.Context, jobID, workerID string, fencingToken int64, _ string, durationMs int64) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin complete tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	var (
-		tenantID    string
-		stateVer    int64
-		traceparent *string
-	)
-	err = tx.QueryRow(ctx, completeUpdate, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
-	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("complete update: %w", err)
-		}
-		// Determine specific rejection reason.
-		var state string
-		err := tx.QueryRow(ctx, completeRejectCancelling, jobID, workerID, fencingToken).Scan(&state)
-		if err == nil {
-			return domain.NewError(domain.CodeCancelRequested, domain.ErrCancelRequested,
-				"job is cancelling: complete rejected")
-		}
-		return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
-			"complete rejected: owner/token mismatch or job not running")
-	}
-
-	// Release the tenant's inflight slot in the same transaction (ADR-0007 §6).
-	if _, err := tx.Exec(ctx, quotaRelease, tenantID); err != nil {
-		return fmt.Errorf("release tenant quota: %w", err)
-	}
-
-	// Update attempt outcome.
-	if err := updateAttempt(ctx, tx, jobID, workerID, "succeeded", nil, nil, &durationMs); err != nil {
-		return err
-	}
-
-	// Write outbox event.
-	if err := writeOutbox(ctx, tx, jobID, "job.succeeded", stateVer, traceparent); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
-// Fail transitions a running job to retry_wait or dead, or a cancelling job
-// to cancelled. All within a single transaction with quota release, attempt
-// and outbox writes.
-func (s *JobStore) Fail(ctx context.Context, jobID, workerID string, fencingToken int64, errCode, errMsg string, retryable bool, durationMs int64) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin fail tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	// Try cancelling → cancelled first.
-	var (
-		tenantID    string
-		stateVer    int64
-		traceparent *string
-	)
-	var outcome string
-	err = tx.QueryRow(ctx, failUpdateCancelling, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
-	switch {
-	case err == nil:
-		outcome = "cancelled"
-	case errors.Is(err, pgx.ErrNoRows):
-		// Determine retry vs dead.
-		// Fetch current attempt count to decide.
-		var attempt, maxAttempts int
-		err := tx.QueryRow(ctx, "select attempt, max_attempts from jobs where id = $1 and lease_owner = $2 and fencing_token = $3 and state = 'running'",
-			jobID, workerID, fencingToken).Scan(&attempt, &maxAttempts)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
-					"fail rejected: owner/token mismatch or job not running")
-			}
-			return fmt.Errorf("fail check: %w", err)
-		}
-
-		if retryable && attempt < maxAttempts {
-			// Calculate backoff: base=1s, max=5min, full jitter (0–1s random).
-			jitter := time.Duration(rand.Int64N(int64(time.Second)))
-			backoff := domain.Backoff(attempt, time.Second, 5*time.Minute, jitter)
-			nextRetry := time.Now().Add(backoff)
-			err = tx.QueryRow(ctx, failUpdateRetry, jobID, workerID, fencingToken, nextRetry).Scan(&tenantID, &stateVer, &traceparent)
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
-						"fail rejected: concurrent state change")
-				}
-				return fmt.Errorf("fail retry: %w", err)
-			}
-			outcome = "failed_retry"
-		} else {
-			err = tx.QueryRow(ctx, failUpdateDead, jobID, workerID, fencingToken).Scan(&tenantID, &stateVer, &traceparent)
-			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return domain.NewError(domain.CodeStaleLease, domain.ErrStaleLease,
-						"fail rejected: concurrent state change")
-				}
-				return fmt.Errorf("fail dead: %w", err)
-			}
-			outcome = "failed_dead"
-		}
-	default:
-		return fmt.Errorf("fail cancelling: %w", err)
-	}
-
-	// Release the tenant's inflight slot in the same transaction: all three
-	// transitions above leave the inflight states (ADR-0007 §6).
-	if _, err := tx.Exec(ctx, quotaRelease, tenantID); err != nil {
-		return fmt.Errorf("release tenant quota: %w", err)
-	}
-
-	// Update attempt outcome.
-	if err := updateAttempt(ctx, tx, jobID, workerID, outcome, &errCode, &errMsg, &durationMs); err != nil {
-		return err
-	}
-
-	// Write outbox event.
-	eventType := "job." + outcome
-	if err := writeOutbox(ctx, tx, jobID, eventType, stateVer, traceparent); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
 // Cancel requests cancellation. Waiting-state jobs go directly to cancelled;
 // running jobs enter cancelling.
 func (s *JobStore) Cancel(ctx context.Context, tenantID, jobID string) error {
@@ -627,22 +493,6 @@ func (s *JobStore) Cancel(ctx context.Context, tenantID, jobID string) error {
 		"job %s not found for tenant %s", jobID, tenantID)
 }
 
-// updateAttempt records the outcome of an attempt within the transaction.
-func updateAttempt(ctx context.Context, tx pgx.Tx, jobID, _, outcome string, errCode, errMsg *string, durationMs *int64) error {
-	// Get the current attempt number for this job.
-	var attemptNo int
-	err := tx.QueryRow(ctx, "select attempt from jobs where id = $1", jobID).Scan(&attemptNo)
-	if err != nil {
-		return fmt.Errorf("get attempt no: %w", err)
-	}
-
-	_, err = tx.Exec(ctx, updateAttemptOutcome, jobID, attemptNo, outcome, errCode, errMsg, durationMs)
-	if err != nil {
-		return fmt.Errorf("update attempt: %w", err)
-	}
-	return nil
-}
-
 // writeOutbox inserts an outbox event within the transaction, capturing the
 // post-transition state_version and the job's trace_context for envelope v1
 // (PRD v0.3 FR-703, ADR-0006 §4).
@@ -668,7 +518,7 @@ func scanJob(row pgx.Row) (*domain.Job, error) {
 		&j.MaxAttempts, &j.TimeoutSeconds, &j.IdempotencyKey,
 		&j.LeaseOwner, &j.LeaseUntil, &j.FencingToken,
 		&j.CancelRequestedAt, &j.TraceID, &j.TraceContext, &j.StateVersion,
-		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt,
+		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt, &j.ResultRef,
 	)
 	if err != nil {
 		return nil, err
@@ -687,7 +537,7 @@ func scanJobFromRows(rows pgx.Rows) (*domain.Job, error) {
 		&j.MaxAttempts, &j.TimeoutSeconds, &j.IdempotencyKey,
 		&j.LeaseOwner, &j.LeaseUntil, &j.FencingToken,
 		&j.CancelRequestedAt, &j.TraceID, &j.TraceContext, &j.StateVersion,
-		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt,
+		&j.RetryOfJobID, &j.CreatedAt, &j.UpdatedAt, &j.ResultRef,
 	)
 	if err != nil {
 		return nil, err

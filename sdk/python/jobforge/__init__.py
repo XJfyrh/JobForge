@@ -7,17 +7,25 @@ Usage:
 
     client = JobForgeClient(base_url="http://localhost:8080", api_key="dev-api-key")
     job = client.submit(queue="default", type="demo.echo", payload={"message": "hello"})
-    print(job.id, job.state)
+    print(job.job_id, job.state)
 """
 
 from jobforge.client import JobForgeClient
 from jobforge.errors import (
     AlreadyTerminalError,
+    CancelRequestedError,
     ConflictError,
+    ForbiddenError,
+    InternalError,
     InvalidArgumentError,
+    InvalidTransitionError,
     JobForgeError,
     NotFoundError,
     QueueOverloadedError,
+    RequestTimeoutError,
+    StaleLeaseError,
+    TransportError,
+    UnauthorizedError,
 )
 from jobforge.models import Job, JobState
 
@@ -31,6 +39,14 @@ __all__ = [
     "ConflictError",
     "QueueOverloadedError",
     "AlreadyTerminalError",
+    "CancelRequestedError",
+    "ForbiddenError",
+    "InternalError",
+    "InvalidTransitionError",
+    "RequestTimeoutError",
+    "StaleLeaseError",
+    "TransportError",
+    "UnauthorizedError",
 ]
 
 __version__ = "0.1.0"

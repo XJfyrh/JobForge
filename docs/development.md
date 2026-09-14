@@ -300,9 +300,11 @@ go test -tags scale -count=1 ./tests/scale/
 | CI Job | 检查 | 本地等价命令 |
 |---|---|---|
 | `go-lint` | `go build ./...`、`go vet ./...`、golangci-lint v2.12.2 | `go build ./...`、`go vet ./...`、`.tools/bin/golangci-lint run` |
-| `go-test` | `go test -race -count=1 ./...`（真实 PostgreSQL 16 service，覆盖单元、集成与故障测试） | `go test -race ./...` |
+| `go-test` | `go test -race -count=1 ./...`（真实 PostgreSQL 16、Redis、安装后的 Python SDK；覆盖单元、集成、故障与真实 HTTP 跨语言契约） | 安装 SDK，设置 `JOBFORGE_TEST_PYTHON` 后 `go test -race ./...` |
 | `python-lint` | SQLFluff 历史基线校验、`sqlfluff lint migrations`、`ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/python tools/check_sqlfluff_baseline.py`、`.venv/bin/sqlfluff lint migrations`、`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
+
+`python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
 
 该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表、AGENTS.md 与 CONTRIBUTING.md。
 

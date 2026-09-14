@@ -9,8 +9,15 @@ from datetime import datetime
 from typing import Any
 
 import httpx
+from opentelemetry import propagate, trace
+from opentelemetry.trace import StatusCode
 
-from jobforge.errors import from_response
+from jobforge.errors import (
+    InternalError,
+    RequestTimeoutError,
+    TransportError,
+    from_response,
+)
 from jobforge.models import Job, SubmitResponse
 
 
@@ -25,7 +32,7 @@ class JobForgeClient:
 
     Example:
         >>> client = JobForgeClient("http://localhost:8080", "dev-api-key")
-        >>> job = client.submit(queue="default", type="demo.echo", payload={"msg": "hi"})
+        >>> job = client.submit("default", "demo.echo", {"msg": "hi"})
         >>> print(job.job_id, job.state)
     """
 
@@ -35,14 +42,19 @@ class JobForgeClient:
         api_key: str,
         timeout: float = 30.0,
         trace_id: str | None = None,
+        *,
+        traceparent: str | None = None,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._trace_id = trace_id
+        self._traceparent = traceparent
         self._client = httpx.Client(
             base_url=self._base_url,
             timeout=timeout,
             headers=self._build_headers(),
+            transport=transport,
         )
 
     def _build_headers(self) -> dict[str, str]:
@@ -57,15 +69,77 @@ class JobForgeClient:
 
     def _handle_error(self, response: httpx.Response) -> None:
         """Raise appropriate exception for error responses."""
-        if response.status_code >= 400:
+        if not 200 <= response.status_code < 300:
             try:
                 data = response.json()
-                code = data.get("code", "INTERNAL")
-                message = data.get("message", response.text)
-            except Exception:
-                code = "INTERNAL"
-                message = response.text
-            raise from_response(code, message)
+            except ValueError:
+                data = None
+            error = data.get("error") if isinstance(data, dict) else None
+            if (
+                isinstance(error, dict)
+                and isinstance(error.get("code"), str)
+                and isinstance(error.get("message"), str)
+            ):
+                exc = from_response(error["code"], error["message"][:2048])
+            else:
+                exc = InternalError("invalid server error response")
+            exc.status_code = response.status_code
+            raise exc
+
+    def _request(
+        self, operation: str, method: str, path: str, **kwargs: Any
+    ) -> httpx.Response:
+        """Perform exactly one HTTP exchange with bounded, content-free tracing."""
+        parent = (
+            propagate.extract({"traceparent": self._traceparent})
+            if self._traceparent
+            else None
+        )
+        with trace.get_tracer("jobforge.sdk").start_as_current_span(
+            f"sdk.{operation}",
+            context=parent,
+            record_exception=False,
+            set_status_on_exception=False,
+        ) as span:
+            headers: dict[str, str] = {}
+            propagate.inject(headers)
+            try:
+                response = self._client.request(method, path, headers=headers, **kwargs)
+            except httpx.TimeoutException as exc:
+                span.set_status(StatusCode.ERROR, "request timeout")
+                raise RequestTimeoutError() from exc
+            except httpx.RequestError as exc:
+                span.set_status(StatusCode.ERROR, "transport failure")
+                raise TransportError() from exc
+            span.set_attribute("http.response.status_code", response.status_code)
+            if not 200 <= response.status_code < 300:
+                span.set_status(StatusCode.ERROR, "server rejected request")
+            self._handle_error(response)
+            return response
+
+    @staticmethod
+    def _json(response: httpx.Response) -> dict[str, Any]:
+        """Reject malformed success envelopes without echoing response content."""
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise InternalError("invalid server success response") from exc
+        if not isinstance(data, dict):
+            raise InternalError("invalid server success response")
+        return data
+
+    @classmethod
+    def _submit_response(cls, response: httpx.Response) -> SubmitResponse:
+        data = cls._json(response)
+        if not isinstance(data.get("job_id"), str) or not isinstance(
+            data.get("state"), str
+        ):
+            raise InternalError("invalid server success response")
+        return SubmitResponse(
+            job_id=data["job_id"],
+            state=data["state"],
+            deduplicated=data.get("deduplicated", False),
+        )
 
     def submit(
         self,
@@ -111,15 +185,8 @@ class JobForgeClient:
         if idempotency_key is not None:
             body["idempotency_key"] = idempotency_key
 
-        response = self._client.post("/v1/jobs", json=body)
-        self._handle_error(response)
-
-        data = response.json()
-        return SubmitResponse(
-            job_id=data["job_id"],
-            state=data["state"],
-            deduplicated=data.get("deduplicated", False),
-        )
+        response = self._request("submit", "POST", "/v1/jobs", json=body)
+        return self._submit_response(response)
 
     def get(self, job_id: str) -> Job:
         """Get job details by ID.
@@ -133,9 +200,11 @@ class JobForgeClient:
         Raises:
             NotFoundError: If job does not exist or belongs to another tenant.
         """
-        response = self._client.get(f"/v1/jobs/{job_id}")
-        self._handle_error(response)
-        return Job.from_dict(response.json())
+        response = self._request("get", "GET", f"/v1/jobs/{job_id}")
+        try:
+            return Job.from_dict(self._json(response))
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise InternalError("invalid server job response") from exc
 
     def cancel(self, job_id: str) -> None:
         """Request job cancellation.
@@ -150,8 +219,7 @@ class JobForgeClient:
             NotFoundError: If job does not exist.
             AlreadyTerminalError: If job is already in a terminal state.
         """
-        response = self._client.post(f"/v1/jobs/{job_id}:cancel")
-        self._handle_error(response)
+        self._request("cancel", "POST", f"/v1/jobs/{job_id}:cancel")
 
     def retry(self, job_id: str) -> SubmitResponse:
         """Manually retry a dead or cancelled job.
@@ -168,15 +236,8 @@ class JobForgeClient:
             NotFoundError: If job does not exist.
             AlreadyTerminalError: If job is succeeded (cannot retry).
         """
-        response = self._client.post(f"/v1/jobs/{job_id}:retry")
-        self._handle_error(response)
-
-        data = response.json()
-        return SubmitResponse(
-            job_id=data["job_id"],
-            state=data["state"],
-            deduplicated=data.get("deduplicated", False),
-        )
+        response = self._request("retry", "POST", f"/v1/jobs/{job_id}:retry")
+        return self._submit_response(response)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""

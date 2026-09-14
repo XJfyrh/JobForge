@@ -32,6 +32,7 @@ func NewRouter(
 	// Global middleware stack.
 	r.Use(chimiddleware.Recoverer)
 	r.Use(RequestIDMiddleware)
+	r.Use(TraceContextMiddleware)
 	r.Use(LoggingMiddleware(logger))
 	r.Use(AuthMiddleware(cfg))
 

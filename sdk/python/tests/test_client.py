@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import httpx
 import pytest
 
@@ -50,7 +52,7 @@ def mock_transport() -> httpx.MockTransport:
         if path == "/v1/jobs/not-found" and request.method == "GET":
             return httpx.Response(
                 404,
-                json={"code": "NOT_FOUND", "message": "job not found"},
+                json={"error": {"code": "NOT_FOUND", "message": "job not found"}},
             )
 
         if path == "/v1/jobs/test-job-123:cancel" and request.method == "POST":
@@ -59,7 +61,12 @@ def mock_transport() -> httpx.MockTransport:
         if path == "/v1/jobs/terminal-job:cancel" and request.method == "POST":
             return httpx.Response(
                 409,
-                json={"code": "ALREADY_TERMINAL", "message": "job already succeeded"},
+                json={
+                    "error": {
+                        "code": "ALREADY_TERMINAL",
+                        "message": "job already succeeded",
+                    }
+                },
             )
 
         if path == "/v1/jobs/test-job-123:retry" and request.method == "POST":
@@ -72,32 +79,22 @@ def mock_transport() -> httpx.MockTransport:
                 },
             )
 
-        if path == "/v1/jobs" and request.method == "POST":
-            # Check for queue overloaded
-            return httpx.Response(
-                429,
-                json={"code": "QUEUE_OVERLOADED", "message": "queue at capacity"},
-            )
-
-        return httpx.Response(404, json={"code": "NOT_FOUND", "message": "unknown route"})
+        return httpx.Response(
+            404, json={"error": {"code": "NOT_FOUND", "message": "unknown route"}}
+        )
 
     return httpx.MockTransport(handler)
 
 
 @pytest.fixture
-def client(mock_transport: httpx.MockTransport) -> JobForgeClient:
+def client(mock_transport: httpx.MockTransport) -> Iterator[JobForgeClient]:
     """Create a test client with mock transport."""
-    client = JobForgeClient(
+    with JobForgeClient(
         base_url="http://testserver",
         api_key="test-key",
-    )
-    # Replace the internal client with mock transport
-    client._client = httpx.Client(
-        base_url="http://testserver",
         transport=mock_transport,
-        headers=client._build_headers(),
-    )
-    return client
+    ) as client:
+        yield client
 
 
 class TestSubmit:
