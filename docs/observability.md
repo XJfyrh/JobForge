@@ -2,7 +2,7 @@
 
 本文档描述 JobForge 的可观测性架构，包括分布式 Trace、Prometheus 指标和 pprof 性能剖析。
 
-技术选型见 [ADR-0004](adr/0004-observability-stack.md)；任务计数口径与可选 OTLP 增量见 [ADR-0012](adr/0012-task-observability-and-otlp.md)（实现候选，待 PR 审查接受）。
+技术选型见 [ADR-0004](adr/0004-observability-stack.md)；任务计数口径与可选 OTLP 增量见已接受的 [ADR-0012](adr/0012-task-observability-and-otlp.md)。
 
 ## 架构概览
 

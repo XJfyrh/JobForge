@@ -1,7 +1,8 @@
 # ADR-0012：任务完成口径与可选 OTLP 观测链路
 
-- 状态：Proposed（维护者已授权范围的实现候选，PR 评审合并后转 Accepted）
+- 状态：Accepted
 - 日期：2026-09-14
+- 接受日期：2026-09-15；[PR #33](https://github.com/XJfyrh/JobForge/pull/33) 合并提交 `f30b95a`
 - 关联：PRD v0.6 AT-40～42，补充 ADR-0004、0011
 
 ## 背景

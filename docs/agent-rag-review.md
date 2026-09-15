@@ -1,6 +1,6 @@
 # Agent/RAG 合并审查与验收边界（2026-09-15）
 
-对应 [PR #33](https://github.com/XJfyrh/JobForge/pull/33)、[PRD v0.6](product/JobForge_PRD_v0.6.md) 和[实施记录](agent-rag-progress.md)。审查从 `8006033` 开始，基线为 `02c61e4`。本轮补修已推送，但 Windows 完整复验未通过，暂不按“无问题”自动合并；ADR-0011/0012 保留 Proposed。合并判定针对 v0.6 已约定范围，不代表历史门禁、未实现 P1 或生产部署已全部验收。
+对应 [PR #33](https://github.com/XJfyrh/JobForge/pull/33)、[PRD v0.6](product/JobForge_PRD_v0.6.md) 和[实施记录](agent-rag-progress.md)。审查从 `8006033` 开始，基线为 `02c61e4`。Windows 失败经调查补修后，两轮全量快速验收及独立真实模型层通过；最终提交 `8fc61de` 的六项 CI 全部通过，2026-09-15 以 `f30b95a` squash 合并，ADR-0011/0012 按流程在合并后接受。合并判定针对 v0.6 已约定范围，不代表历史门禁、未实现 P1 或生产部署已全部验收。
 
 ## 审查范围与修正
 
@@ -16,7 +16,7 @@
 
 本次确定的问题：SDK 曾接受对象类型的 `result_ref`、字符串/布尔类型的整数、无效时间、非列表的 attempts、字符串类型的 `deduplicated` 和未知提交状态，调用方会拿到不符合声明类型的结果。新增 11 个回归用例先实际失败，再补字段校验；所有这些响应现在归为 `InternalError`。另两个用例证实解析异常的堆栈会包含被拒绝字段的原文，现对公开 SDK 解析异常抑制该异常链。共 13 个畸形字段/堆栈回归用例，加上可选字段、未知扩展字段和有效时间线的兼容验证；成功 HTTP mock 使用服务端接受的 UUID。修复没有新增依赖或改变队列状态机。
 
-## 本次复验结果与合并阻塞
+## 首轮复验与原始失败记录
 
 | 检查 | 结果与证据 |
 |---|---|
@@ -33,7 +33,30 @@
 
 这可以确认本机时间测量环境不满足稳定时钟前提，不能把该环境的 SLO 失败直接判成确定的代码性能回归；也不能据此把所有失败都归因于时钟。AT-24 首次未启动的直接原因没有完整 RPC 日志，AT-22 首轮波动也未确证根因。因此增加 Worker 启动日志及提前退出诊断，**不改 15s 启动等待、250ms Poll RPC、6s signal SLO 或 AT-22 阈值**，不把失败改成 skip。
 
-本轮暂不合并：先在时钟稳定的 Windows 测试环境复验并解释启动失败，或由维护者明确决定以已通过的独立 Linux 门禁作为合并依据。未擅自重启或校时共享 Docker/WSL 环境，以免影响其他项目。历史通过、本轮失败、定向通过和 Linux 通过分别保留。
+该阶段暂停合并，要求先修复 Windows 环境并解释启动失败。后续调查与修复如下；历史通过、失败、定向通过和 Linux 通过分别保留。
+
+## Windows 调查、修复与重新验收
+
+修复提交 `8fc61de`，操作和复现命令见 [Windows 验收运行手册](runbooks/windows-acceptance.md)，时钟证据见 [JSON 摘录](evidence/windows-clock-fix-2026-09-15.json)。完整原始日志保存在仓库外 `E:\JobForge-notes\2026-09-15-windows-fix`。
+
+1. **重复校时已定位并修复。** Ubuntu-24.04 的 NTP 与 Hyper-V implicit time sync 同时运行；NTP 报告 −2.372883s 的同刻，PG 探针后退 2.372892s，约 15s 后又前进 2.370716s。只停止并禁用 Ubuntu timesyncd，保留宿主同步；未更换时钟源、内核，未重启 Docker/WSL。Linux RAW 对照未发现 TSC 漂移。修复后的 60s 长测试并行采样最大步进下界 2.94ms、offset 下界 2.61ms、SQL RTT 37.75ms。
+2. **AT-24 启动预算已定位并修复。** 时钟稳定后，旧 250ms Poll 预算仍中断 Claim；一次在 243ms 提交 20 个任务但响应在 deadline 边界丢失，Worker 只能等待 30s lease 恢复，先触发 15s readiness 失败。测试现使用已有生产默认 30s Poll 预算；15s readiness、5s Heartbeat、6s signal SLO 均不变。400ms 慢 Claim 回归旧配置实际失败，修复后通过完整取消/指标/Trace 断言。
+3. **AT-22 保留波动，不虚构归因。** 时钟修复后的混合全量仍失败一次：p95=8.0529464s / max=8.2931818s，整组 494.779s；两真实任务仍通过。不能把它归因于 NTP，原失败没有 Claim/Complete 分段数据，尚不能确定该次宿主负载或 SQL 延迟的具体来源。新增分段诊断，未改变数据规模、20 jobs/s、30s 或 1s/2s 门槛。随后三轮定向和原阈值全量通过；不以此关闭历史 W4。
+
+| 修复后检查 | 实际结果 |
+|---|---|
+| AT-24、400ms 慢 Claim、AT-22 两个变体 ×3 | 全部通过，126.104s；AT-24 六组 p95=4.568～4.616s；AT-22 sustained p95=40.10 / 30.29 / 59.45ms |
+| 新 Windows 入口时钟预检 | 60s 通过，步进下界 2.680ms、offset 下界 3.206ms、SQL RTT 4.117ms |
+| 快速全量 `go test -race -count=1 -v ./...` | 通过，集成 167.904s；AT-22 p95=41.332ms/max=49.976ms，Claim p95=16.923ms、Complete p95=5.835ms；AT-24 p95=4.594s，慢 Claim 场景 p95=4.597s |
+| 独立真实模型层 | 通过，91.483s；12 场景 82.99s、SDK 6.98s，14 条 Jaeger 后端断言，真实索引/抽取产物、租户隔离、超时/取消/重试及发布前后 OS kill 恢复均执行 |
+| 第二轮新入口快速全量 race | 通过，143.280s；AT-22 p95=48.491ms/max=68.712ms，Claim p95=22.239ms、Complete p95=8.040ms；AT-24 p95=4.594s，慢 Claim 场景 p95=4.595s；60s 时钟预检步进下界 1.364ms |
+| 格式与机械检查 | gofmt/goimports、build/vet/golangci-lint（0 issues）、Python 51 项、ruff check/format、mypy、SQLFluff 基线/migrations、Buf lint/format/breaking、promtool 配置/规则、仪表盘生成一致性通过 |
+| `8fc61de` 工程 CI | [run 34966557266](https://github.com/XJfyrh/JobForge/actions/runs/34966557266) 五项通过；原始日志确认集成 race 131.778s、Python 51 项 |
+| `8fc61de` 真实模型 CI | [run 34966557253](https://github.com/XJfyrh/JobForge/actions/runs/34966557253) 通过；原始日志确认 69.730s、12 场景 + SDK + 14 条 Jaeger 断言 |
+
+快速层刻意不设置真实模型 URL，两个真实模型测试在随后独立层实际执行；helper 主进程 skip 对应真实 OS 子进程路径，不能计为未运行故障。AT-25 继续明确 skip。没有修改核心状态转换、生产 Poll 默认值、SQL/migration 或公开契约，因此本次排障没有新的核心热路径性能变更。
+
+只读探针还实测了缺 DSN（exit 2）、数据库不可用（exit 1）及连接信息不泄漏；历史跳时样本有自动回归。仓库外同时保留 `acceptance`、`acceptance-repeat`、两份 CI 原始日志与 `decisions.md`，不会用通过记录覆盖之前的失败。
 
 ## 远程模型：配置能力存在，真实后端未验收
 
