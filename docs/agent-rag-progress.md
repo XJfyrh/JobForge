@@ -13,6 +13,10 @@
 
 所有模型替身只计快速测试；真实模型结果、真实进程 kill 和观测查询另列。历史 W4 Claim 绝对门禁未通过的既有披露继续有效，不以本轮相对性能比较覆盖。
 
+## 合并审查（2026-09-15）
+
+多方面审查的范围、SDK 响应校验补修及未验收项的详细解释见[合并审查记录](agent-rag-review.md)。新增 13 个畸形字段/异常堆栈回归用例，其中 11 个字段用例和 2 个堆栈脱敏用例均先实际复现失败，再修复；加上兼容性用例，Python 测试增至 51 项。SDK 成功 mock 改用有效 UUID，修正已删除完成确认 helper 的过时注释。远程模型、生产留存、W4 历史失败和 AT-25 跳过均继续保留，合并检查以 PR 最新提交为准。
+
 ## M1 验证（Windows / PostgreSQL 16，2026-09-14）
 
 - 通过：`go build ./...`、`go vet ./...`、golangci-lint、`go test -race ./...`（设置测试 DSN、Redis URL、Python 解释器）；pytest（34）、ruff check/format、mypy；SQLFluff 历史基线、migration lint；buf lint。

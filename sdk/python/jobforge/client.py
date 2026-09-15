@@ -19,7 +19,7 @@ from jobforge.errors import (
     TransportError,
     from_response,
 )
-from jobforge.models import Job, SubmitResponse
+from jobforge.models import Job, JobState, SubmitResponse
 
 
 class JobForgeClient:
@@ -125,8 +125,8 @@ class JobForgeClient:
         """Reject malformed success envelopes without echoing response content."""
         try:
             data = response.json()
-        except ValueError as exc:
-            raise InternalError("invalid server success response") from exc
+        except ValueError:
+            raise InternalError("invalid server success response") from None
         if not isinstance(data, dict):
             raise InternalError("invalid server success response")
         return data
@@ -134,8 +134,11 @@ class JobForgeClient:
     @classmethod
     def _submit_response(cls, response: httpx.Response) -> SubmitResponse:
         data = cls._json(response)
-        if not isinstance(data.get("job_id"), str) or not isinstance(
-            data.get("state"), str
+        if (
+            not isinstance(data.get("job_id"), str)
+            or not data["job_id"]
+            or data.get("state") not in tuple(JobState)
+            or not isinstance(data.get("deduplicated", False), bool)
         ):
             raise InternalError("invalid server success response")
         return SubmitResponse(
@@ -206,8 +209,10 @@ class JobForgeClient:
         response = self._request("get", "GET", f"/v1/jobs/{job_id}")
         try:
             return Job.from_dict(self._json(response))
-        except (KeyError, TypeError, ValueError, AttributeError) as exc:
-            raise InternalError("invalid server job response") from exc
+        except (KeyError, TypeError, ValueError, AttributeError):
+            # Parser errors can include a rejected field's value. Suppress that
+            # chain so logging the public exception does not expose the body.
+            raise InternalError("invalid server job response") from None
 
     def cancel(self, job_id: str) -> None:
         """Request job cancellation.

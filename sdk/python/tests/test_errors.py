@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import traceback
+
 import httpx
 import pytest
 
@@ -53,7 +55,7 @@ def test_error_contract(
         "http://testserver", "synthetic", transport=transport
     ) as client:
         with pytest.raises(exception) as captured:
-            client.get("id")
+            client.get("11111111-1111-4111-8111-111111111111")
     assert captured.value.code == code
     assert captured.value.status_code == status
     assert captured.value.message == "safe message"
@@ -80,7 +82,7 @@ def test_unexpected_response_is_safe_internal_error(body: bytes) -> None:
         transport=httpx.MockTransport(lambda _: httpx.Response(502, content=body)),
     ) as client:
         with pytest.raises(InternalError) as captured:
-            client.get("id")
+            client.get("11111111-1111-4111-8111-111111111111")
     assert "secret" not in str(captured.value)
     assert captured.value.retryable
 
@@ -94,9 +96,49 @@ def test_malformed_success_is_internal_error(body: bytes) -> None:
         transport=httpx.MockTransport(lambda _: httpx.Response(200, content=body)),
     ) as client:
         with pytest.raises(InternalError):
-            client.get("id")
+            client.get("11111111-1111-4111-8111-111111111111")
         with pytest.raises(InternalError):
             client.submit("default", "demo.echo", {})
+
+
+@pytest.mark.parametrize(
+    "operation,body",
+    [
+        ("get", {"id": 42, "state": "ready"}),
+        ("get", {"id": "job", "result_ref": {"private": "marker"}}),
+        ("get", {"id": "job", "result_ref": False}),
+        ("get", {"id": "job", "attempt": "1"}),
+        ("get", {"id": "job", "fencing_token": True}),
+        ("get", {"id": "job", "created_at": "invalid-date"}),
+        ("get", {"id": "job", "created_at": "private-marker"}),
+        ("get", {"id": "job", "state": "private-marker"}),
+        ("get", {"id": "job", "attempts": {}}),
+        ("get", {"id": "job", "attempts": [{"attempt_no": "1"}]}),
+        ("submit", {"job_id": "job", "state": "ready", "deduplicated": "false"}),
+        ("submit", {"job_id": "job", "state": "unknown"}),
+        ("retry", {"job_id": "job", "state": "ready", "deduplicated": 1}),
+    ],
+)
+def test_malformed_success_fields_are_rejected(
+    operation: str, body: dict[str, object]
+) -> None:
+    """Malformed fields must not escape the SDK's declared result types."""
+    with JobForgeClient(
+        "http://testserver",
+        "synthetic",
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=body)),
+    ) as client:
+        with pytest.raises(InternalError) as captured:
+            if operation == "get":
+                client.get("11111111-1111-4111-8111-111111111111")
+            elif operation == "retry":
+                client.retry("11111111-1111-4111-8111-111111111111")
+            else:
+                client.submit("default", "demo.echo", {})
+        assert "private" not in str(captured.value)
+        assert "private-marker" not in "".join(
+            traceback.format_exception(captured.value)
+        )
 
 
 @pytest.mark.parametrize(

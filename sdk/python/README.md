@@ -31,6 +31,8 @@ with JobForgeClient("http://localhost:8080", os.environ["JOBFORGE_API_KEY"]) as 
 
 异常均派生 `JobForgeError`，提供 `code`、`message`、`status_code` 和 `retryable`。支持 InvalidArgument / Unauthorized / Forbidden / NotFound / Conflict / AlreadyTerminal / StaleLease / CancelRequested / InvalidTransition / QueueOverloaded / Internal。未知错误码与异常响应安全归为 InternalError。网络失败为 TransportError，超时为 RequestTimeoutError；服务端可能已接受提交，调用方重试应使用相同提交幂等键。SDK 不自行重试，不提供调度循环。
 
+HTTP 2xx 也会校验已知结果字段：错误的 ID/标量类型、状态、时间或 attempt 时间线归为 InternalError，不把原始响应正文带入异常消息或格式化堆栈。缺失可选字段沿用默认值，未知扩展字段忽略，旧响应中缺失/null/空串的 result_ref 均映射为 None。
+
 安装 `opentelemetry-sdk` 并配置自己的 TracerProvider 后，SDK 自动创建 `sdk.submit/get/cancel/retry` span 并传播当前 W3C context。也可通过 `traceparent=` 接入外部上下文；旧 `trace_id=` 继续写 X-Trace-ID，仅作兼容关联。SDK 不配置 exporter、不输出 payload/密钥。
 
 快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。上述 get 可能仍返回执行中状态；安装 `[demo]` extra 后运行 `examples/agent_rag.py` 可等待两个真实任务并验证产物。启动和清理见[真实任务指南](../../docs/real-tasks.md)，Trace/故障演练见[可观测性指南](../../docs/observability.md)。

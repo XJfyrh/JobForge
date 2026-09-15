@@ -567,8 +567,8 @@ func (r *Runtime) abandonLease(job *ClaimedJob, execCancel context.CancelFunc, l
 }
 
 // reportComplete sends a Complete RPC to the Gateway, retrying transient
-// failures. The Gateway absorbs duplicate Completes for the same lease
-// (isIdempotentComplete), so retries are safe.
+// failures. The finish transaction acknowledges the same accepted attempt
+// without replacing its result; superseded leases are rejected.
 func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef string, durationMs int64) {
 	ctx = withJobTraceParent(ctx, job)
 
@@ -588,8 +588,8 @@ func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef
 }
 
 // reportFail sends a Fail RPC to the Gateway, retrying transient failures.
-// The Gateway absorbs duplicate Fails for the same lease (isIdempotentFail),
-// so retries are safe.
+// The finish transaction acknowledges the same accepted attempt without a
+// second state transition; superseded leases are rejected.
 func (r *Runtime) reportFail(ctx context.Context, job *ClaimedJob, errCode, errMsg string, retryable bool, durationMs int64) {
 	ctx = withJobTraceParent(ctx, job)
 

@@ -79,6 +79,29 @@ class Job:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Job:
         """Create a Job from an API response dictionary."""
+        _check_fields(data, str, ("id", "tenant_id", "queue", "type"))
+        if not data["id"]:
+            raise ValueError("missing job id")
+        _check_fields(
+            data,
+            int,
+            ("priority", "attempt", "max_attempts", "timeout_seconds", "fencing_token"),
+        )
+        _check_fields(
+            data,
+            str,
+            (
+                "idempotency_key",
+                "lease_owner",
+                "trace_id",
+                "retry_of_job_id",
+                "result_ref",
+            ),
+            nullable=True,
+        )
+        attempts = data.get("attempts")
+        if attempts is not None and not isinstance(attempts, list):
+            raise TypeError("invalid attempts field")
         return cls(
             id=data["id"],
             tenant_id=data.get("tenant_id", ""),
@@ -99,7 +122,7 @@ class Job:
             retry_of_job_id=data.get("retry_of_job_id"),
             created_at=_parse_datetime(data.get("created_at")),
             updated_at=_parse_datetime(data.get("updated_at")),
-            attempts=[Attempt.from_dict(a) for a in data.get("attempts") or []],
+            attempts=[Attempt.from_dict(a) for a in attempts or []],
             result_ref=data.get("result_ref") or None,
         )
 
@@ -133,6 +156,10 @@ class Attempt:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Attempt:
         """Create an Attempt from an API response dictionary."""
+        _check_fields(data, str, ("worker_id", "outcome"))
+        _check_fields(data, int, ("attempt_no", "fencing_token"))
+        _check_fields(data, str, ("error_code", "error_message"), nullable=True)
+        _check_fields(data, int, ("duration_ms",), nullable=True)
         return cls(
             attempt_no=data.get("attempt_no", 0),
             worker_id=data.get("worker_id", ""),
@@ -159,7 +186,24 @@ def _parse_datetime(value: str | None) -> datetime | None:
     """Parse an ISO 8601 datetime string."""
     if value is None:
         return None
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except (ValueError, AttributeError):
-        return None
+    if not isinstance(value, str):
+        raise TypeError("invalid datetime field")
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _check_fields(
+    data: dict[str, Any],
+    expected: type[str] | type[int],
+    names: tuple[str, ...],
+    *,
+    nullable: bool = False,
+) -> None:
+    """Validate present fields; keep legacy defaults and ignore unknown fields."""
+    if not isinstance(data, dict):
+        raise TypeError("invalid response object")
+    for name in names:
+        if name not in data or (nullable and data[name] is None):
+            continue
+        # JSON booleans must not pass as integers (bool subclasses int).
+        if type(data[name]) is not expected:
+            raise TypeError(f"invalid {name} field")

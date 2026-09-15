@@ -27,17 +27,20 @@ def mock_transport() -> httpx.MockTransport:
             return httpx.Response(
                 202,
                 json={
-                    "job_id": "test-job-123",
+                    "job_id": "11111111-1111-4111-8111-111111111111",
                     "state": "ready",
                     "deduplicated": False,
                 },
             )
 
-        if path == "/v1/jobs/test-job-123" and request.method == "GET":
+        if (
+            path == "/v1/jobs/11111111-1111-4111-8111-111111111111"
+            and request.method == "GET"
+        ):
             return httpx.Response(
                 200,
                 json={
-                    "id": "test-job-123",
+                    "id": "11111111-1111-4111-8111-111111111111",
                     "tenant_id": "test-tenant",
                     "queue": "default",
                     "type": "demo.echo",
@@ -49,16 +52,25 @@ def mock_transport() -> httpx.MockTransport:
                 },
             )
 
-        if path == "/v1/jobs/not-found" and request.method == "GET":
+        if (
+            path == "/v1/jobs/33333333-3333-4333-8333-333333333333"
+            and request.method == "GET"
+        ):
             return httpx.Response(
                 404,
                 json={"error": {"code": "NOT_FOUND", "message": "job not found"}},
             )
 
-        if path == "/v1/jobs/test-job-123:cancel" and request.method == "POST":
+        if (
+            path == "/v1/jobs/11111111-1111-4111-8111-111111111111:cancel"
+            and request.method == "POST"
+        ):
             return httpx.Response(200, json={})
 
-        if path == "/v1/jobs/terminal-job:cancel" and request.method == "POST":
+        if (
+            path == "/v1/jobs/44444444-4444-4444-8444-444444444444:cancel"
+            and request.method == "POST"
+        ):
             return httpx.Response(
                 409,
                 json={
@@ -69,11 +81,14 @@ def mock_transport() -> httpx.MockTransport:
                 },
             )
 
-        if path == "/v1/jobs/test-job-123:retry" and request.method == "POST":
+        if (
+            path == "/v1/jobs/11111111-1111-4111-8111-111111111111:retry"
+            and request.method == "POST"
+        ):
             return httpx.Response(
                 202,
                 json={
-                    "job_id": "retry-job-456",
+                    "job_id": "22222222-2222-4222-8222-222222222222",
                     "state": "ready",
                     "deduplicated": False,
                 },
@@ -104,7 +119,7 @@ class TestSubmit:
             type="demo.echo",
             payload={"message": "hello"},
         )
-        assert result.job_id == "test-job-123"
+        assert result.job_id == "11111111-1111-4111-8111-111111111111"
         assert result.state == "ready"
         assert result.deduplicated is False
 
@@ -118,37 +133,37 @@ class TestSubmit:
             timeout_seconds=600,
             idempotency_key="unique-key",
         )
-        assert result.job_id == "test-job-123"
+        assert result.job_id == "11111111-1111-4111-8111-111111111111"
 
 
 class TestGet:
     def test_get_success(self, client: JobForgeClient) -> None:
-        job = client.get("test-job-123")
-        assert job.id == "test-job-123"
+        job = client.get("11111111-1111-4111-8111-111111111111")
+        assert job.id == "11111111-1111-4111-8111-111111111111"
         assert job.state == JobState.RUNNING
         assert job.attempt == 1
 
     def test_get_not_found(self, client: JobForgeClient) -> None:
         with pytest.raises(NotFoundError) as exc_info:
-            client.get("not-found")
+            client.get("33333333-3333-4333-8333-333333333333")
         assert exc_info.value.code == "NOT_FOUND"
 
 
 class TestCancel:
     def test_cancel_success(self, client: JobForgeClient) -> None:
         # Should not raise
-        client.cancel("test-job-123")
+        client.cancel("11111111-1111-4111-8111-111111111111")
 
     def test_cancel_terminal(self, client: JobForgeClient) -> None:
         with pytest.raises(AlreadyTerminalError) as exc_info:
-            client.cancel("terminal-job")
+            client.cancel("44444444-4444-4444-8444-444444444444")
         assert exc_info.value.code == "ALREADY_TERMINAL"
 
 
 class TestRetry:
     def test_retry_success(self, client: JobForgeClient) -> None:
-        result = client.retry("test-job-123")
-        assert result.job_id == "retry-job-456"
+        result = client.retry("11111111-1111-4111-8111-111111111111")
+        assert result.job_id == "22222222-2222-4222-8222-222222222222"
         assert result.state == "ready"
 
 
@@ -171,3 +186,43 @@ class TestJobModel:
         job = Job.from_dict(data)
         assert job.id == "job-1"
         assert job.state == JobState.READY
+
+    @pytest.mark.parametrize("result_ref", [None, "", "artifact:v1:index-1"])
+    def test_optional_fields_and_unknown_extensions(
+        self, result_ref: str | None
+    ) -> None:
+        data = {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "result_ref": result_ref,
+            "attempts": None,
+            "future_field": {"version": 2},
+        }
+        job = Job.from_dict(data)
+        assert job.result_ref == (result_ref or None)
+        assert job.attempts == []
+        assert job.created_at is None
+
+    def test_attempt_timeline(self) -> None:
+        job = Job.from_dict(
+            {
+                "id": "11111111-1111-4111-8111-111111111111",
+                "created_at": "2026-09-15T08:00:00Z",
+                "attempts": [
+                    {
+                        "attempt_no": 1,
+                        "worker_id": "worker-1",
+                        "fencing_token": 1,
+                        "started_at": "2026-09-15T08:00:01Z",
+                        "finished_at": None,
+                        "duration_ms": None,
+                        "error_code": None,
+                        "error_message": None,
+                    }
+                ],
+            }
+        )
+        assert job.created_at is not None
+        assert job.created_at.utcoffset() is not None
+        assert job.attempts[0].attempt_no == 1
+        assert job.attempts[0].started_at is not None
+        assert job.attempts[0].finished_at is None
