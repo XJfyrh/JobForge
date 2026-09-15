@@ -55,11 +55,13 @@ go vet ./tools/executorprobe
 
 Windows 的 Go 命令只覆盖跨平台协议；POSIX API 类型检查必须指定 Linux。Linux 真进程用例由 `JOBFORGE_EXECUTOR_PROCESS_TESTS=1` 显式启用，Dockerfile 已设置；普通 `go test` 未启用时会明确 skip，**skip 不算进程验收通过**。CI 单独构建并运行上述容器，以实际覆盖 Linux runner 的 race 和孤儿回收。
 
-真进程场景：正常请求、非 JSON 响应、错请求 ID、超大 stdout、超大 stderr、步骤超时、取消、单独杀 guardian、实际杀 Go 父进程并 Wait。取消用例中的 step 忽略 SIGTERM，以验证 KILL 后备路径，而非仅证明合作退出。
+真进程场景：正常请求、非 JSON 响应、错请求 ID、超大 stdout、超大 stderr、合法结果后的无换行残片、步骤超时、取消、单独杀 guardian、实际杀 Go 父进程并 Wait。取消用例中的 step 忽略 SIGTERM，以验证 KILL 后备路径，而非仅证明合作退出。
 
 ## S0 发现与限制
 
-[2026-09-16 实际验收记录](acceptance-2026-09-16.txt) 包含最终源码 SHA256、镜像身份、`-race` 构建与资源限制命令。最终 Linux race 层 9 个真进程场景全部通过、无 skip；Python 请求守卫 8 个测试通过。最后一次实测取消后整组回收约 105ms，步骤 1s 超时后总回收约 1.103s，Go 父进程 SIGKILL 后约 14ms 整组消失；均为该机器该次运行的观测，不是生产 SLO 或统计分位数。
+[2026-09-16 实际验收记录](acceptance-2026-09-16.txt) 包含最终源码 SHA256、镜像身份、`-race` 构建与资源限制命令。最终 Linux race 层 10 个真进程场景全部通过、无 skip；Python 协议守卫 10 个测试通过。最后一次实测取消后整组回收约 104ms，步骤 1s 超时后总回收约 1.104s，Go 父进程 SIGKILL 后约 13ms 整组消失；均为该机器该次运行的观测，不是生产 SLO 或统计分位数。
+
+独立审查发现早期 guardian 会吞掉合法结果之后、EOF 之前的无换行残片，使错误输出被判成功。现只转发完整换行前缀，保留残片并在 EOF 拒绝；Python 回归覆盖同一次/不同次管道 read 的分块，真实 Linux `trailing_bytes` 用例验证 Go 最终返回协议错误并回收整组。合法 result 帧本身不足以使执行成功，还须整个协议结束和进程退出有效。
 
 首次试验把 500ms/3s deadline 与解释器启动混在一起，负载下 Python 两进程启动约 2.7～3s，导致正常请求和取消屏障超时。镜像 COPY 后仍复现；单独标准库 import 曾耗时 1.13s，因此不能把原因归结为 Windows bind mount。后续空闲时正常请求约 0.3s，也说明该启动成本随环境变化，不能直接宣传为稳定性能。
 

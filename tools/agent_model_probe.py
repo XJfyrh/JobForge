@@ -235,13 +235,22 @@ async def chat(
         "options": OPTIONS,
     }
     payload["format" if structured else "tools"] = FINAL_SCHEMA if structured else TOOLS
-    record: dict[str, Any] = {"number": len(requests) + 1, "usage_known": False}
+    record: dict[str, Any] = {
+        "number": len(requests) + 1,
+        "usage_known": False,
+        "completion_unknown": True,
+    }
     requests.append(record)
     started = time.monotonic()
     try:
         response = await request_json(
             client, "POST", "/api/chat", payload, min(CALL_TIMEOUT, remaining)
         )
+        # Disconnects, HTTP errors and incomplete bodies cannot prove the backend
+        # stopped. A valid non-streaming completion is the only positive evidence.
+        record["completion_unknown"] = response.get("done") is not True
+        if record["completion_unknown"]:
+            raise ProbeError("INCOMPLETE_MODEL_RESPONSE")
         record.update(
             usage_known=isinstance(response.get("eval_count"), int),
             prompt_tokens=response.get("prompt_eval_count"),
@@ -436,6 +445,45 @@ async def correction_probe(
     return report
 
 
+def persist_report(path: Path, report: dict[str, Any]) -> None:
+    """Persist completed probe evidence before any optional observation request."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+
+def finish_stage(
+    path: Path, report: dict[str, Any], result: dict[str, Any], stage: str
+) -> bool:
+    """Persist every stage and forbid more inference after an unknown completion."""
+    uncertain = any(row.get("completion_unknown") for row in result["requests"])
+    if uncertain:
+        report["stopped_after_uncertain_backend_completion"] = True
+        report["stopped_at"] = stage
+        report["all_passed"] = False
+    persist_report(path, report)
+    return not uncertain
+
+
+async def sample_model_status(
+    client: httpx.AsyncClient, path: Path, report: dict[str, Any], stage: str
+) -> None:
+    """Treat status failures as bounded diagnostics, never erase model evidence."""
+    try:
+        report["loaded_model_sample"] = await request_json(
+            client, "GET", "/api/ps", timeout=5
+        )
+    except (ProbeError, TimeoutError, httpx.HTTPError) as exc:
+        report.setdefault("observation_errors", []).append(
+            {
+                "stage": stage,
+                "error": str(exc)
+                if isinstance(exc, ProbeError)
+                else type(exc).__name__,
+            }
+        )
+    persist_report(path, report)
+
+
 async def run(args: argparse.Namespace) -> int:
     """Run sequential local probes and write bounded evidence, including failures."""
     dataset = json.loads(DATA_PATH.read_text(encoding="utf-8"))
@@ -463,15 +511,13 @@ async def run(args: argparse.Namespace) -> int:
                 "case_seconds": CASE_TIMEOUT,
             },
             "cases": [],
+            "all_passed": False,
         }
         for case in dataset["cases"]:
             result = await run_case(client, args.model, case)
             report["cases"].append(result)
-            report["loaded_model_sample"] = await request_json(client, "GET", "/api/ps")
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(
-                json.dumps(report, indent=2) + "\n", encoding="utf-8"
-            )
+            stage = f"case:{case['id']}"
+            may_continue = finish_stage(args.output, report, result, stage)
             print(
                 json.dumps(
                     {
@@ -481,29 +527,30 @@ async def run(args: argparse.Namespace) -> int:
                     }
                 )
             )
-            if result.get("error") in {
-                "TimeoutError",
-                "ReadError",
-                "RemoteProtocolError",
-            }:
-                report["stopped_after_uncertain_backend_completion"] = True
-                report["all_passed"] = False
-                args.output.write_text(
-                    json.dumps(report, indent=2) + "\n", encoding="utf-8"
-                )
+            if not may_continue:
                 return 1
+            await sample_model_status(client, args.output, report, stage)
         report["structured_output"] = await structured_probe(
             client, args.model, dataset["cases"][0]
         )
-        report["corrections"] = [
-            await correction_probe(client, args.model, dataset["cases"][0], malformed)
-            for malformed in (False, True)
-        ]
+        if not finish_stage(
+            args.output, report, report["structured_output"], "structured_output"
+        ):
+            return 1
+        report["corrections"] = []
+        for malformed in (False, True):
+            result = await correction_probe(
+                client, args.model, dataset["cases"][0], malformed
+            )
+            report["corrections"].append(result)
+            stage = "correction:malformed" if malformed else "correction:unknown_tool"
+            if not finish_stage(args.output, report, result, stage):
+                return 1
         report["all_passed"] = (
             all(row["passed"] for row in report["cases"] + report["corrections"])
             and report["structured_output"]["passed"]
         )
-        args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        persist_report(args.output, report)
         return 0 if report["all_passed"] else 1
 
 

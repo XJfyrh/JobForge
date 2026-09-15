@@ -12,7 +12,16 @@ from typing import NoReturn
 MAX_REQUEST = 4096
 MAX_RESPONSE = 16384
 OPERATIONS = frozenset(
-    {"echo", "block", "ignore_term", "bad_json", "wrong_id", "oversize", "stderr"}
+    {
+        "echo",
+        "block",
+        "ignore_term",
+        "bad_json",
+        "wrong_id",
+        "oversize",
+        "stderr",
+        "trailing_bytes",
+    }
 )
 
 
@@ -75,6 +84,9 @@ def step(operation: str) -> None:
             "value": request["value"],
         }
     )
+    if operation == "trailing_bytes":
+        sys.stdout.write("invalid trailing bytes")
+        sys.stdout.flush()
 
 
 def guard() -> None:
@@ -109,6 +121,8 @@ def guard() -> None:
                     chunk = os.read(child.stdout.fileno(), 4096)
                     if not chunk:
                         return_code = child.wait(timeout=1)
+                        if output:
+                            raise ValueError("unterminated response frame")
                         if return_code != 0:
                             raise ValueError("step process failed")
                         return
@@ -130,9 +144,12 @@ def guard() -> None:
                         sys.stdout.buffer.flush()
                         terminate_group()
                     if b"\n" in output:
-                        sys.stdout.buffer.write(output)
+                        # Preserve the suffix across reads; EOF must reject a partial
+                        # frame even when it follows a previously valid result.
+                        boundary = output.rindex(b"\n") + 1
+                        sys.stdout.buffer.write(output[:boundary])
                         sys.stdout.buffer.flush()
-                        output.clear()
+                        del output[:boundary]
     finally:
         if child.poll() is None:
             child.kill()

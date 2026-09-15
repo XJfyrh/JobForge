@@ -1,52 +1,56 @@
 S0 Linux executor acceptance: PASS (exit 0), 2026-09-16
+Review regression included: valid result followed by unterminated trailing bytes is rejected, 10 real process scenarios passed.
 Build: docker build --network none --tag jobforge-executor-probe:s0 --file tools/executorprobe/Dockerfile .
 Run: docker run --rm --init --network none --cpus 1 --memory 256m --pids-limit 64 jobforge-executor-probe:s0
 Race binary: CGO_ENABLED=1 go test -race -c -o /out/probe.test ./tools/executorprobe
-Runtime: Python 3.12.14/bookworm, non-root; image identity: sha256:fdccc62e587dd11945b4921323064c97ab5c2396ac1968e5797d623b9ed71150
+Runtime: Python 3.12.14/bookworm, non-root; image identity: sha256:321efaad621c944362ae84a9209cbdc4c1229ab41ef6c808b45428056ec7caf3
 Builder: golang:1.26.5-bookworm@sha256:53eeac89074db483fdf0ab3be1df32bf6e47562263d2d0d6baa7f26acb4957dd
 Runtime base: python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254
 Source SHA256:
 Dockerfile 463c7e894c90d0cd240528a4694bbf9d85af234cf0b0ecdb366392b507462b50
-executor.py c08d8cd2e8da1ad638e34bcf6d9ceacfce79e917ccea552e0b9bb4cd7bd8fef7
+executor.py d3de6905cd895473bbaa16d7c957ecd2395d4d9af769470440bd1ff7ed822986
 main_linux.go c2aa88696a94f0520b712ac57299e374508109ec5c8f4b3371a3cf71ac4bad56
 main_other.go b98b6e0dd6a0ac73fda7725d39bd84095a9fb69dc9be85bcf03c233619002b3a
 protocol_test.go e9e71b843480ac40b59c4048798bac6b569ab5f1dd3580b2981b1c152370afef
-protocol.go c11952ef1e7f5e20ff080d7ba51f718d254bc0d1beb16583a2ca5145ac9053e3
-runner_linux_test.go fef102a7959841ef32a1be7a6e747ef54733d9094f00cc32775a76f95097c452
+protocol.go b50b37ab5ca04f3f57b9b773efb0e109168dc0a030b103747c16532c282e65e2
+runner_linux_test.go b19114a00796d791a7bb6df771964fb65f302b2dde8b4edecab47b1fce695b94
 runner_linux.go ef3f309af85d326f5f50626311c87fa933b684e129c2c30a5db35b1b4ce56dde
-test_executor.py 50864771e31f5d0557db9f562972159085ab7e0be632f975b6ebe8c49aecd7c5
+test_executor.py 3142a8971ce4005c6a876288b912c2c96e893cd0a1a1d4ec044862fb1166ed31
 
 === RUN   TestProtocolRejectsUnsafeAndMalformedFrames
 --- PASS: TestProtocolRejectsUnsafeAndMalformedFrames (0.00s)
 === RUN   TestRealProcessContracts
 === RUN   TestRealProcessContracts/echo
-    runner_linux_test.go:68: guardian=13 step=14 returned=<nil>; process group reaped
+    runner_linux_test.go:69: guardian=13 step=14 returned=<nil>; process group reaped
 === RUN   TestRealProcessContracts/bad_json
-    runner_linux_test.go:68: guardian=15 step=16 returned=invalid executor protocol; process group reaped
+    runner_linux_test.go:69: guardian=15 step=16 returned=invalid executor protocol; process group reaped
 === RUN   TestRealProcessContracts/wrong_id
-    runner_linux_test.go:68: guardian=17 step=18 returned=invalid executor protocol; process group reaped
+    runner_linux_test.go:69: guardian=17 step=18 returned=invalid executor protocol; process group reaped
 === RUN   TestRealProcessContracts/oversize
-    runner_linux_test.go:68: guardian=19 step=20 returned=executor output limit exceeded; process group reaped
+    runner_linux_test.go:69: guardian=19 step=20 returned=executor output limit exceeded; process group reaped
 === RUN   TestRealProcessContracts/stderr
-    runner_linux_test.go:68: guardian=22 step=0 returned=executor output limit exceeded; process group reaped
---- PASS: TestRealProcessContracts (8.11s)
-    --- PASS: TestRealProcessContracts/echo (1.97s)
-    --- PASS: TestRealProcessContracts/bad_json (2.19s)
-    --- PASS: TestRealProcessContracts/wrong_id (1.96s)
-    --- PASS: TestRealProcessContracts/oversize (1.54s)
-    --- PASS: TestRealProcessContracts/stderr (0.44s)
+    runner_linux_test.go:69: guardian=22 step=0 returned=executor output limit exceeded; process group reaped
+=== RUN   TestRealProcessContracts/trailing_bytes
+    runner_linux_test.go:69: guardian=24 step=25 returned=invalid executor protocol; process group reaped
+--- PASS: TestRealProcessContracts (1.80s)
+    --- PASS: TestRealProcessContracts/echo (0.30s)
+    --- PASS: TestRealProcessContracts/bad_json (0.32s)
+    --- PASS: TestRealProcessContracts/wrong_id (0.43s)
+    --- PASS: TestRealProcessContracts/oversize (0.27s)
+    --- PASS: TestRealProcessContracts/stderr (0.25s)
+    --- PASS: TestRealProcessContracts/trailing_bytes (0.23s)
 === RUN   TestCancelTimeoutAndGuardianDeath
 === RUN   TestCancelTimeoutAndGuardianDeath/cancel
-    runner_linux_test.go:104: guardian=24 step=25 startup=332.705739ms after_started=104.506772ms; group killed and reaped
+    runner_linux_test.go:105: guardian=26 step=27 startup=259.938627ms after_started=104.447242ms; group killed and reaped
 === RUN   TestCancelTimeoutAndGuardianDeath/timeout
-    runner_linux_test.go:104: guardian=26 step=27 startup=249.080474ms after_started=1.10285892s; group killed and reaped
+    runner_linux_test.go:105: guardian=28 step=29 startup=203.320373ms after_started=1.103716582s; group killed and reaped
 === RUN   TestCancelTimeoutAndGuardianDeath/guardian_kill
-    runner_linux_test.go:104: guardian=28 step=29 startup=210.536777ms after_started=105.28421ms; group killed and reaped
---- PASS: TestCancelTimeoutAndGuardianDeath (2.11s)
-    --- PASS: TestCancelTimeoutAndGuardianDeath/cancel (0.44s)
-    --- PASS: TestCancelTimeoutAndGuardianDeath/timeout (1.35s)
-    --- PASS: TestCancelTimeoutAndGuardianDeath/guardian_kill (0.32s)
+    runner_linux_test.go:105: guardian=30 step=31 startup=200.012311ms after_started=107.441921ms; group killed and reaped
+--- PASS: TestCancelTimeoutAndGuardianDeath (1.98s)
+    --- PASS: TestCancelTimeoutAndGuardianDeath/cancel (0.36s)
+    --- PASS: TestCancelTimeoutAndGuardianDeath/timeout (1.31s)
+    --- PASS: TestCancelTimeoutAndGuardianDeath/guardian_kill (0.31s)
 === RUN   TestParentKillControlEOF
-    runner_linux_test.go:166: Go parent=30 SIGKILL+Wait, guardian=36 step=38 reaped after control EOF in 14.033715ms
---- PASS: TestParentKillControlEOF (0.25s)
+    runner_linux_test.go:167: Go parent=32 SIGKILL+Wait, guardian=38 step=39 reaped after control EOF in 13.400897ms
+--- PASS: TestParentKillControlEOF (0.24s)
 PASS

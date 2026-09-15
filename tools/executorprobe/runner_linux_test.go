@@ -49,6 +49,7 @@ func TestRealProcessContracts(t *testing.T) {
 	}{
 		{"echo", nil}, {"bad_json", errProtocol}, {"wrong_id", errProtocol},
 		{"oversize", errOutputLimit}, {"stderr", errOutputLimit},
+		{"trailing_bytes", errProtocol},
 	} {
 		t.Run(tc.op, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

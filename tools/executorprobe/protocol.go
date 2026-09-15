@@ -36,7 +36,7 @@ type response struct {
 
 func encodeRequest(r request) ([]byte, error) {
 	switch r.Operation {
-	case "echo", "block", "ignore_term", "bad_json", "wrong_id", "oversize", "stderr":
+	case "echo", "block", "ignore_term", "bad_json", "wrong_id", "oversize", "stderr", "trailing_bytes":
 	default:
 		return nil, errProtocol
 	}

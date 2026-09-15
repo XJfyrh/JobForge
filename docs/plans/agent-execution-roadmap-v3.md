@@ -225,7 +225,7 @@ S1 即开始开发 SDK/API 契约和基本运行详情。S2 之前必须落实�
 
 代码改动执行适用的格式、Go build/vet/lint/race、Python pytest/ruff/mypy、SQLFluff、新协议生成与 Buf 检查、真实跨语言契约、promtool 和仪表盘一致性校验。新契约不要求与旧接口兼容；实施时同步更新 PRD、ADR、规范和 CI 对旧契约的假设，不能靠跳过检查落地破坏性改动。
 
-本次仅写候选路线；正式改动前仍按 [AGENTS.md](../../AGENTS.md)、[CONTRIBUTING](../../CONTRIBUTING.md) 和 [ADR 流程](../adr/README.md) 明确取代关系。数据库只新增 versioned migration，不改写已应用版本。新版本可用独立、可重建环境，不设计旧任务/数据迁移。当前若在 Windows 宿主执行仓库集成测试，仍先按现行要求启动 PostgreSQL 并设置 JOBFORGE_TEST_DSN。
+本文件记录已确认的路线；正式实现仍按 [AGENTS.md](../../AGENTS.md)、[CONTRIBUTING](../../CONTRIBUTING.md) 和 [ADR 流程](../adr/README.md) 明确取代关系。数据库只新增 versioned migration，不改写已应用版本。新版本可用独立、可重建环境，不设计旧任务/数据迁移。当前若在 Windows 宿主执行仓库集成测试，仍先按现行要求启动 PostgreSQL 并设置 JOBFORGE_TEST_DSN。
 
 观测至少包含积压、运行中/等待审批数量、调用失败/额度拒绝、步骤耗时、恢复次数、业务动作结果和 Worker 存活。长时间人工等待不保持一个常驻 span；恢复创建新 span 并关联 Run 与先前步骤。观测后端故障不能影响任务状态或卡住执行器。
 
