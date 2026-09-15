@@ -83,6 +83,8 @@ macOS/Linux：
 
 ## 本地 PostgreSQL
 
+Windows 全量验收也可使用 `pwsh -NoProfile -File tools/test-windows.ps1`：自动启动专用 PostgreSQL/Redis、重装 SDK wheel、检查时钟并运行 Python/race。真实模型层使用 `-RealModels`，前置服务及时间异常诊断见 [Windows 验收运行手册](runbooks/windows-acceptance.md)。这不替代下面的静态门禁，也不把缺失后端视为通过。
+
 集成测试需要真实 PostgreSQL。使用 Docker Compose 启动：
 
 ```sh

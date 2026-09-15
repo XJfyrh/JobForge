@@ -402,8 +402,20 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 	consumerDone := make(chan struct{})
 	go func() {
 		defer close(consumerDone)
+		var claimDurations, completeDurations []time.Duration
+		defer func() {
+			if len(claimDurations) > 0 {
+				p50, p95, maxDuration := durationSummary(claimDurations)
+				t.Logf("AT-22 Claim RPC/store time: n=%d p50=%s p95=%s max=%s", len(claimDurations), p50, p95, maxDuration)
+			}
+			if len(completeDurations) > 0 {
+				p50, p95, maxDuration := durationSummary(completeDurations)
+				t.Logf("AT-22 Complete store time: n=%d p50=%s p95=%s max=%s", len(completeDurations), p50, p95, maxDuration)
+			}
+		}()
 		emptyStreak := 0
 		for {
+			claimStart := time.Now()
 			res, err := js.Claim(ctx, store.ClaimParams{
 				Queues:            []string{queue},
 				WorkerID:          "at22s-consumer-" + suffix,
@@ -412,6 +424,7 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 				TenantMaxInflight: limit,
 				QuotaPrefilter:    true,
 			})
+			claimDurations = append(claimDurations, time.Since(claimStart))
 			if err != nil {
 				t.Errorf("consumer claim: %v", err)
 				return
@@ -428,9 +441,11 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 					latencies = append(latencies, lat)
 					mu.Unlock()
 				}
+				completeStart := time.Now()
 				if err := js.Complete(ctx, j.ID, "at22s-consumer-"+suffix, j.FencingToken, "", 1); err != nil {
 					t.Errorf("consumer complete: %v", err)
 				}
+				completeDurations = append(completeDurations, time.Since(completeStart))
 			}
 			if len(res.Jobs) == 0 {
 				select {
