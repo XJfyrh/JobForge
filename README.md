@@ -6,6 +6,8 @@
 
 **一句话定位：JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台——以 PostgreSQL 为唯一事实源，提供可恢复、可观测、可隔离的 at-least-once 可靠执行底座。**
 
+下一阶段[Agent v3路线](docs/plans/agent-execution-roadmap-v3.md)以云端主chat构建可恢复业务Agent，本地chat为可选扩展；目前交付S0契约与进程探针，云端业务接入尚未实现。下面的架构和快速开始对应现有v0.6服务。
+
 ## 系统架构
 
 ```mermaid
@@ -105,6 +107,9 @@ docker compose -f deploy/compose.yaml --profile durable-events up -d --build
 | [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
+| [下一阶段路线 v3](docs/plans/agent-execution-roadmap-v3.md) | 可恢复业务 Agent；路线已确认，S0 契约与关键试验进行中 |
+| [Agent v3 实施记录](docs/agent-v3-progress.md) | 新 PRD/ADR、试验证据与分阶段验收状态 |
+| [路线 v2 对照](docs/plans/agent-execution-roadmap-v2.md) | 有界工具调用与公平评测；保留此前候选方案 |
 | [性能基线](docs/benchmark.md) | 冻结基线、发布数据与复现命令 |
 | [可靠性报告](docs/reliability-report.md) | scale 套件（AT-13/AT-14）运行结果与复现命令 |
 | [开发环境](docs/development.md) | 本地构建、测试与检查命令 |
