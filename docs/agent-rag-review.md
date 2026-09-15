@@ -1,6 +1,6 @@
 # Agent/RAG 合并审查与验收边界（2026-09-15）
 
-对应 [PR #33](https://github.com/XJfyrh/JobForge/pull/33)、[PRD v0.6](product/JobForge_PRD_v0.6.md) 和[实施记录](agent-rag-progress.md)。审查从 `8006033` 开始，基线为 `02c61e4`；本轮补修和最终检查随 PR 一并合并。合并判定针对 v0.6 已约定范围，不代表历史门禁、未实现 P1 或生产部署已全部验收。
+对应 [PR #33](https://github.com/XJfyrh/JobForge/pull/33)、[PRD v0.6](product/JobForge_PRD_v0.6.md) 和[实施记录](agent-rag-progress.md)。审查从 `8006033` 开始，基线为 `02c61e4`。本轮补修已推送，但 Windows 完整复验未通过，暂不按“无问题”自动合并；ADR-0011/0012 保留 Proposed。合并判定针对 v0.6 已约定范围，不代表历史门禁、未实现 P1 或生产部署已全部验收。
 
 ## 审查范围与修正
 
@@ -15,6 +15,25 @@
 | 工程与证据 | 区分快速替身、真实 PostgreSQL、真实模型、OS kill、Jaeger 实际查询。CI 的失败管道传播已核对，不仅依赖绿色图标。 |
 
 本次确定的问题：SDK 曾接受对象类型的 `result_ref`、字符串/布尔类型的整数、无效时间、非列表的 attempts、字符串类型的 `deduplicated` 和未知提交状态，调用方会拿到不符合声明类型的结果。新增 11 个回归用例先实际失败，再补字段校验；所有这些响应现在归为 `InternalError`。另两个用例证实解析异常的堆栈会包含被拒绝字段的原文，现对公开 SDK 解析异常抑制该异常链。共 13 个畸形字段/堆栈回归用例，加上可选字段、未知扩展字段和有效时间线的兼容验证；成功 HTTP mock 使用服务端接受的 UUID。修复没有新增依赖或改变队列状态机。
+
+## 本次复验结果与合并阻塞
+
+| 检查 | 结果与证据 |
+|---|---|
+| Python | 普通 wheel 重装后 51 项通过；ruff check/format、mypy 通过。 |
+| Go 静态 / SQL / Proto / 观测配置 | build/vet/golangci-lint、SQLFluff 历史基线与 migrations、Buf lint/format/breaking、promtool config/rules、仪表盘生成一致性通过。 |
+| `f4510ec` Linux 工程 CI | [run 34960791572](https://github.com/XJfyrh/JobForge/actions/runs/34960791572) 五项通过，真实 PostgreSQL/Redis/Python 的全量 race 集成 126.082s。 |
+| `f4510ec` Linux 真实模型 CI | [run 34960791321](https://github.com/XJfyrh/JobForge/actions/runs/34960791321) 实际 PASS：集成 71.294s，12 生命周期场景 64.95s，SDK 5.23s，14 条 Jaeger 后端断言。 |
+| Windows 全量首轮 | **失败**，集成 348.802s：AT-22 sustained fairness p95=6.9482107s / max=7.1726371s，门槛分别为 1s / 2s；未报告 data race。 |
+| AT-22 定向对照 | 当前版本两轮 p95=40.8491ms / 252.2947ms；实施前 `02c61e4` 两轮为 30.6174ms / 56.7844ms，均通过。 |
+| Windows 全量第二轮 | **失败**，集成 332.413s：AT-22 通过（p95=40.6962ms），AT-24 15s 内 0/20 Handler 启动。两个真实任务、12 场景、SDK 与 14 条 Jaeger 断言通过。 |
+| AT-24 增加诊断后定向三轮 | 两轮通过、一轮失败：失败轮总耗时 5.20s，但 DB-clock signal p95=7.61869s；同轮 API 返回→context 取消 p95=4.5708206s。不计整组通过。 |
+
+随后进行 40s 只读 `clock_timestamp()` 采样，证实 PostgreSQL 时间相对 Windows 单调时钟不稳定：约 200ms 的相邻采样出现额外 **1524.740ms** 的跳变，该次 SQL 往返仅 **0.537ms**，起始 DB/主机偏差约 -2.307s。[原始相邻样本](evidence/review-clock-2026-09-15.json)纳入仓库；完整 CSV、探针和测试日志在仓库外 `E:\JobForge-notes\2026-09-15-review`。
+
+这可以确认本机时间测量环境不满足稳定时钟前提，不能把该环境的 SLO 失败直接判成确定的代码性能回归；也不能据此把所有失败都归因于时钟。AT-24 首次未启动的直接原因没有完整 RPC 日志，AT-22 首轮波动也未确证根因。因此增加 Worker 启动日志及提前退出诊断，**不改 15s 启动等待、250ms Poll RPC、6s signal SLO 或 AT-22 阈值**，不把失败改成 skip。
+
+本轮暂不合并：先在时钟稳定的 Windows 测试环境复验并解释启动失败，或由维护者明确决定以已通过的独立 Linux 门禁作为合并依据。未擅自重启或校时共享 Docker/WSL 环境，以免影响其他项目。历史通过、本轮失败、定向通过和 Linux 通过分别保留。
 
 ## 远程模型：配置能力存在，真实后端未验收
 

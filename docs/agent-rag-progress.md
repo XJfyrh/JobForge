@@ -9,13 +9,15 @@
 | M1 接入契约 | 已实现并验证 | SDK 34 项测试；独立环境安装；真实 HTTP/Python/Gateway/Worker 联调；AT-34 PostgreSQL 结果事务/竞争/迁移测试；初轮及最终全量 race 通过 | 无 |
 | M2 真实任务 | 已实现并验证 | 两个真实模型、SDK、产物、12 类生命周期；干净 Compose / SDK 安装；发布前后真实 kill；已移除专属 Handler/注册/当前示例 | 无实现缺口 |
 | M3 观测与运维 | 已实现并验证 | Jaeger 实际链路查询；Compose 停 Collector、模型和 Worker；指标/告警触发恢复；Grafana 11 面板实际检查 | 无实现缺口 |
-| M4 全量验证/交付 | 实现与验收完成 | 本地全量 race（含 Compose CPU 模型/Jaeger，集成 211.350s）；Linux 工程 CI 和真实模型验收通过；三分钟脚本已实跑 | [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 待评审合并，ADR 保留 Proposed |
+| M4 全量验证/交付 | 实现已交付；合并审查未关闭 | 既有本地全量 race（集成 211.350s）、Linux 工程 CI 和真实模型验收通过；三分钟脚本已实跑 | 本轮 Windows 完整复验失败，见下方审查记录；[PR #33](https://github.com/XJfyrh/JobForge/pull/33) 暂不合并，ADR 保留 Proposed |
 
 所有模型替身只计快速测试；真实模型结果、真实进程 kill 和观测查询另列。历史 W4 Claim 绝对门禁未通过的既有披露继续有效，不以本轮相对性能比较覆盖。
 
 ## 合并审查（2026-09-15）
 
 多方面审查的范围、SDK 响应校验补修及未验收项的详细解释见[合并审查记录](agent-rag-review.md)。新增 13 个畸形字段/异常堆栈回归用例，其中 11 个字段用例和 2 个堆栈脱敏用例均先实际复现失败，再修复；加上兼容性用例，Python 测试增至 51 项。SDK 成功 mock 改用有效 UUID，修正已删除完成确认 helper 的过时注释。远程模型、生产留存、W4 历史失败和 AT-25 跳过均继续保留，合并检查以 PR 最新提交为准。
+
+`f4510ec` 的 Linux 六项检查通过；本轮 Windows 全量两轮分别在 AT-22 延迟与 AT-24 Handler 启动失败，不能计为通过。AT-22 定向及基线对照通过；AT-24 进一步定向出现 5.20s 运行却测出 7.62s DB elapsed 的异常，随后只读采样确认数据库时钟跳变。原始失败、诊断、复验、时钟证据及合并阻塞条件均见上述审查记录；未放宽门槛或修改生产时钟语义。
 
 ## M1 验证（Windows / PostgreSQL 16，2026-09-14）
 

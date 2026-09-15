@@ -1,7 +1,7 @@
 # JobForge PRD v0.6：通用 Agent/RAG 真实执行闭环
 
 - 日期：2026-09-14
-- 状态：实现及本地/Linux CI 验收完成（见[实施记录](../agent-rag-progress.md)）；[PR #33](https://github.com/XJfyrh/JobForge/pull/33) 待评审，ADR-0011/0012 尚未接受
+- 状态：实现已交付，既有验收见[实施记录](../agent-rag-progress.md)；2026-09-15 [合并审查](../agent-rag-review.md)发现本轮 Windows 复验失败，[PR #33](https://github.com/XJfyrh/JobForge/pull/33) 暂不合并，ADR-0011/0012 尚未接受
 - 上游：本轮维护者明确授权的三个阶段；v0.1～v0.5 可靠性不变量继续有效
 
 ## 1. 范围与优先级

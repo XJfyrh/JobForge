@@ -61,6 +61,16 @@ type cancelAPIResult struct {
 	err        error
 }
 
+// Keep startup diagnostics with the test so a failed readiness wait can be
+// distinguished from the cancellation signal SLO itself. testing.T is safe
+// for concurrent Worker log writes; no shared bytes.Buffer is needed.
+type cancelSLOLogWriter struct{ t *testing.T }
+
+func (w cancelSLOLogWriter) Write(p []byte) (int, error) {
+	w.t.Logf("%s", p)
+	return len(p), nil
+}
+
 func startCancelSLOGateway(
 	t *testing.T,
 	s gatewaygrpc.WorkerStore,
@@ -279,7 +289,7 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		return "", handlerCtx.Err()
 	}))
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.NewTextHandler(cancelSLOLogWriter{t: t}, nil))
 	runtime := worker.NewRuntime(worker.RuntimeConfig{
 		WorkerID:          "cancel-slo-worker-" + uuid.New().String()[:8],
 		InstanceID:        "cancel-slo-instance",
@@ -325,6 +335,8 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		var sample cancelHandlerSample
 		select {
 		case sample = <-started:
+		case err := <-runtimeDone:
+			t.Fatalf("worker exited before handlers started: %v", err)
 		case <-startDeadline.C:
 			t.Fatalf("only %d/%d handlers started before timeout", i, sampleCount)
 		}
