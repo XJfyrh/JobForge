@@ -6,6 +6,8 @@
 
 **一句话定位：JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台——以 PostgreSQL 为唯一事实源，提供可恢复、可观测、可隔离的 at-least-once 可靠执行底座。**
 
+下一阶段[Agent v3路线](docs/plans/agent-execution-roadmap-v3.md)以云端主chat构建可恢复业务Agent，本地chat为可选扩展；目前交付S0契约与进程探针，云端业务接入尚未实现。下面的架构和快速开始对应现有v0.6服务。
+
 ## 系统架构
 
 ```mermaid
