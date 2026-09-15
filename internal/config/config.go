@@ -23,6 +23,12 @@ type Config struct {
 	// HTTPAddr is the listen address for the HTTP API server.
 	HTTPAddr string
 
+	// ArtifactAddr serves the reference business store separately from jobs.
+	ArtifactAddr string
+	// OllamaURL and OllamaAPIKey belong to trusted business-adapter configuration.
+	OllamaURL    string
+	OllamaAPIKey string
+
 	// GRPCAddr is the listen address for the gRPC Worker Gateway.
 	GRPCAddr string
 
@@ -69,7 +75,7 @@ type Config struct {
 	// (PRD v0.3 FR-724). <= 0 disables the periodic reconcile.
 	QuotaReconcileInterval time.Duration
 
-	// OTelExporterType selects the trace exporter: "stdout" or "none".
+	// OTelExporterType selects the trace exporter: "stdout", "none", or "otlp".
 	OTelExporterType string
 
 	// OTelSampleRatio is the trace sampling ratio in [0.0, 1.0].
@@ -147,6 +153,9 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		DatabaseURL:               getEnv("JOBFORGE_DATABASE_URL", "postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable"),
 		HTTPAddr:                  getEnv("JOBFORGE_HTTP_ADDR", ":8080"),
+		ArtifactAddr:              getEnv("JOBFORGE_ARTIFACT_ADDR", ":8081"),
+		OllamaURL:                 getEnv("JOBFORGE_OLLAMA_URL", "http://localhost:11434"),
+		OllamaAPIKey:              getEnv("JOBFORGE_OLLAMA_API_KEY", ""),
 		GRPCAddr:                  getEnv("JOBFORGE_GRPC_ADDR", ":9090"),
 		TaskTypes:                 taskTypes,
 		LeaseTTL:                  getDurationEnv("JOBFORGE_LEASE_TTL", domain.DefaultLeaseTTL),

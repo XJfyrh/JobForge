@@ -11,10 +11,10 @@ syntax = "proto3";
 
 package jobforge.worker.v1;
 
-option go_package = "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1;workerv1";
-
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1;workerv1";
 
 // WorkerService is the gRPC contract for Worker-Gateway communication.
 // All RPCs must carry a deadline. Complete and Fail must be idempotent.
@@ -65,7 +65,7 @@ message RegisterRequest {
   // Queue names this Worker polls from.
   repeated string queues = 3;
 
-  // Task types this Worker can execute (e.g. "demo.echo", "pagewise.reindex").
+  // Task types this Worker can execute (e.g. "rag.index", "agent.extract").
   repeated string supported_types = 4;
 
   // Maximum concurrent jobs this Worker can handle.
@@ -146,6 +146,10 @@ message ClaimedJob {
   // submission. Workers extract it to attach worker.execute spans to the
   // original submit trace (FR-503 / AT-12). Empty for legacy jobs.
   string trace_context = 11;
+
+  // Authenticated tenant copied from the stored job, never from payload.
+  // Trusted business adapters use it to scope artifact publication.
+  string tenant_id = 12;
 }
 
 // HeartbeatRequest extends the lease and reports progress.
@@ -195,7 +199,9 @@ message CompleteRequest {
   // Fencing token proving lease ownership.
   int64 fencing_token = 3;
 
-  // Optional reference to the result (e.g. storage URI). Not stored inline.
+  // Optional UTF-8 result reference: at most 2048 bytes, no C0/DEL controls.
+  // Empty means no reference. Stored atomically with success, never replaced
+  // by duplicate completion. Large business artifacts remain outside jobs.
   string result_ref = 4;
 
   // Actual execution duration for metrics.

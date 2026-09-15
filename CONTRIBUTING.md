@@ -66,6 +66,10 @@ go vet ./...
 .venv/bin/ruff check .
 .venv/bin/ruff format --check .
 .venv/bin/mypy sdk/python
+.venv/bin/python -m pytest sdk/python/tests
+.venv/bin/python tools/generate_task_dashboard.py
+# 检查生成后的 dashboard diff；CI 另通过固定 Prometheus 镜像运行 promtool。
+docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
 .venv/bin/python tools/check_sqlfluff_baseline.py
 .venv/bin/sqlfluff lint migrations
 .tools/bin/buf lint
@@ -74,6 +78,8 @@ go vet ./...
 上述 golangci-lint、`go test -race ./...`、ruff（check + format）、mypy、SQLFluff 历史基线校验、`sqlfluff lint migrations` 和 buf lint 均由 [CI 工作流](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行（见 [开发环境](docs/development.md) 的 “CI 质量门禁” 一节），本地清单与 PR 门禁保持一致。`.sqlfluffignore` 只冻结已应用 migration 的既有格式债务；禁止用新增 ignore 条目绕过新 migration 的检查。
 
 Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具位于 `.tools\bin`。可靠性集成测试必须使用真实 PostgreSQL，核心行为不能只由 mock 验证。
+
+SDK 安装：`python -m pip install ./sdk/python`；Go/Python 跨语言契约需设置 `JOBFORGE_TEST_PYTHON` 为安装该 SDK 的解释器路径（CI 显式安装并启用）。本地未设置时该用例 skip，不代表契约通过。
 
 Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
 

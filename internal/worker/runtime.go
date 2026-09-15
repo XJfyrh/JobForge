@@ -330,6 +330,7 @@ func (r *Runtime) poll(ctx context.Context) ([]*ClaimedJob, error) {
 	for _, cj := range resp.Jobs {
 		job := &ClaimedJob{
 			ID:           cj.JobId,
+			TenantID:     cj.TenantId,
 			Queue:        cj.Queue,
 			Type:         cj.Type,
 			Payload:      cj.Payload,
@@ -364,6 +365,8 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	ctx, span := observability.Tracer("jobforge.worker").Start(ctx, "worker.execute")
 	defer span.End()
 	span.SetAttributes(
+		attribute.String("job_id", job.ID),
+		attribute.String("tenant_id", job.TenantID),
 		attribute.String("queue", job.Queue),
 		attribute.String("type", job.Type),
 		attribute.Int("attempt", job.Attempt),
@@ -392,7 +395,11 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	cancelSignalAt := make(chan time.Time, 1)
 	hbCtx, hbCancel := context.WithCancel(ctx)
 	defer hbCancel()
-	go r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost, cancelSignalAt)
+	hbDone := make(chan struct{})
+	go func() {
+		defer close(hbDone)
+		r.heartbeatLoop(hbCtx, job, execCancel, &leaseLost, cancelSignalAt)
+	}()
 
 	// Execute handler.
 	start := time.Now()
@@ -401,6 +408,12 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 
 	// Stop heartbeat before reporting result.
 	hbCancel()
+	<-hbDone
+	// A Handler cannot turn an expired/cancelled execution into success by
+	// returning nil, or hide the deadline behind a dependency-specific error.
+	if execCtx.Err() != nil {
+		err = execCtx.Err()
+	}
 	if errors.Is(execCtx.Err(), context.Canceled) {
 		r.observeCancelHandlerStop(ctx, job.Type, cancelSignalAt)
 	}
@@ -418,6 +431,10 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 	if err != nil {
 		retryable := IsRetryable(err)
 		errCode := "EXECUTION_ERROR"
+		var classified interface{ ErrorCode() string }
+		if errors.As(err, &classified) {
+			errCode = classified.ErrorCode()
+		}
 		if errors.Is(err, context.DeadlineExceeded) {
 			errCode = "TIMEOUT"
 			retryable = true
@@ -425,9 +442,9 @@ func (r *Runtime) executeJob(ctx context.Context, job *ClaimedJob) {
 			errCode = "CANCELLED"
 			retryable = false
 		}
-		span.SetStatus(otelcodes.Error, err.Error())
+		span.SetStatus(otelcodes.Error, errCode)
 		span.SetAttributes(attribute.String("error_code", errCode))
-		logger.Warn("job failed", "error", err, "retryable", retryable, "duration_ms", durationMs)
+		logger.Warn("job failed", "error_code", errCode, "retryable", retryable, "duration_ms", durationMs)
 		r.reportFail(ctx, job, errCode, err.Error(), retryable, durationMs)
 		return
 	}
@@ -550,8 +567,8 @@ func (r *Runtime) abandonLease(job *ClaimedJob, execCancel context.CancelFunc, l
 }
 
 // reportComplete sends a Complete RPC to the Gateway, retrying transient
-// failures. The Gateway absorbs duplicate Completes for the same lease
-// (isIdempotentComplete), so retries are safe.
+// failures. The finish transaction acknowledges the same accepted attempt
+// without replacing its result; superseded leases are rejected.
 func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef string, durationMs int64) {
 	ctx = withJobTraceParent(ctx, job)
 
@@ -571,8 +588,8 @@ func (r *Runtime) reportComplete(ctx context.Context, job *ClaimedJob, resultRef
 }
 
 // reportFail sends a Fail RPC to the Gateway, retrying transient failures.
-// The Gateway absorbs duplicate Fails for the same lease (isIdempotentFail),
-// so retries are safe.
+// The finish transaction acknowledges the same accepted attempt without a
+// second state transition; superseded leases are rejected.
 func (r *Runtime) reportFail(ctx context.Context, job *ClaimedJob, errCode, errMsg string, retryable bool, durationMs int64) {
 	ctx = withJobTraceParent(ctx, job)
 
@@ -663,8 +680,12 @@ func workerDomainErrorDetail(err error) (*workerv1.DomainErrorDetail, bool) {
 // metadata so the Gateway can join its spans to the original submit trace
 // (FR-503). Returns ctx unchanged when the job carries no trace context.
 func withJobTraceParent(ctx context.Context, job *ClaimedJob) context.Context {
-	if job.TraceContext == "" {
+	parent := observability.InjectTraceParent(ctx)
+	if parent == "" {
+		parent = job.TraceContext
+	}
+	if parent == "" {
 		return ctx
 	}
-	return metadata.AppendToOutgoingContext(ctx, observability.TraceParentKey, job.TraceContext)
+	return metadata.AppendToOutgoingContext(ctx, observability.TraceParentKey, parent)
 }

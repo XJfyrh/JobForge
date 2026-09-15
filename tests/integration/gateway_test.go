@@ -191,6 +191,7 @@ func TestEndToEndSubmitExecuteComplete(t *testing.T) {
 	// 1. Submit a job scheduled in the past (immediate execution).
 	pastRunAt := time.Now().Add(-5 * time.Second)
 	job := createScheduledJob(t, js, "e2e", "demo.echo", pastRunAt)
+	reanchorRunAt(t, job.ID)
 
 	// Verify scheduled.
 	got, err := js.GetByID(ctx, "test-tenant", job.ID)

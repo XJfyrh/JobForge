@@ -385,7 +385,10 @@ func TestFailRetry(t *testing.T) {
 		t.Fatalf("claim: %v", err)
 	}
 
-	before := time.Now()
+	var before time.Time
+	if err := testEnv.pool.QueryRow(ctx, "select clock_timestamp()").Scan(&before); err != nil {
+		t.Fatal(err)
+	}
 	err = s.Fail(ctx, job.ID, "worker-retry", claimed[0].FencingToken,
 		"TIMEOUT", "connection timed out", true, 500)
 	if err != nil {
@@ -483,7 +486,7 @@ func TestCompleteCancelRace(t *testing.T) {
 		wg.Add(2)
 		go func() {
 			defer wg.Done()
-			completeErr = s.Complete(ctx, job.ID, "worker-race", token, "", 10)
+			completeErr = s.Complete(ctx, job.ID, "worker-race", token, "artifact:race", 10)
 		}()
 		go func() {
 			defer wg.Done()
@@ -500,6 +503,9 @@ func TestCompleteCancelRace(t *testing.T) {
 
 		switch got.State {
 		case domain.StateSucceeded:
+			if got.ResultRef == nil || *got.ResultRef != "artifact:race" {
+				t.Fatalf("success without atomic reference: %v", got.ResultRef)
+			}
 			// Complete won. Cancel should have gotten ALREADY_TERMINAL.
 			if cancelErr == nil {
 				// Cancel may succeed if it ran first (running->cancelling),
@@ -508,6 +514,9 @@ func TestCompleteCancelRace(t *testing.T) {
 				t.Errorf("iter %d: state=succeeded but cancel succeeded", i)
 			}
 		case domain.StateCancelling:
+			if got.ResultRef != nil {
+				t.Fatal("cancel won but result was written")
+			}
 			// Cancel won. Complete should have gotten CANCEL_REQUESTED.
 			if completeErr == nil {
 				t.Errorf("iter %d: state=cancelling but complete succeeded", i)

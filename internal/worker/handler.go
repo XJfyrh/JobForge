@@ -19,6 +19,7 @@ import (
 // ClaimedJob represents a job lease granted by the Gateway via Poll RPC.
 type ClaimedJob struct {
 	ID           string
+	TenantID     string
 	Queue        string
 	Type         string
 	Payload      []byte

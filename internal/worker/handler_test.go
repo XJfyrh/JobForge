@@ -9,11 +9,11 @@ import (
 func TestRegistryTypesAreSorted(t *testing.T) {
 	registry := NewRegistry()
 	handler := HandlerFunc(func(context.Context, *ClaimedJob) (string, error) { return "", nil })
-	registry.Register("pagewise.reindex", handler)
+	registry.Register("rag.index", handler)
 	registry.Register("demo.fail", handler)
 	registry.Register("demo.echo", handler)
 
-	want := []string{"demo.echo", "demo.fail", "pagewise.reindex"}
+	want := []string{"demo.echo", "demo.fail", "rag.index"}
 	if !slices.Equal(registry.Types(), want) {
 		t.Fatalf("types = %v, want %v", registry.Types(), want)
 	}

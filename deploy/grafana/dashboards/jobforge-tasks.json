@@ -1,0 +1,517 @@
+{
+  "uid": "jobforge-tasks",
+  "title": "JobForge \u00b7 Agent / RAG execution",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "jobforge",
+    "agent",
+    "rag"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pending jobs",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jobforge_queue_depth{queue=~\"$queue\"}) or vector(0)",
+          "instant": true,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 2,
+      "title": "Live workers",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jobforge_workers_active) or vector(0)",
+          "instant": true,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 3,
+      "title": "Attempts \u00b7 process total",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jobforge_job_attempts_total{queue=~\"$queue\",type=~\"$type\"}) or vector(0)",
+          "instant": true,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 4,
+      "title": "Dead \u00b7 process total",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jobforge_dlq_total{queue=~\"$queue\",type=~\"$type\"}) or vector(0)",
+          "instant": true,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 5,
+      "title": "Queue backlog by state",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (queue,state) (jobforge_queue_depth{queue=~\"$queue\"})",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 6,
+      "title": "Attempt outcomes by task",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type,outcome) (rate(jobforge_job_attempts_total{queue=~\"$queue\",type=~\"$type\"}[$__rate_interval]))",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 7,
+      "title": "Worker execution duration p95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by (le,type) (rate(jobforge_job_latency_seconds_bucket{queue=~\"$queue\",type=~\"$type\"}[$__rate_interval])))",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 8,
+      "title": "Automatic retries (5m)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type,error_code) ((increase(jobforge_retries_total{queue=~\"$queue\",type=~\"$type\"}[5m]) > 0) or (jobforge_retries_total{queue=~\"$queue\",type=~\"$type\"} unless jobforge_retries_total{queue=~\"$queue\",type=~\"$type\"} offset 5m) or (0 * jobforge_retries_total{queue=~\"$queue\",type=~\"$type\"}))",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 9,
+      "title": "Lease recoveries (5m)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type,resolution) ((increase(jobforge_lease_expired_total{queue=~\"$queue\",type=~\"$type\"}[5m]) > 0) or (jobforge_lease_expired_total{queue=~\"$queue\",type=~\"$type\"} unless jobforge_lease_expired_total{queue=~\"$queue\",type=~\"$type\"} offset 5m) or (0 * jobforge_lease_expired_total{queue=~\"$queue\",type=~\"$type\"}))",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 10,
+      "title": "Service health / alert state",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=~\"jobforge-.+\"}",
+          "instant": false,
+          "legendFormat": "{{type}} {{outcome}} {{state}} {{error_code}} {{resolution}} {{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Process metrics can miss a commit during a crash. Use PostgreSQL attempt records for audit. Worker duration excludes queue waiting and lease recovery without a reported duration."
+    },
+    {
+      "id": 11,
+      "title": "Active alerts",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\",alertname=~\"JobForge.*\"}",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "queue",
+        "label": "Queue",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "jobforge-prometheus"
+        },
+        "query": "label_values(jobforge_jobs_submitted_total,queue)",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 1
+      },
+      {
+        "name": "type",
+        "label": "Task",
+        "type": "custom",
+        "query": "rag.index,agent.extract",
+        "includeAll": true,
+        "allValue": "rag.index|agent.extract",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "trace_id",
+        "label": "Trace ID",
+        "type": "textbox",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "Open task trace",
+      "type": "link",
+      "url": "http://localhost:16686/trace/${trace_id}",
+      "targetBlank": true
+    },
+    {
+      "title": "Prometheus alerts",
+      "type": "link",
+      "url": "http://localhost:9091/alerts",
+      "targetBlank": true
+    }
+  ]
+}

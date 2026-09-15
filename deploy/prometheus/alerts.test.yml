@@ -1,0 +1,37 @@
+rule_files:
+  - alerts.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'jobforge_dlq_total{queue="default",type="rag.index"}'
+        values: '_ 1+0x10'
+      - series: 'jobforge_lease_expired_total{queue="default",type="agent.extract"}'
+        values: '_ 1+0x10'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: JobForgeDeadLetter
+        exp_alerts:
+          - exp_labels:
+              queue: default
+              type: rag.index
+              severity: warning
+            exp_annotations:
+              summary: Tasks entered dead state
+              description: Inspect the tenant-scoped attempt timeline and trace before retrying.
+      - eval_time: 2m
+        alertname: JobForgeLeaseRecovery
+        exp_alerts:
+          - exp_labels:
+              queue: default
+              type: agent.extract
+              severity: warning
+            exp_annotations:
+              summary: Worker leases expired and were recovered
+              description: Check killed/disconnected workers; verify attempt fencing and business artifact reuse.
+      - eval_time: 8m
+        alertname: JobForgeDeadLetter
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: JobForgeLeaseRecovery
+        exp_alerts: []

@@ -1,0 +1,38 @@
+{
+  "observed_date": "2026-09-15",
+  "environment": "Windows Go monotonic clock; PostgreSQL 16 in Docker Desktop; isolated test database on port 5433",
+  "operation": "read-only SELECT clock_timestamp() every approximately 200 ms for 40 seconds",
+  "interpretation": "Database elapsed time differs from host monotonic elapsed time; no root cause is attributed to a specific clock synchronization component",
+  "initial": {
+    "elapsed_s": "0.001914",
+    "host_utc": "2026-09-15T11:14:21.18502115Z",
+    "postgres_utc": "2026-09-15T11:14:18.87786Z",
+    "query_ms": "1.386",
+    "db_minus_host_ms": "-2307.161",
+    "db_step_vs_monotonic_ms": "0.000"
+  },
+  "before_discontinuity": {
+    "elapsed_s": "23.132121",
+    "host_utc": "2026-09-15T11:14:44.31565815Z",
+    "postgres_utc": "2026-09-15T11:14:42.792899Z",
+    "query_ms": "0.527",
+    "db_minus_host_ms": "-1522.759",
+    "db_step_vs_monotonic_ms": "8.512"
+  },
+  "after_discontinuity": {
+    "elapsed_s": "23.333268",
+    "host_utc": "2026-09-15T11:14:44.5168009Z",
+    "postgres_utc": "2026-09-15T11:14:44.518782Z",
+    "query_ms": "0.537",
+    "db_minus_host_ms": "1.981",
+    "db_step_vs_monotonic_ms": "1524.740"
+  },
+  "final": {
+    "elapsed_s": "39.825105",
+    "host_utc": "2026-09-15T11:15:01.008648Z",
+    "postgres_utc": "2026-09-15T11:15:01.644551Z",
+    "query_ms": "0.515",
+    "db_minus_host_ms": "635.903",
+    "db_step_vs_monotonic_ms": "-16.782"
+  }
+}

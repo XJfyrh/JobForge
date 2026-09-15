@@ -20,9 +20,8 @@ type Config struct {
 	// Environment is the deployment environment (dev, staging, production).
 	Environment string
 
-	// ExporterType selects the trace exporter: "stdout" or "none".
-	// P0 defaults to stdout (zero external dependencies). OTLP can be
-	// added later without changing call sites.
+	// ExporterType selects "stdout", "none", or optional "otlp" (HTTP).
+	// stdout remains the development default with no external dependencies.
 	ExporterType string
 
 	// SampleRatio is the trace sampling ratio in [0.0, 1.0].

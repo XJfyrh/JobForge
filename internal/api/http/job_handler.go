@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/observability"
@@ -137,7 +138,11 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	// Trace ID propagation (AT-12): use X-Trace-ID header or generate new.
 	traceID := r.Header.Get("X-Trace-ID")
 	if traceID == "" {
-		traceID = uuid.New().String()
+		if span.SpanContext().IsValid() {
+			traceID = span.SpanContext().TraceID().String()
+		} else {
+			traceID = uuid.New().String()
+		}
 	}
 
 	// W3C TraceContext propagation (FR-503): serialize the current submit
@@ -201,7 +206,7 @@ func (h *JobHandler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Record jobs submitted metric (PRD 12.1).
-	if h.metrics != nil {
+	if h.metrics != nil && !deduplicated {
 		h.metrics.JobsSubmittedTotal.Add(ctx, 1,
 			metric.WithAttributes(
 				attribute.String("tenant", tenantID),
@@ -248,6 +253,7 @@ type JobResponse struct {
 	RetryOfJobID   *string         `json:"retry_of_job_id"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+	ResultRef      *string         `json:"result_ref"`
 	// Attempts is the execution timeline (FR-002). Populated by GetJob only;
 	// omitted in list responses.
 	Attempts []AttemptResponse `json:"attempts,omitempty"`
@@ -266,11 +272,26 @@ type AttemptResponse struct {
 	DurationMs   *int64     `json:"duration_ms,omitempty"`
 }
 
+func validJobID(w http.ResponseWriter, id string) bool {
+	if len(id) != 36 || uuid.Validate(id) != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_ARGUMENT", "job_id must be a canonical UUID")
+		return false
+	}
+	return true
+}
+
 // GetJob handles GET /v1/jobs/{job_id}.
 // Returns job details together with the full attempt timeline (FR-002).
 func (h *JobHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 	tenantID := TenantFromContext(r.Context())
 	jobID := chi.URLParam(r, "job_id")
+	if !validJobID(w, jobID) {
+		return
+	}
+	ctx, span := observability.Tracer("jobforge.api").Start(r.Context(), "http.get_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("job_id", jobID), attribute.String("tenant_id", tenantID))
+	r = r.WithContext(ctx)
 
 	job, err := h.store.GetByID(r.Context(), tenantID, jobID)
 	if err != nil {
@@ -353,6 +374,13 @@ func (h *JobHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
 func (h *JobHandler) CancelJob(w http.ResponseWriter, r *http.Request) {
 	tenantID := TenantFromContext(r.Context())
 	jobID := chi.URLParam(r, "job_id")
+	if !validJobID(w, jobID) {
+		return
+	}
+	ctx, span := observability.Tracer("jobforge.api").Start(r.Context(), "http.cancel_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("job_id", jobID), attribute.String("tenant_id", tenantID))
+	r = r.WithContext(ctx)
 
 	err := h.store.Cancel(r.Context(), tenantID, jobID)
 	if err != nil {
@@ -373,6 +401,13 @@ func (h *JobHandler) CancelJob(w http.ResponseWriter, r *http.Request) {
 func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
 	tenantID := TenantFromContext(r.Context())
 	jobID := chi.URLParam(r, "job_id")
+	if !validJobID(w, jobID) {
+		return
+	}
+	ctx, span := observability.Tracer("jobforge.api").Start(r.Context(), "http.retry_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("retry_of_job_id", jobID), attribute.String("tenant_id", tenantID))
+	r = r.WithContext(ctx)
 
 	// Fetch the original job.
 	origJob, err := h.store.GetByID(r.Context(), tenantID, jobID)
@@ -403,6 +438,20 @@ func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
 
 	// Clone as new job.
 	now := time.Now()
+	var traceParent *string
+	if parent := observability.InjectTraceParent(ctx); parent != "" {
+		traceParent = &parent
+	}
+	traceID := uuid.NewString()
+	if span.SpanContext().IsValid() {
+		traceID = span.SpanContext().TraceID().String()
+	}
+	if origJob.TraceContext != nil {
+		original := observability.ContextWithTraceParent(context.Background(), *origJob.TraceContext)
+		if source := trace.SpanContextFromContext(original); source.IsValid() {
+			span.AddLink(trace.Link{SpanContext: source})
+		}
+	}
 	newJob, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
 		TenantID:       tenantID,
 		Queue:          origJob.Queue,
@@ -412,6 +461,8 @@ func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
 		MaxAttempts:    origJob.MaxAttempts,
 		TimeoutSeconds: origJob.TimeoutSeconds,
 		RetryOfJobID:   &origJob.ID,
+		TraceID:        &traceID,
+		TraceContext:   traceParent,
 	}, now)
 	if err != nil {
 		h.writeDomainError(w, err)
@@ -429,6 +480,10 @@ func (h *JobHandler) RetryJob(w http.ResponseWriter, r *http.Request) {
 		"original_job_id", jobID,
 		"tenant_id", tenantID,
 	)
+	span.SetAttributes(attribute.String("job_id", newJob.ID), attribute.String("queue", newJob.Queue), attribute.String("type", newJob.Type))
+	if h.metrics != nil {
+		h.metrics.JobsSubmittedTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("tenant", tenantID), attribute.String("queue", newJob.Queue), attribute.String("type", newJob.Type)))
+	}
 
 	writeJSON(w, http.StatusAccepted, CreateJobResponse{
 		JobID:        newJob.ID,
@@ -483,7 +538,7 @@ func domainCodeToHTTPStatus(code domain.ErrorCode) int {
 		return http.StatusForbidden
 	case domain.CodeNotFound:
 		return http.StatusNotFound
-	case domain.CodeConflict, domain.CodeAlreadyTerminal, domain.CodeStaleLease, domain.CodeCancelRequested:
+	case domain.CodeConflict, domain.CodeAlreadyTerminal, domain.CodeStaleLease, domain.CodeCancelRequested, domain.CodeInvalidTransition:
 		return http.StatusConflict
 	case domain.CodeQueueOverloaded:
 		return http.StatusTooManyRequests
@@ -514,6 +569,7 @@ func toJobResponse(j *domain.Job) JobResponse {
 		RetryOfJobID:   j.RetryOfJobID,
 		CreatedAt:      j.CreatedAt,
 		UpdatedAt:      j.UpdatedAt,
+		ResultRef:      j.ResultRef,
 	}
 }
 

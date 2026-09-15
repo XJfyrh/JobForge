@@ -1,234 +1,44 @@
-# 三分钟演示脚本
+# 三分钟 Agent/RAG 演示
 
-本文档提供 JobForge 的可复现演示步骤，对应 PRD 第 18 节。全部命令可在 Docker Compose 环境中直接执行。
+当前验收由 [PRD v0.6](product/JobForge_PRD_v0.6.md) 定义。提前按[真实任务指南](real-tasks.md)下载固定模型、安装 SDK/检查工具；按[观测指南](observability.md#agentrag-本地观测闭环)启用 obs，并追加 `compose.models-test.yaml` 以便主机 Go 测试使用 `localhost:11435`。下载、编译和首次加载不计入三分钟。演示库使用独立项目与 55433，故障测试库使用 5433。
 
-## 前置条件
-
-- Docker Desktop 已安装并运行
-- curl 可用（Windows 11 内置）
-- Go 1.26+ 已安装（用于运行测试命令）
-
-## 步骤 1：启动全栈
-
-```sh
-docker compose -f deploy/compose.yaml up -d --build
-```
-
-等待所有服务就绪：
-
-```sh
-docker compose -f deploy/compose.yaml ps
-```
-
-预期输出包含：postgres (healthy)、api、scheduler、gateway、worker-1、worker-2。
-
-## 步骤 2：提交任务
-
-提交一个通用 echo 任务：
-
-```sh
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.echo","payload":{"message":"hello jobforge"}}' | python -m json.tool
-```
-
-提交一个 PageWise 索引重建任务（当前为模拟 Agent Handler 骨架，不连接真实 PageWise 服务）：
-
-```sh
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"pagewise.reindex","payload":{"document_id":"doc-001","pages":5},"timeout_seconds":60}' | python -m json.tool
-```
-
-记录返回的 `job_id`，查询状态：
-
-```sh
-curl -s http://localhost:8080/v1/jobs/{job_id} \
-  -H "X-API-Key: dev-api-key" | python -m json.tool
-```
-
-验证部署任务类型目录：Worker 是否在线不影响合法 type 入队；未知 type 必须在 job/outbox 写入前拒绝。
-
-```sh
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.unknown","payload":{}}' | python -m json.tool
-```
-
-预期 HTTP 400：`{"error":{"code":"INVALID_ARGUMENT","message":"task type is not registered"}}`。API 与 Gateway 启动日志中的 `catalog_size=6` 和 `catalog_sha256` 应一致；Compose 已为二者显式设置相同 `JOBFORGE_TASK_TYPES`。
-
-## 步骤 3：持久效果提交后 Kill Worker
-
-先停止 worker-2，确保待故障任务由 worker-1 领取；随后提交一个在**首次持久效果提交后**等待 60 秒的任务：
-
-```sh
-docker compose -f deploy/compose.yaml stop worker-2
-
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.idempotent_effect","payload":{"post_effect_delay_ms":60000},"timeout_seconds":120}'
-```
-
-记录返回的 `{job_id}`。用效果表作为同步屏障，确认业务效果已经提交：
-
-```sh
-docker compose -f deploy/compose.yaml exec -T postgres \
-  psql -U jobforge -d jobforge -c \
-  "select job_id, result_ref, applied_at from demo_idempotent_effects where job_id = '{job_id}'"
-```
-
-查询返回一行后，在 Complete 前实际 kill worker-1：
-
-```sh
-docker compose -f deploy/compose.yaml kill worker-1
-```
-
-## 步骤 4：观察 Lease 过期与重新领取
-
-启动 worker-2，等待 lease 过期（默认 30s）+ Scheduler 扫描（1s）：
-
-```sh
-docker compose -f deploy/compose.yaml start worker-2
-
-# 等待约 35 秒后查询任务状态
-sleep 35
-curl -s http://localhost:8080/v1/jobs/{job_id} \
-  -H "X-API-Key: dev-api-key" | python -m json.tool
-```
-
-预期：任务被 worker-2 重新领取并进入 `succeeded`，`lease_owner` 变为 worker-2，`attempt` 与 fencing token 递增。重复执行命中既有 `result_ref`，不会再次等待 60 秒。
-
-再次查询效果表，仍必须恰好一行：
-
-```sh
-docker compose -f deploy/compose.yaml exec -T postgres \
-  psql -U jobforge -d jobforge -c \
-  "select count(*) as persistent_effects from demo_idempotent_effects where job_id = '{job_id}'"
-```
-
-重启 worker-1：
-
-```sh
-docker compose -f deploy/compose.yaml start worker-1
-```
-
-## 步骤 5：STALE_LEASE 演示
-
-通过集成测试验证旧 Worker 晚到 Complete 被拒绝：
-
-```sh
-go test -run TestFaultAT03StaleWorkerLateComplete ./tests/integration/ -v -count=1
-```
-
-预期输出包含：`STALE_LEASE` 错误被正确返回，新状态不被覆盖。
-
-v0.5 还要求 gRPC status 带稳定领域 detail，且取消先提交时 `CANCEL_REQUESTED` 映射为 `FAILED_PRECONDITION`。真实 PostgreSQL 契约验证：
+## 0:00—1:00 提交两个任务并检查实际产物
 
 ```powershell
-$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
-go test -run TestAT31LeaseAndCancelDomainDetails ./tests/integration/ -v -count=1
+$env:OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:4318'
+.venv/Scripts/python.exe examples/agent_rag.py
 ```
 
-## 步骤 6：提交幂等与执行幂等
+脚本使用安装好的 Python SDK，经真实 HTTP / Gateway / Worker 执行 `rag.index`、`agent.extract`。输出两份 job_id、result_ref、artifact_url、trace_id；实际读取 6×384 向量、重新检索三个问题、检查采购单字段，并验证提交幂等和跨租户 404。任何断言不满足即失败。
 
-提交带幂等键的任务（重复提交不会创建新任务）：
+复制输出的 job_id，可用 SDK 查询状态和 attempt 时间线：
 
-```sh
-# 第一次提交
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.idempotent_effect","payload":{"key":"effect-001"},"idempotency_key":"unique-key-001"}'
-
-# 第二次提交（相同 idempotency_key）
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.idempotent_effect","payload":{"key":"effect-001"},"idempotency_key":"unique-key-001"}'
+```python
+from jobforge import JobForgeClient
+with JobForgeClient("http://localhost:8080", "dev-api-key") as client:
+    job = client.get("替换为刚输出的 job_id")
+    print(job.state, job.result_ref, job.attempts)
 ```
 
-预期：第二次返回 `"deduplicated": true`，job_id 相同。
+## 1:00—2:00 取消、人工重试与发布后崩溃
 
-上述 `idempotency_key` 是提交 API 去重；执行幂等是另一层契约，范围为同一 job ID 的重复投递。通过故障测试验证真实 Worker 进程退出后持久效果仍仅一次：
+使用独立、可重建的测试 PostgreSQL，运行两种真实任务的两个关键窗口；预热后本机约数十秒。完整六类场景与全部门禁另有验收记录。
 
 ```powershell
-$env:JOBFORGE_TEST_DSN = "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable"
-go test -run TestFaultAT02CrashBeforeACK ./tests/integration/ -v -count=1
+docker compose -f deploy/compose.yaml up -d postgres
+$env:JOBFORGE_TEST_DSN='postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
+$env:JOBFORGE_REAL_MODEL_URL='http://localhost:11435'
+$env:JOBFORGE_TEST_OTLP_ENDPOINT='http://localhost:4318'
+$env:JOBFORGE_TEST_JAEGER_URL='http://localhost:16686'
+go test -race ./tests/integration -run '^TestRealTasksLifecycle/(rag.index|agent.extract)/(cancel_after_publish_manual_retry|crash_after_publish)$' -count=1 -v
 ```
 
-预期包含 `real Worker kill`、fencing token 递增、`applied=1 deduplicated=1`。该 Demo 只证明同一 PostgreSQL 原子效果，不表示跨系统 exactly-once；人工 retry 克隆的新 job ID 也不会自动共享效果。
+取消通过真实 API 发出，Worker 通过 Heartbeat 接收；人工 retry 生成新 job_id，保留业务键。crash 场景实际 Kill/Wait Worker PID，等待数据库自然租约过期，再次执行时 token 增长。断言首次产物引用/内容/发布时间不变，恢复后不再调用模型。模型计算可重做，未实现断点续作。
 
-## 步骤 7：DLQ 与人工重试
+## 2:00—3:00 查看 Trace、指标与告警
 
-提交一个必定失败的任务（3 次 attempt 后进入 dead）：
+打开 [Grafana 任务仪表盘](http://localhost:3000/d/jobforge-tasks)，本地演示账号 admin/jobforge。分别选择 rag.index / agent.extract，查看积压、attempt outcome、执行耗时、重试/DLQ、Worker 存活与租约恢复。将第一步的 trace_id 填入 Trace ID，点击 Open task trace；链路包含 SDK、API、Gateway、Worker、真实模型适配器、产物发布和 Complete。
 
-```sh
-curl -s -X POST http://localhost:8080/v1/jobs \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-api-key" \
-  -d '{"queue":"default","type":"demo.fail","payload":{"error_code":"TRANSIENT_FAILURE"},"max_attempts":3}'
-```
+故障测试输出 `JAEGER VERIFIED` 及恢复 Trace ID，可看到 `scheduler.recover_lease` 与后继 attempt。强杀进程的未结束/未导出 Span 可能丢失，任务 attempt 仍以 PostgreSQL 审计为准。
 
-等待重试完成（退避 1s + 2s + 4s ≈ 7s），查询状态为 `dead`：
-
-```sh
-sleep 10
-curl -s http://localhost:8080/v1/jobs/{job_id} \
-  -H "X-API-Key: dev-api-key" | python -m json.tool
-```
-
-执行人工重试：
-
-```sh
-curl -s -X POST http://localhost:8080/v1/jobs/{job_id}:retry \
-  -H "X-API-Key: dev-api-key" | python -m json.tool
-```
-
-预期：返回新的 job_id（克隆），原任务终态不变。
-
-## 步骤 8：Benchmark 与 pprof
-
-查看 Prometheus 指标：
-
-```sh
-curl -s http://localhost:6060/metrics | grep jobforge_
-```
-
-采集 CPU profile（需要服务运行中）：
-
-```sh
-go tool pprof http://localhost:6060/debug/pprof/profile?seconds=5
-```
-
-查看性能基线报告：
-
-```sh
-cat docs/benchmark.md
-```
-
-关键数据（v0.5 收官 + 0019 Gateway Poll 脏库修复）：
-
-- Submit: 307.94 jobs/sec（100 jobs / 4 workers）
-- Process: 395.09 jobs/sec
-- p50: 8.84ms / p95: 14.44ms / p99: 31.65ms
-- Claim 五轮中位数：7.071ms/op，相对 v0.5 实施前改善 8.1%
-- Gateway Register→Poll 独立五轮中位数：clean 7.179ms/op、20k dirty 7.200ms/op；dirty/clean 仅 +0.3%，dirty 较修复前改善 26.7%；144 allocs/op 不变
-- 20k Claim p50/p95：93.69/106.36ms，相对 v0.5 的 96.35/107.93ms 均改善
-- 历史 W4 Claim 4.171ms/op 绝对门禁仍保留未通过披露
-
-## 清理
-
-```sh
-docker compose -f deploy/compose.yaml down -v
-```
-
-## 相关文档
-
-- [系统架构](architecture.md)
-- [故障语义](failure-semantics.md)
-- [性能基线](benchmark.md)
-- [可观测性](observability.md)
+完整 Compose 运维演练另运行 `examples/observability_acceptance.py --project jobforge-agent-rag`，约需数分钟：真实停止 Collector、模型和 Worker，断言业务可靠性、四种结果指标及告警触发/恢复。该长演练不塞入三分钟。证据与限制见[实施记录](agent-rag-progress.md)。

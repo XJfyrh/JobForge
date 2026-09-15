@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/xjfyrh/jobforge/internal/config"
+	"github.com/xjfyrh/jobforge/internal/observability"
 )
 
 type contextKey string
@@ -24,6 +25,15 @@ const (
 	// RequestIDKey is the context key for the request correlation ID.
 	RequestIDKey contextKey = "request_id"
 )
+
+// TraceContextMiddleware restores only W3C traceparent; baggage may contain
+// application secrets and is deliberately not imported into task execution.
+func TraceContextMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := observability.ContextWithTraceParent(r.Context(), r.Header.Get(observability.TraceParentKey))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 // TenantFromContext extracts the authenticated tenant ID from the request
 // context. Returns empty string if not set.

@@ -3,7 +3,6 @@ package observability
 import (
 	"context"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -16,7 +15,7 @@ const TraceParentKey = "traceparent"
 // context (e.g. tracing disabled or no active span).
 func InjectTraceParent(ctx context.Context) string {
 	carrier := propagation.MapCarrier{}
-	otel.GetTextMapPropagator().Inject(ctx, carrier)
+	propagation.TraceContext{}.Inject(ctx, carrier)
 	return carrier[TraceParentKey]
 }
 
@@ -29,5 +28,5 @@ func ContextWithTraceParent(ctx context.Context, traceparent string) context.Con
 		return ctx
 	}
 	carrier := propagation.MapCarrier{TraceParentKey: traceparent}
-	return otel.GetTextMapPropagator().Extract(ctx, carrier)
+	return propagation.TraceContext{}.Extract(ctx, carrier)
 }

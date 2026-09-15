@@ -1,0 +1,69 @@
+name: Real model acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'internal/tasks/**'
+      - 'internal/worker/**'
+      - 'tests/integration/real_*'
+      - 'tests/integration/trace_backend_test.go'
+      - 'examples/**'
+      - '.github/workflows/real-models.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  real-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jobforge
+          POSTGRES_PASSWORD: jobforge
+          POSTGRES_DB: jobforge
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jobforge"
+          --health-interval 5s --health-retries 10
+      ollama:
+        image: ollama/ollama:0.32.5
+        ports: ["11434:11434"]
+      jaeger:
+        image: cr.jaegertracing.io/jaegertracing/jaeger:2.20.0
+        ports: ["4318:4318", "16686:16686"]
+    env:
+      JOBFORGE_TEST_DSN: postgres://jobforge:jobforge@localhost:5432/jobforge?sslmode=disable
+      JOBFORGE_TEST_PYTHON: python
+      JOBFORGE_REAL_MODEL_URL: http://localhost:11434
+      JOBFORGE_TEST_OTLP_ENDPOINT: http://localhost:4318
+      JOBFORGE_TEST_JAEGER_URL: http://localhost:16686
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned tools and SDK
+        run: |
+          python -m pip install -r tools/requirements-lint.txt
+          python -m pip install --no-deps ./sdk/python
+      - name: Fetch pinned model tags (adapters verify manifest digests)
+        run: |
+          docker exec '${{ job.services.ollama.id }}' ollama pull all-minilm:22m
+          docker exec '${{ job.services.ollama.id }}' ollama pull qwen2.5:0.5b
+      - name: Real models, artifacts, SDK and process crash recovery
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -race ./tests/integration -run '^TestRealTasks(SDK|Lifecycle)$' -count=1 -v | tee real-models.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-model-evidence
+          path: real-models.txt

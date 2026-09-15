@@ -19,7 +19,13 @@ class JobForgeError(Exception):
     def __init__(self, code: str, message: str) -> None:
         self.code = code
         self.message = message
+        self.status_code: int | None = None
         super().__init__(f"[{code}] {message}")
+
+    @property
+    def retryable(self) -> bool:
+        """Whether a caller may retry, with its own bounded policy."""
+        return self.code in ("QUEUE_OVERLOADED", "INTERNAL", "TRANSPORT", "TIMEOUT")
 
 
 class InvalidArgumentError(JobForgeError):
@@ -78,6 +84,34 @@ class QueueOverloadedError(JobForgeError):
         super().__init__("QUEUE_OVERLOADED", message)
 
 
+class CancelRequestedError(JobForgeError):
+    """Cancellation won the race with completion (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("CANCEL_REQUESTED", message)
+
+
+class InvalidTransitionError(JobForgeError):
+    """The operation is not allowed in the current state (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("INVALID_TRANSITION", message)
+
+
+class TransportError(JobForgeError):
+    """The HTTP exchange failed; submission acceptance may be unknown."""
+
+    def __init__(self, message: str = "HTTP exchange failed") -> None:
+        super().__init__("TRANSPORT", message)
+
+
+class RequestTimeoutError(TransportError):
+    """The request timed out; retry submissions with the same idempotency key."""
+
+    def __init__(self, message: str = "HTTP request timed out") -> None:
+        JobForgeError.__init__(self, "TIMEOUT", message)
+
+
 class InternalError(JobForgeError):
     """Internal server error (HTTP 500)."""
 
@@ -96,6 +130,8 @@ _ERROR_MAP: dict[str, Callable[[str], JobForgeError]] = {
     "CONFLICT": ConflictError,
     "ALREADY_TERMINAL": AlreadyTerminalError,
     "STALE_LEASE": StaleLeaseError,
+    "CANCEL_REQUESTED": CancelRequestedError,
+    "INVALID_TRANSITION": InvalidTransitionError,
     "QUEUE_OVERLOADED": QueueOverloadedError,
     "INTERNAL": InternalError,
 }
@@ -105,5 +141,5 @@ def from_response(code: str, message: str) -> JobForgeError:
     """Create the appropriate exception from an error code and message."""
     exc_factory = _ERROR_MAP.get(code)
     if exc_factory is None:
-        return JobForgeError(code, message)
+        return InternalError("unrecognized server error")
     return exc_factory(message)

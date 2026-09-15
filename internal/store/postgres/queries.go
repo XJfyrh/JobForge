@@ -31,7 +31,7 @@ select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-       created_at, updated_at, request_hash
+       created_at, updated_at, result_ref, request_hash
 from jobs
 where tenant_id = $1 and idempotency_key = $2
 `
@@ -42,7 +42,7 @@ select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-       created_at, updated_at,
+       created_at, updated_at, result_ref,
        (xmax = 0) as inserted
 from jobs
 where id = $1
@@ -54,7 +54,7 @@ select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-       created_at, updated_at
+       created_at, updated_at, result_ref
 from jobs
 where id = $1 and tenant_id = $2
 `
@@ -76,7 +76,7 @@ select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-       created_at, updated_at
+       created_at, updated_at, result_ref
 from jobs
 where queue = any($1::text[])
   and state = 'ready'
@@ -103,7 +103,7 @@ returning id, tenant_id, queue, type, payload, priority, state,
           run_at, attempt, max_attempts, timeout_seconds,
           idempotency_key, lease_owner, lease_until, fencing_token,
           cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-          created_at, updated_at
+          created_at, updated_at, result_ref
 `
 
 // claimSelectQuota selects claim candidates with the tenant quota pre-filter
@@ -120,7 +120,7 @@ select j.id, j.tenant_id, j.queue, j.type, j.payload, j.priority, j.state,
        j.run_at, j.attempt, j.max_attempts, j.timeout_seconds,
        j.idempotency_key, j.lease_owner, j.lease_until, j.fencing_token,
        j.cancel_requested_at, j.trace_id, j.trace_context, j.state_version, j.retry_of_job_id,
-       j.created_at, j.updated_at
+       j.created_at, j.updated_at, j.result_ref
 from jobs j
 where j.queue = any($1::text[])
   and j.state = 'ready'
@@ -218,86 +218,6 @@ returning jobs.lease_until,
           end as cancel_signal_latency_seconds
 `
 
-// completeUpdate transitions running → succeeded. Returns the tenant_id so
-// the same transaction can release the tenant's quota slot (ADR-0007 §6).
-// Matches owner + token + state. Rejects cancelling state (cancel wins race).
-const completeUpdate = `
-update jobs
-set state = 'succeeded',
-    state_version = state_version + 1,
-    updated_at = now()
-where id = $1
-  and lease_owner = $2
-  and fencing_token = $3
-  and state = 'running'
-returning tenant_id, state_version, trace_context
-`
-
-// completeRejectCancelling checks if the job is in cancelling state (cancel won
-// the race). Used to return CANCEL_REQUESTED instead of STALE_LEASE.
-const completeRejectCancelling = `
-select state from jobs
-where id = $1 and lease_owner = $2 and fencing_token = $3 and state = 'cancelling'
-`
-
-// failUpdateRetry transitions running → retry_wait with backoff. Returns the
-// tenant_id for the same-transaction quota release (ADR-0007 §6).
-const failUpdateRetry = `
-update jobs
-set state = 'retry_wait',
-    run_at = $4,
-    lease_owner = null,
-    lease_until = null,
-    state_version = state_version + 1,
-    updated_at = now()
-where id = $1
-  and lease_owner = $2
-  and fencing_token = $3
-  and state = 'running'
-returning tenant_id, state_version, trace_context
-`
-
-// failUpdateDead transitions running → dead. Returns the tenant_id for the
-// same-transaction quota release (ADR-0007 §6).
-const failUpdateDead = `
-update jobs
-set state = 'dead',
-    state_version = state_version + 1,
-    updated_at = now()
-where id = $1
-  and lease_owner = $2
-  and fencing_token = $3
-  and state = 'running'
-returning tenant_id, state_version, trace_context
-`
-
-// failUpdateCancelling transitions cancelling → cancelled on fail.
-// In cancelling state, fail does not trigger retry. Returns the tenant_id:
-// cancelling jobs keep occupying a quota slot until this terminal transition
-// releases it (PRD v0.3 FR-723, ADR-0007 §6).
-const failUpdateCancelling = `
-update jobs
-set state = 'cancelled',
-    state_version = state_version + 1,
-    updated_at = now()
-where id = $1
-  and lease_owner = $2
-  and fencing_token = $3
-  and state = 'cancelling'
-returning tenant_id, state_version, trace_context
-`
-
-// updateAttemptOutcome records the attempt result.
-const updateAttemptOutcome = `
-update job_attempts
-set finished_at = now(),
-    outcome = $3,
-    error_code = $4,
-    error_message = $5,
-    duration_ms = $6
-where job_id = $1 and attempt_no = $2
-`
-
 // insertOutboxEvent writes a state-change event to the outbox within the same
 // transaction as the state transition. aggregate_version (jobs.state_version)
 // and traceparent are captured here so envelope v1 can be built at publish
@@ -335,10 +255,10 @@ where id = $1
 returning state_version, trace_context
 `
 
-// checkTerminal checks if a job is already in a terminal state.
-const checkTerminal = `
+// checkCancelState distinguishes a duplicate request from terminal rejection.
+const checkCancelState = `
 select state from jobs
-where id = $1 and tenant_id = $2 and state in ('succeeded', 'dead', 'cancelled')
+where id = $1 and tenant_id = $2 and state in ('cancelling', 'succeeded', 'dead', 'cancelled')
 `
 
 // listJobs retrieves jobs with keyset pagination ordered by created_at DESC.
@@ -347,7 +267,7 @@ select id, tenant_id, queue, type, payload, priority, state,
        run_at, attempt, max_attempts, timeout_seconds,
        idempotency_key, lease_owner, lease_until, fencing_token,
        cancel_requested_at, trace_id, trace_context, state_version, retry_of_job_id,
-       created_at, updated_at
+       created_at, updated_at, result_ref
 from jobs
 where tenant_id = $1
   and ($2::text is null or state = $2)

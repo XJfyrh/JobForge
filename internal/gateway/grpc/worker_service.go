@@ -24,6 +24,10 @@ import (
 type WorkerStore interface {
 	store.JobStore
 
+	// CompleteAttempt and FailAttempt return facts from the state transaction.
+	CompleteAttempt(ctx context.Context, jobID, workerID string, token int64, ref string, durationMs int64) (*store.AttemptResult, error)
+	FailAttempt(ctx context.Context, jobID, workerID string, token int64, code, message string, retryable bool, durationMs int64) (*store.AttemptResult, error)
+
 	// RegisterWorker upserts a worker registration record.
 	RegisterWorker(ctx context.Context, req *workerv1.RegisterRequest, sessionID string) error
 
@@ -152,8 +156,8 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 		return nil, svc.contractError(ctx, observability.ContractSurfacePoll, reason, domain.CodeInvalidArgument, message)
 	}
 
-	// gateway.claim_jobs span (PRD 12.2).
-	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.claim_jobs")
+	// The Poll batch is independent of each submitted job's trace.
+	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.poll")
 	defer span.End()
 	span.SetAttributes(
 		attribute.String("worker_id", req.WorkerId),
@@ -212,9 +216,22 @@ func (svc *WorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (
 
 	span.SetAttributes(attribute.Int("jobs.claimed", len(jobs)))
 
-	return &workerv1.PollResponse{
-		Jobs: toClaimedJobs(jobs),
-	}, nil
+	claimed := toClaimedJobs(jobs)
+	for i, job := range jobs {
+		if job.TraceContext == nil {
+			continue
+		}
+		// Poll can contain several traces. Each committed lease gets its own
+		// receipt span parented to submission; the Worker uses that parent.
+		jobCtx, claimSpan := observability.Tracer("jobforge.gateway").Start(
+			observability.ContextWithTraceParent(ctx, *job.TraceContext), "gateway.claim_jobs")
+		claimSpan.SetAttributes(attribute.String("job_id", job.ID), attribute.String("tenant_id", job.TenantID),
+			attribute.String("queue", job.Queue), attribute.String("type", job.Type),
+			attribute.Int("attempt", job.Attempt), attribute.String("worker_id", req.WorkerId))
+		claimed[i].TraceContext = observability.InjectTraceParent(jobCtx)
+		claimSpan.End()
+	}
+	return &workerv1.PollResponse{Jobs: claimed}, nil
 }
 
 func (svc *WorkerService) validateRegister(
@@ -365,118 +382,73 @@ func (svc *WorkerService) Heartbeat(ctx context.Context, req *workerv1.Heartbeat
 	}, nil
 }
 
-// Complete reports successful job execution. Idempotent.
+// Complete reports successful execution; only the original lease can repeat it.
 func (svc *WorkerService) Complete(ctx context.Context, req *workerv1.CompleteRequest) (*workerv1.CompleteResponse, error) {
 	if req.JobId == "" || req.WorkerId == "" {
 		return nil, domainStatusError(domain.CodeInvalidArgument, "job_id and worker_id are required")
 	}
-
-	// Restore the job's trace from incoming gRPC metadata so the
-	// gateway.complete_job span joins the original submit trace (FR-503).
-	ctx = traceContextFromMetadata(ctx)
-
-	// gateway.complete_job span (PRD 12.2).
-	ctx, span := observability.Tracer("jobforge.gateway").Start(ctx, "gateway.complete_job")
+	ctx, span := observability.Tracer("jobforge.gateway").Start(traceContextFromMetadata(ctx), "gateway.complete_job")
 	defer span.End()
-	span.SetAttributes(
-		attribute.String("worker_id", req.WorkerId),
-	)
-
+	span.SetAttributes(attribute.String("job_id", req.JobId), attribute.String("worker_id", req.WorkerId))
 	var durationMs int64
 	if req.Duration != nil {
+		if err := req.Duration.CheckValid(); err != nil || req.Duration.AsDuration() < 0 {
+			return nil, domainStatusError(domain.CodeInvalidArgument, "invalid duration")
+		}
 		durationMs = req.Duration.AsDuration().Milliseconds()
 	}
-
-	err := svc.store.Complete(ctx, req.JobId, req.WorkerId, req.FencingToken, req.ResultRef, durationMs)
+	result, err := svc.store.CompleteAttempt(ctx, req.JobId, req.WorkerId, req.FencingToken, req.ResultRef, durationMs)
 	if err != nil {
-		// Idempotency: if already succeeded with same token, return success.
-		if isIdempotentComplete(ctx, err, svc.store, req) {
-			return &workerv1.CompleteResponse{State: "succeeded"}, nil
-		}
-		span.SetStatus(otelcodes.Error, err.Error())
+		span.SetStatus(otelcodes.Error, "completion rejected")
 		return nil, mapError(err)
 	}
-
-	// Record job attempt and latency metrics (PRD 12.1).
-	if svc.metrics != nil {
-		svc.metrics.JobAttemptsTotal.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("queue", ""),
-				attribute.String("type", ""),
-				attribute.String("outcome", "succeeded"),
-			))
-		if durationMs > 0 {
-			svc.metrics.JobLatencySeconds.Record(ctx, float64(durationMs)/1000.0,
-				metric.WithAttributes(
-					attribute.String("queue", ""),
-					attribute.String("type", ""),
-					attribute.String("outcome", "succeeded"),
-				))
-		}
-	}
-
-	return &workerv1.CompleteResponse{State: "succeeded"}, nil
+	span.SetAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type), attribute.Bool("changed", result.Changed))
+	svc.recordFinishedAttempt(ctx, result, "")
+	return &workerv1.CompleteResponse{State: string(result.State)}, nil
 }
 
-// Fail reports job execution failure. Idempotent.
+// Fail returns the committed outcome, including a matching duplicate's ACK.
 func (svc *WorkerService) Fail(ctx context.Context, req *workerv1.FailRequest) (*workerv1.FailResponse, error) {
 	if req.JobId == "" || req.WorkerId == "" {
 		return nil, domainStatusError(domain.CodeInvalidArgument, "job_id and worker_id are required")
 	}
-
+	ctx, span := observability.Tracer("jobforge.gateway").Start(traceContextFromMetadata(ctx), "gateway.fail_job")
+	defer span.End()
+	span.SetAttributes(attribute.String("job_id", req.JobId), attribute.String("worker_id", req.WorkerId))
 	var durationMs int64
 	if req.Duration != nil {
+		if err := req.Duration.CheckValid(); err != nil || req.Duration.AsDuration() < 0 {
+			return nil, domainStatusError(domain.CodeInvalidArgument, "invalid duration")
+		}
 		durationMs = req.Duration.AsDuration().Milliseconds()
 	}
-
-	err := svc.store.Fail(ctx, req.JobId, req.WorkerId, req.FencingToken,
-		req.ErrorCode, req.ErrorMessage, req.Retryable, durationMs)
+	result, err := svc.store.FailAttempt(ctx, req.JobId, req.WorkerId, req.FencingToken, req.ErrorCode, req.ErrorMessage, req.Retryable, durationMs)
 	if err != nil {
-		// Idempotency: if the job already transitioned due to a prior Fail call,
-		// return success with the current state.
-		if isIdempotentFail(ctx, err, svc.store, req.JobId) {
-			state, _ := svc.store.GetJobState(ctx, req.JobId)
-			return &workerv1.FailResponse{State: string(state)}, nil
-		}
+		span.SetStatus(otelcodes.Error, "failure report rejected")
 		return nil, mapError(err)
 	}
-
-	// Record failure metrics (PRD 12.1).
-	if svc.metrics != nil {
-		svc.metrics.JobAttemptsTotal.Add(ctx, 1,
-			metric.WithAttributes(
-				attribute.String("queue", ""),
-				attribute.String("type", ""),
-				attribute.String("outcome", "failed"),
-			))
-		if req.Retryable {
-			svc.metrics.RetriesTotal.Add(ctx, 1,
-				metric.WithAttributes(
-					attribute.String("queue", ""),
-					attribute.String("error_code", req.ErrorCode),
-				))
-		}
-	}
-
-	// Determine resulting state.
-	state, _ := svc.store.GetJobState(ctx, req.JobId)
-	resp := &workerv1.FailResponse{State: string(state)}
-	switch state {
-	case domain.StateRetryWait:
-		if runAt, err := svc.store.GetJobRunAt(ctx, req.JobId); err == nil && runAt != nil {
-			resp.NextRetryAt = timestamppb.New(*runAt)
-		}
-	case domain.StateDead:
-		// Record DLQ metric (PRD 12.1).
-		if svc.metrics != nil {
-			svc.metrics.DLQTotal.Add(ctx, 1,
-				metric.WithAttributes(
-					attribute.String("queue", ""),
-					attribute.String("type", ""),
-				))
-		}
+	span.SetAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type), attribute.String("outcome", result.Outcome), attribute.Bool("changed", result.Changed))
+	svc.recordFinishedAttempt(ctx, result, req.ErrorCode)
+	resp := &workerv1.FailResponse{State: string(result.State)}
+	if result.State == domain.StateRetryWait {
+		resp.NextRetryAt = timestamppb.New(result.RunAt)
 	}
 	return resp, nil
+}
+
+func (svc *WorkerService) recordFinishedAttempt(ctx context.Context, result *store.AttemptResult, errorCode string) {
+	if svc.metrics == nil || !result.Changed {
+		return
+	}
+	attrs := metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type), attribute.String("outcome", result.Outcome))
+	svc.metrics.JobAttemptsTotal.Add(ctx, 1, attrs)
+	svc.metrics.JobLatencySeconds.Record(ctx, float64(result.DurationMs)/1000, attrs)
+	if result.State == domain.StateRetryWait {
+		svc.metrics.RetriesTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type), attribute.String("error_code", observability.RetryErrorCategory(errorCode))))
+	}
+	if result.State == domain.StateDead {
+		svc.metrics.DLQTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("queue", result.Queue), attribute.String("type", result.Type)))
+	}
 }
 
 // refreshWorkerLiveness advances workers.last_heartbeat_at at most once per
@@ -561,41 +533,13 @@ func (svc *WorkerService) SampleWorkerCounts(ctx context.Context) {
 	}
 }
 
-// isIdempotentComplete checks if a Complete error is due to the job already
-// being succeeded (idempotent retry).
-func isIdempotentComplete(ctx context.Context, err error, s WorkerStore, req *workerv1.CompleteRequest) bool {
-	var de *domain.Error
-	if errors.As(err, &de) && de.Code == domain.CodeAlreadyTerminal {
-		state, stateErr := s.GetJobState(ctx, req.JobId)
-		return stateErr == nil && state == domain.StateSucceeded
-	}
-	return false
-}
-
-// isIdempotentFail checks if a Fail error is due to the job already having
-// transitioned from a prior Fail call (idempotent retry). The job is expected
-// to be in retry_wait, dead, or cancelled state.
-func isIdempotentFail(ctx context.Context, err error, s WorkerStore, jobID string) bool {
-	var de *domain.Error
-	if !errors.As(err, &de) {
-		return false
-	}
-	if de.Code != domain.CodeStaleLease && de.Code != domain.CodeAlreadyTerminal {
-		return false
-	}
-	state, stateErr := s.GetJobState(ctx, jobID)
-	if stateErr != nil {
-		return false
-	}
-	return state == domain.StateRetryWait || state == domain.StateDead || state == domain.StateCancelled
-}
-
 // toClaimedJobs converts domain jobs to proto ClaimedJob messages.
 func toClaimedJobs(jobs []*domain.Job) []*workerv1.ClaimedJob {
 	result := make([]*workerv1.ClaimedJob, 0, len(jobs))
 	for _, j := range jobs {
 		cj := &workerv1.ClaimedJob{
 			JobId:        j.ID,
+			TenantId:     j.TenantID,
 			Queue:        j.Queue,
 			Type:         j.Type,
 			Payload:      j.Payload,

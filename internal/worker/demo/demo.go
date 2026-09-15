@@ -6,6 +6,7 @@ package demo
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,12 +18,12 @@ import (
 	"github.com/xjfyrh/jobforge/internal/worker"
 )
 
-// EchoHandler returns the payload as-is. Used for minimal connectivity testing.
+// EchoHandler returns a bounded payload digest for connectivity testing.
 type EchoHandler struct{}
 
 // Execute implements worker.Handler.
 func (h *EchoHandler) Execute(_ context.Context, job *worker.ClaimedJob) (string, error) {
-	return fmt.Sprintf("echo:%s", string(job.Payload)), nil
+	return fmt.Sprintf("echo:sha256:%x", sha256.Sum256(job.Payload)), nil
 }
 
 // SleepHandler sleeps for a configurable duration. Supports context cancellation
@@ -129,16 +130,16 @@ func (h *HTTPHandler) Execute(ctx context.Context, job *worker.ClaimedJob) (stri
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return fmt.Sprintf("http:%d:%s", resp.StatusCode, string(body)), nil
+		return fmt.Sprintf("http:%d:sha256:%x", resp.StatusCode, sha256.Sum256(body)), nil
 	}
 
 	if resp.StatusCode >= 500 {
 		// Server error → retryable.
-		return "", worker.NewRetryableError(fmt.Errorf("http %d: %s", resp.StatusCode, string(body)))
+		return "", worker.NewRetryableError(fmt.Errorf("http status %d", resp.StatusCode))
 	}
 
 	// Client error (4xx) → non-retryable.
-	return "", fmt.Errorf("http %d: %s", resp.StatusCode, string(body))
+	return "", fmt.Errorf("http status %d", resp.StatusCode)
 }
 
 // RegisterAll registers all demo handlers with the given registry. The

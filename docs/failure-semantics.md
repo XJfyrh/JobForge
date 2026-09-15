@@ -242,3 +242,9 @@ scale 套件的规模参数、运行命令与结果归档见 [可靠性报告](r
 - [性能基线](benchmark.md) — 恢复时间实测数据
 - [可靠性报告](reliability-report.md) — scale 套件（AT-13/AT-14）运行结果与复现命令
 - [演示脚本](demo-script.md) — 故障演示步骤
+
+## Agent/RAG 模型与业务发布故障（v0.6）
+
+模型连接/429/5xx 返回可重试 MODEL_UNAVAILABLE；非法输入、固定模型 digest 不匹配、Schema 两次校验失败或检索验收失败进入明确失败。每 attempt 最多两次推理，不在适配器内部无限重试。Worker 超时保持 TIMEOUT，取消断开 HTTP 并停止后续处理，但已开始的模型计算和已提交的业务效果不能保证撤销。
+
+发布前崩溃从头重新执行；产物发布后、Complete 前崩溃按业务键读取首次产物，无重复发布。取消竞争可能留下已发布但未挂到 cancelled job 的业务产物；人工 retry 创建新 job_id、保留业务键，能够复用它。旧 Worker 的结果始终由 owner/token/state 守卫拒绝。不是断点续作，也不提升 at-least-once 保证。真实进程及模型验证方法见 [真实任务指南](real-tasks.md)。

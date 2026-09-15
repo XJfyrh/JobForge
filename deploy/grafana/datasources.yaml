@@ -3,8 +3,7 @@
 # /etc/grafana/provisioning/datasources inside the grafana container.
 #
 # Registers the compose-internal Prometheus instance automatically so the
-# jobforge_* metrics can be explored without manual setup. No dashboard JSON
-# is provisioned: Grafana Explore is sufficient for curve inspection.
+# jobforge_* metrics and the task dashboard work without manual setup.
 apiVersion: 1
 
 datasources:
@@ -14,4 +13,14 @@ datasources:
     access: proxy
     url: http://prometheus:9090
     isDefault: true
+    editable: false
+    jsonData:
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jobforge-jaeger
+  - name: Jaeger
+    uid: jobforge-jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
     editable: false

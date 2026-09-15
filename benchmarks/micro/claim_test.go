@@ -16,16 +16,19 @@ import (
 // seedJobs creates n ready jobs for claim benchmarks.
 func seedJobs(ctx context.Context, b *testing.B, js *postgres.JobStore, queue string, n int) {
 	b.Helper()
+	var pastRunAt time.Time
+	if err := benchPool.QueryRow(ctx, "select now() - interval '1 day'").Scan(&pastRunAt); err != nil {
+		b.Fatal(err)
+	}
 	for i := 0; i < n; i++ {
 		id := uuid.New().String()
-		pastRunAt := time.Now().Add(-1 * time.Second)
 		job, err := domain.NewJob(id, domain.NewJobParams{
 			TenantID: "bench-tenant",
 			Queue:    queue,
 			Type:     "demo.echo",
 			Payload:  []byte(`{"benchmark":true}`),
 			RunAt:    &pastRunAt,
-		}, time.Now())
+		}, pastRunAt.Add(time.Second))
 		if err != nil {
 			b.Fatalf("create job: %v", err)
 		}
@@ -40,7 +43,7 @@ func seedJobs(ctx context.Context, b *testing.B, js *postgres.JobStore, queue st
 func BenchmarkClaim(b *testing.B) {
 	ctx := context.Background()
 	js := postgres.NewJobStore(benchPool)
-	queue := "bench-claim-single"
+	queue := "bench-claim-single-" + uuid.NewString()
 
 	// Pre-seed jobs.
 	seedJobs(ctx, b, js, queue, b.N+100)
@@ -49,7 +52,7 @@ func BenchmarkClaim(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, err := js.Claim(ctx, store.ClaimParams{
+		jobs, err := js.Claim(ctx, store.ClaimParams{
 			Queues:   []string{queue},
 			WorkerID: "bench-worker-single",
 			MaxJobs:  1,
@@ -57,6 +60,9 @@ func BenchmarkClaim(b *testing.B) {
 		})
 		if err != nil {
 			b.Fatalf("claim: %v", err)
+		}
+		if len(jobs.Jobs) != 1 {
+			b.Fatalf("claim benchmark requires one real claim, got %d", len(jobs.Jobs))
 		}
 	}
 }

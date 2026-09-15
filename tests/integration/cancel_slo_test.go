@@ -39,7 +39,31 @@ type cancelSignalSample struct {
 // this wrapper only preserves raw samples so the test can calculate p95.
 type observingHeartbeatStore struct {
 	*postgres.JobStore
-	signals chan cancelSignalSample
+	signals    chan cancelSignalSample
+	t          *testing.T
+	claimDelay time.Duration
+}
+
+func (s *observingHeartbeatStore) ClaimForWorker(ctx context.Context, params store.WorkerClaimParams) (*store.ClaimResult, error) {
+	if s.claimDelay > 0 {
+		timer := time.NewTimer(s.claimDelay)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	start := time.Now()
+	result, err := s.JobStore.ClaimForWorker(ctx, params)
+	if elapsed := time.Since(start); err != nil || elapsed > 100*time.Millisecond {
+		claimed := 0
+		if result != nil {
+			claimed = len(result.Jobs)
+		}
+		s.t.Logf("AT-24 claim: elapsed=%s committed_jobs=%d error=%v", elapsed, claimed, err)
+	}
+	return result, err
 }
 
 func (s *observingHeartbeatStore) Heartbeat(ctx context.Context, jobID, workerID string, fencingToken int64, ttl time.Duration) (*store.HeartbeatResult, error) {
@@ -59,6 +83,16 @@ type cancelAPIResult struct {
 	jobID      string
 	returnedAt time.Time
 	err        error
+}
+
+// Keep startup diagnostics with the test so a failed readiness wait can be
+// distinguished from the cancellation signal SLO itself. testing.T is safe
+// for concurrent Worker log writes; no shared bytes.Buffer is needed.
+type cancelSLOLogWriter struct{ t *testing.T }
+
+func (w cancelSLOLogWriter) Write(p []byte) (int, error) {
+	w.t.Logf("%s", p)
+	return len(p), nil
 }
 
 func startCancelSLOGateway(
@@ -232,6 +266,18 @@ func TestGatewayNonDefaultLeaseLivenessThrottle(t *testing.T) {
 // period. Only the DB-clock signal segment is subject to the 6s p95 SLO;
 // API-to-context and context-to-handler-return are reported separately.
 func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
+	testCancelHeartbeatSignalSLO(t, 0)
+}
+
+// A cancellation SLO starts after a Handler is running. A bounded slow
+// claim must fit the production Poll budget, rather than being aborted by
+// an unrelated 250ms test-only RPC deadline before any Handler can start.
+func TestCancelSLOStartupWithSlowClaim(t *testing.T) {
+	testCancelHeartbeatSignalSLO(t, 400*time.Millisecond)
+}
+
+func testCancelHeartbeatSignalSLO(t *testing.T, claimDelay time.Duration) {
+	t.Helper()
 	const (
 		sampleCount       = 20
 		heartbeatPeriod   = 5 * time.Second
@@ -260,7 +306,7 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 
 	_, cancelClient, jobStore := setupCtlServer(t)
 	signalSamples := make(chan cancelSignalSample, sampleCount)
-	observedStore := &observingHeartbeatStore{JobStore: jobStore, signals: signalSamples}
+	observedStore := &observingHeartbeatStore{JobStore: jobStore, signals: signalSamples, t: t, claimDelay: claimDelay}
 	gatewayAddr := startCancelSLOGateway(t, observedStore, 30*time.Second, heartbeatPeriod, metrics, cancelHandlerType)
 
 	queue := "cancel-slo-" + uuid.New().String()[:8]
@@ -279,7 +325,7 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		return "", handlerCtx.Err()
 	}))
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.NewTextHandler(cancelSLOLogWriter{t: t}, nil))
 	runtime := worker.NewRuntime(worker.RuntimeConfig{
 		WorkerID:          "cancel-slo-worker-" + uuid.New().String()[:8],
 		InstanceID:        "cancel-slo-instance",
@@ -287,7 +333,7 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		Capacity:          sampleCount,
 		GatewayAddr:       gatewayAddr,
 		HeartbeatInterval: 0, // adopt the Gateway's 5s RegisterResponse value
-		PollTimeout:       250 * time.Millisecond,
+		PollTimeout:       0, // use the production 30s RPC budget; readiness still has a 15s deadline
 		ShutdownGrace:     10 * time.Second,
 		Version:           "m4-at24",
 	}, registry, logger, metrics)
@@ -325,6 +371,8 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		var sample cancelHandlerSample
 		select {
 		case sample = <-started:
+		case err := <-runtimeDone:
+			t.Fatalf("worker exited before handlers started: %v", err)
 		case <-startDeadline.C:
 			t.Fatalf("only %d/%d handlers started before timeout", i, sampleCount)
 		}
@@ -401,6 +449,12 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 	}
 
 	cancelSpans := 0
+	executionParents := make(map[string]bool)
+	for _, span := range spanRecorder.Started() {
+		if span.Name() == "worker.execute" {
+			executionParents[span.SpanContext().SpanID().String()] = true
+		}
+	}
 	for _, span := range spanRecorder.Ended() {
 		if span.Name() != "gateway.cancel_signal" {
 			continue
@@ -409,8 +463,8 @@ func TestCancelAT24HeartbeatSignalSLO(t *testing.T) {
 		if got := span.SpanContext().TraceID().String(); got != "4bf92f3577b34da6a3ce929d0e0e4736" {
 			t.Fatalf("cancel signal trace ID = %s", got)
 		}
-		if got := span.Parent().SpanID().String(); got != "00f067aa0ba902b7" {
-			t.Fatalf("cancel signal parent span ID = %s", got)
+		if got := span.Parent().SpanID().String(); !executionParents[got] {
+			t.Fatalf("cancel signal parent %s is not a worker.execute span", got)
 		}
 		for _, attr := range span.Attributes() {
 			key := strings.ToLower(string(attr.Key))

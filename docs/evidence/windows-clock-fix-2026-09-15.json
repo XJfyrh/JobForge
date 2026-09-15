@@ -1,0 +1,34 @@
+{
+  "environment": {
+    "windows": "11 26200.9445",
+    "wsl": "2.6.1.0",
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "docker_desktop": "4.83.0",
+    "clocksource": "tsc",
+    "hv_utils_timesync_implicit": "Y",
+    "ubuntu_timesyncd_before": "active/enabled",
+    "ubuntu_timesyncd_after": "inactive/disabled",
+    "windows_time_service": "stopped/manual; unchanged"
+  },
+  "observations": {
+    "ntp_offset_seconds": -2.372883,
+    "ntp_destination_timestamp_utc": "2026-09-15T11:34:54Z",
+    "postgres_backward_step_ms": -2372.892,
+    "backward_step_host_utc": "2026-09-15T11:34:54.45657145Z",
+    "backward_step_sql_rtt_ms": 0.503,
+    "postgres_forward_step_ms": 2370.716,
+    "forward_step_host_utc": "2026-09-15T11:35:09.14147325Z",
+    "forward_step_sql_rtt_ms": 0.586,
+    "linux_raw_elapsed_seconds": 39.836402001,
+    "windows_monotonic_elapsed_seconds": 39.8363772
+  },
+  "post_fix_60s_during_full_acceptance": {
+    "passed": true,
+    "max_offset_lower_bound_ms": 2.612,
+    "max_step_lower_bound_ms": 2.9373,
+    "max_rtt_ms": 37.7461
+  },
+  "remediation": "Disabled and stopped systemd-timesyncd only in Ubuntu-24.04; retained Hyper-V host sync. No Docker/WSL restart, kernel/clocksource or Windows service change.",
+  "source": "https://ubuntu.com/wsl/docs/stable/explanation/time-sync/",
+  "raw_evidence_directory": "E:/JobForge-notes/2026-09-15-windows-fix"
+}

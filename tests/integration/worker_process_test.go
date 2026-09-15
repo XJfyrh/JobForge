@@ -107,6 +107,7 @@ type testWorkerProcess struct {
 	stdout bytes.Buffer
 	stderr bytes.Buffer
 	done   chan struct{}
+	stdin  io.WriteCloser // optional test-only graceful shutdown channel
 
 	mu      sync.Mutex
 	waitErr error
@@ -180,6 +181,20 @@ func (p *testWorkerProcess) killAndWait(t *testing.T) {
 	// terminated by a signal even though Wait has successfully reaped it.
 	if p.cmd.ProcessState == nil {
 		t.Fatal("Worker helper Wait returned without process state")
+	}
+}
+
+func (p *testWorkerProcess) stopAndWait(t *testing.T) {
+	t.Helper()
+	if p.stdin == nil {
+		t.Fatal("process has no graceful shutdown channel")
+	}
+	_ = p.stdin.Close()
+	if !p.wait(workerProcessExitLimit) {
+		t.Fatal("business Worker failed to stop gracefully")
+	}
+	if err := p.waitError(); err != nil {
+		t.Fatalf("business Worker shutdown: %v\n%s", err, p.output())
 	}
 }
 

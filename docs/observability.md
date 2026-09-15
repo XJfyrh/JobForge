@@ -2,7 +2,7 @@
 
 本文档描述 JobForge 的可观测性架构，包括分布式 Trace、Prometheus 指标和 pprof 性能剖析。
 
-技术选型见 [ADR-0004](adr/0004-observability-stack.md)。
+技术选型见 [ADR-0004](adr/0004-observability-stack.md)；任务计数口径与可选 OTLP 增量见 [ADR-0012](adr/0012-task-observability-and-otlp.md)（实现候选，待 PR 审查接受）。
 
 ## 架构概览
 
@@ -65,9 +65,9 @@
 | `jobforge_queue_depth` | Gauge | tenant, queue, state |
 | `jobforge_job_latency_seconds` | Histogram | queue, type, outcome |
 | `jobforge_claim_duration_seconds` | Histogram | —（单次 Poll 可能跨多个声明队列领取，无单一 queue 标签） |
-| `jobforge_retries_total` | Counter | queue, error_code |
+| `jobforge_retries_total` | Counter | queue, type, error_code（固定分类） |
 | `jobforge_dlq_total` | Counter | queue, type |
-| `jobforge_lease_expired_total` | Counter | queue |
+| `jobforge_lease_expired_total` | Counter | queue, type, resolution（requeued/cancelled） |
 | `jobforge_workers_active` | Gauge | version, status |
 | `jobforge_tenant_throttled_total` | Counter | tenant, reason |
 | `jobforge_contract_rejections_total` | Counter | surface, reason |
@@ -198,7 +198,8 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
 
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
-| `JOBFORGE_OTEL_EXPORTER` | `stdout` | Trace exporter（stdout / none） |
+| `JOBFORGE_OTEL_EXPORTER` | `stdout` | Trace exporter（stdout / none / otlp） |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTel 标准默认 | OTLP/HTTP 接收端；Compose 为 `http://otel-collector:4318`，主机 SDK 为 `http://localhost:4318` |
 | `JOBFORGE_OTEL_SAMPLE_RATIO` | `1.0` | 采样率 [0.0, 1.0] |
 | `JOBFORGE_METRICS_ADDR` | `127.0.0.1:6060` | Debug server 地址 |
 
@@ -207,3 +208,63 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
 - pprof、metrics 和管理端点只绑定内网或 localhost
 - 日志不得记录完整敏感 payload、API key 或 Authorization header
 - Span 属性不包含完整 payload
+
+## Agent/RAG 本地观测闭环
+
+先按[真实任务指南](real-tasks.md)启动模型并下载固定版本。Windows PowerShell 中可选启用：
+
+```powershell
+$env:JOBFORGE_OTEL_EXPORTER = 'otlp'
+# 与集成测试数据库隔离，避免测试清空演示库。
+$env:JOBFORGE_POSTGRES_PORT = '55433'
+docker compose -p jobforge-agent-rag -f deploy/compose.yaml --profile models --profile obs up -d --build
+$env:OTEL_EXPORTER_OTLP_ENDPOINT = 'http://localhost:4318'
+.venv/Scripts/python.exe -m pip install './sdk/python[demo]'
+.venv/Scripts/python.exe examples/agent_rag.py
+```
+
+Collector 0.160.0 接收 OTLP/HTTP 并向 Jaeger 2.20.0 转发；Jaeger 使用内存存储，重启后 Trace 丢失。任务与业务产物仍以 PostgreSQL 为事实源。Prometheus 3.14.0 / Grafana 13.2.1 为固定开发镜像，不配置外发告警通知。
+
+- [任务仪表盘](http://localhost:3000/d/jobforge-tasks)：本地演示账号 `admin` / `jobforge`。切换 Task 查看 `rag.index` 或 `agent.extract`；Queue 只过滤具有该维度的指标。积压是队列级数据，没有 task type 维度。
+- [Jaeger](http://localhost:16686)：粘贴 SDK 输出的 `trace_id`；也可填入仪表盘的 Trace ID 后点击 Open task trace。Grafana 同时预置 Jaeger 数据源，支持 Explore 查询。
+- [Prometheus targets](http://localhost:9091/targets)：七个 JobForge 目标应为 UP；[alerts](http://localhost:9091/alerts) 展示规则状态。
+
+链路为 `sdk.submit → http.submit_job → gateway.claim_jobs → worker.execute → business.<type> → business.model.* / business.artifact.publish → gateway.complete_job / gateway.fail_job`。SDK get/cancel/retry、产物 GET/search 也传播 TraceContext。租约恢复 Span `scheduler.recover_lease` 使用任务持久化的提交父上下文；后续 attempt 留在同一 Trace。人工重试创建新 job_id，使用本次请求 Trace，并以 Span Link 与 `retry_of_job_id` 关联原任务。只传 W3C TraceContext，不透传任意 Baggage。
+
+强制 kill 可能丢失该进程尚未结束或尚未导出的 Span；恢复 Span、attempt 审计与后继 Worker 仍可关联。模型服务只接收 traceparent，本例不声称 Ollama 内部已实现 OTel；适配器的客户端 Span 覆盖模型调用。Trace 不存正文、prompt、输出、业务 key、产物内容或凭据。
+
+### 指标口径与告警
+
+`jobs_submitted_total` 只计新持久任务，幂等提交重放不计数；人工重试的新任务计数。`job_attempts_total` 按已提交转换记录 `succeeded / failed_retry / failed_dead / cancelled / lease_expired`；重复 Complete/Fail、旧 token 和取消竞争中的拒绝不计数。租约恢复计 attempt 的 `lease_expired` 及独立 recovery counter，不混入业务失败或自动重试。`retries_total` 只计 Fail 导致的 retry_wait，人工重试与租约恢复不计；未知 error_code 归类为 `OTHER`。
+
+执行耗时由 Worker 的单调本地时钟测量，排除排队等待；只在结果被接受时记录一次。取消 Fail 记录已执行时长；无有效上报的租约回收不伪造时长。该指标不是提交到完成总延迟。QueueDepth 对消失序列显式归零，采样出错保留前值。
+
+计数在业务事务提交后尽力发送，提交后立刻崩溃可能漏计；进程重启清零。因此统计卡注明 process totals，速率/5 分钟增长用于运行趋势，审计以 jobs/job_attempts 为准。首次出现即为 1 的 DLQ/recovery 序列也触发告警，避免纯 increase() 漏掉首个事件。
+
+规则包括：抓取中断 15s、ready 积压且无活 Worker 30s、ready >100 持续 1m、新 dead 事件、租约恢复。Worker gauge 有 2×TTL 新鲜窗口与 TTL/2 采样延迟，默认约 75s 才归零，再加 30s 告警持续期。阈值供小型开发环境示例，生产应按容量设置。
+
+### 自动化故障复现与排障
+
+以下命令只针对可重建演示项目，实际停止 Collector/Ollama/Worker、暂停模型请求并 SIGKILL Worker，约需数分钟。脚本 finally 恢复被操作服务；若主机也被强制关闭，手动 `unpause ollama` 和 `start` 这些服务。
+
+```powershell
+.venv/Scripts/python.exe examples/observability_acceptance.py --project jobforge-agent-rag
+```
+
+脚本检查：Collector 故障时两类真实任务成功且结果不变；积压与服务失联告警触发、恢复后消退；两类任务自动重试、TIMEOUT→dead→人工重试、真实 Worker kill→自然租约恢复；按类型查询成功/失败/恢复指标、Jaeger Span 和 Grafana 的预置仪表盘。发布后/Complete 前崩溃由真实模型 Go 进程测试补充：
+
+```powershell
+docker compose -f deploy/compose.yaml up -d postgres
+$env:JOBFORGE_TEST_DSN = 'postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
+$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'
+$env:JOBFORGE_REAL_MODEL_URL = 'http://localhost:11435'
+$env:JOBFORGE_TEST_OTLP_ENDPOINT = 'http://localhost:4318'
+$env:JOBFORGE_TEST_JAEGER_URL = 'http://localhost:16686'
+go test -race -v ./tests/integration -run '^TestRealTasks' -count=1
+```
+
+未设置真实模型地址时明确 skip；未设置 Jaeger 地址时不执行后端查询断言。两项均设置才构成模型与观测联合验收。该命令使用测试库，不清理演示库。
+
+排障顺序：SDK get 的 state/attempts/error_code → result_ref 与租户产物 GET → trace_id → 指标与 Worker 日志。缺 Trace 先查 exporter 配置、Collector 日志和 Jaeger 是否重启；勿重新提交业务去补 Trace。出现 out-of-order samples 或 Jaeger clock-skew 提示时检查主机/WSL/Docker 时钟；本地曾观察到时钟跳变，不能据跨进程时间戳推断精确耗时。执行时长与租约判定各自使用既定时钟口径。
+
+OTLP 使用有界异步队列（2048 Span），网络超时 2s、批量导出超时 3s、关闭最多等待 5s，失败丢弃遥测，不重试业务也不回滚状态。队列满时丢 Span，不能阻塞 Claim/Complete。错误日志限频且不打印导出端响应/凭据。停止可选组件：`docker compose -p jobforge-agent-rag -f deploy/compose.yaml --profile obs stop otel-collector jaeger prometheus grafana`。

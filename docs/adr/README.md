@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+增量评审候选：[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)。
+
 ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义的决策。PRD 已明确的边界不需要重复创建 ADR；对其补充、取舍或偏离必须记录。
 
 ## 文件命名
@@ -31,6 +33,8 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 - 与 PRD 已固定边界不一致的实现选择。
 
 ## 已接受 ADR 索引
+
+当前实现候选：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)，对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)。候选在工作分支准备，评审与验收状态单独记录。
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|

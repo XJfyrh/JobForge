@@ -151,16 +151,7 @@ func (s *SchedulerStore) PromoteReady(ctx context.Context, batchSize int) (int, 
 }
 
 // recoveredJob holds the data returned by lease recovery queries.
-type recoveredJob struct {
-	ID           string
-	TenantID     string
-	Queue        string
-	LeaseOwner   *string
-	Attempt      int
-	FencingToken int64
-	StateVersion int64
-	Traceparent  *string
-}
+type recoveredJob = store.RecoveredAttempt
 
 // RecoverExpiredLeases recovers running jobs with expired leases (back to
 // ready) and cancelling jobs with expired leases (to cancelled). It writes
@@ -168,13 +159,19 @@ type recoveredJob struct {
 // releases the recovered jobs' tenant quota slots, all within one
 // transaction (ADR-0007 §6). Returns the total number of jobs recovered.
 func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) {
+	jobs, err := s.RecoverExpiredAttempts(ctx)
+	return len(jobs), err
+}
+
+// RecoverExpiredAttempts returns only rows committed by this recovery, with
+// metric/trace dimensions captured in the same transaction.
+func (s *SchedulerStore) RecoverExpiredAttempts(ctx context.Context) ([]store.RecoveredAttempt, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("begin recovery tx: %w", err)
+		return nil, fmt.Errorf("begin recovery tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	total := 0
 	// Per-tenant release counters: both recovery paths decrement the same
 	// counter rows, so releases are aggregated per tenant and applied in
 	// ascending tenant_id order after the jobs updates (global lock order).
@@ -183,37 +180,35 @@ func (s *SchedulerStore) RecoverExpiredLeases(ctx context.Context) (int, error) 
 	// Recover running → ready.
 	runningJobs, err := s.recoverQuery(ctx, tx, recoverRunningLeases)
 	if err != nil {
-		return 0, fmt.Errorf("recover running leases: %w", err)
+		return nil, fmt.Errorf("recover running leases: %w", err)
 	}
 	for _, j := range runningJobs {
 		if err := s.writeRecoveryAudit(ctx, tx, j); err != nil {
-			return 0, err
+			return nil, err
 		}
 		released[j.TenantID]++
-		total++
 	}
 
 	// Recover cancelling → cancelled.
 	cancellingJobs, err := s.recoverQuery(ctx, tx, recoverCancellingLeases)
 	if err != nil {
-		return 0, fmt.Errorf("recover cancelling leases: %w", err)
+		return nil, fmt.Errorf("recover cancelling leases: %w", err)
 	}
 	for _, j := range cancellingJobs {
 		if err := s.writeRecoveryAudit(ctx, tx, j); err != nil {
-			return 0, err
+			return nil, err
 		}
 		released[j.TenantID]++
-		total++
 	}
 
 	if err := releaseQuotaByTenant(ctx, tx, released); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("commit recovery tx: %w", err)
+		return nil, fmt.Errorf("commit recovery tx: %w", err)
 	}
-	return total, nil
+	return append(runningJobs, cancellingJobs...), nil
 }
 
 // releaseQuotaByTenant decrements tenant_quota_counters for every recovered
@@ -246,7 +241,7 @@ func (s *SchedulerStore) recoverQuery(ctx context.Context, tx pgx.Tx, query stri
 	var jobs []recoveredJob
 	for rows.Next() {
 		var j recoveredJob
-		if err := rows.Scan(&j.ID, &j.TenantID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken, &j.StateVersion, &j.Traceparent); err != nil {
+		if err := rows.Scan(&j.ID, &j.TenantID, &j.Queue, &j.LeaseOwner, &j.Attempt, &j.FencingToken, &j.StateVersion, &j.Traceparent, &j.Type, &j.State); err != nil {
 			return nil, fmt.Errorf("scan recovered job: %w", err)
 		}
 		jobs = append(jobs, j)

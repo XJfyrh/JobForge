@@ -36,7 +36,7 @@ type Metrics struct {
 	ClaimDurationSeconds metric.Float64Histogram
 
 	// RetriesTotal counts retry events (PRD 12.1).
-	// Labels: queue, error_code.
+	// Labels: queue, type, error_code (fixed category).
 	RetriesTotal metric.Int64Counter
 
 	// DLQTotal counts jobs entering dead-letter queue (PRD 12.1).
@@ -44,7 +44,7 @@ type Metrics struct {
 	DLQTotal metric.Int64Counter
 
 	// LeaseExpiredTotal counts lease expiry recoveries (PRD 12.1).
-	// Labels: queue.
+	// Labels: queue, type, resolution (requeued or cancelled).
 	LeaseExpiredTotal metric.Int64Counter
 
 	// WorkersActive tracks registered workers (PRD 12.1).
