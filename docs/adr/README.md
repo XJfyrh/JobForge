@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-增量评审候选：[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)。
+最新增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
 
 ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义的决策。PRD 已明确的边界不需要重复创建 ADR；对其补充、取舍或偏离必须记录。
 
@@ -34,7 +34,7 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 ## 已接受 ADR 索引
 
-当前实现候选：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)，对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)。候选在工作分支准备，评审与验收状态单独记录。
+当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
@@ -48,3 +48,5 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 | [ADR-0008](0008-cancel-control-channel-heartbeat.md) | 取消控制通道与 Heartbeat 参数（5s 默认，ControlStream 预留） | Accepted | 2026-08-10 |
 | [ADR-0009](0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久业务效果与真实进程崩溃证据边界 | Accepted | 2026-08-17 |
 | [ADR-0010](0010-task-type-catalog-and-worker-capability-binding.md) | 部署任务类型目录与 Worker 能力原子绑定 | Accepted | 2026-08-18 |
+| [ADR-0011](0011-general-task-results-and-model-adapters.md) | 通用结果引用与预注册模型业务适配器 | Accepted | 2026-09-15 |
+| [ADR-0012](0012-task-observability-and-otlp.md) | 任务完成口径与可选 OTLP 观测链路 | Accepted | 2026-09-15 |

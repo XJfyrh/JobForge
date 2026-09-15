@@ -283,8 +283,8 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | [ADR-0008](adr/0008-cancel-control-channel-heartbeat.md) | 取消 SLO | P0 heartbeat 默认 5s、DB-clock 分段度量；P1 ControlStream 保留为可裁剪 M5 |
 | [ADR-0009](adr/0009-demo-persistent-effects-and-real-crash-evidence.md) | Demo 持久效果与崩溃证据 | job_id 原子业务幂等；Demo DB 依赖隔离；真实进程 Kill/Wait；不宣称 exactly-once |
 | [ADR-0010](adr/0010-task-type-catalog-and-worker-capability-binding.md) | 类型目录与 Worker 能力绑定 | 静态部署 allowlist；Register 子集；workers 行锁内容量核算与 Claim；无 migration |
-| [ADR-0011](adr/0011-general-task-results-and-model-adapters.md) | 通用结果与模型适配器（Proposed） | Go 持有唯一任务租约；有界结果引用；独立业务键与产物发布 |
-| [ADR-0012](adr/0012-task-observability-and-otlp.md) | 任务可观测闭环（Proposed） | 提交后按状态转换计数；可选 OTLP；遥测不参与可靠性判断 |
+| [ADR-0011](adr/0011-general-task-results-and-model-adapters.md) | 通用结果与模型适配器（Accepted） | Go 持有唯一任务租约；有界结果引用；独立业务键与产物发布 |
+| [ADR-0012](adr/0012-task-observability-and-otlp.md) | 任务可观测闭环（Accepted） | 提交后按状态转换计数；可选 OTLP；遥测不参与可靠性判断 |
 
 ## 目录结构
 

@@ -9,7 +9,7 @@
 | M1 接入契约 | 已实现并验证 | SDK 34 项测试；独立环境安装；真实 HTTP/Python/Gateway/Worker 联调；AT-34 PostgreSQL 结果事务/竞争/迁移测试；初轮及最终全量 race 通过 | 无 |
 | M2 真实任务 | 已实现并验证 | 两个真实模型、SDK、产物、12 类生命周期；干净 Compose / SDK 安装；发布前后真实 kill；已移除专属 Handler/注册/当前示例 | 无实现缺口 |
 | M3 观测与运维 | 已实现并验证 | Jaeger 实际链路查询；Compose 停 Collector、模型和 Worker；指标/告警触发恢复；Grafana 11 面板实际检查 | 无实现缺口 |
-| M4 全量验证/交付 | 实现已交付；合并审查未关闭 | 既有本地全量 race（集成 211.350s）、Linux 工程 CI 和真实模型验收通过；三分钟脚本已实跑 | 本轮 Windows 完整复验失败，见下方审查记录；[PR #33](https://github.com/XJfyrh/JobForge/pull/33) 暂不合并，ADR 保留 Proposed |
+| M4 全量验证/交付 | 当前范围验收通过并合并 | Windows 两轮快速全量 race 167.904s/143.280s、独立真实模型 91.483s、SDK 51 项、六项最终 CI；[PR #33](https://github.com/XJfyrh/JobForge/pull/33) → `f30b95a` | 远程模型、生产留存、历史 W4 失败和 AT-25 skip 继续保留 |
 
 所有模型替身只计快速测试；真实模型结果、真实进程 kill 和观测查询另列。历史 W4 Claim 绝对门禁未通过的既有披露继续有效，不以本轮相对性能比较覆盖。
 
@@ -18,6 +18,8 @@
 多方面审查的范围、SDK 响应校验补修及未验收项的详细解释见[合并审查记录](agent-rag-review.md)。新增 13 个畸形字段/异常堆栈回归用例，其中 11 个字段用例和 2 个堆栈脱敏用例均先实际复现失败，再修复；加上兼容性用例，Python 测试增至 51 项。SDK 成功 mock 改用有效 UUID，修正已删除完成确认 helper 的过时注释。远程模型、生产留存、W4 历史失败和 AT-25 跳过均继续保留，合并检查以 PR 最新提交为准。
 
 `f4510ec` 的 Linux 六项检查通过；本轮 Windows 全量两轮分别在 AT-22 延迟与 AT-24 Handler 启动失败，不能计为通过。AT-22 定向及基线对照通过；AT-24 进一步定向出现 5.20s 运行却测出 7.62s DB elapsed 的异常，随后只读采样确认数据库时钟跳变。原始失败、诊断、复验、时钟证据及合并阻塞条件均见上述审查记录；未放宽门槛或修改生产时钟语义。
+
+`8fc61de` 修复 Windows 校时冲突及 AT-24 测试专用的过短 Poll 预算，新增真实慢 Claim 回归、时钟预检与分层验收脚本。修复后 AT-22/24 三轮定向、Windows 两轮全量快速层和独立真实模型层实际通过。最终六项 CI 通过并核对原始输出，PR #33 已 squash 合并为 `f30b95a`。时钟修复后仍有一次 AT-22 混合全量失败，其具体瞬时延迟来源未确证，原记录不删除；复验和分段证据见[审查记录](agent-rag-review.md#windows-调查修复与重新验收)。
 
 ## M1 验证（Windows / PostgreSQL 16，2026-09-14）
 
@@ -57,4 +59,4 @@
 - 未运行：可信远程模型配置、不同硬件/未知文档准确率、生产观测持久留存与容量评估。这些不作为本轮本地验收前提。
 - Jaeger 开发内存存储重启清空；遥测可能丢失、计数随进程重启清零，不能替代 PG 审计。曾观察到 Docker/主机时钟跳变导致 Prometheus out-of-order 与 Jaeger skew 提示，跨进程时间戳不用于精确耗时结论。
 - 固定小语料与合成订单是真实推理验收范围；恢复是重新执行/产物复用，不是断点续作，不能撤销已开始的外部模型计算。0022 downgrade 若遇新 C1 引用可被旧约束阻止，不自动修改数据。
-- 复现入口：[真实任务](real-tasks.md)、[观测故障](observability.md#自动化故障复现与排障)、[三分钟演示](demo-script.md)。ADR-0011/0012 仍为 Proposed，等 PR 审查后接受；不把本地验证等同于架构决策已合并。
+- 复现入口：[真实任务](real-tasks.md)、[Windows 验收](runbooks/windows-acceptance.md)、[观测故障](observability.md#自动化故障复现与排障)、[三分钟演示](demo-script.md)。ADR-0011/0012 在 PR #33 合并后标为 Accepted；接受的是当前增量决策及已说明的边界。
