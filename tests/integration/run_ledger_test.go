@@ -75,55 +75,69 @@ func ledgerObserve(t *testing.T, h *runHarness, request agentrun.ReserveCallRequ
 }
 
 func TestRunLedgerThreeScopeReservationCompetition(t *testing.T) {
-	h := setupRunHarness(t)
-	first := ledgerAtStep(t, h, "tenant-a", "budget-racer-a", "model_proposal")
-	second := ledgerAtStep(t, h, "tenant-b", "budget-racer-b", "model_proposal")
-	if _, err := h.Pool.Exec(h.Ctx, "update budget_accounts set limit_chat=used_chat+1 where scope='batch'"); err != nil {
-		t.Fatal(err)
-	}
-	claims := []agentrun.ClaimedRun{first, second}
-	before := []agentrun.Run{ledgerView(t, h, first.Lease), ledgerView(t, h, second.Lease)}
-	type outcome struct {
-		index int
-		err   error
-	}
-	finished := make(chan outcome, 2)
-	start := make(chan struct{})
-	var wg sync.WaitGroup
-	for i, claimed := range claims {
-		request := ledgerRequest(h, claimed, agentrun.SubcallChat, "")
-		wg.Go(func() {
-			<-start
-			_, err := h.Store.ReserveCall(h.Ctx, h.Principal, request)
-			finished <- outcome{index: i, err: err}
+	for _, dimension := range []string{"chat", "cost"} {
+		t.Run(dimension, func(t *testing.T) {
+			h := setupRunHarness(t)
+			first := ledgerAtStep(t, h, "tenant-a", "budget-racer-a", "model_proposal")
+			second := ledgerAtStep(t, h, "tenant-b", "budget-racer-b", "model_proposal")
+			callBudget, err := agentrun.ReservationBudget(h.Profile, agentrun.SubcallChat)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if dimension == "chat" {
+				_, err = h.Pool.Exec(h.Ctx, "update budget_accounts set limit_chat=used_chat+1 where scope='batch'")
+			} else {
+				_, err = h.Pool.Exec(h.Ctx, "update budget_accounts set limit_cost_microyuan=used_cost_microyuan+$1 where scope='batch'", callBudget.CostMicroyuan)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			claims := []agentrun.ClaimedRun{first, second}
+			before := []agentrun.Run{ledgerView(t, h, first.Lease), ledgerView(t, h, second.Lease)}
+			type outcome struct {
+				index int
+				err   error
+			}
+			finished := make(chan outcome, 2)
+			start := make(chan struct{})
+			var wg sync.WaitGroup
+			for i, claimed := range claims {
+				request := ledgerRequest(h, claimed, agentrun.SubcallChat, "")
+				wg.Go(func() {
+					<-start
+					_, err := h.Store.ReserveCall(h.Ctx, h.Principal, request)
+					finished <- outcome{index: i, err: err}
+				})
+			}
+			close(start)
+			wg.Wait()
+			close(finished)
+			winners, rejected := 0, 0
+			for result := range finished {
+				after := ledgerView(t, h, claims[result.index].Lease)
+				if result.err == nil {
+					winners++
+					if after.Budget.Family.Used.Chat != before[result.index].Budget.Family.Used.Chat+1 ||
+						after.Budget.Tenant.Used.Chat != before[result.index].Budget.Tenant.Used.Chat+1 {
+						t.Fatal("winner did not reserve family and tenant together")
+					}
+				} else if errors.Is(result.err, agentrun.ErrBudgetExhausted) {
+					rejected++
+					if after.Budget.Family != before[result.index].Budget.Family || after.Budget.Tenant != before[result.index].Budget.Tenant {
+						t.Fatal("losing reservation partially charged family or tenant")
+					}
+				} else {
+					t.Fatalf("unexpected concurrent reservation error: %v", result.err)
+				}
+				if after.Budget.Batch.Used.Chat != 1 || after.Budget.Batch.Used.CostMicroyuan != callBudget.CostMicroyuan {
+					t.Fatal("shared batch exceeded its final chat or monetary allowance")
+				}
+			}
+			if winners != 1 || rejected != 1 {
+				t.Fatalf("last shared allowance: winners=%d rejected=%d", winners, rejected)
+			}
+
 		})
-	}
-	close(start)
-	wg.Wait()
-	close(finished)
-	winners, rejected := 0, 0
-	for result := range finished {
-		after := ledgerView(t, h, claims[result.index].Lease)
-		if result.err == nil {
-			winners++
-			if after.Budget.Family.Used.Chat != before[result.index].Budget.Family.Used.Chat+1 ||
-				after.Budget.Tenant.Used.Chat != before[result.index].Budget.Tenant.Used.Chat+1 {
-				t.Fatal("winner did not reserve family and tenant together")
-			}
-		} else if errors.Is(result.err, agentrun.ErrBudgetExhausted) {
-			rejected++
-			if after.Budget.Family != before[result.index].Budget.Family || after.Budget.Tenant != before[result.index].Budget.Tenant {
-				t.Fatal("losing reservation partially charged family or tenant")
-			}
-		} else {
-			t.Fatalf("unexpected concurrent reservation error: %v", result.err)
-		}
-		if after.Budget.Batch.Used.Chat != 1 {
-			t.Fatal("shared batch exceeded its final chat allowance")
-		}
-	}
-	if winners != 1 || rejected != 1 {
-		t.Fatalf("last shared allowance: winners=%d rejected=%d", winners, rejected)
 	}
 }
 

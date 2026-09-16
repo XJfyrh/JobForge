@@ -1,0 +1,48 @@
+# Opt-in overlay on compose.agent.yaml. Required directories are outside Git.
+services:
+  control:
+    environment:
+      JOBFORGE_AGENT_WORKER_KEYS: ${JOBFORGE_CLOUD_WORKER_KEYS:?dedicated worker credential map required}
+    volumes:
+      - ${JOBFORGE_CLOUD_CONFIG_DIR:?prepared directory required}/control.enabled.json:/etc/jobforge/run.json:ro
+
+  support-cloud:
+    profiles: [cloud]
+    image: jobforge-support-cloud:s1
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.support-cloud
+    init: true
+    restart: "no"
+    environment:
+      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_agent?sslmode=disable
+      JOBFORGE_AGENT_CONFIG: /etc/jobforge/cloud/control.enabled.json
+      JOBFORGE_AGENT_WORKER_CONFIG: /etc/jobforge/cloud/worker.json
+      JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE: /run/secrets/worker.json
+      JOBFORGE_AGENT_GATEWAY: control:9093
+      JOBFORGE_AGENT_GRPC_TLS: "false"
+    volumes:
+      - ${JOBFORGE_CLOUD_CONFIG_DIR:?prepared directory required}:/etc/jobforge/cloud:ro
+      - ${JOBFORGE_CLOUD_CONFIG_DIR:?prepared directory required}/executor.json:/etc/jobforge/executor.json:ro
+      - ${JOBFORGE_CLOUD_SECRETS_DIR:?external secret directory required}/worker.json:/run/secrets/worker.json:ro
+      - ${JOBFORGE_CLOUD_SECRETS_DIR:?external secret directory required}/driver.json:/run/secrets/driver.json:ro
+      - ${JOBFORGE_CLOUD_STATE_DIR:?fixed batch state directory required}:/var/lib/jobforge/batches
+      - ${JOBFORGE_CLOUD_EXPORT_DIR:?private export directory required}:/var/lib/jobforge/exports
+      - ${JOBFORGE_CLOUD_OUTBOUND_DIR:?metadata directory required}:/var/lib/jobforge/outbound
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+      control:
+        condition: service_started
+      business:
+        condition: service_started
+      ollama:
+        condition: service_started
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 96
+    mem_limit: 512m
+    cpus: 2

@@ -16,6 +16,7 @@ import httpx
 from opentelemetry.trace import get_current_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from jobforge_agent import outbound_audit
 from jobforge_agent.embedding import LOCAL_ORIGINS
 from jobforge_agent.errors import ToolError
 from jobforge_agent.http import origin, strict_json
@@ -620,27 +621,46 @@ class AuthorizedDispatcher:
             content=request.body,
             headers=headers,
         )
+        response: httpx.Response | None = None
+        complete_body = False
+        stage, failure_reason, buffered_bytes = "send", "incomplete", 0
+        audit = outbound_audit.begin(
+            request,
+            permit["physical_call_id"],
+            self._start,
+            self._endpoints[request.endpoint].base_origin,
+        )
+        # Optional metadata I/O may consume the remaining dispatch window.
+        # Recheck and consume permission immediately before entering HTTP send.
         now = self._guard(deadline)
         self._conversation.can_dispatch(permit["physical_call_id"], now)
-        response: httpx.Response | None = None
         try:
             response = await client.send(outbound, stream=True)
+            stage = "headers"
+            if audit is not None:
+                audit.record("http_response", http_status=response.status_code)
             if response.headers.get("content-encoding", "identity") != "identity":
+                failure_reason = "content_encoding"
                 raise DispatchError("PROTOCOL_ERROR")
             length = response.headers.get("content-length")
             if length is not None:
                 if not length.isascii() or not length.isdecimal():
+                    failure_reason = "content_length"
                     raise DispatchError("PROTOCOL_ERROR")
                 if int(length) > request.max_response_bytes:
+                    failure_reason = "size_limit"
                     raise DispatchError("OUTPUT_INVALID", fact="size_limit", stop=True)
             data = bytearray()
+            stage = "body"
             # Reading the raw stream directly allows capture before an awaited
             # response.aclose(), including its cancellation/failure path.
             assert isinstance(response.stream, httpx.AsyncByteStream)
             async for chunk in response.stream:
                 if len(data) + len(chunk) > request.max_response_bytes:
+                    failure_reason = "size_limit"
                     raise DispatchError("OUTPUT_INVALID", fact="size_limit", stop=True)
                 data.extend(chunk)
+                buffered_bytes = len(data)
             complete = CompleteResponse(
                 response.status_code,
                 bytes(data),
@@ -648,6 +668,7 @@ class AuthorizedDispatcher:
                 request.parameter_hash,
             )
             received.append(complete)
+            complete_body = True
             if request.subcall == "chat":
                 captured.append(self._capture_chat(complete, permit, request))
             elif extract_usage is not None:
@@ -655,7 +676,28 @@ class AuthorizedDispatcher:
                 if evidence is not None:
                     captured.append(self._capture(evidence, permit, request))
             return complete
+        except asyncio.CancelledError:
+            failure_reason = "cancelled"
+            raise
+        except httpx.TimeoutException:
+            failure_reason = "http_timeout"
+            raise
+        except (httpx.HTTPError, OSError):
+            failure_reason = "http_error"
+            raise
         finally:
+            if audit is not None:
+                audit.record(
+                    "finish",
+                    http_status=response.status_code if response is not None else None,
+                    response_complete=complete_body,
+                )
+                if not complete_body:
+                    audit.failure(
+                        stage=stage,
+                        reason=failure_reason,
+                        buffered_bytes=buffered_bytes,
+                    )
             # A consumed chat permit always retains one immutable fact, including
             # cancellation before a complete body. Never replace it with a later
             # response or wait for more provider data during shutdown.

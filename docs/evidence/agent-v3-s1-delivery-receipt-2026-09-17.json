@@ -1,0 +1,2478 @@
+{
+  "schema_version": 1,
+  "acceptance_complete": true,
+  "implementation_commit": "353ded3675ad8bf3d10519f66c3b916159ca9109",
+  "build": {
+    "schema_version": 1,
+    "recorded_at": "2026-09-16T17:42:55+00:00",
+    "runtime_built_from_commit": "353ded3675ad8bf3d10519f66c3b916159ca9109",
+    "prepared_from_commit": "353ded3675ad8bf3d10519f66c3b916159ca9109",
+    "worker_image": "sha256:9d557526d4156158dbc9f432bbd436a0d0d4d7a9d8e8b7eb8f503c2c2df1408e",
+    "launcher_image": "sha256:255e58e5f0bbda1afe4efac5ac9ca39d23caa41f991e666817f774f7554228bb",
+    "control_image": "sha256:933b63f70978ef1e9fcc336ec70408475bef93ae121c44a191ce37d822a16939",
+    "production_isolation_sha256": "067979fcf6b5a780e5bae2a47360a21f416ef450f78b69c68521295f7b6be790",
+    "business_database": "jobforge_support_v2_20260916",
+    "business_override_sha256": "7a9c318159b1d77839f01c054215450b8f2f5c2f87fd5894c55731c81ef421f8",
+    "model_calls_during_preparation": 0
+  },
+  "control_database": "jobforge_s1_delivery_20260917",
+  "business_database": "jobforge_support_v2_20260916",
+  "identity": {
+    "authorization": "s1-closeout-2026-09-17",
+    "profile_id": "support-deepseek-20260917-v2",
+    "worker_id": "support-cloud-20260917-v2",
+    "batch_id": "31e15e34-fb02-426a-8b73-9eef5a8287f6",
+    "batch_key": "support-delivery-20260917-v2",
+    "north_account_id": "83f89284-a12f-44e9-b671-660b63979508",
+    "south_account_id": "a6f657f0-0c42-4fe6-82d9-00e75d540397",
+    "valid_from": "2026-09-16T17:42:55Z",
+    "new_authorization_limit_microyuan": 5000000,
+    "prior_new_batch_known_microyuan": 48653,
+    "prior_new_batch_held_microyuan": 2105344
+  },
+  "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+  "started_at": "2026-09-16T17:47:54.864502168Z",
+  "finished_at": "2026-09-16T17:50:38.877979717Z",
+  "container_exit_code": 0,
+  "container_oom_killed": false,
+  "container_restart_count": 0,
+  "launcher_stop": {
+    "detected_at": "2026-09-16T17:50:38.841688+00:00",
+    "wait_completed_at": "2026-09-16T17:50:38.849271+00:00",
+    "children_reaped": true,
+    "graceful": true,
+    "driver_completed": true,
+    "stop_reason": "driver_exited",
+    "worker_returncode": 0,
+    "driver_returncode": 0
+  },
+  "row_status_counts": {
+    "finished": 40
+  },
+  "completed_duration_seconds_nearest_rank": {
+    "sample_count": 40,
+    "p50": 3.734005,
+    "p95": 4.190391,
+    "max": 6.029242,
+    "basis": "Original execution-time Run updated_at minus created_at; all 40 completed attempts."
+  },
+  "budget_account": {
+    "account_id": "31e15e34-fb02-426a-8b73-9eef5a8287f6",
+    "scope": "batch",
+    "scope_key": "support-delivery-20260917-v2",
+    "valid_from": "2026-09-16T17:42:55Z",
+    "valid_until": "2026-09-16T23:42:55Z",
+    "limits": {
+      "chat": 480,
+      "logical_tools": 320,
+      "query_embedding": 320,
+      "profile_metadata_http": 640,
+      "business_tool_http": 320,
+      "physical_http": 1760,
+      "protocol_corrections": 40,
+      "tokens": 503808000,
+      "cost_microyuan": 2846003
+    },
+    "used": {
+      "chat": 40,
+      "logical_tools": 118,
+      "query_embedding": 40,
+      "profile_metadata_http": 80,
+      "business_tool_http": 118,
+      "physical_http": 278,
+      "protocol_corrections": 0,
+      "tokens": 87109,
+      "cost_microyuan": 137418
+    },
+    "known_tokens": 87109,
+    "known_cost_microyuan": 137418,
+    "held_tokens": 0,
+    "held_cost_microyuan": 0,
+    "frozen": false,
+    "batch_stop_code": ""
+  },
+  "historical_original_batch": {
+    "known_cost_microyuan": 97526,
+    "held_cost_microyuan": 0,
+    "held_tokens": 512
+  },
+  "prior_closeout_batch": {
+    "known_cost_microyuan": 48653,
+    "held_cost_microyuan": 2105344,
+    "held_tokens": 1049600
+  },
+  "new_authorization_cumulative_used_microyuan": 2291415,
+  "budget_authority": "Maintainer explicitly permits reasonable budget adjustment; this delivery remained within the earlier cumulative 5 CNY.",
+  "provider_preflight": {
+    "models_http_status": 200,
+    "balance_http_status": 200,
+    "model_available": true,
+    "inference_calls_during_preflight": 0
+  },
+  "artifacts": {
+    "registration.json": "ffcc9727a057388ec1ed695bb88be6e513cc16cbaadf181d76c14f11458fffb1",
+    "evidence.json": "06c4eb6d4cbc982960527da42cba442a583d660ded0ca9e85814bb2272cb4d95",
+    "report.json": "8594b682e5246e0b2c966fbd7ceb5bdde040894d8c9b97247e5280b31d66563e",
+    "business-before.json": "44a65c2a3b8f897f48662b998a7d02723ae5b5836dbf8fd06a8ffe505d9a4c52",
+    "business-after.json": "afa1dca370eb71bf8ebb064950e81d5f9235d26709474e99dd0a7c72f324a528",
+    "runtime-preflight.json": "382dc0aa67207c7a6b220c632cd6846883eb4b34567762f20050aed05f676d6d",
+    "launch-authorization.json": "fcd29a4934240fc68218625b5e9ec344306863279b76dc76a147e5c29fb4ecdb",
+    "production-isolation.json": "067979fcf6b5a780e5bae2a47360a21f416ef450f78b69c68521295f7b6be790",
+    "container-exit.json": "4222fa45bcbb149103cfd9c9a760f72c04f6a67bd76613b3353cff9a2540ec1a",
+    "setup-after.json": "44f1212d507ac7f5f02821cfe671bf2ca2145e53c2da7a44df29a911f21f36c3",
+    "historical-admission.json": "d421440a25c503ee0624777a18c56596a09f0298a781b6e652acab3f16e6d591"
+  },
+  "export_composition": "All 40 original execution-time SDK exports from one new batch; no historical case stitching.",
+  "cases": [
+    {
+      "case_id": "DEV-001",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "17f39a3a-2d02-4cd6-9b24-d74c2b0b9ceb",
+      "ticket_id": "ticket-01",
+      "snapshot_id": "6c7133a6-fb4c-423c-81ad-b25e47adc69d",
+      "snapshot_hash": "11c6a2c7f7fcadbc96855a9b15dd6d27b76b3b8574557e81616abf3ada6cea43",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:17f39a3a-2d02-4cd6-9b24-d74c2b0b9ceb",
+      "steps": [
+        {
+          "step_id": "437a2e0d-d398-4711-9d40-8bf79fe951e3",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "ed833f2a-b8ea-498c-a4e2-de85a3209fdd",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "27923871-3a20-41f7-b8d8-3417ba5f909b",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "017edec7-1435-468e-8d21-4403b57e9fc1",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "592c870d-2d58-40b4-a91f-99079518657e",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "968be4db-5ff4-4c4b-8675-74c6fab1eff6",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "2df3cfcc-3ce9-4696-a5a4-f33f4a96169a",
+        "21f5ea9e-bb1f-41e9-80b1-57333cf7e114",
+        "00565b89-09e2-414f-b903-a090b329904a",
+        "03afd7ca-8240-487e-b0e2-0ddb1911930f",
+        "84895281-f68a-452e-a8f8-40a43a30705f",
+        "14ed3360-0992-4b8b-be7a-6df3d971fbb0",
+        "4421cfe1-05a6-4473-b8a6-1555a64ab855"
+      ],
+      "completed_duration_seconds": 4.125546,
+      "private_export_sha256": "4b6ed1333dda4c9f4ee1a7748042f847bc1c3d0b438c36e6552d7231a138b12a"
+    },
+    {
+      "case_id": "DEV-002",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "cebeddf7-c7b1-4166-a1dc-0f3ae652b899",
+      "ticket_id": "ticket-01",
+      "snapshot_id": "7bc7a50d-e861-451c-b806-f9a9c9b65018",
+      "snapshot_hash": "fbd2f2e4d58a2c11b746dc9ba79851d5dededbeb024fe9adce0371f732dbda6c",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:cebeddf7-c7b1-4166-a1dc-0f3ae652b899",
+      "steps": [
+        {
+          "step_id": "970ed03b-3cd9-4eaa-9ad5-c6d183539573",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "b6a31d2e-4be9-4a89-9274-3c7fd142b2f4",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "d517e171-5af1-428e-9db3-65011a37d55c",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "fbd2cc05-f523-4f66-9dc5-ccaaf8026067",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "9a8b97c5-dd28-4dd4-9286-e59ccc502517",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "f1719c25-de56-46f7-84f0-ab9d75f88306",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "a2556445-c0f4-4f2c-a170-2d394eda7106",
+        "5ab65eba-35af-4ca9-8be1-be3fab473e7e",
+        "e09f3214-a0b2-4bad-9de5-9c6a07863fc8",
+        "2f45e35d-2d13-4392-8283-222595e07625",
+        "0763366b-3927-4be5-824d-96801305c8ca",
+        "4d089101-18ba-4380-a2fa-eb989a8a773b",
+        "d1850c41-bd39-40a3-8f43-7ed547d72531"
+      ],
+      "completed_duration_seconds": 3.30579,
+      "private_export_sha256": "82f943dcee8c78503d62e7128dea9f2af35876b0275104b41696ed8b3ff43f06"
+    },
+    {
+      "case_id": "DEV-003",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "a2559f8e-ad7b-45ca-a95c-66da1d13bba7",
+      "ticket_id": "ticket-02",
+      "snapshot_id": "2856d586-82d3-401e-be96-e0935f572348",
+      "snapshot_hash": "53dbaff6e1cdf1a56dd0c200af7574317e1621fb8a7cbdfd01fed1374cad2130",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "succeeded",
+      "error_code": null,
+      "result_ref": "run-step:a2559f8e-ad7b-45ca-a95c-66da1d13bba7:6",
+      "steps": [
+        {
+          "step_id": "43f321fd-7a6d-4a8a-ab1a-d37f6d2999c9",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "c489d161-0038-4e16-a6c0-53f12a12e8f1",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "e8d8ea0a-740e-421a-92ee-1555273e8e32",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "749ae6fc-0765-4ed6-9662-725684e968a2",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "c03518b7-9a66-4c9c-aee7-63f28d2f5646",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "a1e0c3a7-c0f8-4887-b438-5fc883b75731",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "28ce29c5-e303-4721-8f7d-5919abfd0ae4",
+        "f0b442c8-3157-4d43-9c6c-f06bae0dfef1",
+        "239246e8-80b4-4c4d-90bb-de445e7fbc3e",
+        "c8db69bb-08e2-476b-a7ac-dfadb51010b8",
+        "f3e90599-f844-4f1b-a7fa-b6ff90c8292c",
+        "61d6a019-d2d9-4842-9670-96fdbda71a4f",
+        "1f6c27a9-8dfc-4865-993e-3a6e3d2ef370"
+      ],
+      "completed_duration_seconds": 3.773149,
+      "private_export_sha256": "0009edd2800a23e97a57ff75e3842c51eeb6ecbe1989d98c187fb580ea8f0a27"
+    },
+    {
+      "case_id": "DEV-004",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "d541e4e5-b8ea-4af0-87bc-ca2d77f1d66a",
+      "ticket_id": "ticket-02",
+      "snapshot_id": "55b995ae-f3b1-4207-93b3-c0d938a9ba2f",
+      "snapshot_hash": "2b899b806ac67fa15bc052e6711ab873e296bbb5ef5cb1a213efb4d4cc3f4270",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:d541e4e5-b8ea-4af0-87bc-ca2d77f1d66a",
+      "steps": [
+        {
+          "step_id": "20922b37-3c19-4a4e-b8e6-8577c44defe0",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "0b58fcd1-00cf-4581-81de-814b67e73786",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "c18c8368-14c6-4fbe-ba2c-35b29d2e3f80",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "ebb07088-5179-4f26-8a82-26f4316b899f",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "8dbd89df-1685-4ab6-82b4-145b5c2b7674",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "a91f90e2-e5a2-46fb-a9df-d7c5a08b7e4e",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "28f6bbfc-9517-4a89-9fa5-528c05aff03e",
+        "d752052a-d395-4333-9507-3459fef10fd7",
+        "0646564b-ecd0-4dc2-b249-084332df65d1",
+        "e21afab2-ec1b-4fcb-ba43-55b4c84a9897",
+        "00b757b0-6acc-46d9-a83f-5325c00717ba",
+        "a6e92a7a-7766-4331-a97b-b7281a572cfd",
+        "e098976e-4b55-450e-a46a-a2802a243fff"
+      ],
+      "completed_duration_seconds": 3.842337,
+      "private_export_sha256": "f9bb7daf174801e5d44a3600c1a5c1e8c8263619b3e460185bf0e36b92773376"
+    },
+    {
+      "case_id": "DEV-005",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "999262f9-300c-40eb-a812-1933fa2a4f28",
+      "ticket_id": "ticket-03",
+      "snapshot_id": "036791ca-6b89-493f-b5e3-3262d81a0cbd",
+      "snapshot_hash": "f0bab55be2d0f42c45194967b386313f99a333b53ce70c52bca72d3a4c941fd6",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:999262f9-300c-40eb-a812-1933fa2a4f28",
+      "steps": [
+        {
+          "step_id": "8bc60abf-2f5a-4b0f-a657-496d2c120bdf",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "e7794c6b-cce2-41d3-be19-8a9e9a8da755",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "0d8d3b9f-0371-41d4-abda-b5fe9606218d",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "e0d6da29-b61b-4196-a939-1aec66c2d910",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "ed972f81-ca7d-42b5-83da-5e299b8ffbe8",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "def9f2d1-b56d-475b-b086-97ac978036f6",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "5c155951-43d8-4522-b96b-1ebaac004044",
+        "8ed71d57-8e21-46f3-9b94-125123c45499",
+        "97cd687c-1adc-4b2a-a127-0a273779fae7",
+        "e4d6c040-4784-43f6-88ab-64d51af8954f",
+        "bc5a5712-5bd2-4450-bdd5-8560a36e89b7",
+        "2eddc212-f7b4-4592-b068-0d8fa9bdc64a",
+        "a0922b9e-6b11-4744-8d08-b30cc45f7d47"
+      ],
+      "completed_duration_seconds": 3.160095,
+      "private_export_sha256": "1346190f9bdedbc1188ff0da6137d1ba2c14be3c0f6ddfc802995b55c006c33b"
+    },
+    {
+      "case_id": "DEV-006",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "defd0b1c-97bb-4650-baa6-1c579c4f9439",
+      "ticket_id": "ticket-03",
+      "snapshot_id": "12f68fb2-6526-4fd3-8fc4-a36b15e9a6e9",
+      "snapshot_hash": "25d4d32c06751599a76f20dca69812f38c1fa55c7ca5311c7817163652141cd4",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:defd0b1c-97bb-4650-baa6-1c579c4f9439",
+      "steps": [
+        {
+          "step_id": "75f87071-1d18-40c3-b477-4020a91381b9",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "eeeaecaa-913f-474a-8e1a-ccc572852688",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "90d6487f-b5ff-402f-841e-1d30c639acfb",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "1075c2f6-7d42-4860-9dd0-434c1d936821",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "063ec756-df24-4d63-97fd-252afe398b75",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "ba1cc97a-620e-4904-9f41-9b59258eb846",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "3ecb8f70-1d5f-439c-aed7-d5e0c2483198",
+        "076552e4-4d4d-404e-abd0-92a494f67063",
+        "a2141bb7-b4d9-48be-80bc-1cf075fcf370",
+        "eb1ea9f0-d887-40a3-b64a-938613b7d2e5",
+        "07e78ed9-e287-4293-9075-64641e200f3c",
+        "8aedfaca-9175-4048-bdf6-dedfca652685",
+        "290fb0d8-6c80-4539-9c39-0b2ef03ab4a5"
+      ],
+      "completed_duration_seconds": 3.622008,
+      "private_export_sha256": "8492953f2675fa9d3cbe2866559ee44cd7655883da0563372898f8e4d0423074"
+    },
+    {
+      "case_id": "DEV-007",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "52a64466-966e-4cc7-bfc1-11a59e37f169",
+      "ticket_id": "ticket-04",
+      "snapshot_id": "81e4a6b9-e4eb-408a-bbfd-3cfbf85513d8",
+      "snapshot_hash": "abd82c2d0f230c7fe23c20dac5e2512c3802f6f42d39f73a158ed9095f654b52",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:52a64466-966e-4cc7-bfc1-11a59e37f169",
+      "steps": [
+        {
+          "step_id": "448ad366-6ed6-4a88-b92b-284ba97f7486",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "249efd4c-8efa-4a8d-a42b-17b9748eed5f",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "5d8c0985-331e-483f-8b15-8859711315cd",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "a76fe2db-19fa-4817-b886-312bbad47c80",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "0eb7f335-7c92-4cdf-8a80-a8d352ec248b",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "b9971099-cc9e-42ed-b591-73549e9e59ba",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "b62b982b-04ed-4ea5-b70d-9d4291231e3b",
+        "b1d41e0d-62c4-4614-973f-674ba3618d01",
+        "e20c35d7-70cb-4f9a-805b-156cc86b498d",
+        "5c509f23-30fa-4807-88a4-6a7dca5f7591",
+        "88745607-359b-4b25-b9df-643c89d29ef4",
+        "609f068d-9cb8-4618-b8bd-a848cb8c98ba",
+        "ca82d999-b122-422b-ab17-9e80b3b56076"
+      ],
+      "completed_duration_seconds": 3.468969,
+      "private_export_sha256": "59c876af5aae9e56a9695255810a6fdf3d82f224a3507f8ce590988922b64d67"
+    },
+    {
+      "case_id": "DEV-008",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "1ba49afd-3939-4be6-894d-30791ef48528",
+      "ticket_id": "ticket-04",
+      "snapshot_id": "b3c22be0-3046-4889-98bb-ae1a0704072c",
+      "snapshot_hash": "8e311c962fa6c7e059437200efb74ccf70b9c1a6de1358547fc72dbe9b788840",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:1ba49afd-3939-4be6-894d-30791ef48528",
+      "steps": [
+        {
+          "step_id": "9a65b189-5123-42fe-acb0-4175ec1c1123",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "d312062e-8156-4eb5-97df-bed82d999c4a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "d318bd03-8d24-4cb6-8ff4-21582297ab50",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "b143451f-c93e-46a0-81c5-b7a3f2473210",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "cb6c6bc8-6d41-4507-adcf-84b84b7e2fe6",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "1ec4f87a-fdbf-43af-82c4-d4baab1c5b01",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "62be533f-5118-4ae2-93d8-8428a6b3cbe1",
+        "255aaff3-fdb8-47b0-a106-05b30b8e93c1",
+        "48699a53-7c1a-408f-a4a3-0674f8691618",
+        "5ae8d4dc-2480-4b86-8ef0-1d50de0a2074",
+        "440ac8b4-20ce-415b-b64d-99357ca1c4dd",
+        "a93fd98e-eccc-44cb-982f-65271fd742a7",
+        "b02b4788-f310-4214-b479-998fe8c2a91e"
+      ],
+      "completed_duration_seconds": 3.625491,
+      "private_export_sha256": "5ea4983d4d2a6bef04f4cc39c1c5e8165eb62380d8d6ee54fd2c461f368110e3"
+    },
+    {
+      "case_id": "DEV-009",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "2eeafaa2-6dd0-4ddd-9077-c4661e2c71f7",
+      "ticket_id": "ticket-05",
+      "snapshot_id": "eb0d8e7b-7c68-435b-88e8-b7fb8773992e",
+      "snapshot_hash": "3373fe3f9882f586c14ebceaa116bdaeb9d76c18c5420be800f104296900134a",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:2eeafaa2-6dd0-4ddd-9077-c4661e2c71f7",
+      "steps": [
+        {
+          "step_id": "8c8bf1c3-8732-4cae-81c3-cbed124b6679",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "adb28017-9284-4905-b5f1-f5b4e9aa7da3",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "ac4c3aa2-3040-45f7-8366-bbc887cc98be",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "6803d8bf-4cbf-4833-ad3b-b09f6a9a1e13",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "d27cf62e-480d-409d-836e-b51310f105f8",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "7b4828e4-775c-4fb0-b6c1-7c4b229ad9bf",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "2461f358-537f-4ca7-8a15-30499c4f5b15",
+        "9096edc8-288b-4b22-bb30-a1f8b314bb07",
+        "f6182ca5-0eff-4a5f-b93a-d21f28f9d7dd",
+        "69379045-229a-4e0f-bee6-03a762be8375",
+        "a78abd48-2322-4a98-86d8-1db8d493e7cf",
+        "ea9713fc-a397-4e77-8a13-ac2985239b6d",
+        "7273a616-f037-4c9d-bd2e-6b46e8fbd8ac"
+      ],
+      "completed_duration_seconds": 3.597103,
+      "private_export_sha256": "3209703bf82be041fbc8b21e84c4372588874be96bf71c72f3e99eeb064582c2"
+    },
+    {
+      "case_id": "DEV-010",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "3ee9d7f0-d2bd-433e-b11f-a1d97711ebd8",
+      "ticket_id": "ticket-05",
+      "snapshot_id": "2dd1a643-6ea1-4561-b871-171052538b23",
+      "snapshot_hash": "943ebcc7cf2e491f0820cff91a20a00295a586101fda9c8a0da9f1bd545bea26",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:3ee9d7f0-d2bd-433e-b11f-a1d97711ebd8",
+      "steps": [
+        {
+          "step_id": "d5fa7bfb-e197-4ed0-857e-5735a6f8d990",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "d5a18108-a230-4ad6-bfa7-c0133c4f4b67",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "32952770-9c65-4573-9ee4-e03aaacab0e5",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "e843cc30-e006-402b-ac12-0fe75f4ba6bf",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "3a186884-862c-4943-bcc8-02d5d6c55ae7",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "55946910-d850-48f5-a0f2-682f61c8da5b",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "d9544d64-cec7-461e-84fd-1e50eecb5367",
+        "09adceeb-e74e-4f59-8582-f45e06a93f60",
+        "b2adc478-5ed5-4493-9174-40837c5abb36",
+        "9da36c6d-cf58-43ed-8134-6a7dca3d441f",
+        "48bdf67f-3970-4e9f-a19e-63f72a6a4cc1",
+        "098efc62-319d-4ba7-8525-6b1fd9994de4",
+        "5bd2fb87-98ad-42ec-938c-ce8e8d9fd4ab"
+      ],
+      "completed_duration_seconds": 3.343692,
+      "private_export_sha256": "216c42e7a621ccd9dd530b59a8bfa023a21d2422f135c062721dab20d03bac20"
+    },
+    {
+      "case_id": "DEV-011",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "1a7f79a7-fd2b-4db8-b6a0-a70c8de03f9a",
+      "ticket_id": "ticket-06",
+      "snapshot_id": "d99c3154-1f81-495b-bc74-65c7063ed6f9",
+      "snapshot_hash": "5c31c4eaf381a694a26986ef3d4c4c201a07e207f50ca99277b21f3a024a8d37",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:1a7f79a7-fd2b-4db8-b6a0-a70c8de03f9a",
+      "steps": [
+        {
+          "step_id": "717c7114-bb38-4f65-a7ee-3d139f21b960",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "158d7fdc-6e52-4111-9625-35ab5063c340",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "b034dbe3-8b87-47d1-aa4d-6e37676f50e5",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "2b737e47-be05-4ddb-bd5a-7a6bce73bf6e",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "1146736d-0db3-4e69-9e7d-6314a69e9c9c",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "71095675-cedd-4673-a9c8-976340194fc2",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "6a2be75d-1e59-4b77-ad1c-39775abf3110",
+        "87b35973-3f6a-4d9a-8b39-32a89507f16d",
+        "650d212f-c3c5-4318-b445-52c46c681ba0",
+        "0ded5d21-5f7f-4355-bb58-50d953a09f99",
+        "00f042db-4954-48a7-83c0-ffe6ed450758",
+        "a1a71faa-602e-4ab5-8580-7fd0a9683580",
+        "51240900-8c32-418c-b0b6-47fd9a3b0523"
+      ],
+      "completed_duration_seconds": 3.764726,
+      "private_export_sha256": "16ed51a6e8b0816ff467dca16b226539f1cd8adee2a3f0dc58cc09669e551ffc"
+    },
+    {
+      "case_id": "DEV-012",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "f07890b1-36df-4bc5-8a56-853ff014032e",
+      "ticket_id": "ticket-06",
+      "snapshot_id": "cf45e3dc-4307-43c2-81ea-db89d8107f13",
+      "snapshot_hash": "bdd7dd0ca87f426f44184125e2d867443a1e33fbfd14179d6c1228f0fb65a8ba",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:f07890b1-36df-4bc5-8a56-853ff014032e",
+      "steps": [
+        {
+          "step_id": "e9802be9-00b5-4c1f-9ffe-c33c7df4f467",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "db00e382-f3de-4b16-85e8-dc55cd99b83a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "8c8547aa-06aa-4b4f-a7cc-3baa2e66238a",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "87364a4c-1877-4e0e-84ed-30701bcb52ce",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "399d4c80-f800-4e38-a1b6-5e7c27c6256c",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "a773116d-1924-49a4-ba85-6ee96d7dc2f5",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "69d86d22-adc5-43ed-b966-f75ab0e7c496",
+        "c3bb94a2-05fa-44d9-99fd-82174150a784",
+        "d7e8a613-6585-4081-ab6d-8b29d2c191ef",
+        "8a663c4c-052c-47d2-970a-81518498384e",
+        "bc6f82c3-5983-49ec-b7be-136bb7861701",
+        "527fcaf3-3eb2-4530-b9c6-b4e06dec8986",
+        "579488fc-e55a-4371-8b42-5d009867cd51"
+      ],
+      "completed_duration_seconds": 3.852707,
+      "private_export_sha256": "2a199a134a7eae0a39b0599963dfd8ae7c7f795093df4043a12ab0b5e0cdd717"
+    },
+    {
+      "case_id": "DEV-013",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "b22f511f-6ddc-4c57-8cf2-cd0628b03ba2",
+      "ticket_id": "ticket-07",
+      "snapshot_id": "5d7e3bee-f314-45e2-b755-cd64b30d3479",
+      "snapshot_hash": "9b3e20057a7c949d0f7ec61d19c467f81f8a0342068c575437e03a78bd4734cd",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:b22f511f-6ddc-4c57-8cf2-cd0628b03ba2",
+      "steps": [
+        {
+          "step_id": "ef62d271-c899-422d-9307-c9db96cc6563",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "c5825cbe-71fa-449f-a794-f19a99738d7a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "f839c9bc-8a8a-4b41-a886-d3dd2aa1e01f",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "2f8319a8-e7d2-4609-a88e-151d5f320546",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "dd3a4e5c-4ef6-4e86-9088-3f4187d54689",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "1a9c6a0a-4db5-49c7-af39-366a99c4393f",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "8e7e851a-f5e6-4d40-afb0-5d09f99cc2ae",
+        "48ae6f9a-4576-4b68-b161-adaf5072529a",
+        "5a485410-2d99-4450-bec0-cb5ee9ee9797",
+        "879c088d-3e6a-418c-ab31-0bb59ab467a5",
+        "630b6dc5-e20c-4bcc-8783-c17e1441b5ea",
+        "7f06e58a-e9f1-4245-bec1-e01c2f79cfcf",
+        "7a22113d-4112-4fef-8e81-4a453fb584ce"
+      ],
+      "completed_duration_seconds": 3.502378,
+      "private_export_sha256": "f2ba35fd3dcc490667edeaeff87fd273f4b151ad9717620889eee5133b92b5bf"
+    },
+    {
+      "case_id": "DEV-014",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "530e87d6-41f5-4dfb-8eb9-9ebf0524bf3c",
+      "ticket_id": "ticket-07",
+      "snapshot_id": "4eaa8987-a7b1-45b0-8020-14e5f2c7dc53",
+      "snapshot_hash": "e95a18dd1e830ed93152c533d2e801f53ee5ca39f87e24afc4d9f17800fece1f",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:530e87d6-41f5-4dfb-8eb9-9ebf0524bf3c",
+      "steps": [
+        {
+          "step_id": "c9045258-628e-4bc7-a85f-90fe370075e0",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "9bf6a3ef-6474-4807-8eb2-b187604f229d",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "0ec021df-e204-4415-a0f3-f90950bd76ba",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "19023e0a-fd26-4749-ba49-d7f053bec83d",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "097a949e-2308-484a-95b5-01bf85f97988",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "4e45fdb2-d1e5-49c0-bce7-0d75e2e1f234",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "c9993345-ce2a-4bba-a9be-0da69072d20d",
+        "712aca52-7420-4fd0-ae98-c0ee4988fd1b",
+        "b0c6c603-3e67-4506-9c74-c362a5ae979d",
+        "ac9f0dbc-3fca-4dfb-8f69-7fd29af947af",
+        "785cc558-7d75-49ee-abed-5b154ec731d3",
+        "35706e80-2cdd-4b52-8a58-1bba084022e0",
+        "448393ae-5ed3-4b78-b80f-50b430e46b9a"
+      ],
+      "completed_duration_seconds": 3.470726,
+      "private_export_sha256": "bd0bd4b83f9bedc824c575ba03b60775bc045baf4845e2d4fbf47bb99133c6d0"
+    },
+    {
+      "case_id": "DEV-015",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "8cf3e952-01ad-4ae3-87dd-72cf36df160f",
+      "ticket_id": "ticket-08",
+      "snapshot_id": "6eeb17ae-24cf-4e4a-975f-2a721d585f41",
+      "snapshot_hash": "1332cc5a7943f9cf2af0368157f96615fe2836a2693df12f99ed6bde855c1bb1",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:8cf3e952-01ad-4ae3-87dd-72cf36df160f",
+      "steps": [
+        {
+          "step_id": "c5e97490-5f4f-4f9c-8bd0-e22c21330431",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "b9e9ec87-5259-4b8a-a824-2975cb42aa7d",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "e53643aa-4f56-48c3-b00b-d69e06c68da2",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "3af7ced1-0a78-4996-adf1-f17f78ae68ba",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "85f4b029-b3f2-459e-99c8-c79120536e15",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "339ea97c-5257-439b-b625-b8456507d27d",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "ec34c31d-9f04-48d3-8479-89db5aa62fba",
+        "2458886f-5ba9-4f8a-8d83-d265c3d97cbf",
+        "42bb17ee-6a06-46ed-8845-07cf833d4d96",
+        "92cfb6f6-a62d-4788-b8f3-6fc58c207ee4",
+        "f4b2fe4e-672d-419f-8b91-ee2272b76c99",
+        "c61e6d3b-91b0-4f63-aa52-955fcff068a5",
+        "f82f28b9-b423-49ba-b6ed-1f2425eb94ee"
+      ],
+      "completed_duration_seconds": 3.734005,
+      "private_export_sha256": "b12883b0a8368c6849f3956471fc8189acffb3d540f4dd3463065ddb87efa72c"
+    },
+    {
+      "case_id": "DEV-016",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "a3b7ef78-b71f-420d-a0b8-097c4182b73e",
+      "ticket_id": "ticket-08",
+      "snapshot_id": "cc0f7662-e598-4174-8531-f011d8b09eb0",
+      "snapshot_hash": "10e5e1c4c0b9c916a798b702e77ee314048a26c9714e3716201253ab7277ea42",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:a3b7ef78-b71f-420d-a0b8-097c4182b73e",
+      "steps": [
+        {
+          "step_id": "23f20169-e1ac-48e4-af7e-265039bf0023",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "9be8a79e-7528-4f26-938e-bf5b934c01e6",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "ec1e7760-af67-4409-acb9-72f6c3569501",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "38a23266-4f51-4818-83c4-f6f7c659720b",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "9f7aff5f-fcaa-4445-8708-cc9f9b686a66",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "27e8bf8e-0901-4855-be44-54b3bc196479",
+        "9f94a111-fe36-4aef-8376-044d4cc99d7e",
+        "a9dcb249-a7ef-4b15-8935-e134abd8ca16",
+        "efaeb877-df04-430d-875e-42f5a461c778",
+        "05103d06-2e9a-4cd2-b225-a4298dc82ce0",
+        "35fd4fa8-e51d-402b-adcd-ec20a9d78f50"
+      ],
+      "completed_duration_seconds": 3.317469,
+      "private_export_sha256": "6e419ebf497a9a0426965e870154178e1a327bc5250f8530b63359d4d6ab4f93"
+    },
+    {
+      "case_id": "DEV-017",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "6cdb7bdb-496b-45e8-b54d-bf0a5e970ad3",
+      "ticket_id": "ticket-09",
+      "snapshot_id": "27ee5d06-87d6-4d53-992f-b9f68746a9ff",
+      "snapshot_hash": "5d40ab53db7a057974945a63d299633d2a412e9e3e613013cfe6457a60c38a52",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:6cdb7bdb-496b-45e8-b54d-bf0a5e970ad3",
+      "steps": [
+        {
+          "step_id": "7a2be289-86f2-4c86-8d72-1781ede25881",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "3c3f44eb-9916-4647-923f-d1ad506e16ba",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "551c455b-a3d2-4f0a-bfc7-caf1f123ce82",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "0de9de8b-8c68-49b8-a08b-96fcf31c7a30",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "ee5c4748-6310-4b43-a509-1a53ddbb4abb",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "9e62c472-6d9e-4156-9e7d-7c43a80c03f9",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "bc2ba4a3-5bae-4d64-8e8b-6f98a0e5b50f",
+        "b4047ba5-bfed-45b1-835c-bccee3c02223",
+        "2dd6dac1-6d03-4297-b4d0-da199db1678c",
+        "42c71696-aacb-4cb6-87ba-10661306b0da",
+        "55d35cf4-8284-4af6-ae87-5a73221cfdd6",
+        "f496093b-e36f-414e-9f49-50e94a326c0b",
+        "0f9f3e8a-d1b1-4a69-859e-0fff14b65cf4"
+      ],
+      "completed_duration_seconds": 3.777504,
+      "private_export_sha256": "7cf285b99dfb05593d12b90a5bc2110533dd313ea32ccf54d20bbdae44aa02b6"
+    },
+    {
+      "case_id": "DEV-018",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "2b51dcd5-5201-40dc-91cf-9c5ca43fd016",
+      "ticket_id": "ticket-09",
+      "snapshot_id": "92abf071-1c7c-47b9-9e96-884164f5404b",
+      "snapshot_hash": "9c5e24c9b9893633856057ca47652893e0c98bffba8f0632086c3d25c4110f6c",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:2b51dcd5-5201-40dc-91cf-9c5ca43fd016",
+      "steps": [
+        {
+          "step_id": "1a83159f-2bce-4d97-8c40-7c3e32de0312",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "3a440322-2914-4943-9272-110b5aea94f2",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "93bb9f04-4d0b-4875-9ddb-9ae5d245876f",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "34936436-048b-47a1-a2ea-67b681bcf67a",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "ea4d69ba-45af-4179-89d4-450472d8ef02",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "f7b4e993-6a96-408e-acf2-0770268f6e1b",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "1afbf868-f454-4756-824b-dcc3df99eb56",
+        "26c6b53a-620c-451c-82f1-6f832a1db47a",
+        "71b37415-d102-4682-899c-77dae78675cb",
+        "85d4f12c-fec9-4c2b-b092-b3de70754313",
+        "72439a91-889b-4f69-bedd-df43cc9bf718",
+        "21ad88fa-e1cd-4087-896f-b17f4e72d5a1",
+        "1f6ec28e-246a-43a7-ae2e-45ce430c719d"
+      ],
+      "completed_duration_seconds": 3.731742,
+      "private_export_sha256": "a7182a8c200ca04a47fba2adde1698761f7d7d4bd0409f3f3586002b61fb32ec"
+    },
+    {
+      "case_id": "DEV-019",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "fe8dd4b8-7b67-4884-b8e2-e4d5bcef06f0",
+      "ticket_id": "ticket-10",
+      "snapshot_id": "d593c5ae-972e-4b80-8e25-ffb793556a80",
+      "snapshot_hash": "4d2fa01a8352ad3299cd3b5f625d21b3401d520cb7901a3b6602544d932d42f7",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:fe8dd4b8-7b67-4884-b8e2-e4d5bcef06f0",
+      "steps": [
+        {
+          "step_id": "05827983-3191-4ed0-9271-f95f85ecc5a2",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "8fdf6e27-6a49-4974-81a7-5ad036c95a75",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "4e01b6bf-acee-4525-aee6-0c89beb9e733",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "37e8aa53-635b-4324-a6a8-0edce38158bc",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "071095c7-94eb-44f4-8bea-792e2370ac2a",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "eaed2fd2-737f-437d-9552-110ac0f4669e",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "62eb2a21-aa7a-4308-b248-86c3dec2d7ac",
+        "112c09f6-58fc-4ea2-8e61-05578f737cde",
+        "3a352ce7-7d37-433f-8f57-e65b6691b93c",
+        "3be691d0-9ccc-4aad-b716-75dc9b3218f8",
+        "349f2a9f-035c-4abb-9b18-401d1df027d9",
+        "1e52b6fb-ec46-4642-a7d2-bb8fd42e43ac",
+        "bab4bb11-b9e5-4e94-84f6-a719bb00f292"
+      ],
+      "completed_duration_seconds": 4.30791,
+      "private_export_sha256": "28f0e39fb1e56977e9eb37484e3573977887acf4a920481fb70bc7b9fe407c86"
+    },
+    {
+      "case_id": "DEV-020",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "37fdb100-64b4-44a4-8fc5-f8e3b3a958e3",
+      "ticket_id": "ticket-10",
+      "snapshot_id": "93b69e7c-1d8b-4936-863d-0515be1cd017",
+      "snapshot_hash": "57d46e887cc1ae1e653b270cd1eaba4900f66f164739e9cdf1832ff34cab9d33",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:37fdb100-64b4-44a4-8fc5-f8e3b3a958e3",
+      "steps": [
+        {
+          "step_id": "dd4baab0-8717-418b-a9c2-46792c5a1c3d",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "c503f6b2-2b81-40bc-a2f4-ec50e7d0cdc1",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "56988ece-6bb8-42c2-b14b-7ed2391e3e1a",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "19cd6a4e-3378-41fe-aca7-8dc779c109b5",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "a52a78df-487e-46c3-9387-9a0e1c16856b",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "48640575-32cf-4e5d-87e4-2ab03e54e2ff",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "442e2d1d-e3d1-4532-b831-765b2d9e190d",
+        "7917622b-39d7-4b7e-80ee-564d6611add6",
+        "34e444d5-f60d-4037-9b83-c8fc4d1187d1",
+        "dc4e757b-9387-4b81-809e-d29ecdb9b297",
+        "259a7139-f975-4d73-a494-6741ed299870",
+        "e5bfdf89-6a8e-482f-b14c-188be70bf5ec",
+        "0e86af05-a256-433e-b3af-aa481678ab11"
+      ],
+      "completed_duration_seconds": 4.016888,
+      "private_export_sha256": "8da32214132b0af01235c475964de17d7e2846cd57e3cf419838138020bd7fed"
+    },
+    {
+      "case_id": "DEV-021",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "701e254b-18f7-473f-9317-06b350c82352",
+      "ticket_id": "ticket-11",
+      "snapshot_id": "841bfe40-6017-48b1-afa4-79c54ce0bfdc",
+      "snapshot_hash": "2ca40078194cd6983b8b2144107e935ad60ddc66e95a0e72bf33400c4ddf5aa0",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:701e254b-18f7-473f-9317-06b350c82352",
+      "steps": [
+        {
+          "step_id": "0f5a85c0-2eb2-42ed-a66f-2746053aa7e2",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "874fcc3f-87e8-4772-abf4-c2a82d66d808",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "5f4a0b86-00fa-4533-8d80-427a4283f9a4",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "d374c85a-625a-4afb-a37e-9a3074eecde8",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "86020437-fa87-46ee-819f-e4f330de6fa9",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "e0b02468-28b6-429e-a6e0-aa59848a798d",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "62b98ed4-6e06-4816-b7cb-a07ffbf7e368",
+        "1bb1e22a-ff5a-41b4-9429-0711ab0d2bc2",
+        "be16493d-fe54-4a98-8781-dec24e9f0841",
+        "592fbed2-3135-4788-9fb2-44ba2445e305",
+        "16d675a9-7476-40ad-a0d9-783dc35e3026",
+        "25d729e1-68b1-4977-8c91-2b94c2316b64",
+        "8f12f633-0d2f-42b5-bca5-242e8ea52122"
+      ],
+      "completed_duration_seconds": 3.74217,
+      "private_export_sha256": "3b41809de6cd2a32402cc5fe0482b6f1817d9c04d74f6d5b2899385699f70fe6"
+    },
+    {
+      "case_id": "DEV-022",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "ffbcb295-b214-4b51-857f-7abe79c0767a",
+      "ticket_id": "ticket-11",
+      "snapshot_id": "656ba107-9adf-4e52-b467-a728d8b76ef1",
+      "snapshot_hash": "36e8c58bd9ed4fec8d0ffe156cfb67f58400e1bade789889749c49d44385500d",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:ffbcb295-b214-4b51-857f-7abe79c0767a",
+      "steps": [
+        {
+          "step_id": "4013acba-215e-4fb7-8102-0aea23090542",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "e1703535-6840-44f5-9509-ba75f8a5e5a1",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "adb1b06d-d5b9-4c99-8cd0-89c79f901711",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "e631f64d-0461-41d5-956d-5bf8fddacf7e",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "70766e19-bf14-4ee5-9c52-d7dce4fde646",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "2786c8d6-0a0d-4c0b-b258-473661b6847f",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "7a79d748-77a5-47f5-98a9-40847e0e9433",
+        "69a8b40a-24c6-47bc-b3ff-21ae8985e9e7",
+        "d58e63f2-b0a2-4c9f-9f67-b559322b9e51",
+        "ac98e64c-d4d2-45fb-9841-0d5aaaaa36c6",
+        "658fee04-287f-4c8e-b7bc-5fec2b4a8e2b",
+        "377990e9-390d-4379-9554-cd79ce261e78",
+        "4c01bb6f-0da3-46c7-8510-ea950e7461cd"
+      ],
+      "completed_duration_seconds": 3.53524,
+      "private_export_sha256": "5f79a2bd7928e66c006626c20ebdec3dd528603053280f1f8b19a8803aed423b"
+    },
+    {
+      "case_id": "DEV-023",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "b7f8a606-30df-4a40-ae42-49277f21849f",
+      "ticket_id": "ticket-12",
+      "snapshot_id": "3c98f8ad-1e76-4f55-9074-668df4890c18",
+      "snapshot_hash": "d21e64aa690c83cbc6d67612a8923d430f21a06c2ba073d192717f1b04d0ff90",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:b7f8a606-30df-4a40-ae42-49277f21849f",
+      "steps": [
+        {
+          "step_id": "a89c577a-7e48-4a32-9a20-dae3f5a128ab",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "c4cc2eb3-8fa6-497f-b4f6-03e21642cb32",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "6dd57df6-68f7-450c-840b-b8a15e8361dd",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "1e465348-7a6e-4783-9c2c-e13190153b43",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "4cf71a2e-b1a2-430a-92ce-663a7e32129e",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "cb05fa4b-6c85-4c58-a914-868cc72fde9a",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "821b0f84-a535-405b-9965-c51ee55f8f6a",
+        "5d4dc3b5-9777-46d1-a370-3f9e4379c39c",
+        "6e027a66-ef39-486f-a76f-8a00dc5df909",
+        "26720dcb-7ece-4850-8811-55d3f7010c1d",
+        "a1f3a8b5-a12b-408a-9de5-0eef449e4319",
+        "ff8805db-f109-4f6d-bd20-ab31dc508282",
+        "e686687d-3c1e-47d9-b452-1d7f0380becf"
+      ],
+      "completed_duration_seconds": 3.591898,
+      "private_export_sha256": "8a7ebb753c07b4c1518c7c33d25da8e0c4fac9facc2590bf28608dab70b52f05"
+    },
+    {
+      "case_id": "DEV-024",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "3c6bf43a-01fd-41a2-ad00-91056e00094a",
+      "ticket_id": "ticket-12",
+      "snapshot_id": "6efb4e2b-acc7-4f86-a54f-d088d5f2477d",
+      "snapshot_hash": "76f411067f00ea7a2dce5b00c1a9ee50cc55780383fc1dab9c7d59d035e10f9b",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:3c6bf43a-01fd-41a2-ad00-91056e00094a",
+      "steps": [
+        {
+          "step_id": "a9dbc7f3-ea5e-415d-81e9-277f85a290a3",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "37343516-04eb-4fc3-ac39-cb2335f00a09",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "8cb6036e-87a4-43a2-9347-60e67a98edee",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "8b64259e-7347-4d55-908a-3e866ec9a0cf",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "44f0f3fd-d240-48ff-9d90-bcb385b9ee5d",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "40eab491-02a6-43b3-9235-71d1273b2a52",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "e9a6c07b-4490-48a8-8744-030d8cd99153",
+        "7345d5ed-a3cb-4c43-963c-d7dc46515170",
+        "6c461e39-635b-4f06-ae02-febc88a1c020",
+        "6d822e0e-f0ed-47be-8eaf-380c561a1417",
+        "da6c9747-5d2e-449c-9d60-89c849f08929",
+        "ba8f37d1-b36d-4d69-822e-461d0a659140",
+        "8418a0dc-62d3-4766-9479-1a15e65289ab"
+      ],
+      "completed_duration_seconds": 3.526068,
+      "private_export_sha256": "88c9d0d7052e4b38c568121cbf4112464b6a0cd3705d8251b4a19718c8ddf749"
+    },
+    {
+      "case_id": "DEV-025",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "db00aac9-1dc4-4abe-8db2-92c20693d8f4",
+      "ticket_id": "ticket-13",
+      "snapshot_id": "fb84fdd2-42ba-45ca-a7b1-a1f308096738",
+      "snapshot_hash": "24e2b33b42413345e6b05f440786b5d0d5e5e5b5f6e69a55de63f485198c387a",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:db00aac9-1dc4-4abe-8db2-92c20693d8f4",
+      "steps": [
+        {
+          "step_id": "3f718e9c-1d8b-42ba-ad7e-65645d1c970c",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "004c535e-b42b-48cd-b2a0-cc4063e8c173",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "aa8ec575-448f-4fb3-892e-784362960479",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "5c13648d-237c-47ba-b459-1d0864f0a388",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "a8f9603c-d105-4256-b26c-b87a8cfa3f0e",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "e1090b24-27d8-4ab4-92b8-5bc8bde787b7",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "71c67519-c15b-4d15-b89f-a055e29af6e8",
+        "0d5fa4a2-d706-4441-b608-eb4fe73144d0",
+        "4f63e1f6-2daa-46f6-b4fb-29ec8c5c886b",
+        "3be3750d-381f-4e1e-92f9-e09672425759",
+        "f1ceeb56-7fe0-447d-9e5b-a454fe525418",
+        "2deb53d2-7488-452f-aff4-f4fa9d61e0b8",
+        "715c1423-8fc9-4972-9d16-630310f816c3"
+      ],
+      "completed_duration_seconds": 3.555759,
+      "private_export_sha256": "e7734cc8fde22b7f005cc97b7481926808e892cefe4b64faa66433cc6d2914f1"
+    },
+    {
+      "case_id": "DEV-026",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "4e115ad2-4553-4db6-8dfd-03913cdee4a9",
+      "ticket_id": "ticket-13",
+      "snapshot_id": "e82cd025-fdfb-4ec6-bea2-ede7fa883050",
+      "snapshot_hash": "32622c4519653a1478872750247bb3246de3ae9e45ca8c4a7e9dcdfa43409ae5",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:4e115ad2-4553-4db6-8dfd-03913cdee4a9",
+      "steps": [
+        {
+          "step_id": "bc1b2c28-e84b-4ebe-ab5b-872574add927",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "9d463f99-3fe6-4644-88d0-3ba3f323bc7a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "67c25be1-4a24-4815-b561-248e2bb8c26b",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "b9a9fe30-4535-4c6f-98e2-200f58aaf4af",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "de1df062-de2d-480f-98f4-d4e8dddacbc0",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "6dcf8dde-8405-4d4f-ad2f-e8e80871fd3f",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "2e753f2a-ee87-41ad-902b-d4650c570532",
+        "c8968175-6e86-4566-9f47-55eda3c2a912",
+        "d6cb2a25-c5a9-48fa-b2ce-fc19d848fae0",
+        "5af4dd40-63e7-4105-ba3d-a7fbe9aad7e2",
+        "f8b1fe92-49ce-4fbc-87b1-967cbde9601f",
+        "5834ba6c-48fc-4377-a74b-0280e5a05cc0",
+        "ea15f9ea-1e87-4f56-81e4-f3a3601d45e4"
+      ],
+      "completed_duration_seconds": 3.999019,
+      "private_export_sha256": "3c13c830ef7235907699aeafc1cd1390cc0250736197c8d411a121066609c0f2"
+    },
+    {
+      "case_id": "DEV-027",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "4d11ddc7-65de-44ee-8af6-f85b6ac060f2",
+      "ticket_id": "ticket-14",
+      "snapshot_id": "72be3669-1e49-4ced-b615-93246f609360",
+      "snapshot_hash": "f4bf0ff81365a23a88cca7cb3741d829e3b0e52a63444cb93e23cc0f01220c2e",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:4d11ddc7-65de-44ee-8af6-f85b6ac060f2",
+      "steps": [
+        {
+          "step_id": "c224f26a-27d2-4b70-bf39-a9eb22b07a83",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "44f0423f-683a-4252-a227-f3d977775f54",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "d037543c-ffc0-4b2f-9e6c-769d33fe0ac6",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "a7642ae1-acaa-4514-80d7-973bcf686ce2",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "a630f8f1-6108-4e6e-9c07-8da04f2440a6",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "f8340aa7-d8cb-4e5c-971b-8689df8efe32",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "a5738abb-ecb1-411d-8c7e-20878db66452",
+        "feff528e-c78a-48b0-9b84-fbde5ecc75a5",
+        "e2ca065e-4dc7-4b3a-87ed-46fed9b7789f",
+        "6e5a114d-9a5b-4c82-b86f-6cac5d6bbe06",
+        "77c9d828-425e-4078-aa33-d15464602acb",
+        "d261a08e-0238-40dc-9cd6-a9f619de5a1b",
+        "ddb4228f-f5a7-43ec-967b-179e1832083e"
+      ],
+      "completed_duration_seconds": 4.052104,
+      "private_export_sha256": "87b1a265eeb078f7c727a095ab85c6f440d2573c2cabe5262fcf707919b54ca7"
+    },
+    {
+      "case_id": "DEV-028",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "de3e19d0-f118-409a-82bd-b2621bd79cec",
+      "ticket_id": "ticket-14",
+      "snapshot_id": "72f386a0-377c-49e4-a167-52265c65644c",
+      "snapshot_hash": "836377e37da5af134a08f54be5d9f16931b60cc1c35c9a8c824699035c724c44",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:de3e19d0-f118-409a-82bd-b2621bd79cec",
+      "steps": [
+        {
+          "step_id": "c5666991-2b4e-4a38-8487-604c90f32fc9",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "cb858318-f4d7-4fca-9585-901fba817424",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "d47ab5ca-4b85-4db9-82ab-4fb4fffaa5da",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "49b85abe-ae4e-4eb6-b115-4469756002f9",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "0430bf2b-b44e-4613-819b-e821180fb7d9",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "9f7cbc5a-74ee-4cd6-8b96-1bfa214d7cc0",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "34b28843-b940-49c3-9f99-20a9277286b8",
+        "ef370a39-8eb8-4731-90ea-190b367e62e4",
+        "e365d179-d290-438a-87c7-86c7f800dce5",
+        "59ed4bc4-8319-4e82-ba82-8488b6750ea6",
+        "dafdbb35-857b-4cc9-ab42-723f40f92339",
+        "29771ab7-0fb2-47e3-a3d3-9e26c2b55c37",
+        "aa4577a9-51fd-4316-952c-9c4349ed9d85"
+      ],
+      "completed_duration_seconds": 4.190391,
+      "private_export_sha256": "094140266ecbb20e67ad676f8321dafd1c70d57a50129328b39d8ecc773b3f1d"
+    },
+    {
+      "case_id": "DEV-029",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "4e68f02e-e440-4552-ba8d-be34d99f10f9",
+      "ticket_id": "ticket-15",
+      "snapshot_id": "7aa0ead0-125d-4384-9f8e-a9dcb5b770f7",
+      "snapshot_hash": "c6af955245432985dd41346cbfa7c1172e7fe00b60cc8295fb2228af4b069244",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:4e68f02e-e440-4552-ba8d-be34d99f10f9",
+      "steps": [
+        {
+          "step_id": "da20a407-5921-4455-8c67-36c882125921",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "63d587bf-350f-4c8f-9d8b-a2fdb58a556b",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "110fc35a-b348-4d41-81cc-d28181a28706",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "9fca82a6-6896-40c6-853e-715211fba698",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "1eafd5c2-56cb-49d4-9a44-4a7118a9ad1c",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "ead4cafb-8552-4626-8be5-bf0db1415968",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "15240176-d467-470e-b955-d5a06e5d2c04",
+        "6692c2d5-b35e-47e0-b306-d82743761a6f",
+        "0aaf112c-5a58-465f-94be-607230554677",
+        "b5a47e33-bcce-4618-964c-88baff3c4095",
+        "b7dde68e-88ad-404c-beaf-fce20fe75e84",
+        "f29fd4d5-6d74-4058-bb76-173d588cd3aa",
+        "e69682d3-b351-4f65-8221-327f8c6465fe"
+      ],
+      "completed_duration_seconds": 3.996225,
+      "private_export_sha256": "ef6d6bd49fa6f1eded1dd4462a3451faec2ea4b337c560c1a592d4035f80d4a7"
+    },
+    {
+      "case_id": "DEV-030",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "3ae5469f-48e9-430c-baee-09ba3265f2a2",
+      "ticket_id": "ticket-15",
+      "snapshot_id": "00656f94-2ae5-48d8-9f07-26469a8e3e3f",
+      "snapshot_hash": "e8e4202f658d1c774e476ecbca46d9e8b3e08340ded4ac5521980ee9700964c2",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:3ae5469f-48e9-430c-baee-09ba3265f2a2",
+      "steps": [
+        {
+          "step_id": "e19e21be-7657-4daa-be4a-f691a29962d7",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "cd8c0ed2-76ef-4873-9579-7a05b704350e",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "2b8fef15-148a-400a-b091-23477ebf024e",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "9c14fe16-5d79-438e-be44-b8294e06a123",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "d6ef733b-9927-4ff9-873b-2a4c1fa76685",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "928edd8d-69e3-49c1-89d0-23f9a7a2135e",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "d00c0f4f-4030-4ca0-8b74-f618948ca08a",
+        "0b3339e7-c49a-48a3-a93c-4bb02e8614ca",
+        "55c51474-5928-47f0-97e9-bbab2f6d25a3",
+        "315c2883-cc7d-4b3e-9d43-80a5b96fab50",
+        "923f4293-8087-4bae-9c01-49b3c96f5611",
+        "ff6e360c-fae1-45fd-9020-022af3713f23",
+        "72a2af02-ef72-4365-afc1-526d502a839c"
+      ],
+      "completed_duration_seconds": 3.48271,
+      "private_export_sha256": "061508568312790bf2f6d05f3b8301ad03ee1856215f637d68363c851cea2a87"
+    },
+    {
+      "case_id": "DEV-031",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "4ba11e89-205c-430d-b2d8-359b88b2f0fa",
+      "ticket_id": "ticket-16",
+      "snapshot_id": "403e598a-a85f-40c4-ac5a-ce44079144f3",
+      "snapshot_hash": "d6991acaa82430f58df111d02958345318f92b266b5b066af25382f32a212ac2",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:4ba11e89-205c-430d-b2d8-359b88b2f0fa",
+      "steps": [
+        {
+          "step_id": "ae7f21f7-bd97-4114-ba38-1d3300423e8f",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "40f91e44-ab00-40b5-bfb2-a47ad3be534a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "f7e56091-bf68-40d9-9991-dcea88dd78d4",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "ca8a61be-0401-4f80-9762-392e0dc0627b",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "bc175396-7309-48d6-a944-8eae11fa23a8",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "fa6a7648-5d45-42b7-85fb-c9e04f7c8e7f",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "50e7d931-a637-4597-aed0-7b7fbfa26371",
+        "e5eacf75-3874-42c8-a3d8-fe67ea7ea975",
+        "512fd572-dac2-479c-8b92-b7313410ebf8",
+        "236bc559-77e8-4174-9569-2aa2c4e7e365",
+        "5a8da5ad-d435-427b-a3f7-220ba6694400",
+        "c709423e-c8a4-4afc-bf48-80a2ae6080c9",
+        "b8966777-ee6a-44c6-84db-784d9ae3f456"
+      ],
+      "completed_duration_seconds": 3.98951,
+      "private_export_sha256": "64d02724fee5dcd28faaa8f6e133646dd772f7f2ed2eead68e6e6a63382441dd"
+    },
+    {
+      "case_id": "DEV-032",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "16aadec5-f070-4fcd-82d9-327f52b64cb9",
+      "ticket_id": "ticket-16",
+      "snapshot_id": "458d6bec-29f5-4e37-a514-38e3cce3170d",
+      "snapshot_hash": "67e7f8cf3b703bda38a25496b845c3662fafcec3fa93e670bbeae00d6e5b2504",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:16aadec5-f070-4fcd-82d9-327f52b64cb9",
+      "steps": [
+        {
+          "step_id": "a54a0a7b-458a-406b-96ef-d464713644ce",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "7563cd4a-9a38-4277-9b65-fc2db7ab1644",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "5f31ca33-b96e-47f6-9cdd-7909b751b80f",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "f3d57b0c-e3d5-4242-bb67-1dbefcb0f81f",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "7efb6acc-ebeb-4514-9699-84de45134d2f",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "bf599847-29c0-47ff-bbce-e472d85e4db4",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "04546248-8a6e-46e8-ad72-b7de668f4a27",
+        "2ace8802-41c8-480a-a41c-5be804299c0d",
+        "3cf57484-751c-4961-80c7-8f4c2375078a",
+        "318c0add-47ea-48fc-bd16-bc24058dbc4b",
+        "2dc5c19c-b17f-4793-8cc5-80b000b7a08b",
+        "82327d6c-e599-48c5-a0df-100b37df17f6",
+        "e873d082-c898-4f84-a64e-fca5afa1f774"
+      ],
+      "completed_duration_seconds": 3.867458,
+      "private_export_sha256": "0735af3f4c4aecbb23eaef088ea341af9a74d1c0ec8e3e2f97539386010c94ba"
+    },
+    {
+      "case_id": "DEV-033",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "25ed07e7-d876-4a05-a611-6b406be1eea0",
+      "ticket_id": "ticket-17",
+      "snapshot_id": "e79cea43-ae10-4e7c-aaa7-c8bdf1665e85",
+      "snapshot_hash": "ab54a62d71c98b70581831332a55025da354896d3b7f23c07952bb0d855ee6cb",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:25ed07e7-d876-4a05-a611-6b406be1eea0",
+      "steps": [
+        {
+          "step_id": "92f6456d-293d-4566-8929-1e8f384abd9b",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "d24977a5-f876-42ac-8d65-65f22caacccf",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "a22fd4a1-01b4-430c-bd82-ae83c758688e",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "5134095e-74b6-433f-8550-fc9aca8176d6",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "be02e1b2-ec74-4bbe-8c04-657eeb869ce2",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "f465b2ee-27a8-4799-a3b2-427261c90e7f",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "c7f7b048-5ffb-4aaf-b3df-ff5f6b3a3583",
+        "233bf79c-cd80-4e69-9b1b-eda4d62b5ab4",
+        "d35dc935-730e-41a2-b976-445cad036a3b",
+        "adea9407-2dc8-4192-beb3-d8f22d15f748",
+        "b27dfa2d-ebc4-4abf-b091-be95a32223f2",
+        "6b93293d-da3b-4073-8211-3d5d681b33e8",
+        "42192623-4746-49c5-ad24-2b15397bb31c"
+      ],
+      "completed_duration_seconds": 3.665063,
+      "private_export_sha256": "2afbba9c3f240c6b162eb2d0a4b8367f4191e0108528a2e81864dd6c46794a21"
+    },
+    {
+      "case_id": "DEV-034",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "0f36c25f-71da-45c0-a413-865e3655ae19",
+      "ticket_id": "ticket-17",
+      "snapshot_id": "744304f2-b046-498a-a5a5-7f15d3957dcd",
+      "snapshot_hash": "da9709f84889b0ec7ea3d2edc6b01f51b86bc5c584c58d5bef552f2b2689cfc4",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:0f36c25f-71da-45c0-a413-865e3655ae19",
+      "steps": [
+        {
+          "step_id": "f0062f01-f57a-43c0-9b87-4d6a565f73b5",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "564e86d6-6fba-4f88-9194-8ae16c9e7f4a",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "20ea311f-47c9-4fbc-bfba-c5d4b8416bff",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "75a7159e-6d2f-4f15-8e33-bc74e85f0e13",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "b8454fd8-8882-42a3-b75c-5abda41527e1",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "ce014724-d6fe-45d1-9617-1f2c9cdbfce9",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "31e0e5bb-5a25-4a15-aeac-ae692cc38c43",
+        "6eb7bc31-73dc-4627-b52c-6576a351c4b4",
+        "8a309e1b-cbe2-42db-a150-c246b3379e5f",
+        "a468f4ec-3dba-4262-be39-3fc1aaebe0fe",
+        "5a62f525-714b-451b-b5ee-60b1505b2e2a",
+        "4ed05f5c-c7fa-434f-8417-8a69935ba5ac",
+        "bd7a7033-a417-4eb3-98c4-c1169c236255"
+      ],
+      "completed_duration_seconds": 6.029242,
+      "private_export_sha256": "c21018b2893730bf2d0db0ca1eb2a1c8d68df1278158a2cd79260864976727f2"
+    },
+    {
+      "case_id": "DEV-035",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "b3c60894-9d38-4a01-a939-7e99b5851ebf",
+      "ticket_id": "ticket-18",
+      "snapshot_id": "03539805-be26-4ae7-ba22-a1153baa7eb4",
+      "snapshot_hash": "58a8ed12e03bf3ac1a0f90820832c0ab2631cb4987cddd57b380a2ef4f778d99",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:b3c60894-9d38-4a01-a939-7e99b5851ebf",
+      "steps": [
+        {
+          "step_id": "360e7fe0-dd61-406d-881d-079b3211d6de",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "ee993626-741a-4b31-9456-5deb0fb36ca2",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "7cfdfc6d-13c1-4ac6-9233-f9f189fc04e4",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "5c096b4b-9176-44e2-8197-64b982da5fd7",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "f5c94358-303a-4920-93a1-69cac06700e4",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "fc29cdf4-7c9c-4d4a-aa1a-43d15c81e45c",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "527de40a-f9ef-4e0a-9b9f-646c758d8353",
+        "9c964b73-4085-4bd9-acb4-9f8f1dbee400",
+        "fa26fb4f-98a9-4146-9b68-4265087622e3",
+        "804dc53f-2b58-4ec9-b7cd-e960454bf468",
+        "da508123-5796-4fc2-a115-60146f758b2a",
+        "9574408c-14ad-4c93-8018-45481d0e4098",
+        "1cdee7dd-a2ce-4d83-b40f-ab65bd8db22b"
+      ],
+      "completed_duration_seconds": 3.742833,
+      "private_export_sha256": "d093d844907b786126a1436512f9660e8e3b3dd2f0b67340d3e0b16c607291f1"
+    },
+    {
+      "case_id": "DEV-036",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "b58eea17-5859-4948-8723-a10adb50cd4a",
+      "ticket_id": "ticket-18",
+      "snapshot_id": "e4979eac-2a75-4d7c-9d8d-d7b0a5a3a942",
+      "snapshot_hash": "e0e5c0c77ccdd2b23fc9c316aa0014d787fbbd36aaaa94d630fb328e0a2ec53e",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:b58eea17-5859-4948-8723-a10adb50cd4a",
+      "steps": [
+        {
+          "step_id": "13752001-717a-4385-8785-9143cb5a5e58",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "5758555a-7f5e-42c5-8ca1-7118ebd5a495",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "57c3db59-96a6-41a8-b030-76a4542a71b1",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "247d6a37-fb0f-4918-86c9-eda6724b7331",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "6c844dd8-ecd2-4d1f-8ff0-d37fc76f7b09",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "e6c13693-44c8-4214-9334-a58c2a996c41",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "ce145479-245e-4a89-8245-6016b02c4b97",
+        "c208b993-359c-4569-9962-e2586969dfac",
+        "7e08dca5-eecc-4220-ae5d-4af8e213ce94",
+        "97cfb7c6-95fc-4878-932d-c5c987f9478f",
+        "43a4349a-c1f8-4c35-8a80-54a556d210b3",
+        "050e62db-6e14-44e9-a888-1309586af191",
+        "3e9e4ff1-031c-4bb5-b8c0-21b5de51a0f1"
+      ],
+      "completed_duration_seconds": 3.651857,
+      "private_export_sha256": "ba5514da70795e3837fe76a7ed5840266dc083871d909cacad6e612e650a4837"
+    },
+    {
+      "case_id": "DEV-037",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "b8512e16-1b52-4719-bc6f-158b8ffb774f",
+      "ticket_id": "ticket-19",
+      "snapshot_id": "ecde61a1-b56f-4ecb-ae73-7fe054f2593c",
+      "snapshot_hash": "9a9445eb52f4d3bd64383f7217538ef0a73c52a31aacacf141bad11c481fd61e",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:b8512e16-1b52-4719-bc6f-158b8ffb774f",
+      "steps": [
+        {
+          "step_id": "00aba141-0ce3-4cdc-967c-81b9102aeb8b",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "316825af-3a23-4488-9dba-cad9e4272999",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "460d5f47-13c3-4197-bd76-472d541e371e",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "598c63b4-37d2-4cab-a319-5c7fee9407d2",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "c72b5caa-9bdb-4929-a6c4-ef47d10689cd",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "2e2cc7b5-0a6f-43e5-89da-3e0b793f6538",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "710a9119-ceb1-4431-8b29-0d462a8363ce",
+        "93fc6265-f59c-45f4-bf54-ba43396daa05",
+        "728c4c2d-7396-46ab-a7fe-88a0f87c8778",
+        "94e47881-e853-4074-b1a0-363b507e2994",
+        "0c3e9358-5845-43d7-9991-11a2b9ca9f4f",
+        "9ca3db90-1950-48c7-9749-103381e29d16",
+        "f5af22d7-5b93-4bf8-a880-c3f28603b6dc"
+      ],
+      "completed_duration_seconds": 3.54181,
+      "private_export_sha256": "d06e9fddf34921ba2c1ff0d215253def6e2112f8ad73608cd1c7872cc1a92292"
+    },
+    {
+      "case_id": "DEV-038",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "44b2daa2-4806-4ffd-a5c0-316db403f014",
+      "ticket_id": "ticket-19",
+      "snapshot_id": "249ca196-0ac1-4bab-8e44-a8f0a1212e82",
+      "snapshot_hash": "ef4ceb9bfbc721770eb5fdc4dfafbd2255bbc25dfb463f8c6f65d98935200396",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:44b2daa2-4806-4ffd-a5c0-316db403f014",
+      "steps": [
+        {
+          "step_id": "cb3b7491-5325-48b4-94d6-1a2c2a1f923c",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "9ab6772a-583d-445b-b5ba-480206c54d0f",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "9de2fa9c-076b-4802-86b4-9ccf94ab0fdf",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "21ee6fa8-c734-4183-9572-60066cf45d2a",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "38157821-702f-4e42-bcb4-16bd84801a55",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "db34d8fa-c17d-4948-bd5b-35ad43802838",
+        "40a2f5e8-51e1-4a3d-a0cc-328af50be3e6",
+        "0e84940f-4d86-4a75-b693-93f04af627e6",
+        "d6b60732-ef0e-41ab-baaf-e465a4e67af7",
+        "2148a7d7-e1c7-47cc-8cde-a036b7729ba4",
+        "2f05af57-afc8-4eb6-b3fc-8b672d480a2c"
+      ],
+      "completed_duration_seconds": 3.739096,
+      "private_export_sha256": "97802547184a6e6317db4c4235c39cc9dc6aa74eb4ae3ee829c09a5d97e56a4d"
+    },
+    {
+      "case_id": "DEV-039",
+      "driver_status": "finished",
+      "tenant_id": "tenant-north",
+      "run_id": "6fcd4094-fe92-4b01-bb5b-d1be465e3d1c",
+      "ticket_id": "ticket-20",
+      "snapshot_id": "7ad69b33-b5b1-4c5a-9cc0-a761fdff45fc",
+      "snapshot_hash": "3d29a8b2cce09d9683fd193307af8238c55dcdd5eb9fbea3af0fb865a33c8e85",
+      "index": {
+        "id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:6fcd4094-fe92-4b01-bb5b-d1be465e3d1c",
+      "steps": [
+        {
+          "step_id": "0e3153d9-af1c-443a-b67d-0016dc30653a",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "5922e3f0-5261-4dd6-a494-ccd87b6529e8",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "bfe11569-e933-408b-b238-6b85f76e8304",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "141dad16-92cc-4ac7-bd63-fbe27f677c61",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "d6d2fd02-5733-43fb-aa78-3c28b1c373ab",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "9d04c694-1a45-42a4-9b14-7c12f01c4e77",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "c0b164d6-70ff-4c12-b264-4fe3c8467b90",
+        "a88cc32c-82b7-4bcc-889e-b43e3babe1ae",
+        "8c5e7ed3-3a59-48b1-ae49-0fe16834bca9",
+        "61b448f2-27d2-4d51-a2d7-228ee6ac5fa7",
+        "23ed998d-0968-4382-bb10-0ca73c440251",
+        "569ebaff-aac5-4bfb-a204-a59619454e69",
+        "eb3e0807-bb4b-498c-9fbf-83a2fc533c3f"
+      ],
+      "completed_duration_seconds": 3.891612,
+      "private_export_sha256": "6610500ef2696729ad7de93ac0828b1e4bffbb7572022988307c15bfbd25a349"
+    },
+    {
+      "case_id": "DEV-040",
+      "driver_status": "finished",
+      "tenant_id": "tenant-south",
+      "run_id": "95929d31-79d7-45d6-b70c-c26a16907d97",
+      "ticket_id": "ticket-20",
+      "snapshot_id": "301766e1-c7a6-45b8-a035-a36dcb12d826",
+      "snapshot_hash": "3cbd2eb9d103d565462ca093060450e193919ff9b055a49518e5063e55f8a994",
+      "index": {
+        "id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+        "content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+        "profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e"
+      },
+      "profile_id": "support-deepseek-20260917-v2",
+      "profile_hash": "553a677807f5b8501aa370d83605a2b3198c4629abc61c83eb3dd3b708878ec7",
+      "price_hashes": [
+        "4fdd070ca9e0bf13004e7d3f787715564ba560bbe5602c7f3b132f72f9e52f1c"
+      ],
+      "exported_state": "awaiting_approval",
+      "error_code": null,
+      "result_ref": "run-proposal:95929d31-79d7-45d6-b70c-c26a16907d97",
+      "steps": [
+        {
+          "step_id": "485f730a-5586-4cd1-aba0-4c0a379ebe54",
+          "kind": "read_ticket"
+        },
+        {
+          "step_id": "04760f0c-fc9f-4fad-b731-1e58dd6b33e3",
+          "kind": "get_order"
+        },
+        {
+          "step_id": "e358623d-382c-4d24-88fc-2dc2e7746831",
+          "kind": "get_delivery"
+        },
+        {
+          "step_id": "a8641b8e-e0b1-4b87-94b9-7d897c47293b",
+          "kind": "search_policy"
+        },
+        {
+          "step_id": "9ac67ae6-e6f9-40cc-a5e3-176b3013c7fe",
+          "kind": "model_proposal"
+        },
+        {
+          "step_id": "63ee65ba-a197-4d87-9372-a6f57b4621c2",
+          "kind": "submit_proposal"
+        }
+      ],
+      "physical_call_ids": [
+        "83f14953-2ec3-4e9b-8282-535a3c7bf359",
+        "0f32a525-ba30-4755-8240-c0c5b227312f",
+        "eb0a12af-8a0b-47ee-817f-4ffde0f1bf2c",
+        "693c6474-cb1d-4936-bd63-6918dc35f1fc",
+        "fafb0f6f-84ff-486c-beae-ee277882199d",
+        "9c8cd867-c26c-46a0-9ef4-580fbf2a0a16",
+        "0524d4ee-4529-43e3-939f-282173a3c35c"
+      ],
+      "completed_duration_seconds": 3.842969,
+      "private_export_sha256": "30de07ef77e42796d50e396ca2580e484f8ebd96a3e49f8b6c4ecfb8bcc8d5d1"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ package runworker
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -138,6 +139,13 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 
 func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) stepOutcome {
 	if !cleaned(receipt) {
+		// These receipt fields contain process facts only, never child output.
+		slog.Error("executor cleanup unconfirmed", "run_id", c.lease.Execution.RunId,
+			"step_kind", c.execute.Binding.StepKind, "guardian_observed", receipt.Guardian.Observed,
+			"guardian_code", receipt.Guardian.Code, "guardian_signaled", receipt.Guardian.Signaled,
+			"group_gone", receipt.GroupGone, "ordinary_joined", receipt.Ordinary.Joined,
+			"metering_joined", receipt.Metering.Joined, "stderr_joined", receipt.StderrJoined,
+			"cleanup_timed_out", receipt.CleanupTimedOut)
 		return stepOutcome{Fatal: ErrCleanup}
 	}
 	code := receiptFailure(receipt)

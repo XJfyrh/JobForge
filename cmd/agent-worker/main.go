@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -62,8 +63,30 @@ func main() {
 	defer cancel()
 	if err := serve(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		// Child output, credentials and remote errors are never diagnostics.
-		_, _ = os.Stderr.WriteString("agent worker stopped\n")
+		slog.Error("agent worker stopped", "reason", stopReason(err))
 		os.Exit(1)
+	}
+}
+
+// stopReason classifies trusted error identities without logging their text.
+func stopReason(err error) string {
+	switch {
+	case errors.Is(err, runworker.ErrCleanup):
+		return "CLEANUP_UNCONFIRMED"
+	case errors.Is(err, runworker.ErrAuthority):
+		return "AUTHORITY_LOST"
+	case errors.Is(err, runworker.ErrBatchStopped):
+		return "BATCH_STOPPED"
+	case errors.Is(err, run.ErrStepConflict):
+		return "STEP_CONFLICT"
+	case errors.Is(err, run.ErrProfileUnavailable):
+		return "PROFILE_UNAVAILABLE"
+	case errors.Is(err, run.ErrInvalidArgument):
+		return "INVALID_ARGUMENT"
+	case errors.Is(err, run.ErrDependencyUnavailable):
+		return "DEPENDENCY_UNAVAILABLE"
+	default:
+		return "INTERNAL_ERROR"
 	}
 }
 

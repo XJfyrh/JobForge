@@ -1,6 +1,8 @@
 # S1 首批收费合同的实施与验收映射
 
-2026-09-16；**随 [PRD v0.13](../product/JobForge_PRD_v0.13.md) / [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 经 PR #49 独立审查通过并合并时接受**。本文只拆分增量工作，未启用 profile、未运行服务或收费请求。support PR #48 为代码基线；ADR-0020 合同已接受，审计实现仍是独立待交付依赖。
+2026-09-16 历史实施映射；**随 [PRD v0.13](../product/JobForge_PRD_v0.13.md) / [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 经 PR #49 独立审查通过并合并时接受**。接受当时只拆分增量工作，未启用 profile、未运行服务或收费请求；support PR #48 为当时代码基线，ADR-0020 审计实现当时仍待交付。下文保留该首批实施顺序与验证要求。
+
+**2026-09-17 当前状态：PR #50 审计、#52 停止竞态修复、#53 / [ADR-0022](../adr/0022-s1-closeout-cumulative-authorization.md) 新批次累计授权已合并；PR #51 保持 Draft，S1 未完成。** 原首批及修复后新批次均已实际调用 DeepSeek，但未完成 40 案。新批次 14 案 `awaiting_approval`、DEV-015 中断、25 案未尝试，业务 9/40；安全证据 14 案通过、1 案不完整、25 案未执行。中断调用在 HTTP 200 响应头后未取得完整正文，以 `CHAT_USAGE_UNKNOWN` 停批，新增已知 48,653 microyuan、hold 2,105,344 microyuan。必要确认不完整，不得依新授权换 batch 绕过；详情见[收尾证据](../evidence/agent-v3-s1-closeout-2026-09-17.md)。S2～S5 未开始，旧批及全部历史证据保留。
 
 ## 切片与最小落点
 

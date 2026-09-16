@@ -101,10 +101,12 @@ docker compose -f deploy/compose.yaml up -d postgres
 $env:JOBFORGE_TEST_DSN = 'postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
 docker build --file tools/agentruntimecheck/Dockerfile --target integration-check --tag jobforge-agent-runtime:integration .
 docker run --rm --init --network none jobforge-agent-runtime:integration /app/worker.test '-test.v' '-test.timeout=120s'
-docker run --rm --init -e 'JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1' -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
+docker run --rm --init --add-host control:127.0.0.1 -e 'JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1' -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
 ```
 
 `worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 默认执行已用 race 编译的 `TestRunExecutor`、`TestRunSupportExecutor` 和 `TestRunProviderAuditExecutor`。support 场景经正式 adapter 验证完整方案和一次纠正；审计场景在真实 PG/gRPC/FD 中验证提交前数据库锁阻塞、提交后 ACK 丢失、停批和第二次纠正终态。固定回环模型仍是合成响应，不能当真实 DeepSeek 结果。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
+
+默认还执行 `TestRunSupportLauncher`：安装后的 SDK driver、正式 Worker、launcher 与真实 PG/gRPC 联合验证 driver 在 Submit 后退出、Reserve 已提交但回复未交付时终止监管。`control:127.0.0.1` 仅把测试容器内的固定 SDK 地址指向本例 HTTP listener；真实部署仍使用 Compose 的 control 服务。
 
 仅 integration target 在构建时运行 [test_install.py](../tools/agentruntimecheck/test_install.py)，将固定测试 registry 和固定 loopback 供应商 origin 安装到该测试镜像。它没有运行时 URL/模块开关，也不进入生产 Dockerfile。合成服务的调用计数用于检查“未确认时后续 HTTP 为 0”等执行机制，不能记作实际供应商调用。
 

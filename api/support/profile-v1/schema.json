@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobforge.local/support/profile-v1/schema.json",
+  "title": "First audited support profile definition",
+  "description": "Closed ADR0021 support definition, complete non-null and at most 16384 UTF-8 bytes. Go additionally verifies index hash, price/profile hash and cross-field identity. Artifact digest correspondence is a trusted preparation/deployment responsibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model",
+    "price",
+    "program",
+    "resources",
+    "schema_version"
+  ],
+  "properties": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_tokens",
+        "message_content_bytes",
+        "model_content_bytes",
+        "observed_on",
+        "observed_version",
+        "origin",
+        "path",
+        "provider",
+        "request_body_bytes",
+        "request_model",
+        "response_body_bytes",
+        "response_format",
+        "stream",
+        "temperature",
+        "thinking"
+      ],
+      "properties": {
+        "max_tokens": {
+          "const": 1024
+        },
+        "message_content_bytes": {
+          "const": 16384
+        },
+        "model_content_bytes": {
+          "const": 16384
+        },
+        "observed_on": {
+          "const": "2026-09-16"
+        },
+        "observed_version": {
+          "const": "DeepSeek-V4.1-Flash"
+        },
+        "origin": {
+          "const": "https://api.deepseek.com"
+        },
+        "path": {
+          "const": "/chat/completions"
+        },
+        "provider": {
+          "const": "deepseek"
+        },
+        "request_body_bytes": {
+          "const": 65536
+        },
+        "request_model": {
+          "const": "deepseek-flash"
+        },
+        "response_body_bytes": {
+          "const": 65536
+        },
+        "response_format": {
+          "const": "json_object"
+        },
+        "stream": {
+          "const": false
+        },
+        "temperature": {
+          "const": 0
+        },
+        "thinking": {
+          "const": "disabled"
+        }
+      }
+    },
+    "price": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "denominator",
+        "input_hit_microyuan",
+        "input_miss_microyuan",
+        "observed_on",
+        "output_microyuan",
+        "source_sha256"
+      ],
+      "properties": {
+        "currency": {
+          "const": "CNY"
+        },
+        "denominator": {
+          "const": 1000000
+        },
+        "input_hit_microyuan": {
+          "const": 40000
+        },
+        "input_miss_microyuan": {
+          "const": 2000000
+        },
+        "observed_on": {
+          "const": "2026-09-16"
+        },
+        "output_microyuan": {
+          "const": 8000000
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "properties": {
+        "adapter": {
+          "const": "support-fixed-v1"
+        },
+        "adapter_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "prompt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "prompt_version": {
+          "const": "support-fixed-prompt-v1"
+        },
+        "proposal_schema": {
+          "const": "support-proposal-v1"
+        },
+        "proposal_schema_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "strategy": {
+          "const": "support_fixed_v1"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "corpus_sha256",
+        "dataset_id",
+        "index_profile",
+        "index_profile_hash",
+        "observed_at",
+        "policy_version",
+        "runtime_manifest_sha256",
+        "seed_sha256",
+        "tenants"
+      ],
+      "properties": {
+        "corpus_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dataset_id": {
+          "const": "support-dev-2026-09-16-v2"
+        },
+        "index_profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "chunker_version",
+            "corpus_sha256",
+            "dimensions",
+            "embedding_digest",
+            "embedding_model",
+            "policy_version"
+          ],
+          "properties": {
+            "chunker_version": {
+              "const": "paragraph-v1"
+            },
+            "corpus_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "dimensions": {
+              "const": 384
+            },
+            "embedding_digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "embedding_model": {
+              "const": "all-minilm:22m"
+            },
+            "policy_version": {
+              "const": "delivery-policy-dev-v2"
+            }
+          }
+        },
+        "index_profile_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "observed_at": {
+          "const": "2026-09-16T12:00:00Z"
+        },
+        "policy_version": {
+          "const": "delivery-policy-dev-v2"
+        },
+        "runtime_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "seed_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "tenants": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "index_content_hash",
+                "index_id",
+                "policy_revision",
+                "tenant_id"
+              ],
+              "properties": {
+                "index_content_hash": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "index_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "policy_revision": {
+                  "const": 2
+                },
+                "tenant_id": {
+                  "const": "tenant-north"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "index_content_hash",
+                "index_id",
+                "policy_revision",
+                "tenant_id"
+              ],
+              "properties": {
+                "index_content_hash": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "index_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "policy_revision": {
+                  "const": 2
+                },
+                "tenant_id": {
+                  "const": "tenant-south"
+                }
+              }
+            }
+          ],
+          "items": false
+        }
+      }
+    },
+    "schema_version": {
+      "const": 1
+    }
+  }
+}

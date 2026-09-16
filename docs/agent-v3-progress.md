@@ -1,5 +1,9 @@
 # Agent v3 实施记录
 
+**2026-09-17 当前状态：S1完整真实验收已闭合，40/40执行、安全40/40完整且硬失败0，业务11/40（27.5%）；由[PR #51](https://github.com/XJfyrh/JobForge/pull/51)交付，S2～S5未开始。** 见[最新完整报告](evidence/agent-v3-s1-delivery-2026-09-17.md)。后文按时间保留历史失败、停止及当时判断。
+
+## 起点记录（历史）
+
 - 开始日期：2026-09-16。
 - 维护者已确认[路线 v3](plans/agent-execution-roadmap-v3.md)，S0契约与探针已交付，后续为S1。
 - 起点：5c82834；分支 XJfyrh/agent-v3-s0。
@@ -14,7 +18,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b及support固定流程已合并，云端验收待交付 | PR #47已接受provider审计合同，PR #48合并support；真实PG/正式进程、v2数据独立审查及真实索引检索见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)。完整评分、审计持久桥及40案云端推理仍未验收 |
+| S1 业务与基线 | 已完成真实验收；PR #51交付 | 40/40完整执行、安全硬失败0、业务11/40（27.5%）；[完整报告](evidence/agent-v3-s1-delivery-2026-09-17.md)、[运行指南](agent-v3-cloud-batch.md)。历史两批失败及hold保留 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -110,4 +114,12 @@ C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、�
 
 ## S1 provider 持久审计实现
 
-按已接受 ADR-0020 完成有界 typed report、原调用绑定、首报告原子持久/定价、冲突与晚到权限、跨 FD ACK、持久批次 guard 和租户隔离的 Calls HTTP/SDK。实际 Windows/固定 Linux/PG/安装 SDK 与进程故障检查、性能退化和修复后的结果见[分层证据](evidence/agent-v3-s1-provider-audit-2026-09-16.md)。实现仍须最终 head 独立复核与 CI，完整评分器、收费登记/启动器、40案真实云端及整个S1未完成；历史W4失败、AT-25跳过与生产留存未验收不变。
+按已接受 ADR-0020 完成有界 typed report、原调用绑定、首报告原子持久/定价、冲突与晚到权限、跨 FD ACK、持久批次 guard 和租户隔离的 Calls HTTP/SDK。实际 Windows/固定 Linux/PG/安装 SDK 与进程故障检查、性能退化和修复后的结果见[分层证据](evidence/agent-v3-s1-provider-audit-2026-09-16.md)。[PR #50](https://github.com/XJfyrh/JobForge/pull/50) 的最终提交 `577d79f` 经独立完整审查和诊断差量复核，[八项 CI](https://github.com/XJfyrh/JobForge/actions/runs/35110868145) 全部通过，合并为 `1d50170`。40案真实云端及整个S1仍未完成；历史W4失败、AT-25跳过与生产留存未验收不变。
+
+## S1 收尾修复与新批次阻塞（2026-09-17）
+
+[PR #52](https://github.com/XJfyrh/JobForge/pull/52) 已合并为 `8a4cbab`，[CI 35120539572](https://github.com/XJfyrh/JobForge/actions/runs/35120539572) 八项通过；[PR #53](https://github.com/XJfyrh/JobForge/pull/53) 已合并为 `4dd017b`，[CI 35121570133](https://github.com/XJfyrh/JobForge/actions/runs/35121570133) 八项通过，接受 [ADR-0022](adr/0022-s1-closeout-cumulative-authorization.md) 的新增累计 5 CNY 授权。PR #51 的 `dbacee7` 通过[CI 35121487782](https://github.com/XJfyrh/JobForge/actions/runs/35121487782)全部八项；随后 `b094e5b` 合入授权合同。这些工程结果不表示真实云端验收通过。
+
+新 batch `901bce9d…` 于 2026-09-17 00:31:12～00:32:13（UTC+8）实际运行。14 案方案进入 `awaiting_approval`，DEV-015 中断，25 案未尝试；业务评分为 9/40，安全证据为 14 案通过、1 案不完整、25 案未执行。方案完成不表示已批准、写入业务或解决工单；不能将部分安全结果写成全批通过。完整结果见[证据](evidence/agent-v3-s1-closeout-2026-09-17.md)及[机器报告](evidence/agent-v3-s1-closeout-2026-09-17.json)。
+
+中断调用取得 HTTP 200 响应头后未取得完整响应体，usage 无法确认，批次以 `CHAT_USAGE_UNKNOWN` 停止。新增已知费用为 48,653 microyuan（0.048653 CNY），未释放金额 hold 为 2,105,344 microyuan（2.105344 CNY）；hold 不代表供应商账单，unknown 不能当零费。按 ADR-0022，缺少必要持久确认时不得换 batch 绕过。已停止收费，PR #51 保持 Draft，S1 未闭合；历史首批证据、W4 失败、AT-25 跳过及生产长期留存未验收继续保留，不推进 S2～S5。

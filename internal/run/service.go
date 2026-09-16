@@ -147,6 +147,12 @@ func (s *Service) create(ctx context.Context, input Admission) (SubmitResponse, 
 	if err != nil {
 		return SubmitResponse{}, err
 	}
+	if input.Snapshot.TenantID != input.TenantID || input.Snapshot.TicketID != input.Submit.TicketID {
+		return SubmitResponse{}, ErrDependencyUnavailable
+	}
+	if err := ValidateSupportSnapshot(input.Profile, input.Snapshot); err != nil {
+		return SubmitResponse{}, err
+	}
 	input.RunID, input.BusinessID, input.FamilyAccountID = s.newID(), s.newID(), s.newID()
 	input.OperationID, input.FirstStepID = s.newID(), s.newID()
 	result, err := s.store.Admit(ctx, input)

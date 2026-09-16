@@ -88,8 +88,11 @@ func main() {
 }
 
 func command(ctx context.Context, args []string) error {
-	if len(args) != 1 || (args[0] != "bootstrap" && args[0] != "serve") {
-		return errors.New("expected agent-control bootstrap or serve")
+	if len(args) > 0 && args[0] == "prepare-support" {
+		return prepareSupport(args[1:])
+	}
+	if len(args) != 1 || (args[0] != "bootstrap" && args[0] != "serve" && args[0] != "inspect-support") {
+		return errors.New("expected agent-control bootstrap, serve, prepare-support or inspect-support")
 	}
 	config, err := readDeployment(os.Getenv("JOBFORGE_AGENT_CONFIG"))
 	if err != nil {
@@ -114,6 +117,9 @@ func command(ctx context.Context, args []string) error {
 	store, err := runpostgres.New(pool, options)
 	if err != nil {
 		return errors.New("invalid registered Run deployment")
+	}
+	if args[0] == "inspect-support" {
+		return inspectSupport(ctx, store, config)
 	}
 	if args[0] == "bootstrap" {
 		setupCtx, cancel := context.WithTimeout(ctx, time.Minute)
@@ -177,7 +183,9 @@ func readDeployment(path string) (deployment, error) {
 	}
 	for i := range config.Profiles {
 		p := &config.Profiles[i]
-		if p.Strategy != agentrun.BoundedReadonlyStrategy || !agentrun.ValidIdentifier(p.ExecutorVersion) || agentrun.ValidateStepJSON(p.Definition, 16384) != nil {
+		registeredStrategy := p.Strategy == agentrun.BoundedReadonlyStrategy || p.Strategy == agentrun.SupportFixedStrategy && p.AuditEnabled()
+		if !registeredStrategy ||
+			!agentrun.ValidIdentifier(p.ExecutorVersion) || agentrun.ValidateStepJSON(p.Definition, 16384) != nil || agentrun.ValidateSupportProfile(*p) != nil {
 			return config, errors.New("unregistered profile strategy or invalid immutable definition")
 		}
 		if _, err := agentrun.ReservationBudget(*p, agentrun.SubcallChat); err != nil {
@@ -189,6 +197,13 @@ func readDeployment(path string) (deployment, error) {
 		for _, tenant := range w.Tenants {
 			if !slices.Contains(config.Tenants, tenant) {
 				return config, errors.New("worker tenant is not registered")
+			}
+		}
+	}
+	if slices.ContainsFunc(config.Profiles, func(p agentrun.Profile) bool { return p.Strategy == agentrun.SupportFixedStrategy }) {
+		for _, budget := range config.Budgets {
+			if budget.Scope == "batch" && (budget.Limits.CostMicroyuan <= 0 || budget.Limits.CostMicroyuan > 5000000) {
+				return config, errors.New("support batch cost limit must be between 1 and 5000000 microyuan")
 			}
 		}
 	}

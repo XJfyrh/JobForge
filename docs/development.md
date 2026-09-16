@@ -4,6 +4,8 @@
 
 Agent v3 S1-A使用[独立业务开发指南](agent-v3-business.md)中的`deploy/compose.agent.yaml`（5434/8092/11436），业务迁移不进入旧队列库。新增门禁为`python -m pytest python/tests`、`mypy python/jobforge_agent`和显式设置`JOBFORGE_BUSINESS_TEST_DSN`/`JOBFORGE_TEST_PYTHON`后的`go test -race ./tests/integration/business`；CI的独立pgvector job实际运行。未配置依赖的skip不算通过。真实embedding与20条检索运行在独立模型层，不由确定性测试替代。
 
+DeepSeek support的准备、独立库、SDK/密钥注入、40案串行运行与导出评分见[运行指南](agent-v3-cloud-batch.md)。2026-09-17已完成40/40真实执行，安全40/40完整且硬失败0、业务11/40（27.5%），详见[真实报告与费用](evidence/agent-v3-s1-delivery-2026-09-17.md)。历史unknown按ADR-0023保留全hold，旧批不重启；维护者允许合理调预算，本次仍在原新增累计5 CNY内完成。MiniLM仅做embedding；S2～S5及生产长期留存未验收。
+
 ## 项目结构
 
 ```text

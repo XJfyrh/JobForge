@@ -249,7 +249,11 @@ func (f *executorHTTPFixture) serve(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(400)
 			return
 		}
-		response = map[string]any{"snapshot_id": f.snapshot.ID, "matches": []any{map[string]any{"index_id": f.snapshot.IndexID, "chunk_id": "P01.1", "policy_version": "fixture-policy-v1", "evidence_ref": "business-policy:" + f.snapshot.IndexID + ":P01.1", "text": "Synthetic mechanism policy", "source": "fixture", "distance": 0.1}}}
+		var ticket struct {
+			PolicyVersion string `json:"policy_version"`
+		}
+		_ = json.Unmarshal(f.snapshot.Ticket, &ticket)
+		response = map[string]any{"snapshot_id": f.snapshot.ID, "matches": []any{map[string]any{"index_id": f.snapshot.IndexID, "chunk_id": "P01.1", "policy_version": ticket.PolicyVersion, "evidence_ref": "business-policy:" + f.snapshot.IndexID + ":P01.1", "text": "Synthetic mechanism policy", "source": "fixture", "distance": 0.1}}}
 	case "/api/version":
 		response = map[string]any{"version": "0.32.5"}
 	case "/api/tags":
@@ -324,7 +328,7 @@ type executorWorkerRun struct {
 func startExecutorWorker(t *testing.T, h *runHarness, f *executorHTTPFixture, client agentv1.AgentServiceClient, expectedErrors ...error) *executorWorkerRun {
 	t.Helper()
 	manifest := executorManifest(t, h.Profile)
-	w, err := runworker.New(client, manifest, runworker.Config{Profiles: []agentrun.Profile{h.Profile}, Environments: map[string]runexecutor.Environment{"tenant-a": {BusinessOrigin: f.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}})
+	w, err := runworker.New(client, manifest, runworker.Config{Profiles: []agentrun.Profile{h.Profile}, Environments: map[string]runexecutor.Environment{h.Options.Workers[0].Tenants[0]: {BusinessOrigin: f.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,6 +380,8 @@ func waitExecutorSignal(t *testing.T, running *executorWorkerRun, signal <-chan 
 	case <-running.done:
 		t.Fatalf("worker exited before required fact: %v", running.err)
 	case <-time.After(20 * time.Second):
-		t.Fatal("executor signal not observed")
+		stacks := make([]byte, 128<<10)
+		stacks = stacks[:runtime.Stack(stacks, true)]
+		t.Fatalf("executor signal not observed; goroutine stacks (no payload):\n%s", stacks)
 	}
 }
