@@ -81,3 +81,7 @@ ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://g
 ## 有界未知费用的后续准入
 
 [ADR-0023](0023-held-unknown-cross-batch-admission.md) / [PRD v0.15](../product/JobForge_PRD_v0.15.md) 为 Accepted（随本决策 PR 独立审查通过并合并时生效）：允许已停止、完整 hold 且无合同失效证据的历史传输失败按剩余额度准入独立新批；不释放 hold、不恢复旧批、不放宽成功确认。
+
+## S2 有界 Agent
+
+[ADR-0024](0024-bounded-support-agent.md) / [PRD v0.16](../product/JobForge_PRD_v0.16.md) 为 Proposed：在复用 S1 执行器和账本的基础上加入 Go 校验的动态只读决定，开发集至少 32/40 业务正确；维护者授权合理预算自主调整。仅对新 S2 profile 部分取代 ADR-0018/0020 的固定图和终结判断及 ADR-0021～0023 的 S1 专属费用范围，其余合同和历史记录保留。契约接受、实现和真实验收分别记录。
