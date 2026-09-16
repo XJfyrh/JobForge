@@ -27,7 +27,7 @@ Windows Docker Desktop重启后，以独立Compose项目运行固定PG16.15/pgve
 - 新旧policy/index快照隔离、物流新增事件必须增加aggregate_revision、未知工具/错误对象拒绝均有直接测试。
 - Build、vet、golangci-lint、Ruff check/format、SDK/新Python/旧Linux探针mypy、SQLFluff三条历史基线与全部新迁移、Buf lint均已执行通过；Prometheus配置及5条告警规则、Grafana再生成一致性检查通过。
 - 全仓Windows `go test -race -count=1 -json ./...`退出0：405个测试通过事件、0失败、19包通过、11包无测试。[汇总](agent-v3-s1-windows-race-2026-09-16.json)明确列出5个测试skip：AT-25、两项旧真实模型专层未启用、两项子进程helper；它们不计验收通过。新Go↔Python真实HTTP契约已执行通过（4次HTTP、0模型调用），不是skip。极端范数保护补丁之后，又对业务/JSON/真实PG/Python契约完整定向race复验通过。
-- PR最终独立上下文审查及CI结果以PR页面为准；提交前尚未取得的远端结果不计通过。
+- 2026-09-16补记：[PR #38](https://github.com/XJfyrh/JobForge/pull/38)最终head `db8206cb563707a9d26036c3f66e75fc38c1134e`经过两份全新独立上下文审查，无剩余阻断；[机械CI](https://github.com/XJfyrh/JobForge/actions/runs/35059776718)七项及[原有真实模型工作流](https://github.com/XJfyrh/JobForge/actions/runs/35059776725)一项通过，已squash合并为`6924b71`。原有工作流不是新Agent或DeepSeek验收。
 
 初审修复三处边界：写准备报告的fsync耗尽期限后仍可能发送请求；标准Go JSON接受大小写别名覆盖/null数值；pgvector对极端有限向量计算错误距离。分别增加发送前及返回前deadline复核、精确typed JSON形状校验、float32安全范数检查和回归测试。初版全局角色marker绑定随机测试DB导致重复环境不可重建，也在未发布迁移中修正为专属实例项目标记；数据库自身仍严格绑定用途和名称。
 

@@ -1,6 +1,6 @@
 # JobForge PRD v0.8：S1 真实业务工具与固定流程
 
-- 日期：2026-09-16；状态：S1增量契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受；S1-A已实现并进入验收，S1-B/C尚未实现。
+- 日期：2026-09-16；状态：S1增量契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受；S1-A已通过验收并随 [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 合并，S1-B/C尚未实现。
 - 基线：[PRD v0.7](JobForge_PRD_v0.7.md)、[路线v3](../plans/agent-execution-roadmap-v3.md)。本增量细化S1，不缩减S2～S5及整体退出条件。
 - 决策：[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)；后续Run/调用协议继续服从ADR-0013～0015，需在实现前细化源协议。
 
