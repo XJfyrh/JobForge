@@ -227,13 +227,16 @@ func vectorLiteral(vector []float64) (string, error) {
 	}
 	var b strings.Builder
 	b.WriteByte('[')
-	var norm float64
+	var norm float32
 	for i, value := range vector {
 		if math.IsNaN(value) || math.IsInf(value, 0) || math.Abs(value) > math.MaxFloat32 {
 			return "", ErrInvalidArgument
 		}
 		f := float32(value)
-		norm += float64(f) * float64(f)
+		// Explicit rounding also catches vectors whose every component's
+		// square underflows, even when a float64 sum would remain nonzero.
+		product := float32(f * f)
+		norm = float32(norm + product)
 		if i > 0 {
 			b.WriteByte(',')
 		}

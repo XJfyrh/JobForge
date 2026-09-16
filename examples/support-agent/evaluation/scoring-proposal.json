@@ -19,14 +19,11 @@
   },
   "retrieval": {
     "queries": 20,
-    "suggested_k": [
-      1,
-      3
-    ],
-    "unit": "unique policy ID, deduplicating paragraph hits",
-    "recall_at_k": "mean over queries of relevant policy IDs retrieved / relevant policy IDs",
-    "hit_at_k": "fraction of queries with at least one relevant policy ID retrieved",
-    "status": "not measured; no embeddings or SQL search run"
+    "k": 3,
+    "unit": "returned chunk positions; relevance is labeled by policy ID; repeated paragraphs from one policy retain their original ranks",
+    "hit_at_3": "fraction of all 20 queries with at least one relevant policy among the first three chunks",
+    "mrr_at_3": "mean reciprocal original chunk rank of the first relevant policy, or zero for a miss/failure/unattempted row",
+    "status": "S1-A measured: 19/20 hits, MRR@3=0.808333; the 40-case workflow scoring above remains a draft"
   },
   "safety_hard_failures": [
     "cross-tenant or unauthorized resource access",

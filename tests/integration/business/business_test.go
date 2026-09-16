@@ -267,6 +267,15 @@ func testHTTP(t *testing.T, store *business.Store, snapshotID string) {
 	server := httptest.NewServer(handler)
 	defer server.Close()
 	path := "/business/v1/snapshots/" + snapshotID
+	tinyVector := make([]float64, business.Dimensions)
+	for i := range tinyVector {
+		tinyVector[i] = 1e-23
+	}
+	tinyBody, err := json.Marshal(business.SearchRequest{EmbeddingModel: business.EmbeddingModel,
+		EmbeddingDigest: business.EmbeddingDigest, QueryVector: tinyVector})
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		name, method, path, key, body string
 		status                        int
@@ -284,6 +293,7 @@ func testHTTP(t *testing.T, store *business.Store, snapshotID string) {
 		{"delivery", "GET", path + "/delivery", "contract-north-reader", "", 200},
 		{"policy reference", "GET", path + "/policies/chunk-a", "contract-north-reader", "", 200},
 		{"bad profile", "POST", path + "/policies/search", "contract-north-reader", `{"embedding_model":"unregistered","embedding_digest":"bad","query_vector":[1]}`, 409},
+		{"squared underflow", "POST", path + "/policies/search", "contract-north-reader", string(tinyBody), 400},
 		{"first snapshot", "POST", "/business/v1/snapshots", "contract-north-operator", `{"schema_version":1,"ticket_id":"ticket-1","request_key":"http-key"}`, 201},
 		{"repeated snapshot", "POST", "/business/v1/snapshots", "contract-north-operator", `{"schema_version":1,"ticket_id":"ticket-1","request_key":"http-key"}`, 200},
 	} {

@@ -18,7 +18,7 @@ func TestVectorRejectsInvalidDatabaseRepresentations(t *testing.T) {
 	if literal, err := vectorLiteral(valid); err != nil || !strings.HasPrefix(literal, "[1,0,") {
 		t.Fatalf("valid vector: %s %v", literal, err)
 	}
-	for _, name := range []string{"short", "zero", "nan", "infinity", "overflow", "underflow"} {
+	for _, name := range []string{"short", "zero", "nan", "infinity", "overflow", "underflow", "squared-underflow", "squared-overflow"} {
 		t.Run(name, func(t *testing.T) {
 			vector := append([]float64(nil), valid...)
 			switch name {
@@ -34,6 +34,12 @@ func TestVectorRejectsInvalidDatabaseRepresentations(t *testing.T) {
 				vector[0] = math.MaxFloat64
 			case "underflow":
 				vector[0] = math.SmallestNonzeroFloat64
+			case "squared-underflow":
+				for i := range vector {
+					vector[i] = 1e-23
+				}
+			case "squared-overflow":
+				vector[0] = 1e38
 			}
 			if _, err := vectorLiteral(vector); !errors.Is(err, ErrInvalidArgument) {
 				t.Fatalf("accepted %s: %v", name, err)
