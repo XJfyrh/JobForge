@@ -62,9 +62,14 @@ func fixtureFrame(t *testing.T, kind string) runprotocol.Frame {
 
 func startPeer(t *testing.T, mode string) (*Process, context.Context) {
 	t.Helper()
-	requireProcessTests(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
+	return startPeerWithContext(t, ctx, mode), ctx
+}
+
+func startPeerWithContext(t *testing.T, ctx context.Context, mode string) *Process {
+	t.Helper()
+	requireProcessTests(t)
 	pipes, err := newPipes()
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +97,7 @@ func startPeer(t *testing.T, mode string) (*Process, context.Context) {
 			t.Errorf("peer leaked: %+v", receipt)
 		}
 	})
-	return p, ctx
+	return p
 }
 
 func await(t *testing.T, limit time.Duration, predicate func() bool) {
@@ -318,6 +323,66 @@ func TestBlockedMeteringWriteDoesNotDelayStop(t *testing.T) {
 	}
 	if err := <-written; err == nil {
 		t.Fatal("blocked metering unexpectedly completed all writes")
+	}
+}
+
+func TestContextCancellationDuringStopPublicationCleansProcess(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	t.Cleanup(cancel)
+	p := startPeerWithContext(t, ctx, "block_input")
+	select {
+	case event := <-p.Events():
+		if event.Kind != FrameReceived {
+			t.Fatalf("missing ready frame: %+v", event)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("peer did not reach its ready barrier")
+	}
+	// Pause the first Stop between its successful CAS and channel notification.
+	// Cancellation must initiate cleanup without waiting for that notification.
+	if !p.stopping.CompareAndSwap(false, true) {
+		t.Fatal("peer stopped before the publication race was established")
+	}
+	drained := make(chan struct{})
+	go func() {
+		for range p.Events() {
+			continue
+		}
+		close(drained)
+	}()
+	t.Cleanup(func() {
+		close(p.stop) // Finish the deliberately paused publication exactly once.
+		select {
+		case <-p.Done():
+		default:
+			// Only failed assertions use this escape hatch. The old bug leaves
+			// both termination timers unset and the metering writer asleep.
+			_ = syscall.Kill(-p.pid, syscall.SIGKILL)
+			p.closedOnce.Do(func() { close(p.closed) })
+		}
+		select {
+		case <-drained:
+		case <-time.After(3 * time.Second):
+			t.Error("forced peer cleanup did not drain events")
+		}
+	})
+	timer := time.NewTimer(3 * time.Second)
+	defer timer.Stop()
+	cancel()
+	select {
+	case <-p.Done():
+	case <-timer.C:
+		t.Fatal("context cancellation waited for an unpublished Stop notification")
+	}
+	select {
+	case <-drained:
+	case <-timer.C:
+		t.Fatal("process completed without joining its event consumer")
+	}
+	receipt := p.Wait()
+	requireClean(t, receipt)
+	if !receipt.Ordinary.EOF || !receipt.Metering.EOF || !receipt.Guardian.Signaled || receipt.Guardian.Signal != int(syscall.SIGKILL) {
+		t.Fatalf("cancelled peer lacks actual kill and pipe EOF facts: %+v", receipt)
 	}
 }
 

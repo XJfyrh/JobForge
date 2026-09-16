@@ -321,7 +321,9 @@ func (p *Process) lifecycle(ctx context.Context, pgid int, pipes processPipes, w
 		p.Stop()
 	case <-p.stop:
 	}
-	if channelClosed(p.stop) {
+	// Stop publishes the atomic flag before waking p.stop. A concurrent Stop
+	// may still be between those operations when cancellation reaches here.
+	if p.stopping.Load() {
 		_ = pipes.ordinaryIn[1].Close()
 		_ = syscall.Kill(-pgid, syscall.SIGTERM)
 		graceTimer = time.NewTimer(terminationGrace)
