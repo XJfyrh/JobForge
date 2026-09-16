@@ -10,7 +10,7 @@ S1-B 在 [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 接受后新增 `
 
 S1-C1经PR #42提供[版本化执行器协议与共享时钟](agent-v3-executor-protocol.md)：RPC返回锁后PG观测时间，执行期限保守映射到同Linux容器的CLOCK_BOOTTIME；普通步骤权限与原调用计量分离。C2[受控HTTP适配](agent-v3-authorized-http.md)已随PR #43合并，使用固定Python请求、异步单次许可和完整响应校验。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受后，C3a在原v2 Conversation增加明确观察ACK及双通道确认屏障。C3b的[固定运行时](agent-v3-runtime.md)将这些合同接到正式Go Worker、Linux guardian/step及独立双向FD；具体进程和真实PG联调结果见[分层证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)。云端批次和审批写入仍分别验收，合成HTTP/测试adapter不能代表全链路业务交付。
 
-Agent v3的`agent-worker`容量为1，独占session/lease/5s心跳/RPC，原Conversation决定普通发送权；`runexecutor`只监管固定已安装Python入口、进程组与I/O。独立BOOTTIME watchdog不可被RPC阻塞，停止后的窄计量不恢复步骤权限。Python无调度队列，ObserveCall持久ACK之前不得继续，合法结果必须经过实际Wait、EOF/Join、旧组消失和当前执行权屏障才可Commit。所有profile、manifest和两端runtime必须匹配固定executor_version。生产registry当前为空，测试adapter及loopback供应商origin只进入专用integration构建目标。
+Agent v3的`agent-worker`容量为1，独占session/lease/5s心跳/RPC，原Conversation决定普通发送权；`runexecutor`只监管固定已安装Python入口、进程组与I/O。独立BOOTTIME watchdog不可被RPC阻塞，停止后的窄计量不恢复步骤权限。Python无调度队列，ObserveCall持久ACK之前不得继续，合法结果必须经过实际Wait、EOF/Join、旧组消失和当前执行权屏障才可Commit。所有profile、manifest和两端runtime必须匹配固定executor_version。生产registry仅登记support-fixed-v1，测试adapter及loopback供应商origin只进入专用integration构建目标。
 
 ```mermaid
 flowchart LR
@@ -323,7 +323,7 @@ jobforge/
 │   └── worker/             # Worker Runtime + demo handlers
 ├── proto/jobforge/worker/v1/  # gRPC proto 定义
 ├── sdk/python/             # Python SDK（httpx）
-├── python/jobforge_agent/  # 安装式guardian/step、受控HTTP；生产registry当前为空
+├── python/jobforge_agent/  # 安装式guardian/step、受控HTTP；仅登记support-fixed-v1
 ├── migrations/             # Versioned SQL migrations
 ├── tests/integration/      # 集成测试 + 故障注入测试
 ├── benchmarks/             # 微基准 + 端到端基准

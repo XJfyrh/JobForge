@@ -1,4 +1,4 @@
-"""Test-build-only registered mechanism adapter; never a support acceptance."""
+"""Test-build-only adapters with synthetic HTTP; never real-model acceptance."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from typing import Any
 
 from jobforge_agent.runtime_adapters import validate_existing_proposal
 from jobforge_agent.runtime_input import RuntimeCheckpoint
+from jobforge_agent.support_adapter import SupportFixedAdapter
 
 
 class MechanismAdapter:
@@ -52,4 +53,7 @@ class MechanismAdapter:
         return validate_existing_proposal(value, checkpoint)
 
 
-REGISTRY = {"bounded-readonly-mechanism-v1": MechanismAdapter()}
+REGISTRY = {
+    "bounded-readonly-mechanism-v1": MechanismAdapter(),
+    "support-fixed-v1": SupportFixedAdapter(),
+}

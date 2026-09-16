@@ -5,10 +5,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY internal ./internal
 COPY proto ./proto
+COPY migrations ./migrations
 RUN CGO_ENABLED=1 go test -race -c -o /out/process.test ./internal/runexecutor
 
 FROM build AS integration-build
-COPY migrations ./migrations
 COPY tests ./tests
 COPY cmd ./cmd
 RUN CGO_ENABLED=1 go test -race -c -o /out/integration.test ./tests/integration
@@ -37,6 +37,7 @@ WORKDIR /checks
 COPY ruff.toml mypy.ini /checks/
 COPY python /checks/python
 COPY api/executor /checks/api/executor
+COPY api/support /checks/api/support
 USER 65532:65532
 CMD ["python", "-m", "pytest", "-p", "no:cacheprovider", "python/tests", "-q"]
 
@@ -53,4 +54,4 @@ RUN python /tmp/test_install.py
 WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRunExecutor", "-test.timeout=300s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor)", "-test.timeout=300s"]

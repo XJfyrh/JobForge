@@ -144,7 +144,9 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 		}
 		prior, priorErr := readStep(tx.QueryRow(ctx, "select "+stepColumns+" from run_steps where tenant_id=$1 and run_id=$2 and step_id=$3", r.TenantID, r.ID, req.Step.ID))
 		if priorErr == nil {
-			_, canonical, err := agentrun.CanonicalStepResult(req.ResultJSON, req.Step.Kind)
+			// Duplicates must match the already accepted bytes and hash. New
+			// commits below additionally enforce the registered profile strategy.
+			_, canonical, err := agentrun.CanonicalRegisteredStepResult(req.ResultJSON, req.Step.Kind)
 			if err != nil {
 				return err
 			}

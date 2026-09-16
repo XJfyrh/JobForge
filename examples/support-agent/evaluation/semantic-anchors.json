@@ -1,0 +1,260 @@
+{
+  "schema_version": "support-source-anchors-v1",
+  "dataset_version": "support-dev-2026-09-16-v2",
+  "policy_version": "delivery-policy-dev-v2",
+  "reviewer_type": "agent",
+  "reviewed_on": "2026-09-16",
+  "status": "author_agent_reviewed_pending_independent_v2_review",
+  "scope": "Offline source semantics only; not runtime inputs, model prompts, a model-output scorer, or a case-ID pass list.",
+  "anchors": [
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-north",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-06",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "10c19f5a5a6804013fb43c0d264f1fada26c8673d6563d290e7f571290d01746",
+        "utf8_span": {
+          "start": 0,
+          "end": 59,
+          "text": "Tracking says delivered, but I did not receive the package."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "non_receipt"
+        ]
+      }
+    },
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-south",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-06",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "a7a7f059eb28a61e4c3f0ce2e0aa95972a77b1daa346660e520f9dd84de9ea3c",
+        "utf8_span": {
+          "start": 0,
+          "end": 82,
+          "text": "A neighbor apparently signed. I did not authorize them and do not have the parcel."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "non_receipt",
+          "unauthorized_recipient"
+        ]
+      }
+    },
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-north",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-07",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "1979b45f05e4149f931b7301da5b42efb91e0bef89ff020baac33bffefe27119",
+        "utf8_span": {
+          "start": 0,
+          "end": 67,
+          "text": "The delivery photograph shows a blue porch. That is not my address."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "wrong_address"
+        ]
+      }
+    },
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-south",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-07",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "92612e02b24c9f4b31e9f491ebd33ef484549cf6f89d313bba5596ffd1efcda3",
+        "utf8_span": {
+          "start": 0,
+          "end": 113,
+          "text": "The carrier scanned delivery one hour late, but I never received it. The issue is non-receipt, not only lateness."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "non_receipt"
+        ]
+      }
+    },
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-north",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-08",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "71bb111792e69116db7ea08eea4db9a3d5a1fa3e94f3573b834e3fff6a55b543",
+        "utf8_span": {
+          "start": 0,
+          "end": 79,
+          "text": "The courier left it outside without permission; it was not there when I looked."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "non_receipt",
+          "unauthorized_safe_place"
+        ]
+      }
+    },
+    {
+      "kind": "customer_dispute",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-north",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-19",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "eaaa3ed1a1734ccff0bbfa3d78ae59342f9babe7328ff694067dec0584f366a4",
+        "utf8_span": {
+          "start": 0,
+          "end": 50,
+          "text": "The scan says delivered, but I did not receive it."
+        }
+      },
+      "meaning": {
+        "supported_types": [
+          "non_receipt"
+        ]
+      }
+    },
+    {
+      "kind": "vague_problem",
+      "source": {
+        "document_kind": "ticket_binding",
+        "tenant_id": "tenant-south",
+        "entity_kind": "ticket",
+        "entity_id": "ticket-10",
+        "revision_field": "revision",
+        "revision": 2,
+        "source_pointer": "/description",
+        "full_text_sha256": "9152f0acdaeb9704dbfc7e3222ce3f2de502021096f8d30edb433b298f381316",
+        "utf8_span": {
+          "start": 0,
+          "end": 32,
+          "text": "Something is wrong. Please help."
+        }
+      },
+      "meaning": {
+        "field": "ticket.problem_description"
+      }
+    },
+    {
+      "kind": "carrier_source_key",
+      "source": {
+        "document_kind": "delivery_evidence",
+        "tenant_id": "tenant-south",
+        "entity_kind": "delivery",
+        "entity_id": "delivery-12",
+        "revision_field": "aggregate_revision",
+        "revision": 4,
+        "source_pointer": "/delivery/events/0/note",
+        "full_text_sha256": "0ed64e22b8c793f48250e152d43477e63a4381d7d904b7fb76419e312b2c3131",
+        "utf8_span": {
+          "start": 0,
+          "end": 44,
+          "text": "Carrier source event key: carrier-duplicate."
+        },
+        "event_id": "import-row-1"
+      },
+      "meaning": {
+        "source_key": "carrier-duplicate"
+      }
+    },
+    {
+      "kind": "carrier_source_key",
+      "source": {
+        "document_kind": "delivery_evidence",
+        "tenant_id": "tenant-south",
+        "entity_kind": "delivery",
+        "entity_id": "delivery-12",
+        "revision_field": "aggregate_revision",
+        "revision": 4,
+        "source_pointer": "/delivery/events/1/note",
+        "full_text_sha256": "0ed64e22b8c793f48250e152d43477e63a4381d7d904b7fb76419e312b2c3131",
+        "utf8_span": {
+          "start": 0,
+          "end": 44,
+          "text": "Carrier source event key: carrier-duplicate."
+        },
+        "event_id": "import-row-2"
+      },
+      "meaning": {
+        "source_key": "carrier-duplicate"
+      }
+    },
+    {
+      "kind": "carrier_correction",
+      "source": {
+        "document_kind": "delivery_evidence",
+        "tenant_id": "tenant-south",
+        "entity_kind": "delivery",
+        "entity_id": "delivery-15",
+        "revision_field": "aggregate_revision",
+        "revision": 6,
+        "source_pointer": "/delivery/events/2/note",
+        "full_text_sha256": "dfa0a4d6f6b9e5b37d4219ed3fc513520e5b265d6499caa26adcfa9c742902cb",
+        "utf8_span": {
+          "start": 0,
+          "end": 58,
+          "text": "Carrier factual correction: supersedes earlier event lost."
+        },
+        "event_id": "recovered"
+      },
+      "meaning": {
+        "corrected_event_id": "lost"
+      }
+    },
+    {
+      "kind": "carrier_correction",
+      "source": {
+        "document_kind": "delivery_evidence",
+        "tenant_id": "tenant-north",
+        "entity_kind": "delivery",
+        "entity_id": "delivery-18",
+        "revision_field": "aggregate_revision",
+        "revision": 7,
+        "source_pointer": "/delivery/events/2/note",
+        "full_text_sha256": "dfa0a4d6f6b9e5b37d4219ed3fc513520e5b265d6499caa26adcfa9c742902cb",
+        "utf8_span": {
+          "start": 0,
+          "end": 58,
+          "text": "Carrier factual correction: supersedes earlier event lost."
+        },
+        "event_id": "recovered"
+      },
+      "meaning": {
+        "corrected_event_id": "lost"
+      }
+    }
+  ]
+}

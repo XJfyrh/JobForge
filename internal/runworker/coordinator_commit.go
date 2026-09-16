@@ -14,7 +14,7 @@ import (
 
 func (c *coordinator) commit(ctx context.Context) stepOutcome {
 	f := c.result
-	parsed, canonical, err := run.CanonicalStepResult(f.Result, f.Binding.StepKind)
+	parsed, canonical, err := run.CanonicalRegisteredStepResult(f.Result, f.Binding.StepKind)
 	if err != nil {
 		if errors.Is(err, run.ErrCheckpointTooLarge) {
 			return stepOutcome{Failure: "CHECKPOINT_TOO_LARGE"}

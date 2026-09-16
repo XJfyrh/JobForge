@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jobforge:support-proposal-v1",
+  "title": "support-proposal-v1 model output",
+  "$ref": "#/$defs/modelProposal",
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "requestedField": {"enum": ["ticket.order_id", "order.delivery_id", "delivery.usable_tracking_events", "delivery.delivered_event", "ticket.problem_description"]},
+    "requestedFields": {"type": "array", "minItems": 0, "maxItems": 5, "uniqueItems": true, "items": {"$ref": "#/$defs/requestedField"}},
+    "conclusion": {"enum": ["on_time", "delayed", "disputed", "insufficient", "conflicting"]},
+    "targetStatus": {"enum": ["open", "awaiting_information", "escalated", "informational_only"]},
+    "shortRef": {
+      "oneOf": [
+        {"enum": ["T#/order_id", "T#/status", "T#/subject", "T#/description", "T#/observed_at", "T#/policy_version", "E1#/missing", "E1#/missing_reason", "E1#/order/order_id", "E1#/order/delivery_id", "E1#/order/status", "E1#/order/ordered_at", "E1#/order/promised_delivery_at", "E2#/missing", "E2#/missing_reason", "E2#/delivery/delivery_id", "E2#/delivery/order_id", "E2#/delivery/status", "E2#/delivery/events"]},
+        {"type": "string", "pattern": "^P(0[1-9]|10)\\.[12]$"}
+      ]
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidence_ref", "source_pointer"],
+      "properties": {
+        "evidence_ref": {"type": "string", "minLength": 1, "maxLength": 256},
+        "source_pointer": {"type": "string", "minLength": 1, "maxLength": 128}
+      },
+      "$comment": "Runtime must bind actual snapshot/tenant/version/index, closed field locations or an event-ID-derived array pointer. Schema alone does not authorize a source."
+    },
+    "claimVariant": {
+      "oneOf": [
+        {
+          "required": ["kind", "test", "event_id"],
+          "properties": {"kind": {"const": "timing"}, "test": {"enum": ["delivered_not_late", "delivered_late", "outstanding_not_overdue", "outstanding_overdue_lt48", "outstanding_overdue_ge48"]}, "event_id": {"$ref": "#/$defs/identifier"}}
+        },
+        {
+          "required": ["kind", "type", "delivered_event_id"],
+          "properties": {"kind": {"const": "dispute"}, "type": {"enum": ["non_receipt", "wrong_address", "unauthorized_recipient", "unauthorized_safe_place"]}, "delivered_event_id": {"$ref": "#/$defs/identifier"}}
+        },
+        {
+          "required": ["kind", "status", "event_id"],
+          "properties": {"kind": {"const": "critical"}, "status": {"enum": ["lost", "damaged", "returned_to_sender"]}, "event_id": {"$ref": "#/$defs/identifier"}}
+        },
+        {
+          "required": ["kind", "field"],
+          "properties": {"kind": {"const": "missing"}, "field": {"$ref": "#/$defs/requestedField"}}
+        },
+        {
+          "required": ["kind", "type", "event_ids"],
+          "properties": {"kind": {"const": "conflict"}, "type": {"enum": ["pre_handover", "same_time", "source_key", "post_delivery", "order_delivery"]}, "event_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}}},
+          "if": {"properties": {"type": {"const": "order_delivery"}}},
+          "then": {"properties": {"event_ids": {"maxItems": 0}}},
+          "else": {"properties": {"event_ids": {"minItems": 2, "maxItems": 2}}}
+        },
+        {
+          "required": ["kind", "recovery_event_id", "corrected_event_id"],
+          "properties": {"kind": {"const": "correction"}, "recovery_event_id": {"$ref": "#/$defs/identifier"}, "corrected_event_id": {"$ref": "#/$defs/identifier"}},
+          "$comment": "The two event IDs must differ; runtime validates this cross-field rule."
+        },
+        {
+          "required": ["kind", "mode"],
+          "properties": {"kind": {"const": "ticket_status"}, "mode": {"enum": ["informational_no_action", "preserve_escalated"]}}
+        }
+      ]
+    },
+    "modelClaim": {
+      "type": "object", "unevaluatedProperties": false,
+      "required": ["kind", "refs"],
+      "properties": {"kind": {"type": "string"}, "refs": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/shortRef"}}},
+      "allOf": [{"$ref": "#/$defs/claimVariant"}]
+    },
+    "persistedClaim": {
+      "type": "object", "unevaluatedProperties": false,
+      "required": ["kind", "refs"],
+      "properties": {"kind": {"type": "string"}, "refs": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"$ref": "#/$defs/source"}}},
+      "allOf": [{"$ref": "#/$defs/claimVariant"}]
+    },
+    "proposalFields": {
+      "type": "object",
+      "required": ["decision", "action", "conclusion", "requested_fields", "target_ticket_status", "claims"],
+      "properties": {
+        "decision": {"enum": ["proposal", "no_action"]},
+        "action": {"enum": ["", "record_conclusion", "request_information", "escalate"]},
+        "conclusion": {"$ref": "#/$defs/conclusion"},
+        "requested_fields": {"$ref": "#/$defs/requestedFields"},
+        "target_ticket_status": {"$ref": "#/$defs/targetStatus"}
+      },
+      "if": {"properties": {"decision": {"const": "no_action"}}},
+      "then": {"properties": {"action": {"const": ""}}},
+      "else": {"properties": {"action": {"enum": ["record_conclusion", "request_information", "escalate"]}}},
+      "$comment": "Runtime additionally checks target status: request_information -> awaiting_information, escalate -> escalated, record_conclusion/no_action -> captured current status. No semantic policy judgment is made."
+    },
+    "modelProposal": {
+      "type": "object", "unevaluatedProperties": false,
+      "allOf": [{"$ref": "#/$defs/proposalFields"}],
+      "properties": {"claims": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"$ref": "#/$defs/modelClaim"}}}
+    },
+    "persistedProposal": {
+      "type": "object", "unevaluatedProperties": false,
+      "allOf": [{"$ref": "#/$defs/proposalFields"}],
+      "required": ["summary", "evidence_refs"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 8192},
+        "evidence_refs": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "claims": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"$ref": "#/$defs/persistedClaim"}}
+      }
+    }
+  },
+  "$comment": "Strict UTF-8, duplicate-key rejection, trailing-content rejection and 16KiB UTF-8 byte limits are enforced by parsers, not ordinary JSON Schema validators. Every claim needs an actually returned policy paragraph; aliases do not authorize arbitrary input."
+}

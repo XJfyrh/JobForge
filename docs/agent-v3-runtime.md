@@ -2,7 +2,7 @@
 
 S1-C3b 实现 [PRD v0.11](product/JobForge_PRD_v0.11.md) / [ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md) 的正式进程接缝：Go Worker、严格 checkpoint 投影、固定 Python guardian/step、独立普通与计量管道，以及真实控制 PostgreSQL/gRPC 的机制测试。逐项运行结果见 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)，阶段状态见 [实施记录](agent-v3-progress.md)。本文中的复现命令不等于该层检查已通过。
 
-**生产 `runtime_registry.REGISTRY` 当前为空。** 本轮不登记 support 业务策略，不提供可用于真实收费运行的默认 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 整体及 S2～S5 仍未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。默认部署仍不启用收费 profile/manifest，供应商持久审计按 ADR-0020 另行实现后才能运行首批云端验收。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 整体及 S2～S5 仍未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
 
 ## 执行权与组件
 
@@ -75,7 +75,7 @@ Stop 不可逆且非阻塞；独立清理路径发送 TERM，100ms 后 KILL 全�
 docker build --file deploy/Dockerfile.agent-worker --tag jobforge-agent-worker:c3b .
 ```
 
-生产运行须只读挂载上述 manifest/配置/秘密文件，并设置 `--init`。默认 [compose.agent.yaml](../deploy/compose.agent.yaml)尚不登记正式 Worker 或收费 profile；不要把测试 manifest/adapter 放入生产构建来绕过当前空 registry。
+生产运行须只读挂载上述 manifest/配置/秘密文件，并设置 `--init`。默认 [compose.agent.yaml](../deploy/compose.agent.yaml)尚不登记正式 Worker 或收费 profile；support adapter 的存在不能代替 profile/预算/审计前置条件，不要把测试 manifest/adapter 放入生产构建。
 
 [测试 Dockerfile](../tools/agentruntimecheck/Dockerfile)先构建安装包，再提供分开的目标。process/integration 使用已安装包的固定入口；Python全套测试会优先导入源码目录，因此单独标明其验证层次：
 
@@ -104,7 +104,7 @@ docker run --rm --init --network none jobforge-agent-runtime:integration /app/wo
 docker run --rm --init -e 'JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1' -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
 ```
 
-`worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 的默认命令执行已用 race 编译的 `TestRunExecutor` 集成测试。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
+`worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 的默认命令执行已用 race 编译的 `TestRunExecutor` 和 `TestRunSupportExecutor` 集成测试。后者经正式 support adapter 验证完整方案和一次纠正，固定回环模型仍是合成响应，不能当真实 DeepSeek 结果。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
 
 仅 integration target 在构建时运行 [test_install.py](../tools/agentruntimecheck/test_install.py)，将固定测试 registry 和固定 loopback 供应商 origin 安装到该测试镜像。它没有运行时 URL/模块开关，也不进入生产 Dockerfile。合成服务的调用计数用于检查“未确认时后续 HTTP 为 0”等执行机制，不能记作实际供应商调用。
 

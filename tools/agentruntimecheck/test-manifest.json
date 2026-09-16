@@ -6,6 +6,11 @@
       "profile_id": "c3b-runtime-profile-v1",
       "profile_hash": "2f0def7e3a081916b7aa69285a7a4e8705062713781a4ecc9a71ed3c7b591eae",
       "adapter_id": "bounded-readonly-mechanism-v1"
+    },
+    {
+      "profile_id": "support-executor-synthetic-v1",
+      "profile_hash": "4a9efdc9a335cd268bf8819f8df2f78f651dcabbcca1d6064de75ebfba9bbb86",
+      "adapter_id": "support-fixed-v1"
     }
   ]
 }

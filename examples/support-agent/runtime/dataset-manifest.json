@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "dataset_version": "support-dev-2026-09-16-v1",
+  "dataset_version": "support-dev-2026-09-16-v2",
   "as_of": "2026-09-16T12:00:00Z",
   "seed_file": "seed.json",
-  "policy_version": "delivery-policy-dev-v1",
+  "policy_version": "delivery-policy-dev-v2",
   "policy_manifest": "policies/manifest.json",
   "business_observation_time_note": "Fixed business observation time for this registered development corpus; snapshot IDs, index IDs, profile hash and snapshot creation timestamp remain server-owned. Do not score time-boundary cases against current wall-clock time."
 }

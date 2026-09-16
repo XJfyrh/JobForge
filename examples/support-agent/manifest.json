@@ -1,6 +1,6 @@
 {
-  "dataset_id": "support-dev-2026-09-16-v1",
-  "status": "synthetic_development_draft_not_business_acceptance",
+  "dataset_id": "support-dev-2026-09-16-v2",
+  "status": "synthetic_development_v2_independently_reviewed_pending_scoring_freeze",
   "as_of": "2026-09-16T12:00:00Z",
   "schema": "internal/business/contracts.go Dataset as read 2026-09-16",
   "case_count": 40,
@@ -305,8 +305,8 @@
     "insufficient": 7,
     "conflicting": 5
   },
-  "corpus_sha256": "2b0fef040119960b504b8f55e64d9e8b73095e1b1c2943947abb1fbfb800d62f",
-  "policy_version": "delivery-policy-dev-v1",
+  "corpus_sha256": "c23799485a532eda42d09b6bf6fbfaad96ce5152bc74a59dacf1e8d165f89198",
+  "policy_version": "delivery-policy-dev-v2",
   "runtime_allowlist": [
     "runtime/seed.json",
     "runtime/dataset-manifest.json",
@@ -319,16 +319,51 @@
     "build_draft.py",
     "adapt_go_seed.py",
     "README.md",
-    "validation-report.json"
+    "validation-report.json",
+    "../../tools/support_evaluation/"
   ],
   "split": "development",
   "held_out_created": 0,
   "held_out_opened": 0,
-  "adaptation": "Rich authoring source preserved under authoring/. Runtime uses only the Go typed seed contract: no prebuilt snapshot/profile IDs, no package submodel, no stored write-operation fields. Ten cases were reframed within supported facts; exact variants are enumerated here.",
+  "adaptation": "Runtime contains only the Go typed seed contract. v2 clarifies source semantics in P01/P05/P06 and updates policy binding revisions; the 40 expected labels, orders, deliveries and query wording are unchanged. Earlier authoring sources remain outside the repository.",
   "limitations": [
-    "gold and business rules still require independent human review",
-    "40 exposed cases are not a generalization estimate",
-    "no tokenization, model, embedding, SQL retrieval, HTTP import or runtime acceptance performed",
-    "future held-out data must use independently partitioned template families"
-  ]
+    "Independent Agent review covered all 40 v2 rows and 11 semantic anchors with no remaining P1/P2; this is not human review or model-quality acceptance.",
+    "40 exposed cases are not a generalization estimate.",
+    "Real v2 embedding, published-index retrieval, snapshot restart and cross-tenant HTTP checks are recorded separately; cloud-model acceptance remains unrun. v1 S1-A results remain historical.",
+    "The complete model-output scorer, claim coverage tests and final scoring freeze are not implemented by this offline data validator.",
+    "Future held-out data must use independently partitioned template families."
+  ],
+  "review": {
+    "reviewer_type": "agent",
+    "reviewed_on": "2026-09-16",
+    "source_commit": "0829a4c04a3a123a6ffe6c374e326859b79df1a8",
+    "original_gold_sha256": "64b22337f64679f8fb4987df032935f3c1995496c22576632e8f645ed6205fa6",
+    "unchanged_expected_labels_sha256": "1b80c4c8beae21772e74962b04cf4af768b89a8b580c362ac42e2218433d7552",
+    "expected_labels_hash_encoding": "SHA256 of UTF-8 json.dumps(case_id,tenant_id,expected rows in registered order, sort_keys=True,separators=(comma,colon))",
+    "prior_independent_review": "External s1-support-data-review.md reviewed all 40 v1 label directions; it did not freeze or accept this v2 package.",
+    "v2_review_status": "independent_agent_review_no_remaining_p1_p2",
+    "change_reason": "Resolve P01 versus P05/P06 source-note ambiguity without changing labels to fit model output.",
+    "v2_review_evidence": "docs/evidence/agent-v3-s1-support-2026-09-16.md"
+  },
+  "artifact_sha256": {
+    "evaluation/case-map.jsonl": "b07c6c56fe1cfc4a39b73c7f0063b055b6b9b4a43d0cb4ebc58dda295c698ce7",
+    "evaluation/dev_gold.jsonl": "5b37d2992231d35dbb499075d631b23ebde7b934889f5492f5d5a9fa3b519da1",
+    "evaluation/retrieval_gold.jsonl": "7d4b63c10235b05623aa900bb47b1a3130beba7b2ed06b6fd13f91aaac8f7925",
+    "evaluation/scoring-proposal.json": "a5d2e7f5655448b361cb49277d0450e71fce504b8786d0edbb589a37cd44097d",
+    "evaluation/semantic-anchors.json": "622fa3b9954c28593b4435fe7d8f21b08a6814e2bb0651afaa8159f4daf4945f",
+    "retrieval/queries.jsonl": "141cd3554f305b393ca9834d9d8e1cc72ae826dd62b6246fc33defb4d92f42a7",
+    "runtime/dataset-manifest.json": "963f975f40c541f2a29e73c5ee631ac25279122eb22c34783f45efe03ea950a5",
+    "runtime/policies/P01.md": "6188ae049cb33e62e737e302997f19f7e7b9d933b0cb2ff7578a39c9990e0517",
+    "runtime/policies/P02.md": "9a4199266db744beb827ecc9acdc95bb50971bc572996b04e59ede0783c5ee1f",
+    "runtime/policies/P03.md": "19e4ff3f57d39ce1b63550afc984fc3ea21d9213edc69fb4f18e5615ac66cb4f",
+    "runtime/policies/P04.md": "9902be84daa4f6f3fde64e3014d42aab0304079b5259823bc6a0cd3ab734ec6a",
+    "runtime/policies/P05.md": "831c7ea995694ba0229d66502a2d6f7574e6a0ea408987614bc0145d017b3ca1",
+    "runtime/policies/P06.md": "5dfd8e894f12158f50e1f2c5b1671d855f62f2881a1d6f4187c103f8099dcaeb",
+    "runtime/policies/P07.md": "cde749d003fcd763fe8cea280519fe1c755e083c5c06c22416d4117e42e280d3",
+    "runtime/policies/P08.md": "1f4f7e16c3f30494fb8d2436add563e3e1b8a8cb3ced3a585f81453b0cbee9b5",
+    "runtime/policies/P09.md": "f7243296280385dfd9c788f629f129df3823cc06b3b3982e0f987bc28bd320f9",
+    "runtime/policies/P10.md": "30af49cea5447f07af8cf822124928724058029c8a7e4da8974c4f99745d7b81",
+    "runtime/policies/manifest.json": "2ea4f95f0c3be21f82e81d4f34616075cdb661d8609a6a1230ea8b8a9747ed85",
+    "runtime/seed.json": "361877830231ee8d6b9db5ae9d518d26dde1abb4757bb84c605f42e04f48620c"
+  }
 }

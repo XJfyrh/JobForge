@@ -311,7 +311,7 @@ go test -tags scale -count=1 ./tests/scale/
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
 | `observability-config` | 固定 Prometheus 镜像运行 promtool config/rule tests；重建仪表盘无 diff | `python tools/generate_task_dashboard.py`；Docker promtool 命令见 CONTRIBUTING.md |
 | `executor-process-probe` | S0 固定 Go/Python 镜像内真实进程故障与 Linux race；S1-C1真实跨进程BOOTTIME域 | 构建 `tools/executorprobe/Dockerfile`，按 CI 用 `--init --network none` 分别运行默认进程套件与`./clock.test` |
-| `agent-runtime-contract` | S1-C3b正式Linux进程/race、真实PG/TCP gRPC联合机制；生产镜像构建和空registry边界 | 按[运行时指南](agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`的`process-check/integration-check`并带`--init`运行；构建`deploy/Dockerfile.agent-worker` |
+| `agent-runtime-contract` | S1-C3b正式Linux进程/race、真实PG/TCP gRPC联合机制；生产镜像构建和固定support registry边界 | 按[运行时指南](agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`的`process-check/integration-check`并带`--init`运行；构建`deploy/Dockerfile.agent-worker` |
 
 `python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
 
@@ -426,6 +426,6 @@ S1-C2的[受控HTTP指南](agent-v3-authorized-http.md)提供固定Linux验证�
 
 S1-C3a按已接受ADR-0019同步内部v2观察ACK。共同fixture由Go/Python全套实际消费，旧无ACK序列必须拒绝；`DispatchHooks.observe`返回严格Frame而非空完成信号。Windows沿用上述固定镜像，将tag改为`jobforge-agent-http:c3a`；同环境本地协议微基准与验收边界见[C3a记录](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。不新增兼容双模式或数据库迁移，正式IPC/PG确认仍另验。
 
-S1-C3b的[固定运行时指南](agent-v3-runtime.md)描述新增`cmd/agent-worker`、生产Dockerfile、只读manifest、独立秘密配置与双向FD接缝。生产registry仍为空，默认Compose不登记收费Worker；专用integration target才安装合成adapter与固定loopback origin。Go仍独占执行权和RPC，只有普通观察ACK、进程清理及当前执行权全部成立才能提交结果；真实云端、完整support策略及40案验收继续单列。
+S1-C3b的[固定运行时指南](agent-v3-runtime.md)描述新增`cmd/agent-worker`、生产Dockerfile、只读manifest、独立秘密配置与双向FD接缝。生产registry仅登记support-fixed-v1，默认Compose不登记收费Worker；专用integration target才安装合成adapter与固定loopback origin。Go仍独占执行权和RPC，只有普通观察ACK、进程清理及当前执行权全部成立才能提交结果；support结构化方案/来源共同fixture随Go/Python测试运行，离线开发数据与语义锚由`python -m pytest tools/support_evaluation`检查；供应商持久审计、真实云端及40案验收继续单列。
 
 真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。

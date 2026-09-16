@@ -28,6 +28,7 @@ from jobforge_agent.runtime_input import (
     RuntimeInputError,
     parse_runtime_input,
 )
+from jobforge_agent.support_adapter import validate_support_step
 
 
 def _endpoints(kind: str) -> dict[EndpointAlias, Endpoint]:
@@ -72,6 +73,8 @@ async def execute_registered_step(
     """Run a fixed kind and bind its result to the last acknowledged call."""
     kind = frame["binding"]["step_kind"]
     checkpoint, result = runtime.checkpoint, _result()
+    if adapter.strategy == "support_fixed_v1":
+        validate_support_step(checkpoint, kind)
     snapshot = checkpoint["snapshot"]
     context = RunCallContext(
         frame["binding"]["profile_hash"],

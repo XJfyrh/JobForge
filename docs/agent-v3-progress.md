@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b已合并；真实业务固定流程与云端验收待交付 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B的真实PG/HTTP/SDK、128Run基线和C1/C2均已审查合并；PR #45合并普通ACK，PR #46合并正式运行时。C3b真实PG/进程恢复证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；云端推理/固定业务流程仍未验收 |
+| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b已合并；support固定流程已实现待PR，云端验收待交付 | PR #47已接受provider审计合同；support真实PG/正式进程、v2数据独立审查及真实索引检索见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)。C3b进程恢复证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；完整评分、审计持久桥及40案云端推理仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -99,3 +99,9 @@ C3实施调查发现：现有v2缺普通observation持久ACK，已关闭会话�
 C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、严格输入投影、Python单步/guardian、固定FD与有限清理、持久确认和Commit屏障、executor_version门禁。Linux实际进程race和Python、首轮真实PG/gRPC联合机制检查已运行，最终检查与恢复证据见[C3b记录](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)。新增专门CI覆盖正式进程层，普通平台skip不能代替。当前生产registry为空，测试注册器/固定loopback模型只进入测试镜像；无收费调用，support策略/provider审计/跨队列trace/真实40案及整体S1仍未完成。
 
 [PR #46](https://github.com/XJfyrh/JobForge/pull/46)最终head `512f0fc56ca3d1e87e12d3b99bf3328e396d1ca2`经两份独立上下文正式复审无剩余P1/P2，[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35093384805)全部成功，合并为`0829a4c04a3a123a6ffe6c374e326859b79df1a8`；审查与合并代码树一致。Windows全仓race通过1231个测试/子测试事件，20个具名skip明确保留，15个已由固定Linux进程/协调器/真实PG层覆盖；Python Windows945/Linux775通过。真实Worker SIGKILL重新Claim、已提交步骤复用、unknown预留及可信usage超界冻结/永久失败均实跑。合成供应商不是DeepSeek验收；下一步仍是support固定业务策略、provider持久审计与共享5元批次的40案真实运行。
+
+## S1 support固定流程与provider审计合同
+
+[PR #47](https://github.com/XJfyrh/JobForge/pull/47)最终head `e43e1249c0784acf57e3ef4911087a5caeeb28d1`经两份独立上下文复审及[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35096592640)通过，合并为 `d449bc709b99ad78d3563b2924802e535541a08a`。ADR-0020仅接受合同；同hash重放/不同hash冲突必须先于新财务判定，末次纠正失败的批次屏障严格绑定原attempt/session/fence/step。
+
+随后实现support固定策略、闭集方案和生产adapter；开发数据v2保持40条expected不变，经独立Agent审查并重新完成真实向量化/索引/20查询。实际19/20、RQ-06未命中保留；全仓Windows race与正式Linux进程/PG检查通过，详见[分层证据](evidence/agent-v3-s1-support-2026-09-16.md)。当前仅完成该实现切片，收费profile未启用。provider持久审计、完整评分器及真实40案仍在后续工作中，S1整体未完成。
