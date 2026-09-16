@@ -1,6 +1,6 @@
 # ADR-0015：审批、受控写入与业务回执
 
-- 状态：Proposed。
+- 状态：Accepted；随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 于2026-09-16合并接受。审批与业务写入尚待S4实现验收。
 - 日期：2026-09-16。
 - 关联：[PRD v0.7](../product/JobForge_PRD_v0.7.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)。
 - 拟补充：ADR-0009/0011 的业务幂等；新版本增加明确人工授权及回执不确定性。

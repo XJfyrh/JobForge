@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-最新增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
+现有v0.6实现的增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
 
 ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义的决策。PRD 已明确的边界不需要重复创建 ADR；对其补充、取舍或偏离必须记录。
 
@@ -34,7 +34,7 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 ## 已接受 ADR 索引
 
-维护者已确认路线 v3，S0 详细决策正在评审：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。三者仍为 Proposed，现有实现验收不受本入口变更影响。
+路线 v3 的S0详细决策已随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 接受：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。接受范围为新版本设计，S1～S5仍未实现；现有v0.6运行代码与验收保持原边界。
 
 当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
@@ -52,3 +52,6 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 | [ADR-0010](0010-task-type-catalog-and-worker-capability-binding.md) | 部署任务类型目录与 Worker 能力原子绑定 | Accepted | 2026-08-18 |
 | [ADR-0011](0011-general-task-results-and-model-adapters.md) | 通用结果引用与预注册模型业务适配器 | Accepted | 2026-09-15 |
 | [ADR-0012](0012-task-observability-and-otlp.md) | 任务完成口径与可选 OTLP 观测链路 | Accepted | 2026-09-15 |
+| [ADR-0013](0013-durable-agent-run-and-step-commit.md) | 单一 Run 与持久步骤提交 | Accepted | 2026-09-16 |
+| [ADR-0014](0014-supervised-python-executor-and-call-budget.md) | 受监管 Python 执行器与调用额度 | Accepted | 2026-09-16 |
+| [ADR-0015](0015-approved-business-actions-and-receipts.md) | 审批、受控写入与业务回执 | Accepted | 2026-09-16 |

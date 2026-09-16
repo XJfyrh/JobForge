@@ -1,0 +1,104 @@
+{
+  "source_commit": "ace6b74520de4bc7baff08a8cb2a91f3ae9b842a",
+  "command": "go test -race -count=1 -json ./...",
+  "exit_code": 0,
+  "test_pass_events": 355,
+  "failed_events": 0,
+  "package_passes": [
+    {
+      "package": "github.com/xjfyrh/jobforge/benchmarks/micro",
+      "elapsed_seconds": 1.392
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/cmd/jobforge",
+      "elapsed_seconds": 1.375
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/observability",
+      "elapsed_seconds": 1.371
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/domain",
+      "elapsed_seconds": 1.407
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/tasks",
+      "elapsed_seconds": 1.314
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/config",
+      "elapsed_seconds": 1.422
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/eventconsumer",
+      "elapsed_seconds": 1.431
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tools/executorprobe",
+      "elapsed_seconds": 1.302
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tools/clockcheck",
+      "elapsed_seconds": 1.334
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/api/http",
+      "elapsed_seconds": 2.741
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/outbox",
+      "elapsed_seconds": 2.751
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/gateway/grpc",
+      "elapsed_seconds": 2.864
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/scheduler",
+      "elapsed_seconds": 2.77
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/worker/demo",
+      "elapsed_seconds": 2.783
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/worker",
+      "elapsed_seconds": 3.6390000000000002
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "elapsed_seconds": 139.782
+    }
+  ],
+  "skipped_tests": [
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestCancelAT25ControlStreamDegradation",
+      "output": "=== RUN   TestCancelAT25ControlStreamDegradation\n    quota_test.go:732: PRD v0.3 M5 (FR-733/734): ControlStream is a cuttable P1 extension; skeleton per M0 exit criteria\n--- SKIP: TestCancelAT25ControlStreamDegradation (0.00s)"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRealTasksLifecycle",
+      "output": "=== RUN   TestRealTasksLifecycle\n    real_task_faults_test.go:273: real-model acceptance: set JOBFORGE_REAL_MODEL_URL to a pinned Ollama backend; substitutes are not acceptance\n--- SKIP: TestRealTasksLifecycle (0.00s)"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestBusinessWorkerProcessHelper",
+      "output": "=== RUN   TestBusinessWorkerProcessHelper\n    real_tasks_test.go:39: subprocess helper\n--- SKIP: TestBusinessWorkerProcessHelper (0.00s)"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRealTasksSDK",
+      "output": "=== RUN   TestRealTasksSDK\n    real_tasks_test.go:142: real-model acceptance: set JOBFORGE_REAL_MODEL_URL to a pinned Ollama backend; substitutes are not acceptance\n--- SKIP: TestRealTasksSDK (0.00s)"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestWorkerProcessHelper",
+      "output": "=== RUN   TestWorkerProcessHelper\n    worker_process_test.go:47: subprocess helper\n--- SKIP: TestWorkerProcessHelper (0.00s)"
+    }
+  ],
+  "raw_log_sha256": "98a9c8a60cb0e18449f9dc799308b02fdc0b21a15ff497fdf71304e5420b4523",
+  "windows_dsn": "postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable",
+  "redis_container": "deploy-redis-1",
+  "sdk_interpreter": "E:/JobForge/.venv/Scripts/python.exe"
+}
