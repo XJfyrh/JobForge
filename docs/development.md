@@ -4,7 +4,7 @@
 
 Agent v3 S1-A使用[独立业务开发指南](agent-v3-business.md)中的`deploy/compose.agent.yaml`（5434/8092/11436），业务迁移不进入旧队列库。新增门禁为`python -m pytest python/tests`、`mypy python/jobforge_agent`和显式设置`JOBFORGE_BUSINESS_TEST_DSN`/`JOBFORGE_TEST_PYTHON`后的`go test -race ./tests/integration/business`；CI的独立pgvector job实际运行。未配置依赖的skip不算通过。真实embedding与20条检索运行在独立模型层，不由确定性测试替代。
 
-首批 DeepSeek support 的准备、disabled bootstrap、只读检查、单次 5 CNY/6h/40 案启动及导出评分统一见[固定云端批次运行指南](agent-v3-cloud-batch.md)。该入口使用独立外部 source/凭据/状态目录；本地 MiniLM 只做 embedding。实现与机制检查不等于真实模型或 40 案通过。
+DeepSeek support 的准备、disabled bootstrap、只读检查、6h/40 案串行启动及导出评分统一见[固定云端批次运行指南](agent-v3-cloud-batch.md)。修复后的新批次适用 [ADR-0022](adr/0022-s1-closeout-cumulative-authorization.md) 的新增累计 5 CNY 授权，不是每批重新获得 5 元。该入口使用独立外部 source/凭据/状态目录；本地 MiniLM 只做 embedding。2026-09-17 新批次因 `CHAT_USAGE_UNKNOWN` 停止，14 案方案完成、DEV-015 中断、25 案未尝试；S1 未完成、PR #51 保持 Draft，必要确认不完整时不得换批重跑。见[真实结果与费用/hold](evidence/agent-v3-s1-closeout-2026-09-17.md)；实现与机制检查不等于完整 40 案通过。
 
 ## 项目结构
 
