@@ -65,6 +65,8 @@ Windows 的 Go 命令只覆盖跨平台协议；POSIX API 类型检查必须指�
 
 后续审查发现 stdout EOF 的成功分支可能先于 stderr 超限被选中，原实现 Wait 后没有再次检查限额。现 Wait 完成后统一复核，保留已有失败的错误优先级。[stderr/EOF 定向回归记录](stderr-eof-regression-2026-09-16.txt) 记录 WSL Ubuntu 24.04 上一次确定性失败与修复后通过、当前源码 hash。该二进制使用 `CGO_ENABLED=0`，**不计为 Linux race 通过**。本次固定 Docker 复验因 Docker Desktop 初始化失败而无法运行；旧基线没有覆盖此补丁，保留原文件及 hash，不将新版描述为容器验收通过。
 
+维护者同日重启Docker后，[新增固定容器复验记录](docker-recovery-2026-09-16.txt)覆盖 `ace6b745` 的全部最终探针源码：11类真实进程场景及1个纯协议测试通过，0 skip、0 fail、0 race warning。运行使用固定镜像与相同资源约束；新记录追加成功事实，不改写此前阻塞、非race回归或旧容器基线。
+
 独立审查发现早期 guardian 会吞掉合法结果之后、EOF 之前的无换行残片，使错误输出被判成功。现只转发完整换行前缀，保留残片并在 EOF 拒绝；Python 回归覆盖同一次/不同次管道 read 的分块，真实 Linux `trailing_bytes` 用例验证 Go 最终返回协议错误并回收整组。合法 result 帧本身不足以使执行成功，还须整个协议结束和进程退出有效。
 
 首次试验把 500ms/3s deadline 与解释器启动混在一起，负载下 Python 两进程启动约 2.7～3s，导致正常请求和取消屏障超时。镜像 COPY 后仍复现；单独标准库 import 曾耗时 1.13s，因此不能把原因归结为 Windows bind mount。后续空闲时正常请求约 0.3s，也说明该启动成本随环境变化，不能直接宣传为稳定性能。
