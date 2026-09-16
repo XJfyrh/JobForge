@@ -2,10 +2,23 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/xjfyrh/jobforge/internal/runworker"
 )
+
+func TestStopReasonDoesNotExposeWrappedOrUnknownErrorText(t *testing.T) {
+	if got := stopReason(fmt.Errorf("private upstream response: %w", runworker.ErrCleanup)); got != "CLEANUP_UNCONFIRMED" {
+		t.Fatalf("cleanup identity lost: %s", got)
+	}
+	if got := stopReason(errors.New("private upstream response")); got != "INTERNAL_ERROR" {
+		t.Fatalf("untrusted error escaped: %s", got)
+	}
+}
 
 func TestCredentialDecoderDoesNotAcceptAmbiguousOrExtraFields(t *testing.T) {
 	for name, raw := range map[string]string{

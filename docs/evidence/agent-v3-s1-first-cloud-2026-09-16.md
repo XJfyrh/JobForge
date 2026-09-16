@@ -23,7 +23,7 @@
 
 **运行时退出原因缺证据。** DEV-016 的 `query_embedding` Reserve于15:21:48.658448Z提交；此前metadata请求返回200并有普通观察。launcher于15:21:49.782786Z检测退出，49.897003Z完成Wait。此调用未保存普通观察和出站元数据；元数据是尽力记录，文件缺失不能证明没有发送。该案没有chat预留。15:22:18.37986Z的 `LEASE_EXPIRED` 是之后的回收结果，不能作为原退出原因。
 
-Worker stdout/stderr此前被launcher丢弃，停止文件没有保存Worker退出码、触发进程和内部固定原因。因此无法区分内部清理、控制确认、执行权限或其它退出，不能归咎于DeepSeek。保留原Run、账本、hold和证据，不重启这批Worker。下一次运行前需要最小的安全退出诊断，再针对实际原因修复。
+Worker stdout/stderr此前被launcher丢弃，停止文件没有保存Worker退出码、触发进程和内部固定原因。因此无法区分内部清理、控制确认、执行权限或其它退出，不能归咎于DeepSeek。后续只读取证确认driver记录OPERATOR_STOP、最后SDK读取均成功；但旧记录仍无法区分Worker先退出与launcher收到外部信号。指定时段的Docker历史事件当前查询为空，不能据此排除外部信号。保留原Run、账本、hold和证据，不重启这批Worker。[后续已补最小退出诊断](agent-v3-s1-cloud-fixes-2026-09-16.md)，不把诊断改动等同于根因已修复。
 
 **模型存在业务语义错误。** 独立上下文只读抽查DEV-001/002：两例来源链、登记绑定、持久方案/result、顶层动作/结论和timing均通过；额外ticket_status主张不成立。DEV-001实际工单为open，却主张informational_no_action；DEV-002同为open，却主张preserve_escalated，引用政策也不支持。按ADR-0018，任一不支持的额外主张使整例失败；两例未发现scorer接缝错误，不放宽评分。后续应完善业务提示/约束和纠错反馈，不把评分规则或gold挂入Worker。
 

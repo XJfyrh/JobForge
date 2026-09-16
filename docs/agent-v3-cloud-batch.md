@@ -73,7 +73,7 @@ Get-Content -Raw tools/support_evaluation/business_audit.sql | `
   psql -h 127.0.0.1 -U jobforge_business_reader -d jobforge_business -X -q -A -t `
   -v ON_ERROR_STOP=1 > "$batch/business-before.json"
 
-docker compose @dc run --rm --no-deps support-cloud
+docker compose @dc run --rm --no-deps support-cloud 2> "$batch/launcher-stderr.log"
 $batchExit = $LASTEXITCODE
 
 # 容器退出后，无论 batchExit 是否为零，均保留原状态并采集只读后样本。
@@ -88,6 +88,8 @@ Get-Content -Raw tools/support_evaluation/business_audit.sql | `
 ## 停止后的只读导出与评分
 
 原始导出位于 `$batch/exports/<UTC目录>`，包含全部 40 行 `rows.json`、逐案 SDK 原始响应及抓取摘要、`evidence.json`、`events.json` 和完成记录。`state/<batch UUID>` 保留 setup/attempted/stopped；`outbound` 保留实际 HTTP 边界的有界元数据。不要删除状态目录、重启收费容器、重置账户或换 batch 续跑。
+
+`stopped.json` 的 `stop_reason` 区分 `worker_exited`、`driver_exited`、`signal`、`batch_deadline` 和 `launcher_error`，并保存两个子进程实际 `returncode`（未创建为 null，信号退出为负数）。Worker 的固定错误分类和清理 receipt 字段写入上述 stderr 文件；不记录原始子进程输出、RPC 错误文本或模型正文。`graceful` 只表示在宽限内完成 Wait，不代表内部执行或清理成功。首批旧记录缺少这些字段，不能据此反推当时的触发来源；见[后续最小修复](evidence/agent-v3-s1-cloud-fixes-2026-09-16.md)。
 
 已知 Run 的晚到报告或中断导出只能追加到新目录；下面的 export 模式只做 SDK 读取，不启动 Worker、不 Submit。将 `<原UTC目录>` 替换为实际目录名，保留原始导出。接纳未知且没有 Run ID 的行仍为提交未知，不能推断为零费用。
 

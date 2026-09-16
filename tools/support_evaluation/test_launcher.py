@@ -123,6 +123,11 @@ def test_driver_exit_reaps_worker_and_attempted_batch_never_restarts(
         assert stopped["children_reaped"] is True
         assert stopped["graceful"] is not ignore_term
         assert stopped["driver_completed"] == (driver_mode == "completed")
+        assert stopped["stop_reason"] == "driver_exited"
+        assert stopped["driver_returncode"] == (
+            0 if driver_mode == "completed" else -signal.SIGKILL
+        )
+        assert stopped["worker_returncode"] == (-signal.SIGKILL if ignore_term else 0)
         assert (tmp_path / "worker.term").exists() is not ignore_term
         assert datetime.fromisoformat(stopped["detected_at"]) <= datetime.fromisoformat(
             stopped["wait_completed_at"]
@@ -138,6 +143,37 @@ def test_driver_exit_reaps_worker_and_attempted_batch_never_restarts(
         assert all(
             (tmp_path / name).read_bytes() == data for name, data in before.items()
         )
+    finally:
+        for sig, handler in handlers.items():
+            signal.signal(sig, handler)
+
+
+def test_worker_exit_retains_diagnostic_and_stops_driver(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """A real failed child leaves its reason and exit status for diagnosis."""
+    manifest, raw = _install(
+        tmp_path, monkeypatch, driver_mode="linger", ignore_term=False
+    )
+    _script(
+        Path(launcher.WORKER),
+        "import sys\n"
+        "print('agent worker stopped reason=CLEANUP_UNCONFIRMED', file=sys.stderr)\n"
+        "raise SystemExit(1)\n",
+    )
+    handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+    try:
+        assert launcher.launch(manifest, raw) == 1
+        stopped = json.loads(
+            (launcher.STATE / manifest["batch_account_id"] / "stopped.json").read_text()
+        )
+        assert stopped["stop_reason"] == "worker_exited"
+        assert stopped["worker_returncode"] == 1
+        assert stopped["driver_returncode"] == -signal.SIGTERM
+        assert stopped["children_reaped"] is True
+        assert "reason=CLEANUP_UNCONFIRMED" in capfd.readouterr().err
     finally:
         for sig, handler in handlers.items():
             signal.signal(sig, handler)

@@ -29,8 +29,8 @@
     },
     "program": {
       "adapter": "support-fixed-v1",
-      "adapter_source_sha256": "ab01c0ae9dc856cffd0f5a332a323bcc4c3fe94db0a512550625ce75010a6fb4",
-      "prompt_sha256": "f2fe1f96036633c0a3f49e504274e79711977d2faec66263c46c31c1426abc6e",
+      "adapter_source_sha256": "e9f4bf90681cacd5b159f2b85c82c4c3c402dc64d4797b8a7b20325b428712bb",
+      "prompt_sha256": "05de0b7f358aae53dc23b6c39f006b5179bf96f31b7619e56f02c9c1a6aed346",
       "prompt_version": "support-fixed-prompt-v1",
       "proposal_schema": "support-proposal-v1",
       "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",

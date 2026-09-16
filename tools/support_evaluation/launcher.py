@@ -134,6 +134,7 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
         children: list[subprocess.Popen[bytes]] = []
         successful = False
         clean = True
+        stop_reason = "launcher_error"
         detected = datetime.now(UTC).isoformat()
         try:
             worker = subprocess.Popen(
@@ -141,7 +142,8 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
                 env=child_environment(True),
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                # Worker emits only fixed error categories and process facts.
+                # Inherit stderr so the container retains the exit diagnostic.
             )
             children.append(worker)
             driver = subprocess.Popen(
@@ -154,13 +156,18 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
             children.append(driver)
             while not stopping:
                 if worker.poll() is not None:
+                    stop_reason = "worker_exited"
                     break
                 if driver.poll() is not None:
+                    stop_reason = "driver_exited"
                     successful = driver.returncode == 0
                     break
                 if datetime.now(UTC) >= instant(manifest["valid_until"]):
+                    stop_reason = "batch_deadline"
                     break
                 time.sleep(0.05)
+            if stopping:
+                stop_reason = "signal"
             detected = datetime.now(UTC).isoformat()
         finally:
             # Signal both before waiting, so a dead driver cannot leave a
@@ -180,6 +187,11 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
                     ),
                     "graceful": clean,
                     "driver_completed": successful,
+                    "stop_reason": stop_reason,
+                    "worker_returncode": children[0].returncode if children else None,
+                    "driver_returncode": (
+                        children[1].returncode if len(children) > 1 else None
+                    ),
                 },
             )
         return 0 if successful and clean else 1
