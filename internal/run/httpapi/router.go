@@ -24,6 +24,7 @@ type API interface {
 	Steps(context.Context, string, string, int64, int) (run.StepPage, error)
 	Events(context.Context, string, string, int64, int) (run.EventPage, error)
 	Result(context.Context, string, string) (run.Result, error)
+	Calls(context.Context, string, string) (run.CallsResponse, error)
 	Cancel(context.Context, string, string, string) (run.CancelResponse, error)
 	Retry(context.Context, string, string, string, run.RetryRequest) (run.SubmitResponse, error)
 }
@@ -66,6 +67,7 @@ func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 	router.Get("/v2/runs/{run_id}/steps", h.steps)
 	router.Get("/v2/runs/{run_id}/events", h.events)
 	router.Get("/v2/runs/{run_id}/result", h.result)
+	router.Get("/v2/runs/{run_id}/calls", h.calls)
 	router.Post("/v2/runs/{run_id}/cancel", h.cancel)
 	router.Post("/v2/runs/{run_id}/retry", h.retry)
 	return router, nil

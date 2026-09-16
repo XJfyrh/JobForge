@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import fcntl
+import json
 import os
 import sys
 from pathlib import Path
@@ -13,7 +14,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from jobforge_agent.dispatch import DispatchError  # noqa: E402 -- test source import
 from jobforge_agent.executor_ipc import PipeHooks  # noqa: E402 -- test source import
-from jobforge_agent.protocol_v2 import usage_hash  # noqa: E402 -- test source import
+from jobforge_agent.protocol_v2 import report_hash  # noqa: E402 -- test source import
+from jobforge_agent.provider_audit import (
+    capture_chat_report,  # noqa: E402 -- test source import
+)
 
 
 async def run(mode: str) -> int:
@@ -30,19 +34,42 @@ async def run(mode: str) -> int:
             common.update(
                 call_sequence=1, physical_call_id="00000000-0000-4000-8000-000000000020"
             )
-            usage = {
-                "input_tokens": 1,
-                "output_tokens": 1,
-                "cached_input_tokens": 0,
-                "receipt_hash": "a" * 64,
-            }
-            usage["usage_hash"] = usage_hash(usage)
+            body = json.dumps(
+                {
+                    "id": "synthetic",
+                    "object": "chat.completion",
+                    "created": 1,
+                    "model": "deepseek-flash",
+                    "system_fingerprint": "synthetic-fp",
+                    "choices": [
+                        {
+                            "index": 0,
+                            "finish_reason": "stop",
+                            "message": {"role": "assistant", "content": "{}"},
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": 1,
+                        "completion_tokens": 1,
+                        "total_tokens": 2,
+                        "prompt_cache_hit_tokens": 0,
+                        "prompt_cache_miss_tokens": 1,
+                    },
+                }
+            ).encode()
+            captured = capture_chat_report(
+                body,
+                http_status=200,
+                physical_call_id=common["physical_call_id"],
+                expected_response_model="deepseek-flash",
+            )
             report = {
                 **common,
                 "kind": "metering_report",
                 "parameter_hash": "c" * 64,
-                "usage": usage,
+                **captured.to_dict(),
             }
+            report["report_hash"] = report_hash(report)
             observation = {
                 **common,
                 "kind": "call_observation",
@@ -51,7 +78,8 @@ async def run(mode: str) -> int:
                 "business_outcome": "accepted",
                 "error_code": "",
                 "usage_disposition": "reported",
-                "usage_hash": usage["usage_hash"],
+                "usage_hash": report["usage"]["usage_hash"],
+                "audit_hash": report["provider_audit"]["audit_hash"],
             }
             await asyncio.gather(hooks.settle(report), hooks.observe(observation))
         elif mode == "wait":

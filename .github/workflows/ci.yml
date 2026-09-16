@@ -235,7 +235,7 @@ jobs:
         run: docker build --target integration-check -f tools/agentruntimecheck/Dockerfile -t jobforge-agent-runtime:integration .
       - name: Coordinator ordering with the real Linux clock
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
-      - name: Real PostgreSQL, gRPC and supervised execution faults
+      - name: Real PostgreSQL, gRPC, provider report confirmation and process faults
         run: >-
           docker run --rm --init --network host --cpus 2 --memory 512m --pids-limit 96
           -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable

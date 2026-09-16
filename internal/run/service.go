@@ -16,6 +16,7 @@ type PublicStore interface {
 	Steps(context.Context, string, string, int64, int) (StepPage, error)
 	Events(context.Context, string, string, int64, int) (EventPage, error)
 	Result(context.Context, string, string) (Result, error)
+	Calls(context.Context, string, string) (CallsResponse, error)
 	Cancel(context.Context, string, string, string) (CancelResponse, error)
 }
 

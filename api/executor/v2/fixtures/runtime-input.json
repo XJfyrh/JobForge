@@ -85,9 +85,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -217,9 +219,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
+          "tool_invocation_id": "00000000-0000-4000-8000-000000000100",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -381,9 +385,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
+          "tool_invocation_id": "00000000-0000-4000-8000-000000000100",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -577,9 +583,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
+          "tool_invocation_id": "00000000-0000-4000-8000-000000000100",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -812,9 +820,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -1078,9 +1088,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -1402,9 +1414,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "support-fixed-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -1662,9 +1676,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "support-fixed-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -1759,8 +1775,10 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
           "parameters": {},
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -1855,7 +1873,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": null,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -1950,7 +1970,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": true,
           "tool_invocation_id": ""
         },
@@ -2045,7 +2067,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1.0,
           "tool_invocation_id": ""
         },
@@ -2140,7 +2164,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": "1",
           "tool_invocation_id": ""
         },
@@ -2236,6 +2262,8 @@
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
           "executor_version": "linux-v2-runtime-0",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -2330,7 +2358,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "module/path",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -2425,7 +2455,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -2621,7 +2653,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -2856,7 +2890,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -2952,7 +2988,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3037,7 +3075,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3132,7 +3172,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3227,7 +3269,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3322,7 +3366,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3417,7 +3463,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3512,7 +3560,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3607,7 +3657,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3702,7 +3754,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3797,7 +3851,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3892,7 +3948,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -3987,7 +4045,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -4083,7 +4143,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -4178,7 +4240,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -4270,7 +4334,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -4365,7 +4431,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -4561,7 +4629,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -4757,7 +4827,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -4953,7 +5025,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -5149,7 +5223,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -5345,7 +5421,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -5541,7 +5619,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -5735,7 +5815,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -5932,7 +6014,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -6128,7 +6212,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "bounded-readonly-mechanism-v1",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": "00000000-0000-4000-8000-000000000100"
         },
@@ -6223,7 +6309,9 @@
         "emitted_mono_ms": 1000,
         "input": {
           "adapter_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1",
           "schema_version": 1,
           "tool_invocation_id": ""
         },
@@ -6548,9 +6636,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "support-fixed-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -6848,9 +6938,11 @@
         "emitted_mono_ms": 1000,
         "input": {
           "schema_version": 1,
-          "executor_version": "linux-v2-ack-runtime-1",
+          "executor_version": "linux-v2-audit-runtime-1",
           "adapter_id": "support-fixed-v1",
-          "tool_invocation_id": ""
+          "tool_invocation_id": "",
+          "expected_response_model": "deepseek-flash",
+          "provider_audit_policy": "deepseek-audit-v1"
         },
         "kind": "execute_step",
         "remaining_ms": 60000,
@@ -6863,15 +6955,15 @@
   "invalid_json": [
     {
       "name": "duplicate_input_schema",
-      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"schema_version\":1,\"executor_version\":\"linux-v2-ack-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
+      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"schema_version\":1,\"executor_version\":\"linux-v2-audit-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\",\"expected_response_model\":\"deepseek-flash\",\"provider_audit_policy\":\"deepseek-audit-v1\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
     },
     {
       "name": "duplicate_checkpoint_cursor",
-      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"executor_version\":\"linux-v2-ack-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
+      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"executor_version\":\"linux-v2-audit-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\",\"expected_response_model\":\"deepseek-flash\",\"provider_audit_policy\":\"deepseek-audit-v1\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
     },
     {
       "name": "duplicate_ticket_id",
-      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"ticket_id\":\"synthetic-ticket\",\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"executor_version\":\"linux-v2-ack-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
+      "json": "{\"binding\":{\"tenant_id\":\"runtime-test\",\"worker_id\":\"runtime-test-worker\",\"run_id\":\"00000000-0000-4000-8000-000000000001\",\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"session_id\":\"00000000-0000-4000-8000-000000000005\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"attempt_no\":1,\"fencing_token\":1,\"cursor_version\":0,\"step_sequence\":1,\"step_kind\":\"read_ticket\"},\"checkpoint\":{\"cursor_version\":0,\"next_step\":{\"step_id\":\"00000000-0000-4000-8000-000000000010\",\"sequence\":1,\"kind\":\"read_ticket\",\"cursor_version\":0,\"input_hash\":\"a160b6b2f31c95739a954b2e405c410b8452353ddd51b1a14e973d9713a01178\",\"profile_id\":\"bounded-readonly-mechanism-profile-v1\",\"profile_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"steps\":[],\"snapshot\":{\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"snapshot_id\":\"00000000-0000-4000-8000-000000000002\",\"snapshot_hash\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"version_vector_json\":{\"delivery\":{\"aggregate_revision\":null,\"exists\":false,\"id\":null},\"index\":{\"content_hash\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"id\":\"00000000-0000-4000-8000-000000000003\",\"profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"},\"order\":{\"exists\":false,\"id\":null,\"revision\":null},\"policy\":{\"corpus_sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"revision\":1,\"version\":\"synthetic-policy-v1\"},\"schema_version\":1,\"ticket\":{\"id\":\"synthetic-ticket\",\"revision\":1}},\"ticket_binding_json\":{\"ticket_id\":\"synthetic-ticket\",\"tenant_id\":\"runtime-test\",\"ticket_id\":\"synthetic-ticket\",\"revision\":1,\"observed_at\":\"2026-09-16T00:00:00Z\",\"order_id\":null,\"policy_version\":\"synthetic-policy-v1\",\"subject\":\"synthetic mechanism fixture\",\"description\":\"Synthetic data verifies execution mechanics only.\",\"status\":\"open\"},\"index_id\":\"00000000-0000-4000-8000-000000000003\",\"index_profile_hash\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\"}},\"emitted_mono_ms\":1000,\"input\":{\"schema_version\":1,\"executor_version\":\"linux-v2-audit-runtime-1\",\"adapter_id\":\"bounded-readonly-mechanism-v1\",\"tool_invocation_id\":\"\",\"expected_response_model\":\"deepseek-flash\",\"provider_audit_policy\":\"deepseek-audit-v1\"},\"kind\":\"execute_step\",\"remaining_ms\":60000,\"request_id\":\"00000000-0000-4000-8000-000000000004\",\"trace_context\":\"\",\"version\":2}\n"
     }
   ]
 }

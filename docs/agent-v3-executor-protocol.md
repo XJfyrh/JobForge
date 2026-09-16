@@ -18,9 +18,11 @@ v2的`emitted_mono_ms`是剩余期限的发出锚，接收方扣除IPC排队时�
 
 ## 计量与普通结果
 
+当前内部版本按 [ADR-0020](adr/0020-provider-audit-and-batch-stop.md)升级为 typed provider report：计量 ACK 关联 report_hash，普通 observation.v2 另绑定 audit_hash；完整矩阵见[源合同](../api/executor/v2/README.md)和[持久审计指南](agent-v3-provider-audit.md)。chat unknown、身份/模式不兼容或报告冲突停批。非 chat unknown 保持普通 ACK/full hold，不能把 chat 的新停止规则泛化到免费业务和未知 embedding。下述确认顺序与原期限约束仍适用。
+
 普通observation声明`usage_disposition=unknown/reported`和可空`usage_hash`。每次HTTP都必须收到同身份/序号/观察hash的`call_observation_ack`，免费、unknown、rejected与最后一次调用也适用。reported还必须与同调用/原参数的`metering_report`汇合并确认settled；unknown保留完整hold，不伪造计量。已知超界报告立即停止本地派发；`metering_ack`的anomaly或unconfirmed均不恢复执行。
 
-观察hash复用控制账本的长度前缀SHA256：域、transport outcome、十进制HTTP状态、映射后的领域错误、business outcome、usage hash；unknown的usage项为空字符串。OUTPUT_INVALID→MODEL_PROTOCOL_ERROR、INPUT_INVALID→INVALID_ARGUMENT、PROTOCOL_ERROR→EXECUTOR_PROTOCOL_ERROR，控制拒绝码不得伪装业务观察。hash不含身份，因此两端仍分别严格验证完整binding、request、call和sequence。共同向量与源合同见[内部v2说明](../api/executor/v2/README.md)。
+观察hash复用控制账本的长度前缀SHA256：observation.v2域、transport outcome、十进制HTTP状态、映射后的领域错误、business outcome、usage hash、audit hash；unknown的usage项与非chat的audit项为空字符串。OUTPUT_INVALID→MODEL_PROTOCOL_ERROR、INPUT_INVALID→INVALID_ARGUMENT、PROTOCOL_ERROR→EXECUTOR_PROTOCOL_ERROR，控制拒绝码不得伪装业务观察。hash不含身份，因此两端仍分别严格验证完整binding、request、call和sequence。共同向量与源合同见[内部v2说明](../api/executor/v2/README.md)。
 
 两个FD可反序接收，但普通ACK发出不能早于observation和首次有效settled ACK。至多保存当前调用一份pending普通ACK，双屏障齐备前不恢复idle或发出结果。重复普通ACK属于协议错误；计量重复的既有幂等规则保留。停止后仍可接收标准完整原调用计量，废弃普通ACK不阻碍这项窄补报，也永不恢复普通执行。
 
@@ -36,4 +38,4 @@ ACK与汇合检查原call/step截止，等号过期。确认后第一个intent�
 
 Windows按仓库要求先启动测试PostgreSQL，再执行真实RPC/PG测试；源码协议用共同fixtures和反例验证，Python SDK与旧v1仍回归。Linux镜像另外运行Go/Python共享BOOTTIME测试及既有S0进程探针。C3a沿用C2固定Linux镜像检查实际BOOTTIME和TCP；还提供`go test ./internal/runprotocol/v2 -run '^$' -bench '^BenchmarkExecutorV2Session$' -benchmem -cpu=1`测完整本地codec/状态校验会话，不把它当作IPC、数据库或模型吞吐。
 
-新增直接使用的`golang.org/x/sys/unix`读取内核时钟，沿用仓库既有固定版本；`go mod tidy`同时将此前已直接使用的genproto/rpc归入直接依赖，未升级版本。无数据库migration、未更改Claim SQL或预算转换；历史W4失败、AT-25跳过、生产留存和远程模型未验收继续保留。
+历史C1直接使用的`golang.org/x/sys/unix`读取内核时钟，沿用仓库既有固定版本；当时未新增migration或修改Claim/预算转换。当前审计增量新增0024迁移并在新Claim/工具/调用前检查批次屏障，具体见审计指南。历史W4失败、AT-25跳过、生产留存和远程模型未验收继续保留。

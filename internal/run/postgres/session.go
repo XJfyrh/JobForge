@@ -82,6 +82,10 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 // deployment. A worker with no profiles can stay idle but cannot claim work.
 // Disabling execution does not erase old profiles needed for late accounting.
 func (s *Store) checkExecutorVersion(principal, version string) error {
+	// The retired deployed runtime retains only original-call late accounting.
+	if version == "linux-v2-ack-runtime-1" {
+		return agentrun.ErrProfileUnavailable
+	}
 	for _, id := range s.workers[principal].ProfileIDs {
 		profile, ok := s.profiles[id]
 		if !ok || profile.ExecutorVersion != version {

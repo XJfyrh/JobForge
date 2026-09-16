@@ -231,7 +231,7 @@ func reverseProjection(t *testing.T, f runprotocol.Frame) (*agentv1.RunLease, *a
 	l := &agentv1.RunLease{Execution: &agentv1.ExecutionIdentity{TenantId: b.TenantID, RunId: b.RunID,
 		Session: &agentv1.SessionIdentity{WorkerId: b.WorkerID, SessionId: b.SessionID}, AttemptNo: b.AttemptNo, FencingToken: b.FencingToken}, TraceContext: f.TraceContext,
 		Checkpoint: proto.Clone(c).(*agentv1.Checkpoint)}
-	return l, c, Selection{ExecutorVersion: i.ExecutorVersion, AdapterID: i.AdapterID, ToolInvocationID: i.ToolInvocationID}
+	return l, c, Selection{ExecutorVersion: i.ExecutorVersion, AdapterID: i.AdapterID, ToolInvocationID: i.ToolInvocationID, ExpectedResponseModel: i.ExpectedResponseModel, ProviderAuditPolicy: i.ProviderAuditPolicy}
 }
 
 func wireStep(s identity) *agentv1.StepIdentity {
@@ -297,7 +297,7 @@ func exampleFrame(t *testing.T, kind string) runprotocol.Frame {
 		Binding: runprotocol.Binding{TenantID: "runtime-test", WorkerID: "runtime-test-worker", RunID: runID, StepID: n.StepID, SessionID: uuidAt(5),
 			ProfileID: n.ProfileID, ProfileHash: n.ProfileHash, SnapshotID: n.SnapshotID, SnapshotHash: n.SnapshotHash, InputHash: n.InputHash,
 			AttemptNo: 1, FencingToken: 1, CursorVersion: n.CursorVersion, StepSequence: n.Sequence, StepKind: n.Kind},
-		Checkpoint: marshal(t, p), Input: marshal(t, input{SchemaVersion: 1, ExecutorVersion: ExecutorVersion, AdapterID: testAdapter, ToolInvocationID: toolID})}
+		Checkpoint: marshal(t, p), Input: marshal(t, input{SchemaVersion: 1, ExecutorVersion: ExecutorVersion, ExpectedResponseModel: "deepseek-flash", ProviderAuditPolicy: run.ProviderAuditPolicyDeepSeekV1, AdapterID: testAdapter, ToolInvocationID: toolID})}
 	if err := ValidateExecute(f); err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func supportRuntimeFrame(t *testing.T, vectorName string) runprotocol.Frame {
 		f.Binding.TenantID, f.Binding.StepID, f.Binding.StepSequence, f.Binding.StepKind = p.Snapshot.TenantID, n.StepID, n.Sequence, n.Kind
 		f.Binding.CursorVersion, f.Binding.InputHash, f.Binding.ProfileID, f.Binding.ProfileHash = n.CursorVersion, n.InputHash, profileID, profileHash
 		f.Binding.SnapshotID, f.Binding.SnapshotHash = p.Snapshot.SnapshotID, p.Snapshot.SnapshotHash
-		f.Input = marshal(t, input{SchemaVersion: 1, ExecutorVersion: ExecutorVersion, AdapterID: "support-fixed-v1"})
+		f.Input = marshal(t, input{SchemaVersion: 1, ExecutorVersion: ExecutorVersion, ExpectedResponseModel: "deepseek-flash", ProviderAuditPolicy: run.ProviderAuditPolicyDeepSeekV1, AdapterID: "support-fixed-v1"})
 		f.Checkpoint = marshal(t, p)
 		if err := ValidateExecute(f); err != nil {
 			t.Fatal(err)

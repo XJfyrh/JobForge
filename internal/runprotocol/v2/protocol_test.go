@@ -13,8 +13,12 @@ import (
 )
 
 type fixtures struct {
-	ValidFrames          []json.RawMessage                      `json:"valid_frames"`
-	InvalidFrames        []struct{ Name, Wire, Channel string } `json:"invalid_frames"`
+	ValidFrames   []json.RawMessage `json:"valid_frames"`
+	InvalidFrames []struct {
+		Name    string `json:"name"`
+		Wire    string `json:"wire"`
+		Channel string `json:"channel"`
+	} `json:"invalid_frames"`
 	ObservationHashCases []struct {
 		Name        string          `json:"name"`
 		Frame       json.RawMessage `json:"frame"`
@@ -62,6 +66,10 @@ func decodeFixture(t testing.TB, raw json.RawMessage) Frame {
 
 func TestSharedExecutorV2Fixtures(t *testing.T) {
 	fixture := loadFixtures(t)
+	checkSharedFixtures(t, fixture)
+}
+
+func checkSharedFixtures(t *testing.T, fixture fixtures) {
 	for _, raw := range fixture.ValidFrames {
 		f := decodeFixture(t, raw)
 		t.Run("frame_"+f.Kind, func(t *testing.T) {

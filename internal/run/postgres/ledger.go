@@ -17,12 +17,60 @@ type toolRow struct {
 }
 
 type callRow struct {
-	Reservation                         agentrun.CallReservation
-	Lease                               agentrun.Lease
-	StepID, StepKind, Kind, ProfileHash string
-	Status                              string
-	ObservationHash, UsageHash          *string
-	TransportOutcome, BusinessOutcome   *string
+	Reservation                             agentrun.CallReservation
+	Lease                                   agentrun.Lease
+	StepID, StepKind, Kind, ProfileHash     string
+	Status                                  string
+	ObservationHash, UsageHash              *string
+	TransportOutcome, BusinessOutcome       *string
+	Report                                  *agentrun.CallReport
+	ReportConflictHash                      *string
+	ObservedAt, ReportRecordedAt, SettledAt *time.Time
+	HTTPStatus                              *int
+	ErrorCode                               *string
+	KnownTokens, KnownCostMicroyuan         int64
+	usageJSON, reportJSON                   []byte
+}
+
+const callColumns = `c.physical_call_id,coalesce(c.tool_invocation_id::text,''),c.subcall,c.input_hash,c.price_hash,
+	c.ordinal,c.reserved_at,c.dispatch_expires_at,c.call_deadline,c.reserved_tokens,c.reserved_cost_microyuan,
+	c.tenant_id,c.run_id,c.worker_id,c.session_id,c.attempt_no,c.fencing_token,c.step_id,c.step_kind,c.kind,c.profile_hash,
+	c.status,c.observation_hash,c.usage_hash,c.transport_outcome,c.business_outcome,c.measurement_anomaly,c.usage,
+	coalesce(c.execution_binding_hash,''),coalesce(c.report_hash,''),c.call_report,c.report_recorded_at,
+	c.report_conflict_hash,c.observation_http_status,c.observation_error_code,c.observed_at,c.settled_at,
+	coalesce(c.known_tokens,0),coalesce(c.known_cost_microyuan,0)`
+
+func callTargets(c *callRow) []any {
+	return []any{&c.Reservation.PhysicalCallID, &c.Reservation.ToolInvocationID, &c.Reservation.Subcall, &c.Reservation.ParameterHash, &c.Reservation.PriceHash,
+		&c.Reservation.Ordinal, &c.Reservation.ReservedAt, &c.Reservation.DispatchExpiresAt, &c.Reservation.CallDeadline,
+		&c.Reservation.Budget.TotalTokens, &c.Reservation.Budget.CostMicroyuan,
+		&c.Lease.TenantID, &c.Lease.RunID, &c.Lease.WorkerID, &c.Lease.SessionID, &c.Lease.AttemptNo, &c.Lease.FencingToken,
+		&c.StepID, &c.StepKind, &c.Kind, &c.ProfileHash, &c.Status, &c.ObservationHash, &c.UsageHash,
+		&c.TransportOutcome, &c.BusinessOutcome, &c.Reservation.MeasurementAnomaly, &c.usageJSON,
+		&c.Reservation.ExecutionBindingHash, &c.Reservation.PersistedReportHash, &c.reportJSON, &c.ReportRecordedAt,
+		&c.ReportConflictHash, &c.HTTPStatus, &c.ErrorCode, &c.ObservedAt, &c.SettledAt, &c.KnownTokens, &c.KnownCostMicroyuan}
+}
+
+func decodeCall(c *callRow) error {
+	c.Reservation.UsageKnown = c.Status == "known"
+	if len(c.usageJSON) > 0 {
+		var report agentrun.UsageReport
+		if json.Unmarshal(c.usageJSON, &report) != nil || report.Validate() != nil {
+			return agentrun.ErrInternal
+		}
+		c.Reservation.ReportedUsage = &report
+	}
+	if len(c.reportJSON) > 0 {
+		report, err := agentrun.DecodeCallReport(c.reportJSON)
+		if err != nil {
+			return agentrun.ErrInternal
+		}
+		c.Report = &report
+		if report.ProviderAudit != nil {
+			c.Reservation.PersistedAuditHash = report.ProviderAudit.AuditHash
+		}
+	}
+	return nil
 }
 
 func readTool(ctx context.Context, tx pgx.Tx, id string) (toolRow, error) {
@@ -41,30 +89,13 @@ func toolMatches(t toolRow, req agentrun.BeginToolRequest) bool {
 
 func readCall(ctx context.Context, tx pgx.Tx, tenant, runID, id string) (callRow, error) {
 	var c callRow
-	var usage []byte
-	err := tx.QueryRow(ctx, `select physical_call_id,coalesce(tool_invocation_id::text,''),subcall,input_hash,price_hash,
-		ordinal,reserved_at,dispatch_expires_at,call_deadline,reserved_tokens,reserved_cost_microyuan,
-		tenant_id,run_id,worker_id,session_id,attempt_no,fencing_token,step_id,step_kind,kind,profile_hash,
-		status,observation_hash,usage_hash,transport_outcome,business_outcome,measurement_anomaly,usage
-		from physical_calls where tenant_id=$1 and run_id=$2 and physical_call_id=$3 for update`, tenant, runID, id).Scan(
-		&c.Reservation.PhysicalCallID, &c.Reservation.ToolInvocationID, &c.Reservation.Subcall, &c.Reservation.ParameterHash, &c.Reservation.PriceHash,
-		&c.Reservation.Ordinal, &c.Reservation.ReservedAt, &c.Reservation.DispatchExpiresAt, &c.Reservation.CallDeadline,
-		&c.Reservation.Budget.TotalTokens, &c.Reservation.Budget.CostMicroyuan,
-		&c.Lease.TenantID, &c.Lease.RunID, &c.Lease.WorkerID, &c.Lease.SessionID, &c.Lease.AttemptNo, &c.Lease.FencingToken,
-		&c.StepID, &c.StepKind, &c.Kind, &c.ProfileHash, &c.Status, &c.ObservationHash, &c.UsageHash,
-		&c.TransportOutcome, &c.BusinessOutcome, &c.Reservation.MeasurementAnomaly, &usage)
+	err := tx.QueryRow(ctx, "select "+callColumns+` from physical_calls c
+		where c.tenant_id=$1 and c.run_id=$2 and c.physical_call_id=$3 for update`, tenant, runID, id).Scan(callTargets(&c)...)
 	if err != nil {
 		return c, err
 	}
-	c.Reservation.UsageKnown = c.Status == "known"
-	if len(usage) > 0 {
-		var report agentrun.UsageReport
-		if err := json.Unmarshal(usage, &report); err != nil || report.Validate() != nil {
-			return c, agentrun.ErrInternal
-		}
-		c.Reservation.ReportedUsage = &report
-	}
-	return c, nil
+	err = decodeCall(&c)
+	return c, err
 }
 
 func validateLedgerLease(lease agentrun.Lease) error {
@@ -94,7 +125,7 @@ func (s *Store) ledgerProfile(ctx context.Context, tx pgx.Tx, r agentrun.Run, ex
 	if err := tx.QueryRow(ctx, "select profile_hash,definition from agent_profiles where profile_id=$1", r.ProfileID).Scan(&hash, &body); err != nil {
 		return p, agentrun.ErrProfileUnavailable
 	}
-	if json.Unmarshal(body, &p) != nil || p.ID != r.ProfileID || hash != r.ProfileHash || p.Hash != hash || !agentrun.ValidHash(p.Pricing.Hash) {
+	if json.Unmarshal(body, &p) != nil || p.ValidateAuditPolicy() != nil || p.ID != r.ProfileID || hash != r.ProfileHash || p.Hash != hash || !agentrun.ValidHash(p.Pricing.Hash) {
 		return p, agentrun.ErrProfileUnavailable
 	}
 	if executable {
@@ -175,7 +206,11 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 		if a.ActiveCallID != nil {
 			return agentrun.ErrCallConflict
 		}
-		if _, err := s.ledgerProfile(ctx, tx, r, true); err != nil {
+		profile, err := s.ledgerProfile(ctx, tx, r, true)
+		if err != nil {
+			return err
+		}
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
 			return err
 		}
 		accounts, err = reserveLedgerAccounts(accounts, agentrun.Usage{LogicalTools: 1}, now)
@@ -264,6 +299,12 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 			if err := restoreCallBudget(&prior, profile); err != nil {
 				return err
 			}
+			if profile.AuditEnabled() {
+				bindingHash, err := agentrun.ExecutionBindingHash(req.Lease, req.Step)
+				if err != nil || bindingHash != prior.Reservation.ExecutionBindingHash {
+					return agentrun.ErrCallConflict
+				}
+			}
 			result.Reservation = prior.Reservation
 			return nil
 		}
@@ -277,6 +318,9 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 			return agentrun.ErrProfileUnavailable
 		}
 		if err := checkSubcall(ctx, tx, req, tool); err != nil {
+			return err
+		}
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
 			return err
 		}
 		budget, err := agentrun.ReservationBudget(profile, req.Subcall)
@@ -308,14 +352,21 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 		reservation := agentrun.CallReservation{PhysicalCallID: req.PhysicalCallID, ToolInvocationID: req.ToolInvocationID,
 			Subcall: req.Subcall, ParameterHash: req.ParameterHash, PriceHash: req.PriceHash, Ordinal: ordinal,
 			ReservedAt: now, DispatchExpiresAt: dispatchExpiry, CallDeadline: callDeadline, Budget: budget}
+		if profile.AuditEnabled() {
+			reservation.ExecutionBindingHash, err = agentrun.ExecutionBindingHash(req.Lease, req.Step)
+			if err != nil {
+				return err
+			}
+		}
 		_, err = tx.Exec(ctx, `insert into physical_calls
 			(physical_call_id,tenant_id,run_id,step_id,attempt_no,worker_id,session_id,fencing_token,tool_invocation_id,
 			kind,subcall,ordinal,input_hash,profile_hash,price_hash,reserved_tokens,reserved_cost_microyuan,status,
-			reserved_at,dispatch_expires_at,call_deadline,step_kind)
-			values($1,$2,$3,$4,$5,$6,$7,$8,nullif($9,'')::uuid,$10,$11,$12,$13,$14,$15,$16,$17,'reserved',$18,$19,$20,$21)`,
+			reserved_at,dispatch_expires_at,call_deadline,step_kind,execution_binding_hash)
+			values($1,$2,$3,$4,$5,$6,$7,$8,nullif($9,'')::uuid,$10,$11,$12,$13,$14,$15,$16,$17,'reserved',$18,$19,$20,$21,nullif($22,''))`,
 			req.PhysicalCallID, r.TenantID, r.ID, req.Step.ID, req.Lease.AttemptNo, req.Lease.WorkerID, req.Lease.SessionID,
 			req.Lease.FencingToken, req.ToolInvocationID, agentrun.CallKind(req.Subcall), req.Subcall, ordinal,
-			req.ParameterHash, req.Step.ProfileHash, req.PriceHash, budget.TotalTokens, budget.CostMicroyuan, now, dispatchExpiry, callDeadline, req.Step.Kind)
+			req.ParameterHash, req.Step.ProfileHash, req.PriceHash, budget.TotalTokens, budget.CostMicroyuan, now, dispatchExpiry, callDeadline, req.Step.Kind,
+			reservation.ExecutionBindingHash)
 		if err != nil {
 			return err
 		}
@@ -440,7 +491,19 @@ func (s *Store) ObserveCall(ctx context.Context, principal string, req agentrun.
 		if err := restoreCallBudget(&call, profile); err != nil {
 			return err
 		}
-		hash := req.Hash()
+		if profile.AuditEnabled() {
+			if err := accountsUnfrozen(accounts); err != nil {
+				return err
+			}
+			bindingHash, err := agentrun.ExecutionBindingHash(req.Lease, req.Step)
+			if err != nil || bindingHash != call.Reservation.ExecutionBindingHash {
+				return agentrun.ErrCallConflict
+			}
+		}
+		hash, err := checkAuditObservation(call, profile, req)
+		if err != nil {
+			return err
+		}
 		if call.ObservationHash != nil {
 			if *call.ObservationHash != hash {
 				return agentrun.ErrCallConflict
@@ -451,15 +514,16 @@ func (s *Store) ObserveCall(ctx context.Context, principal string, req agentrun.
 		if a.ActiveCallID == nil || *a.ActiveCallID != req.PhysicalCallID {
 			return agentrun.ErrCallConflict
 		}
-		if req.Usage != nil {
+		if req.Usage != nil && !profile.AuditEnabled() {
 			if _, err := settleLedgerUsage(ctx, tx, &call, profile, accounts, *req.Usage, now); err != nil {
 				return err
 			}
 		}
 		_, err = tx.Exec(ctx, `update physical_calls set status=case when status='reserved' then 'unknown' else status end,
-			transport_outcome=$4,business_outcome=$5,observation_hash=$6,observed_at=$7
+			transport_outcome=$4,business_outcome=$5,observation_hash=$6,observed_at=$7,
+			observation_http_status=$8,observation_error_code=$9
 			where tenant_id=$1 and run_id=$2 and physical_call_id=$3`, r.TenantID, r.ID, req.PhysicalCallID,
-			req.TransportOutcome, req.BusinessOutcome, hash, now)
+			req.TransportOutcome, req.BusinessOutcome, hash, now, req.HTTPStatus, req.ErrorCode)
 		if err != nil {
 			return err
 		}
@@ -477,7 +541,8 @@ func (s *Store) ObserveCall(ctx context.Context, principal string, req agentrun.
 // expired lease, and changes only call/account metering. It never saves the Run.
 func (s *Store) SettleUsage(ctx context.Context, principal string, req agentrun.SettleUsageRequest) (agentrun.SettleUsageResponse, error) {
 	var result agentrun.SettleUsageResponse
-	if validateLedgerLease(req.Lease) != nil || !agentrun.ValidUUID(req.PhysicalCallID) || req.Usage.Validate() != nil {
+	if validateLedgerLease(req.Lease) != nil || !agentrun.ValidUUID(req.PhysicalCallID) ||
+		(req.Usage != nil && req.Usage.Validate() != nil) {
 		return result, agentrun.ErrInvalidArgument
 	}
 	err := s.transact(ctx, func(tx pgx.Tx) error {
@@ -510,11 +575,24 @@ func (s *Store) SettleUsage(ctx context.Context, principal string, req agentrun.
 		if err := restoreCallBudget(&call, profile); err != nil {
 			return err
 		}
-		first, err := settleLedgerUsage(ctx, tx, &call, profile, accounts, req.Usage, now)
+		if profile.AuditEnabled() {
+			result, err = settleCallReport(ctx, tx, &call, profile, &accounts, req, now)
+		} else {
+			if req.Usage == nil || req.ProviderAudit != nil || req.ReportHash != "" || call.Reservation.ExecutionBindingHash != "" {
+				return agentrun.ErrInvalidArgument
+			}
+			result.NewlySettled, err = settleLedgerUsage(ctx, tx, &call, profile, accounts, *req.Usage, now)
+		}
 		if err != nil {
 			return err
 		}
-		result.Reservation, result.NewlySettled = call.Reservation, first
+		batch, err := readAccount(tx.QueryRow(ctx, "select "+accountColumns()+" from budget_accounts where account_id=$1", accounts[2].Account.ID))
+		if err != nil {
+			return err
+		}
+		result.Reservation, result.PersistedReportHash, result.PersistedAuditHash = call.Reservation,
+			call.Reservation.PersistedReportHash, call.Reservation.PersistedAuditHash
+		result.BatchFrozen, result.BatchStopCode = batch.Account.Frozen, batch.Account.BatchStopCode
 		return nil
 	})
 	return result, err

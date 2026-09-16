@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -117,12 +118,18 @@ func TestSharedObservationHashesMatchLedger(t *testing.T) {
 			if err = request.Validate(); err != nil {
 				t.Fatalf("ledger request validation: %v", err)
 			}
-			if request.Hash() != hash {
+			auditHash := ""
+			if frame.AuditHash != nil {
+				auditHash = *frame.AuditHash
+			}
+			ledgerHash, ledgerErr := run.ObservationHashV2(request, auditHash)
+			if ledgerErr != nil || ledgerHash != hash {
 				t.Fatal("wire and ledger observation hashes differ")
 			}
 			if code != frame.ErrorCode {
 				request.ErrorCode = frame.ErrorCode
-				if request.Hash() == hash {
+				unmapped, _ := run.ObservationHashV2(request, auditHash)
+				if unmapped == hash {
 					t.Fatal("wire error was not mapped before hashing")
 				}
 			}
@@ -244,6 +251,9 @@ func TestMeteringPendingExcludesOrdinaryACKWait(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			frames := observationFrames(t)
+			if !reported {
+				freeObservationFrames(frames)
+			}
 			c := observationConversation(t, frames)
 			observation := frames["call_observation"]
 			if !reported {
@@ -315,6 +325,7 @@ func TestAbandonedObservationACKDoesNotBlockLateSettlement(t *testing.T) {
 
 func TestObservationACKSuccessorKeepsOriginalCallDeadline(t *testing.T) {
 	frames := observationFrames(t)
+	freeObservationFrames(frames)
 	permit := frames["call_permit"]
 	permit.CallMS, permit.DispatchMS = 100, 50
 	frames["call_permit"] = permit
@@ -342,6 +353,7 @@ func TestObservationACKNextIntentDeadlineDoesNotBindNewPermit(t *testing.T) {
 			frames := observationFrames(t)
 			for kind, frame := range frames {
 				frame.Binding.StepKind = "search_policy"
+				frame.AuditHash = nil
 				if oneOf(kind, "call_intent", "call_permit") {
 					frame.Subcall, frame.ToolInvocationID = "profile_version", "00000000-0000-4000-8000-000000000099"
 				}
@@ -382,5 +394,67 @@ func TestObservationACKNextIntentDeadlineDoesNotBindNewPermit(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func freeObservationFrames(frames map[string]Frame) {
+	for kind, f := range frames {
+		f.Binding.StepKind = "get_order"
+		f.AuditHash = nil
+		if oneOf(kind, "call_intent", "call_permit") {
+			f.Subcall, f.ToolInvocationID = "get_order", "00000000-0000-4000-8000-000000000099"
+		}
+		if kind == "call_permit" {
+			f.CallMS, f.DispatchMS, f.InputTokenLimit, f.OutputTokenLimit = 10000, 1000, 0, 0
+		}
+		frames[kind] = f
+	}
+}
+
+func TestEmbeddingUnknownOrdinaryACKAllowsNextSearch(t *testing.T) {
+	frames := observationFrames(t)
+	execute := frames["execute_step"]
+	execute.Binding.StepKind = "search_policy"
+	c := &Conversation{}
+	if err := c.Accept(execute, 1000); err != nil {
+		t.Fatal(err)
+	}
+	for index, subcall := range subcalls("search_policy") {
+		intent := frames["call_intent"]
+		intent.Binding, intent.Subcall, intent.CallSequence = execute.Binding, subcall, int64(index+1)
+		intent.ToolInvocationID = "00000000-0000-4000-8000-000000000099"
+		if err := c.Accept(intent, 1000); err != nil {
+			t.Fatal(err)
+		}
+		permit := intent
+		permit.Kind, permit.Granted = "call_permit", true
+		permit.PhysicalCallID = fmt.Sprintf("00000000-0000-4000-8000-%012d", index+1)
+		permit.CallMS, permit.DispatchMS = 10000, 1000
+		if subcall == "query_embedding" {
+			permit.InputTokenLimit = 100
+		}
+		if err := c.Accept(permit, 1000); err != nil {
+			t.Fatal(err)
+		}
+		if err := c.CanDispatch(permit.PhysicalCallID, 1000); err != nil {
+			t.Fatal(err)
+		}
+		observation := frames["call_observation"]
+		observation.Binding, observation.CallSequence, observation.PhysicalCallID = execute.Binding, permit.CallSequence, permit.PhysicalCallID
+		observation.UsageDisposition, observation.UsageHash, observation.AuditHash = "unknown", nil, nil
+		if err := c.Accept(observation, 1000); err != nil {
+			t.Fatal(err)
+		}
+		if c.Closed() || c.MeteringPending() || c.metering.calls[permit.PhysicalCallID].report != nil {
+			t.Fatal("unknown embedding manufactured a report or acquired chat stop semantics")
+		}
+		if err := c.Accept(observationACK(t, observation, 1000), 1000); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result := frames["step_result"]
+	result.Binding = execute.Binding
+	if err := c.Accept(result, 1000); err != nil {
+		t.Fatal("ordinary embedding ACK did not allow the fixed search successor", err)
 	}
 }

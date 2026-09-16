@@ -76,6 +76,10 @@ func (f *coordinatorClient) SettleUsage(ctx context.Context, request *agentv1.Se
 	return f.settle(ctx, request)
 }
 
+func (*coordinatorClient) FailAttempt(context.Context, *agentv1.FailAttemptRequest, ...grpc.CallOption) (*agentv1.FailAttemptResponse, error) {
+	return &agentv1.FailAttemptResponse{}, nil
+}
+
 func cleanReceipt() runexecutor.Receipt {
 	return runexecutor.Receipt{Guardian: runexecutor.Exit{Observed: true}, GroupGone: true,
 		Ordinary: runexecutor.ChannelReceipt{EOF: true, Joined: true},
@@ -140,6 +144,8 @@ func coordinatorFixture(t *testing.T, kind string) (*coordinator, *coordinatorCl
 		lease:      &agentv1.RunLease{Execution: &agentv1.ExecutionIdentity{TenantId: binding.TenantID, RunId: binding.RunID}},
 		checkpoint: &agentv1.Checkpoint{NextStep: step}, calls: make(map[string]*callRecord), completed: make(chan completion, 8), priceHash: strings.Repeat("d", 64)}
 	c.execute = v2.Frame{Version: 2, Kind: "execute_step", RequestID: "00000000-0000-4000-8000-000000000005", Binding: binding, RemainingMS: 180000, Input: json.RawMessage(`{}`), Checkpoint: json.RawMessage(`{}`)}
+	c.profile = run.Profile{ExpectedResponseModel: "deepseek-flash", ProviderAuditPolicy: run.ProviderAuditPolicyDeepSeekV1,
+		ExecutorVersion: run.ProviderAuditExecutorVersion, Pricing: run.Pricing{Denominator: 1}}
 	return c, client, process
 }
 
@@ -164,11 +170,18 @@ func coordinatorResult(t *testing.T, c *coordinator, correction bool) {
 	c.result = &f
 }
 
-func confirmedFixtureCall(c *coordinator, reported bool) *callRecord {
+func confirmedFixtureCall(t *testing.T, c *coordinator, reported bool) *callRecord {
+	t.Helper()
 	call := &callRecord{id: "00000000-0000-4000-8000-000000000006", confirmed: true, settled: reported,
-		intent: v2.Frame{CallSequence: 1}, observation: &v2.Frame{TransportOutcome: "response", BusinessOutcome: "accepted", UsageDisposition: "unknown"}}
+		intent: v2.Frame{CallSequence: 1, Subcall: "chat"}, observation: &v2.Frame{TransportOutcome: "response", BusinessOutcome: "accepted", UsageDisposition: "unknown"}}
 	if reported {
+		report := c.base("metering_report", 1000)
+		report.CallSequence, report.PhysicalCallID, report.ParameterHash = 1, call.id, strings.Repeat("d", 64)
+		report.Usage = &v2.Usage{InputTokens: 1, OutputTokens: 1}
+		completeFixtureReport(t, &report)
+		call.report = &report
 		call.observation.UsageDisposition = "reported"
+		call.observation.UsageHash, call.observation.AuditHash = &report.Usage.UsageHash, &report.ProviderAudit.AuditHash
 	}
 	c.calls[call.id] = call
 	return call
@@ -179,10 +192,10 @@ func successfulCommit(request *agentv1.CommitStepRequest) *agentv1.CommitStepRes
 }
 
 func TestCoordinatorCommitNeedsConfirmedObservationAndMetering(t *testing.T) {
-	for _, mode := range []string{"free_unknown", "reported", "missing_ack", "unsettled", "wrong_call", "stopped"} {
+	for _, mode := range []string{"chat_unknown", "reported", "missing_ack", "unsettled", "wrong_call", "stopped"} {
 		t.Run(mode, func(t *testing.T) {
 			c, client, _ := coordinatorFixture(t, "model_proposal")
-			call := confirmedFixtureCall(c, mode == "reported" || mode == "unsettled")
+			call := confirmedFixtureCall(t, c, mode != "chat_unknown")
 			coordinatorResult(t, c, false)
 			switch mode {
 			case "missing_ack":
@@ -200,7 +213,7 @@ func TestCoordinatorCommitNeedsConfirmedObservationAndMetering(t *testing.T) {
 				return successfulCommit(request), nil
 			}
 			outcome := c.commit(context.Background())
-			valid := mode == "free_unknown" || mode == "reported"
+			valid := mode == "reported"
 			if valid && (outcome.Commit == nil || calls != 1) || !valid && (outcome.Commit != nil || calls != 0) {
 				t.Fatalf("unexpected commit count %d, outcome %+v", calls, outcome)
 			}
@@ -216,7 +229,7 @@ func TestCoordinatorCommitOnlyFirstConfirmedCorrection(t *testing.T) {
 				kind = "protocol_correction"
 			}
 			c, client, _ := coordinatorFixture(t, kind)
-			call := confirmedFixtureCall(c, true)
+			call := confirmedFixtureCall(t, c, true)
 			call.observation.BusinessOutcome, call.observation.ErrorCode = "rejected", "OUTPUT_INVALID"
 			if mode == "timeout" {
 				call.observation.ErrorCode = "TIMEOUT"
@@ -289,7 +302,7 @@ func TestCoordinatorLostCommitAckOnlyReadsSameCommit(t *testing.T) {
 
 func TestCoordinatorBudgetRefusalSurvivesFollowupProtocolFailure(t *testing.T) {
 	c, _, process := coordinatorFixture(t, "model_proposal")
-	call := confirmedFixtureCall(c, false)
+	call := confirmedFixtureCall(t, c, false)
 	refusal, err := status.New(codes.ResourceExhausted, "fixed test refusal").WithDetails(&errdetails.ErrorInfo{Domain: "jobforge.agent.v1", Reason: "BUDGET_EXHAUSTED"})
 	if err != nil {
 		t.Fatal(err)
@@ -357,6 +370,11 @@ func activeCoordinator(t *testing.T, kind string, reported bool) (*coordinator, 
 			Subcall: subcall(intent.Subcall), ParameterHash: intent.ParameterHash, PriceHash: c.priceHash,
 			Budget: &agentv1.CallBudget{InputTokens: 1000, OutputTokens: 1000, TotalTokens: 2000}}}
 	c.calls[call.id] = call
+	binding, err := v2.ReportBinding(v2.Frame{Binding: c.execute.Binding, PhysicalCallID: call.id, ParameterHash: intent.ParameterHash}, "deepseek-flash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	call.reservation.ExecutionBindingHash = binding.ExecutionBindingHash
 	observation := c.base("call_observation", now)
 	observation.CallSequence, observation.PhysicalCallID = 1, call.id
 	observation.TransportOutcome, observation.HTTPStatus, observation.BusinessOutcome, observation.UsageDisposition = "response", 200, "accepted", "unknown"
@@ -365,16 +383,18 @@ func activeCoordinator(t *testing.T, kind string, reported bool) (*coordinator, 
 		usage.UsageHash = run.Fingerprint("jobforge.run.usage.v1", "1", "1", "0", usage.ReceiptHash)
 		report := c.base("metering_report", now)
 		report.CallSequence, report.PhysicalCallID, report.ParameterHash, report.Usage = 1, call.id, intent.ParameterHash, usage
+		completeFixtureReport(t, &report)
 		// Keep a separately prepared frame until the test deliberately delivers
 		// the metering lane. Merely constructing it cannot settle the call.
 		observation.UsageDisposition, observation.UsageHash = "reported", &usage.UsageHash
+		observation.AuditHash = &report.ProviderAudit.AuditHash
 		client.settle = func(_ context.Context, request *agentv1.SettleUsageRequest) (*agentv1.SettleUsageResponse, error) {
 			if !proto.Equal(request.Usage, usageToWire(report.Usage)) {
 				t.Error("settlement changed original usage")
 			}
 			reservation := proto.Clone(call.reservation).(*agentv1.CallReservation)
 			reservation.UsageKnown = true
-			return &agentv1.SettleUsageResponse{Reservation: reservation}, nil
+			return fixtureSettledResponse(reservation, &report), nil
 		}
 	}
 	client.observe = func(_ context.Context, request *agentv1.ObserveCallRequest) (*agentv1.ObserveCallResponse, error) {
@@ -383,7 +403,14 @@ func activeCoordinator(t *testing.T, kind string, reported bool) (*coordinator, 
 		}
 		reservation := proto.Clone(call.reservation).(*agentv1.CallReservation)
 		reservation.UsageKnown = reported
+		if call.report != nil {
+			reservation.PersistedReportHash, reservation.PersistedAuditHash = call.report.ReportHash, reportAuditHash(call.report)
+		}
 		return &agentv1.ObserveCallResponse{Reservation: reservation}, nil
+	}
+	if kind == "model_proposal" && !reported {
+		audit := fixtureAudit()
+		observation.AuditHash = &audit.AuditHash
 	}
 	return c, client, process, call, observation
 }
@@ -418,8 +445,8 @@ func joinCoordinatorTasks(t *testing.T, c *coordinator) {
 	}
 }
 
-func TestCoordinatorObservationACKIncludesFreeAndUnknownCalls(t *testing.T) {
-	for _, kind := range []string{"get_order", "model_proposal"} {
+func TestCoordinatorObservationACKIncludesFreeCalls(t *testing.T) {
+	for _, kind := range []string{"get_order"} {
 		t.Run(kind, func(t *testing.T) {
 			c, _, process, call, observation := activeCoordinator(t, kind, false)
 			c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Ordinary, Frame: &observation})
@@ -450,6 +477,7 @@ func TestCoordinatorReportedObservationWaitsForIndependentMetering(t *testing.T)
 	usage := &v2.Usage{InputTokens: 1, OutputTokens: 1, ReceiptHash: strings.Repeat("a", 64), UsageHash: *observation.UsageHash}
 	report := c.base("metering_report", observation.EmittedMonoMS)
 	report.CallSequence, report.PhysicalCallID, report.ParameterHash, report.Usage = 1, call.id, call.intent.ParameterHash, usage
+	completeFixtureReport(t, &report)
 	c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Metering, Frame: &report})
 	done := nextCompletion(t, c)
 	if done.kind != "settle" {
@@ -467,7 +495,7 @@ func TestCoordinatorReportedObservationWaitsForIndependentMetering(t *testing.T)
 }
 
 func TestCoordinatorResultCanPrecedeACKWriteCompletionDelivery(t *testing.T) {
-	c, _, process, call, observation := activeCoordinator(t, "model_proposal", false)
+	c, _, process, call, observation := activeCoordinator(t, "get_order", false)
 	c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Ordinary, Frame: &observation})
 	c.complete(context.Background(), nextCompletion(t, c))
 	ack := nextWritten(t, process)
@@ -486,7 +514,7 @@ func TestCoordinatorResultCanPrecedeACKWriteCompletionDelivery(t *testing.T) {
 }
 
 func TestCoordinatorLateQueuedACKCannotRenewOriginalCall(t *testing.T) {
-	c, _, process, call, observation := activeCoordinator(t, "model_proposal", false)
+	c, _, process, call, observation := activeCoordinator(t, "get_order", false)
 	c.ordinarySend = true // Earlier bytes were delivered; its task completion is queued.
 	c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Ordinary, Frame: &observation})
 	c.complete(context.Background(), nextCompletion(t, c))

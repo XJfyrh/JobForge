@@ -1,0 +1,317 @@
+{
+  "date": "2026-09-16",
+  "environment": "same Windows host and Docker PostgreSQL; exclusive test DSN; unrelated existing containers retained",
+  "method": "five alternating baseline/candidate pairs per round; 64 Runs, 448 calls, 192 tools, 384 steps per trial; no external HTTP; not W4",
+  "before_optimization": {
+    "baseline": "bffe5665f266f0510de94d7bf13a3f8dbc963df2",
+    "runs_per_trial": 64,
+    "rounds": 5,
+    "scope": "legacy registered Run control hot paths; synthetic results; no external HTTP; not W4",
+    "variants": {
+      "base": {
+        "trials": [
+          {
+            "runs_per_second": 5.072,
+            "p95_ms": {
+              "claim": 35.8504,
+              "claim-empty": 3.0808,
+              "commit-step": 18.3979,
+              "get-checkpoint": 9.792,
+              "observe-chat-with-usage": 14.4459,
+              "reserve-chat": 16.2907,
+              "submit": 35.0156
+            }
+          },
+          {
+            "runs_per_second": 4.877,
+            "p95_ms": {
+              "claim": 34.663,
+              "claim-empty": 2.4136,
+              "commit-step": 19.6537,
+              "get-checkpoint": 10.9384,
+              "observe-chat-with-usage": 15.7991,
+              "reserve-chat": 19.0918,
+              "submit": 27.2118
+            }
+          },
+          {
+            "runs_per_second": 5.221,
+            "p95_ms": {
+              "claim": 31.9464,
+              "claim-empty": 4.0884,
+              "commit-step": 18.5292,
+              "get-checkpoint": 9.8147,
+              "observe-chat-with-usage": 14.463,
+              "reserve-chat": 18.1266,
+              "submit": 26.0097
+            }
+          },
+          {
+            "runs_per_second": 5.226,
+            "p95_ms": {
+              "claim": 32.9106,
+              "claim-empty": 2.6032,
+              "commit-step": 18.6718,
+              "get-checkpoint": 9.7195,
+              "observe-chat-with-usage": 13.7325,
+              "reserve-chat": 18.1674,
+              "submit": 33.5008
+            }
+          },
+          {
+            "runs_per_second": 5.149,
+            "p95_ms": {
+              "claim": 35.0569,
+              "claim-empty": 3.5276,
+              "commit-step": 17.8628,
+              "get-checkpoint": 10.0596,
+              "observe-chat-with-usage": 13.5642,
+              "reserve-chat": 15.7468,
+              "submit": 30.4571
+            }
+          }
+        ],
+        "median_runs_per_second": 5.149,
+        "median_p95_ms": {
+          "claim": 34.663,
+          "claim-empty": 3.0808,
+          "commit-step": 18.5292,
+          "get-checkpoint": 9.8147,
+          "observe-chat-with-usage": 14.4459,
+          "reserve-chat": 18.1266,
+          "submit": 30.4571
+        }
+      },
+      "candidate": {
+        "trials": [
+          {
+            "runs_per_second": 4.023,
+            "p95_ms": {
+              "claim": 33.6977,
+              "claim-empty": 3.3507,
+              "commit-step": 30.334,
+              "get-checkpoint": 10.091,
+              "observe-chat-with-usage": 22.0179,
+              "reserve-chat": 24.2075,
+              "submit": 25.9512
+            }
+          },
+          {
+            "runs_per_second": 4.041,
+            "p95_ms": {
+              "claim": 34.7166,
+              "claim-empty": 3.1187,
+              "commit-step": 29.8149,
+              "get-checkpoint": 9.6725,
+              "observe-chat-with-usage": 22.4876,
+              "reserve-chat": 23.9429,
+              "submit": 25.4779
+            }
+          },
+          {
+            "runs_per_second": 4.048,
+            "p95_ms": {
+              "claim": 36.68,
+              "claim-empty": 2.7466,
+              "commit-step": 29.9725,
+              "get-checkpoint": 9.8524,
+              "observe-chat-with-usage": 22.9642,
+              "reserve-chat": 23.4907,
+              "submit": 34.6639
+            }
+          },
+          {
+            "runs_per_second": 4.063,
+            "p95_ms": {
+              "claim": 32.7514,
+              "claim-empty": 3.205,
+              "commit-step": 29.6786,
+              "get-checkpoint": 9.6466,
+              "observe-chat-with-usage": 22.213,
+              "reserve-chat": 24.4683,
+              "submit": 32.8561
+            }
+          },
+          {
+            "runs_per_second": 4.018,
+            "p95_ms": {
+              "claim": 30.4493,
+              "claim-empty": 3.1443,
+              "commit-step": 29.4193,
+              "get-checkpoint": 10.3721,
+              "observe-chat-with-usage": 21.6848,
+              "reserve-chat": 24.3076,
+              "submit": 29.0461
+            }
+          }
+        ],
+        "median_runs_per_second": 4.041,
+        "median_p95_ms": {
+          "claim": 33.6977,
+          "claim-empty": 3.1443,
+          "commit-step": 29.8149,
+          "get-checkpoint": 9.8524,
+          "observe-chat-with-usage": 22.213,
+          "reserve-chat": 24.2075,
+          "submit": 29.0461
+        }
+      }
+    }
+  },
+  "after_optimization": {
+    "baseline": "bffe5665f266f0510de94d7bf13a3f8dbc963df2",
+    "runs_per_trial": 64,
+    "rounds": 5,
+    "scope": "legacy registered Run control hot paths; synthetic results; no external HTTP; not W4",
+    "variants": {
+      "base": {
+        "trials": [
+          {
+            "runs_per_second": 5.025,
+            "p95_ms": {
+              "claim": 32.4307,
+              "claim-empty": 2.7675,
+              "commit-step": 19.1208,
+              "get-checkpoint": 10.6439,
+              "observe-chat-with-usage": 15.4469,
+              "reserve-chat": 18.5908,
+              "submit": 34.84
+            }
+          },
+          {
+            "runs_per_second": 5.196,
+            "p95_ms": {
+              "claim": 30.8381,
+              "claim-empty": 2.2005,
+              "commit-step": 17.8,
+              "get-checkpoint": 9.6942,
+              "observe-chat-with-usage": 13.5493,
+              "reserve-chat": 18.7612,
+              "submit": 28.2354
+            }
+          },
+          {
+            "runs_per_second": 5.127,
+            "p95_ms": {
+              "claim": 31.6007,
+              "claim-empty": 3.6734,
+              "commit-step": 19.4201,
+              "get-checkpoint": 10.1757,
+              "observe-chat-with-usage": 14.4046,
+              "reserve-chat": 17.2421,
+              "submit": 27.2982
+            }
+          },
+          {
+            "runs_per_second": 5.065,
+            "p95_ms": {
+              "claim": 33.2942,
+              "claim-empty": 2.1595,
+              "commit-step": 18.943,
+              "get-checkpoint": 10.526,
+              "observe-chat-with-usage": 15.2006,
+              "reserve-chat": 16.8902,
+              "submit": 38.5646
+            }
+          },
+          {
+            "runs_per_second": 5.107,
+            "p95_ms": {
+              "claim": 31.1265,
+              "claim-empty": 3.0542,
+              "commit-step": 18.5207,
+              "get-checkpoint": 10.0388,
+              "observe-chat-with-usage": 12.7976,
+              "reserve-chat": 15.8256,
+              "submit": 26.3792
+            }
+          }
+        ],
+        "median_runs_per_second": 5.107,
+        "median_p95_ms": {
+          "claim": 31.6007,
+          "claim-empty": 2.7675,
+          "commit-step": 18.943,
+          "get-checkpoint": 10.1757,
+          "observe-chat-with-usage": 14.4046,
+          "reserve-chat": 17.2421,
+          "submit": 28.2354
+        }
+      },
+      "candidate": {
+        "trials": [
+          {
+            "runs_per_second": 4.803,
+            "p95_ms": {
+              "claim": 34.5959,
+              "claim-empty": 2.3832,
+              "commit-step": 18.7824,
+              "get-checkpoint": 10.6423,
+              "observe-chat-with-usage": 17.9738,
+              "reserve-chat": 20.0013,
+              "submit": 24.6369
+            }
+          },
+          {
+            "runs_per_second": 4.9,
+            "p95_ms": {
+              "claim": 35.0037,
+              "claim-empty": 3.1594,
+              "commit-step": 18.5827,
+              "get-checkpoint": 10.1087,
+              "observe-chat-with-usage": 14.0282,
+              "reserve-chat": 19.3366,
+              "submit": 24.6873
+            }
+          },
+          {
+            "runs_per_second": 4.829,
+            "p95_ms": {
+              "claim": 36.4714,
+              "claim-empty": 3.4936,
+              "commit-step": 18.8114,
+              "get-checkpoint": 9.9907,
+              "observe-chat-with-usage": 15.005,
+              "reserve-chat": 22.1485,
+              "submit": 24.9865
+            }
+          },
+          {
+            "runs_per_second": 4.754,
+            "p95_ms": {
+              "claim": 37.4478,
+              "claim-empty": 3.2238,
+              "commit-step": 19.154,
+              "get-checkpoint": 10.3048,
+              "observe-chat-with-usage": 14.9452,
+              "reserve-chat": 20.7559,
+              "submit": 25.8685
+            }
+          },
+          {
+            "runs_per_second": 5.018,
+            "p95_ms": {
+              "claim": 32.5282,
+              "claim-empty": 2.8441,
+              "commit-step": 17.7222,
+              "get-checkpoint": 9.849,
+              "observe-chat-with-usage": 13.6822,
+              "reserve-chat": 16.8362,
+              "submit": 36.1525
+            }
+          }
+        ],
+        "median_runs_per_second": 4.829,
+        "median_p95_ms": {
+          "claim": 35.0037,
+          "claim-empty": 3.1594,
+          "commit-step": 18.7824,
+          "get-checkpoint": 10.1087,
+          "observe-chat-with-usage": 14.9452,
+          "reserve-chat": 20.0013,
+          "submit": 24.9865
+        }
+      }
+    }
+  }
+}

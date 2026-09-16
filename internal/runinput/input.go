@@ -12,22 +12,26 @@ import (
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
-// ExecutorVersion rejects deployments predating the observation ACK contract.
-const ExecutorVersion = "linux-v2-ack-runtime-1"
+// ExecutorVersion rejects deployments predating the typed audit report contract.
+const ExecutorVersion = run.ProviderAuditExecutorVersion
 
 // Selection comes from the trusted deployment manifest and confirmed BeginTool.
 // Shape validation does not register an adapter or authorize a tool invocation.
 type Selection struct {
-	ExecutorVersion  string
-	AdapterID        string
-	ToolInvocationID string
+	ExecutorVersion       string
+	AdapterID             string
+	ToolInvocationID      string
+	ExpectedResponseModel string
+	ProviderAuditPolicy   string
 }
 
 type input struct {
-	SchemaVersion    int    `json:"schema_version"`
-	ExecutorVersion  string `json:"executor_version"`
-	AdapterID        string `json:"adapter_id"`
-	ToolInvocationID string `json:"tool_invocation_id"`
+	SchemaVersion         int    `json:"schema_version"`
+	ExecutorVersion       string `json:"executor_version"`
+	AdapterID             string `json:"adapter_id"`
+	ToolInvocationID      string `json:"tool_invocation_id"`
+	ExpectedResponseModel string `json:"expected_response_model"`
+	ProviderAuditPolicy   string `json:"provider_audit_policy"`
 }
 
 type identity struct {
@@ -108,7 +112,8 @@ func BuildExecute(lease *agentv1.RunLease, value *agentv1.Checkpoint, selection 
 			AttemptNo: e.AttemptNo, FencingToken: e.FencingToken, StepID: next.StepID, StepSequence: next.Sequence,
 			StepKind: next.Kind, CursorVersion: next.CursorVersion, InputHash: next.InputHash, ProfileID: next.ProfileID,
 			ProfileHash: next.ProfileHash, SnapshotID: next.SnapshotID, SnapshotHash: next.SnapshotHash}}
-	i := input{SchemaVersion: 1, ExecutorVersion: selection.ExecutorVersion, AdapterID: selection.AdapterID, ToolInvocationID: selection.ToolInvocationID}
+	i := input{SchemaVersion: 1, ExecutorVersion: selection.ExecutorVersion, AdapterID: selection.AdapterID, ToolInvocationID: selection.ToolInvocationID,
+		ExpectedResponseModel: selection.ExpectedResponseModel, ProviderAuditPolicy: selection.ProviderAuditPolicy}
 	// Validate original RPC byte lengths before normalization can shrink whitespace.
 	if err := validateProjection(p, i, f.Binding); err != nil {
 		return runprotocol.Frame{}, err
@@ -201,6 +206,7 @@ func validStep(s identity) bool {
 
 func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 	if i.SchemaVersion != 1 || i.ExecutorVersion != ExecutorVersion || !run.ValidIdentifier(i.AdapterID) ||
+		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != run.ProviderAuditPolicyDeepSeekV1 ||
 		p.CursorVersion < 0 || p.CursorVersion > 31 || p.Steps == nil || int64(len(p.Steps)) != p.CursorVersion || !validStep(p.NextStep) {
 		return run.ErrInvalidArgument
 	}

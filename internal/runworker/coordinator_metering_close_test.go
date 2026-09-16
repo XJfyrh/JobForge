@@ -62,11 +62,12 @@ func TestCoordinatorLateSettlementPreservesTypedExit(t *testing.T) {
 				}
 				reservation := proto.Clone(call.reservation).(*agentv1.CallReservation)
 				reservation.UsageKnown = true
-				return &agentv1.SettleUsageResponse{Reservation: reservation}, nil
+				return fixtureSettledResponse(reservation, call.report), nil
 			}
 			report := c.base("metering_report", observation.EmittedMonoMS)
 			report.CallSequence, report.PhysicalCallID, report.ParameterHash = 1, call.id, call.intent.ParameterHash
 			report.Usage = &v2.Usage{InputTokens: 1, OutputTokens: 1, ReceiptHash: strings.Repeat("a", 64), UsageHash: *observation.UsageHash}
+			completeFixtureReport(t, &report)
 			c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Metering, Frame: &report})
 			select {
 			case <-settling:
@@ -94,7 +95,7 @@ func TestCoordinatorLateSettlementPreservesTypedExit(t *testing.T) {
 			if !call.settled || !c.stopped || !c.conversation.Closed() || process.stopped.Load() || c.tasks != 0 || c.failure != "" {
 				t.Fatal("late ACK did not close ordinary work while preserving bounded natural exit")
 			}
-			if got := c.finish(context.Background(), r); got.Failure != "TIMEOUT" || got.Fatal != nil || got.Commit != nil || got.Abandoned {
+			if got := c.finish(context.Background(), r); !errors.Is(got.Fatal, ErrBatchStopped) || got.Commit != nil || got.Abandoned || c.failure != "TIMEOUT" {
 				t.Fatalf("late ACK replaced actual timeout: %+v", got)
 			}
 		})

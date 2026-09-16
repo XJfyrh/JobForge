@@ -22,11 +22,24 @@ from jobforge_agent.protocol_v2 import (
     observation_hash,
     read_frame,
     read_metering_frame,
+    report_hash,
     usage_hash,
 )
 
 ROOT = Path(__file__).resolve().parents[2] / "api" / "executor" / "v2"
-FIXTURES = json.loads((ROOT / "fixtures" / "frames.json").read_text(encoding="utf-8"))
+CORPORA = [
+    json.loads((ROOT / "fixtures" / name).read_text(encoding="utf-8"))
+    for name in ("frames.json", "audit-frames.json")
+]
+FIXTURES = {
+    field: [entry for corpus in CORPORA for entry in corpus.get(field, [])]
+    for field in (
+        "valid_frames",
+        "invalid_frames",
+        "observation_hash_cases",
+        "conversations",
+    )
+}
 Frame = dict[str, Any]
 
 
@@ -46,6 +59,24 @@ def _started(frames: dict[str, Frame], *, dispatch: bool = True) -> Conversation
     if dispatch:
         conversation.can_dispatch(frames["call_permit"]["physical_call_id"], 1000)
     return conversation
+
+
+def _free_frames() -> dict[str, Frame]:
+    frames = _frames()
+    for frame in frames.values():
+        frame["binding"]["step_kind"] = "get_order"
+    for name in ("call_intent", "call_permit"):
+        frames[name].update(
+            subcall="get_order",
+            tool_invocation_id="00000000-0000-4000-8000-000000000088",
+        )
+    frames["call_permit"].update(
+        input_token_limit=0, output_token_limit=0, call_ms=10000, dispatch_ms=1000
+    )
+    frames["call_observation"].update(
+        usage_disposition="unknown", usage_hash=None, audit_hash=None
+    )
+    return frames
 
 
 def _observation_ack(observation: Frame, emitted: int = 1000) -> Frame:
@@ -303,7 +334,8 @@ def test_overrun_is_metered_but_never_restores_execution(field: str) -> None:
     limit = "input_token_limit" if field == "input_tokens" else "output_token_limit"
     report["usage"][field] = frames["call_permit"][limit] + 1
     report["usage"]["usage_hash"] = usage_hash(report["usage"])
-    ack["usage_hash"] = report["usage"]["usage_hash"]
+    report["report_hash"] = report_hash(report)
+    ack["report_hash"] = report["report_hash"]
     assert decode_metering(encode_metering(report)) == report
     conversation.accept_metering(report, 1000)
     assert conversation.closed
@@ -332,23 +364,17 @@ def test_unconfirmed_can_confirm_but_never_reopen() -> None:
 
 
 @pytest.mark.parametrize("output_tokens", [1, MAX_INTEGER])
-def test_safe_fields_with_unsafe_sum_are_retained_for_anomaly(
+def test_chat_fields_with_unsafe_sum_cannot_claim_complete_provider_usage(
     output_tokens: int,
 ) -> None:
-    """Complete counters reach the ledger even when their sum exceeds safeint."""
+    """Chat complete evidence requires the original aggregate total to be safe."""
     frames = _frames()
-    conversation = _started(frames)
-    report, ack = frames["metering_report"], frames["metering_ack"]
+    report = frames["metering_report"]
     report["usage"]["input_tokens"] = MAX_INTEGER
     report["usage"]["output_tokens"] = output_tokens
     report["usage"]["usage_hash"] = usage_hash(report["usage"])
-    assert decode_metering(encode_metering(report)) == report
-    conversation.accept_metering(report, 1000)
-    assert conversation.closed
-    ack["usage_hash"] = report["usage"]["usage_hash"]
-    ack["settlement"] = "anomaly"
-    conversation.accept_metering(ack, 1000)
-    assert conversation.closed
+    with pytest.raises(ProtocolError):
+        encode_metering(report)
 
 
 def test_report_duplicates_are_idempotent_but_distinct_usage_conflicts() -> None:
@@ -361,6 +387,7 @@ def test_report_duplicates_are_idempotent_but_distinct_usage_conflicts() -> None
     conversation.accept_metering(copy.deepcopy(report), 1000)
     report["usage"]["output_tokens"] += 1
     report["usage"]["usage_hash"] = usage_hash(report["usage"])
+    report["report_hash"] = report_hash(report)
     with pytest.raises(ProtocolError):
         conversation.accept_metering(report, 1000)
 
@@ -417,8 +444,7 @@ def test_unknown_cannot_bypass_an_existing_report(arrival: str) -> None:
     observation["usage_disposition"], observation["usage_hash"] = "unknown", None
     if arrival == "before_unknown":
         conversation.accept_metering(frames["metering_report"], 1000)
-        with pytest.raises(ProtocolError):
-            conversation.accept(observation, 1000)
+        conversation.accept(observation, 1000)
     else:
         conversation.accept(observation, 1000)
         conversation.accept_metering(frames["metering_report"], 1000)
@@ -426,9 +452,9 @@ def test_unknown_cannot_bypass_an_existing_report(arrival: str) -> None:
         conversation.accept(frames["step_result"], 1000)
 
 
-def test_unknown_without_report_can_finish_while_hold_remains() -> None:
-    """Missing usage does not invent a zero-price settlement or another call."""
-    frames = _frames()
+def test_free_call_without_report_can_finish_after_ordinary_ack() -> None:
+    """Free calls do not fabricate audit reports or wait for a metering ACK."""
+    frames = _free_frames()
     conversation = _started(frames)
     frames["call_observation"]["usage_disposition"] = "unknown"
     frames["call_observation"]["usage_hash"] = None
@@ -502,7 +528,7 @@ def test_settlement_and_pipe_write_cannot_replace_observation_ack(
     reported: bool,
 ) -> None:
     """The last HTTP still needs its ordinary ACK even after complete settlement."""
-    frames = _frames()
+    frames = _frames() if reported else _free_frames()
     conversation = _started(frames)
     observation = frames["call_observation"]
     if reported:
@@ -532,7 +558,7 @@ def test_settlement_and_pipe_write_cannot_replace_observation_ack(
 )
 def test_observation_ack_matches_full_original_identity_and_content(field: str) -> None:
     """An otherwise valid ACK cannot acknowledge a different call or authority."""
-    frames = _frames()
+    frames = _free_frames()
     conversation = _started(frames)
     observation = frames["call_observation"]
     observation.update(usage_disposition="unknown", usage_hash=None)
@@ -559,7 +585,7 @@ def test_observation_ack_matches_full_original_identity_and_content(field: str) 
 @pytest.mark.parametrize("pending", [False, True])
 def test_duplicate_observation_ack_is_never_reusable(pending: bool) -> None:
     """A pending or already joined ACK is one use, unlike idempotent control RPCs."""
-    frames = _frames()
+    frames = _frames() if pending else _free_frames()
     conversation = _started(frames)
     observation = frames["call_observation"]
     if not pending:
@@ -623,7 +649,7 @@ def test_pending_observation_ack_never_revives_after_loss_of_authority(
 )
 def test_observation_ack_clock_and_original_deadline(scenario: str) -> None:
     """ACK receipt cannot refresh time or move the parent clock backwards."""
-    frames = _frames()
+    frames = _free_frames()
     conversation = _started(frames)
     observation = frames["call_observation"]
     observation.update(
@@ -663,7 +689,7 @@ def test_followup_requires_ack_causal_time_and_confirmation_deadline(
     )
     frames["call_permit"]["dispatch_ms"] = 500
     observation = frames["call_observation"]
-    observation.update(usage_disposition="unknown", usage_hash=None)
+    observation.update(usage_disposition="unknown", usage_hash=None, audit_hash=None)
     conversation = _started(frames)
     conversation.accept(observation, 1000)
     conversation.accept(_observation_ack(observation, 1010), 1010)
@@ -707,7 +733,7 @@ def test_timely_next_intent_does_not_inherit_old_deadline_after_denied_permit() 
         input_token_limit=0, output_token_limit=0, call_ms=1000, dispatch_ms=500
     )
     observation = frames["call_observation"]
-    observation.update(usage_disposition="unknown", usage_hash=None)
+    observation.update(usage_disposition="unknown", usage_hash=None, audit_hash=None)
     conversation = _started(frames)
     conversation.accept(observation, 1000)
     conversation.accept(_observation_ack(observation), 1000)

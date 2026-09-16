@@ -357,3 +357,9 @@ jobforge/
 ## v0.6 业务适配器与结果引用
 
 详见 [ADR-0011](adr/0011-general-task-results-and-model-adapters.md)。Go Runtime 独占任务租约，预注册业务 Handler 通过固定 Ollama HTTP 接口执行推理，模型端不参与调度。0020 将有界结果引用与成功状态原子持久化；0021 的独立业务产物表没有 jobs 外键，按 tenant/type/business_key 唯一发布。独立 artifacts HTTP 服务进行租户鉴权和向量检索，核心 API 只返回引用。发布和 Complete 是两个事务，持久业务幂等覆盖两者之间的崩溃窗口。
+
+## Agent v3 供应商报告与执行屏障
+
+Agent Run 控制账本与固定 Linux Worker 见[运行时指南](agent-v3-runtime.md)。0024迁移在原 physical_calls 保存预留时的 execution binding 和不可变 typed report；报告、可结算 usage 与必要的 batch freeze 同事务提交。Go 仍独占 lease/RPC，Python 使用原计量 FD 捕获事实，不获得调度或数据库权限。新的 Claim/工具/调用检查同一批次旧 chat 的持久完成事实，进程重启不能绕过未完成收费窗口。
+
+模型身份/模式与业务方案有效性分别验证：不兼容模型的完整计数仅属 observed usage，不能按当前价格释放 hold；业务输出无效但计量合法仍可结算。tenant-scoped Calls API/SDK 只返回有界元数据，禁止保存完整模型输入输出或秘密。源合同及恢复限制见[供应商审计指南](agent-v3-provider-audit.md)。该能力不代表真实 DeepSeek、40 案评分或生产长期留存已验收。

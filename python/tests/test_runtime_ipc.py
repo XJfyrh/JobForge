@@ -151,7 +151,7 @@ def test_independent_lanes_accept_ordinary_ack_before_metering_ack() -> None:
         meter_ack = {key: report[key] for key in fields}
         meter_ack.update(
             kind="metering_ack",
-            usage_hash=report["usage"]["usage_hash"],
+            report_hash=report["report_hash"],
             settlement="settled",
         )
         os.write(metering, encode_metering(meter_ack))

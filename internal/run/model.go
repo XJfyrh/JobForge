@@ -117,15 +117,16 @@ type Usage struct {
 
 // Account is one durable family, tenant, or batch budget.
 type Account struct {
-	Scope              string `json:"scope"`
-	ID                 string `json:"id"`
-	Limits             Usage  `json:"limits"`
-	Used               Usage  `json:"used"`
-	Frozen             bool   `json:"frozen"`
-	KnownTokens        int64  `json:"known_tokens"`
-	KnownCostMicroyuan int64  `json:"known_cost_microyuan"`
-	HeldTokens         int64  `json:"held_tokens"`
-	HeldCostMicroyuan  int64  `json:"held_cost_microyuan"`
+	Scope              string        `json:"scope"`
+	ID                 string        `json:"id"`
+	Limits             Usage         `json:"limits"`
+	Used               Usage         `json:"used"`
+	Frozen             bool          `json:"frozen"`
+	KnownTokens        int64         `json:"known_tokens"`
+	KnownCostMicroyuan int64         `json:"known_cost_microyuan"`
+	HeldTokens         int64         `json:"held_tokens"`
+	HeldCostMicroyuan  int64         `json:"held_cost_microyuan"`
+	BatchStopCode      BatchStopCode `json:"-"`
 }
 
 // BudgetView keeps family inheritance visible instead of presenting a new

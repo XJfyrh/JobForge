@@ -9,6 +9,12 @@ import os
 import signal
 import sys
 
+from jobforge_agent.provider_audit import (
+    ReportBinding,
+    decode_call_report,
+    execution_binding_hash,
+)
+
 
 def write(fd: int, value: dict) -> None:
     """Send a full synthetic frame without unbounded test buffering."""
@@ -49,6 +55,20 @@ def main() -> None:
     request = json.loads(sys.stdin.buffer.readline())
     for key in ("version", "request_id", "binding", "emitted_mono_ms"):
         result[key] = report[key] = request[key]
+    content = decode_call_report(
+        json.dumps(
+            {"usage": report["usage"], "provider_audit": report["provider_audit"]}
+        ).encode()
+    )
+    report["report_hash"] = content.hash(
+        ReportBinding(
+            execution_binding_hash(report["binding"]),
+            report["physical_call_id"],
+            report["parameter_hash"],
+            "chat",
+            "deepseek-flash",
+        )
+    )
     if mode in {"metering_closed_timeout", "metering_closed_bad_frame"}:
         signal.signal(signal.SIGUSR1, lambda _sig, _frame: os._exit(69))
         os.close(4)
@@ -70,7 +90,8 @@ def main() -> None:
     elif mode == "wrong_metering":
         report["kind"] = "metering_ack"
         report.pop("parameter_hash")
-        report["usage_hash"] = report.pop("usage")["usage_hash"]
+        report.pop("usage")
+        report.pop("provider_audit")
         report["settlement"] = "settled"
         write(5, report)
     elif mode == "bad_then_metering":

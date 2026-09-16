@@ -138,6 +138,11 @@ func authorityTimeToWire(value time.Time) (*timestamppb.Timestamp, error) {
 }
 
 func reservationToWire(value run.CallReservation) (*agentv1.CallReservation, error) {
+	for _, hash := range []string{value.ExecutionBindingHash, value.PersistedReportHash, value.PersistedAuditHash} {
+		if hash != "" && !run.ValidHash(hash) {
+			return nil, run.ErrInternal
+		}
+	}
 	var subcall agentv1.Subcall
 	for code, name := range subcallNames {
 		if name == value.Subcall {
@@ -156,6 +161,7 @@ func reservationToWire(value run.CallReservation) (*agentv1.CallReservation, err
 		}
 	}
 	return &agentv1.CallReservation{PhysicalCallId: value.PhysicalCallID, ToolInvocationId: value.ToolInvocationID,
+		ExecutionBindingHash: value.ExecutionBindingHash, PersistedReportHash: value.PersistedReportHash, PersistedAuditHash: value.PersistedAuditHash,
 		Subcall: subcall, ParameterHash: value.ParameterHash, PriceHash: value.PriceHash,
 		ReservedAt: timestamppb.New(value.ReservedAt), DispatchExpiresAt: timestamppb.New(value.DispatchExpiresAt),
 		CallDeadline: timestamppb.New(value.CallDeadline), UsageKnown: value.UsageKnown,

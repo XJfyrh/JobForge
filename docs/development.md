@@ -428,4 +428,6 @@ S1-C3a按已接受ADR-0019同步内部v2观察ACK。共同fixture由Go/Python全
 
 S1-C3b的[固定运行时指南](agent-v3-runtime.md)描述新增`cmd/agent-worker`、生产Dockerfile、只读manifest、独立秘密配置与双向FD接缝。生产registry仅登记support-fixed-v1，默认Compose不登记收费Worker；专用integration target才安装合成adapter与固定loopback origin。Go仍独占执行权和RPC，只有普通观察ACK、进程清理及当前执行权全部成立才能提交结果；support结构化方案/来源共同fixture随Go/Python测试运行，离线开发数据与语义锚由`python -m pytest tools/support_evaluation`检查；供应商持久审计、真实云端及40案验收继续单列。
 
+当前[供应商审计增量](agent-v3-provider-audit.md)使用 `linux-v2-audit-runtime-1`：Go/Python 共同 audit/report/observation 向量随单测执行；0024迁移与首份/重放/冲突/晚到/批次屏障由真实 PG race 验证。安装 SDK 并设置 `JOBFORGE_TEST_PYTHON` 后，`TestRunProviderAuditPythonHTTPContract` 验证真实 Calls HTTP 查询。固定 `integration-check` 默认还运行 `TestRunProviderAuditExecutor`，验证 Reserve/report/Observe/Commit 确认丢失与 provider 停止，供应商响应仍为合成 fixture。真实推理、完整业务评分与生产留存须另行验收。
+
 真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。

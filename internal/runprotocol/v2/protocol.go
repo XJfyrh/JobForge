@@ -67,36 +67,39 @@ type Usage struct {
 // Frame is an explicitly discriminated union. Decode requires exactly the fields
 // defined for Kind; unused fields cannot be smuggled through zero values.
 type Frame struct {
-	EmittedMonoMS    int64           `json:"emitted_mono_ms"`
-	Version          int64           `json:"version"`
-	Kind             string          `json:"kind"`
-	RequestID        string          `json:"request_id"`
-	Binding          Binding         `json:"binding"`
-	RemainingMS      int64           `json:"remaining_ms"`
-	TraceContext     string          `json:"trace_context"`
-	Checkpoint       json.RawMessage `json:"checkpoint"`
-	Input            json.RawMessage `json:"input"`
-	CallSequence     int64           `json:"call_sequence"`
-	Subcall          string          `json:"subcall"`
-	ParameterHash    string          `json:"parameter_hash"`
-	ToolInvocationID string          `json:"tool_invocation_id"`
-	PhysicalCallID   string          `json:"physical_call_id"`
-	Granted          bool            `json:"granted"`
-	ErrorCode        string          `json:"error_code"`
-	DispatchMS       int64           `json:"dispatch_ms"`
-	CallMS           int64           `json:"call_ms"`
-	InputTokenLimit  int64           `json:"input_token_limit"`
-	OutputTokenLimit int64           `json:"output_token_limit"`
-	TransportOutcome string          `json:"transport_outcome"`
-	HTTPStatus       int64           `json:"http_status"`
-	BusinessOutcome  string          `json:"business_outcome"`
-	UsageDisposition string          `json:"usage_disposition"`
-	UsageHash        *string         `json:"usage_hash"`
-	ObservationHash  string          `json:"observation_hash"`
-	Settlement       string          `json:"settlement"`
-	Usage            *Usage          `json:"usage"`
-	Outcome          string          `json:"outcome"`
-	Result           json.RawMessage `json:"result"`
+	EmittedMonoMS    int64              `json:"emitted_mono_ms"`
+	Version          int64              `json:"version"`
+	Kind             string             `json:"kind"`
+	RequestID        string             `json:"request_id"`
+	Binding          Binding            `json:"binding"`
+	RemainingMS      int64              `json:"remaining_ms"`
+	TraceContext     string             `json:"trace_context"`
+	Checkpoint       json.RawMessage    `json:"checkpoint"`
+	Input            json.RawMessage    `json:"input"`
+	CallSequence     int64              `json:"call_sequence"`
+	Subcall          string             `json:"subcall"`
+	ParameterHash    string             `json:"parameter_hash"`
+	ToolInvocationID string             `json:"tool_invocation_id"`
+	PhysicalCallID   string             `json:"physical_call_id"`
+	Granted          bool               `json:"granted"`
+	ErrorCode        string             `json:"error_code"`
+	DispatchMS       int64              `json:"dispatch_ms"`
+	CallMS           int64              `json:"call_ms"`
+	InputTokenLimit  int64              `json:"input_token_limit"`
+	OutputTokenLimit int64              `json:"output_token_limit"`
+	TransportOutcome string             `json:"transport_outcome"`
+	HTTPStatus       int64              `json:"http_status"`
+	BusinessOutcome  string             `json:"business_outcome"`
+	UsageDisposition string             `json:"usage_disposition"`
+	UsageHash        *string            `json:"usage_hash"`
+	AuditHash        *string            `json:"audit_hash"`
+	ProviderAudit    *run.ProviderAudit `json:"provider_audit"`
+	ReportHash       string             `json:"report_hash"`
+	ObservationHash  string             `json:"observation_hash"`
+	Settlement       string             `json:"settlement"`
+	Usage            *Usage             `json:"usage"`
+	Outcome          string             `json:"outcome"`
+	Result           json.RawMessage    `json:"result"`
 }
 
 var commonFields = []string{"version", "kind", "request_id", "binding", "emitted_mono_ms"}
@@ -105,11 +108,11 @@ var kindFields = map[string][]string{
 	"execute_step":         {"remaining_ms", "trace_context", "checkpoint", "input"},
 	"call_intent":          {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id"},
 	"call_permit":          {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id", "physical_call_id", "granted", "error_code", "dispatch_ms", "call_ms", "input_token_limit", "output_token_limit"},
-	"call_observation":     {"call_sequence", "physical_call_id", "transport_outcome", "http_status", "business_outcome", "error_code", "usage_disposition", "usage_hash"},
+	"call_observation":     {"call_sequence", "physical_call_id", "transport_outcome", "http_status", "business_outcome", "error_code", "usage_disposition", "usage_hash", "audit_hash"},
 	"call_observation_ack": {"call_sequence", "physical_call_id", "observation_hash"},
 	"step_result":          {"outcome", "error_code", "result"},
-	"metering_report":      {"call_sequence", "physical_call_id", "parameter_hash", "usage"},
-	"metering_ack":         {"call_sequence", "physical_call_id", "usage_hash", "settlement"},
+	"metering_report":      {"call_sequence", "physical_call_id", "parameter_hash", "usage", "provider_audit", "report_hash"},
+	"metering_ack":         {"call_sequence", "physical_call_id", "report_hash", "settlement"},
 }
 
 var bindingFields = []string{"tenant_id", "worker_id", "run_id", "step_id", "session_id", "profile_id", "profile_hash", "snapshot_id", "snapshot_hash", "input_hash", "attempt_no", "fencing_token", "cursor_version", "step_sequence", "step_kind"}
@@ -133,16 +136,13 @@ func Decode(line []byte) (Frame, error) {
 		return Frame{}, ErrProtocol
 	}
 	fields, ok := kindFields[frame.Kind]
-	if !ok || !exactFields(raw, append(append([]string{}, commonFields...), fields...), "usage_hash") ||
+	if !ok || !exactFields(raw, append(append([]string{}, commonFields...), fields...), "usage_hash", "audit_hash", "usage", "provider_audit") ||
 		!objectFields(raw["binding"], bindingFields) || frame.Version != 2 || !between(frame.EmittedMonoMS, 0, MaxInteger) ||
 		!uuidPattern.MatchString(frame.RequestID) || !validBinding(frame.Binding) {
 		return Frame{}, ErrProtocol
 	}
 	if oneOf(frame.Kind, "metering_report", "metering_ack") && len(line) > MaxMeteringFrameBytes {
 		return Frame{}, ErrFrameLimit
-	}
-	if frame.Kind == "metering_ack" && frame.UsageHash == nil {
-		return Frame{}, ErrProtocol
 	}
 	if err := validateFrame(frame); err != nil {
 		return Frame{}, err
@@ -278,16 +278,16 @@ func validateFrame(f Frame) error {
 		}
 	case "call_observation":
 		_, errorCodeErr := ObservationErrorCode(f.ErrorCode)
-		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && validDisposition(f) && errorCodeErr == nil &&
+		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && validDisposition(f) && validAuditHash(f) && errorCodeErr == nil &&
 			((f.TransportOutcome == "response" && between(f.HTTPStatus, 100, 599) && oneOf(f.BusinessOutcome, "accepted", "rejected")) ||
 				(f.TransportOutcome == "unknown" && f.HTTPStatus == 0 && f.BusinessOutcome == "unknown" && f.UsageDisposition == "unknown")) &&
 			((f.BusinessOutcome == "accepted" && f.ErrorCode == "") || (f.BusinessOutcome != "accepted" && f.ErrorCode != ""))
 	case "call_observation_ack":
 		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ObservationHash)
 	case "metering_report":
-		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ParameterHash) && f.Usage != nil && validUsage(f.Usage)
+		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ParameterHash) && validReport(f)
 	case "metering_ack":
-		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && f.UsageHash != nil && hashPattern.MatchString(*f.UsageHash) && oneOf(f.Settlement, "settled", "anomaly", "unconfirmed")
+		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ReportHash) && oneOf(f.Settlement, "settled", "recorded", "anomaly", "conflict", "unconfirmed")
 	case "step_result":
 		limit := 16384
 		if oneOf(f.Binding.StepKind, "read_ticket", "get_order", "get_delivery", "search_policy") {
@@ -334,12 +334,6 @@ func registeredSubcall(step, subcall string) bool {
 	}
 }
 
-func validUsage(u *Usage) bool {
-	return u == nil || (between(u.InputTokens, 0, MaxInteger) && between(u.OutputTokens, 0, MaxInteger) &&
-		between(u.CachedInputTokens, 0, u.InputTokens) &&
-		hashPattern.MatchString(u.ReceiptHash) && hashPattern.MatchString(u.UsageHash) && u.UsageHash == u.Hash())
-}
-
 func validError(code string) bool {
 	return oneOf(code, "", "BUDGET_EXHAUSTED", "STOP_REQUESTED", "STALE_LEASE", "PROFILE_UNAVAILABLE", "DEPENDENCY_UNAVAILABLE", "PROTOCOL_ERROR", "CALL_CONFLICT", "OUTPUT_INVALID", "INPUT_INVALID", "TIMEOUT")
 }
@@ -372,13 +366,13 @@ func oneOf(value string, choices ...string) bool {
 	return false
 }
 
-func exactFields(raw map[string]json.RawMessage, fields []string, nullable string) bool {
+func exactFields(raw map[string]json.RawMessage, fields []string, nullable ...string) bool {
 	if len(raw) != len(fields) {
 		return false
 	}
 	for _, field := range fields {
 		value, ok := raw[field]
-		if !ok || (field != nullable && bytes.Equal(bytes.TrimSpace(value), []byte("null"))) {
+		if !ok || (!oneOf(field, nullable...) && bytes.Equal(bytes.TrimSpace(value), []byte("null"))) {
 			return false
 		}
 	}

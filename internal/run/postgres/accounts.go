@@ -42,7 +42,7 @@ type budgetRow struct {
 
 func readAccount(row pgx.Row) (budgetRow, error) {
 	var b budgetRow
-	targets := []any{&b.Account.ID, &b.Account.Scope, &b.Key, &b.ValidFrom, &b.ValidUntil, &b.Account.Frozen}
+	targets := []any{&b.Account.ID, &b.Account.Scope, &b.Key, &b.ValidFrom, &b.ValidUntil, &b.Account.Frozen, &b.Account.BatchStopCode}
 	targets = append(targets, usageTargets(&b.Account.Limits)...)
 	targets = append(targets, usageTargets(&b.Account.Used)...)
 	targets = append(targets, &b.Account.KnownTokens, &b.Account.KnownCostMicroyuan, &b.Account.HeldTokens, &b.Account.HeldCostMicroyuan)
@@ -51,7 +51,7 @@ func readAccount(row pgx.Row) (budgetRow, error) {
 }
 
 func accountColumns() string {
-	return "account_id,scope,scope_key,valid_from,valid_until,frozen," + usageColumns("limit_") + "," + usageColumns("used_") +
+	return "account_id,scope,scope_key,valid_from,valid_until,frozen,coalesce(batch_stop_code,'')," + usageColumns("limit_") + "," + usageColumns("used_") +
 		",known_tokens,known_cost_microyuan,held_tokens,held_cost_microyuan"
 }
 
@@ -89,8 +89,9 @@ func saveAccount(ctx context.Context, tx pgx.Tx, b budgetRow) error {
 	for i, name := range usageNames {
 		sets = append(sets, fmt.Sprintf("used_%s=$%d", name, i+2))
 	}
-	args = append(args, b.Account.KnownTokens, b.Account.KnownCostMicroyuan, b.Account.HeldTokens, b.Account.HeldCostMicroyuan, b.Account.Frozen)
-	sets = append(sets, "known_tokens=$11", "known_cost_microyuan=$12", "held_tokens=$13", "held_cost_microyuan=$14", "frozen=$15")
+	args = append(args, b.Account.KnownTokens, b.Account.KnownCostMicroyuan, b.Account.HeldTokens, b.Account.HeldCostMicroyuan, b.Account.Frozen, b.Account.BatchStopCode)
+	sets = append(sets, "known_tokens=$11", "known_cost_microyuan=$12", "held_tokens=$13", "held_cost_microyuan=$14", "frozen=frozen or $15",
+		"batch_stop_code=coalesce(batch_stop_code,nullif($16,''))")
 	_, err := tx.Exec(ctx, "update budget_accounts set "+strings.Join(sets, ",")+" where account_id=$1", args...)
 	return err
 }

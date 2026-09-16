@@ -83,7 +83,7 @@ func TestRunExecutorWorkerProcessHelper(t *testing.T) {
 	}
 }
 
-func TestRunExecutorWorkerSIGKILLRetainsUnknownAndRecoversCheckpoint(t *testing.T) {
+func TestRunExecutorWorkerSIGKILLRetainsUnknownAndBlocksChatRestart(t *testing.T) {
 	h := setupExecutorHarness(t)
 	r := h.submit(t, "tenant-a", "worker-kill-paid-http")
 	fixture := executorHTTP(t, h, r, false, false)
@@ -192,47 +192,45 @@ func TestRunExecutorWorkerSIGKILLRetainsUnknownAndRecoversCheckpoint(t *testing.
 	}
 	running := startExecutorWorker(t, h, fixture, client)
 	waitExecutorSignal(t, running, client.looped)
+	running.cancel()
+	select {
+	case <-running.done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("replacement Worker failed to stop after blocked Claim")
+	}
 	view, err = h.Store.Get(h.Ctx, r.TenantID, r.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if view.State != agentrun.Succeeded || view.CursorVersion != 6 || view.AttemptNo != 2 {
-		t.Fatalf("replacement Worker did not resume accepted checkpoint: state=%s cursor=%d attempt=%d", view.State, view.CursorVersion, view.AttemptNo)
+	if view.State == agentrun.Running || view.CursorVersion != 4 || view.AttemptNo != 1 {
+		t.Fatalf("pending chat allowed a replacement Claim: state=%s cursor=%d attempt=%d", view.State, view.CursorVersion, view.AttemptNo)
 	}
-	for _, path := range []string{"order", "delivery", "search", "/api/version", "/api/tags", "/api/embed"} {
+	for _, path := range []string{"order", "delivery", "search", "/api/version", "/api/tags", "/api/embed", "/chat/completions"} {
 		if fixture.count(path) != 1 {
-			t.Fatalf("accepted physical step replayed: %s=%d", path, fixture.count(path))
+			t.Fatalf("pending chat allowed another physical call: %s=%d", path, fixture.count(path))
 		}
 	}
-	if fixture.count("/chat/completions") != 2 {
-		t.Fatal("replacement did not obtain exactly one new chat execution")
-	}
-	var chatCalls, knownChats, reusedSteps, newSteps int
+	var chatCalls, knownChats, acceptedSteps, attempts int
 	if err := h.Pool.QueryRow(h.Ctx, "select count(*),count(*) filter(where status='known') from physical_calls where run_id=$1 and subcall='chat'", r.ID).Scan(&chatCalls, &knownChats); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.Pool.QueryRow(h.Ctx, "select count(*) filter(where sequence<=4 and attempt_no=1),count(*) filter(where sequence>4 and attempt_no=2) from run_steps where run_id=$1", r.ID).Scan(&reusedSteps, &newSteps); err != nil {
+	if err := h.Pool.QueryRow(h.Ctx, "select (select count(*) from run_steps where run_id=$1),(select count(*) from run_attempts where run_id=$1)", r.ID).Scan(&acceptedSteps, &attempts); err != nil {
 		t.Fatal(err)
 	}
-	if chatCalls != 2 || knownChats != 1 || reusedSteps != 4 || newSteps != 2 {
-		t.Fatal("recovery did not retain accepted steps and separately authorize the retry")
+	if chatCalls != 1 || knownChats != 0 || acceptedSteps != 4 || attempts != 1 {
+		t.Fatal("restart changed accepted progress or authorized another paid attempt")
 	}
 	var oldStatus string
-	var known *string
-	if err := h.Pool.QueryRow(h.Ctx, "select status,usage_hash from physical_calls where physical_call_id=$1", oldCall).Scan(&oldStatus, &known); err != nil {
+	var known, reportHash *string
+	if err := h.Pool.QueryRow(h.Ctx, "select status,usage_hash,report_hash from physical_calls where physical_call_id=$1", oldCall).Scan(&oldStatus, &known, &reportHash); err != nil {
 		t.Fatal(err)
 	}
 	var held int64
 	if err := h.Pool.QueryRow(h.Ctx, "select held_cost_microyuan from budget_accounts where account_id=$1", r.Budget.Family.ID).Scan(&held); err != nil {
 		t.Fatal(err)
 	}
-	var newSession string
-	var newFence int64
-	if err := h.Pool.QueryRow(h.Ctx, "select session_id::text,fencing_token from run_attempts where run_id=$1 and attempt_no=2", r.ID).Scan(&newSession, &newFence); err != nil {
-		t.Fatal(err)
-	}
-	if oldStatus != "unknown" || known != nil || held != reservedCost || newSession == old.SessionID || newFence <= old.FencingToken {
-		t.Fatal("recovery erased unknown hold or reused old execution identity")
+	if oldStatus != "unknown" || known != nil || reportHash != nil || held != reservedCost {
+		t.Fatal("restart erased unknown hold or invented provider facts")
 	}
 }
 
@@ -289,7 +287,7 @@ func TestRunExecutorUsageAnomalyFailsLiveRunAndStopsWorker(t *testing.T) {
 	fixture := executorHTTP(t, h, r, false, false)
 	fixture.anomalyInput.Store(h.Profile.MaxInputTokens + 1)
 	client := executorGateway(t, h)
-	running := startExecutorWorker(t, h, fixture, client, agentrun.ErrBudgetExhausted)
+	running := startExecutorWorker(t, h, fixture, client, runworker.ErrBatchStopped)
 	waitExecutorSignal(t, running, fixture.chatSeen)
 	guardians := executorChildren(os.Getpid())
 	if len(guardians) != 1 {
@@ -313,7 +311,7 @@ func TestRunExecutorUsageAnomalyFailsLiveRunAndStopsWorker(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("measurement anomaly did not stop the Worker")
 	}
-	if !errors.Is(running.err, agentrun.ErrBudgetExhausted) {
+	if !errors.Is(running.err, runworker.ErrBatchStopped) {
 		t.Fatalf("unexpected Worker shutdown result: %v", running.err)
 	}
 	if err := syscall.Kill(-guardian, 0); !errors.Is(err, syscall.ESRCH) {

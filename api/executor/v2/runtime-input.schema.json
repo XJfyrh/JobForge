@@ -48,7 +48,9 @@
         "schema_version",
         "executor_version",
         "adapter_id",
-        "tool_invocation_id"
+        "tool_invocation_id",
+        "expected_response_model",
+        "provider_audit_policy"
       ],
       "properties": {
         "schema_version": {
@@ -57,7 +59,7 @@
         },
         "executor_version": {
           "type": "string",
-          "const": "linux-v2-ack-runtime-1"
+          "const": "linux-v2-audit-runtime-1"
         },
         "adapter_id": {
           "$ref": "#/$defs/identifier"
@@ -71,6 +73,12 @@
               "$ref": "#/$defs/uuid"
             }
           ]
+        },
+        "expected_response_model": {
+          "const": "deepseek-flash"
+        },
+        "provider_audit_policy": {
+          "const": "deepseek-audit-v1"
         }
       }
     },

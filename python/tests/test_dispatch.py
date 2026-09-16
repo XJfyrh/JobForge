@@ -182,8 +182,17 @@ class Hooks:
         ack.update(
             kind="metering_ack",
             emitted_mono_ms=self.clock.now,
-            usage_hash=report["usage"]["usage_hash"],
-            settlement=self.settlement,
+            report_hash=report["report_hash"],
+            settlement=(
+                "recorded"
+                if self.settlement == "settled"
+                and (
+                    report["usage"] is None
+                    or report["provider_audit"] is not None
+                    and report["provider_audit"]["identity_state"] != "compatible"
+                )
+                else self.settlement
+            ),
         )
         return ack
 
@@ -210,7 +219,35 @@ async def good_response(
     request: ReceivedRequest,
 ) -> None:
     """Good response."""
-    await respond(writer, body=b'{"ok":true}')
+    await respond(writer, body=chat_body())
+
+
+def chat_body(input_tokens: int = 20, output_tokens: int = 10) -> bytes:
+    """Build a synthetic complete chat response with independently counted usage."""
+    return json.dumps(
+        {
+            "id": "synthetic-chat",
+            "object": "chat.completion",
+            "created": 1,
+            "model": "deepseek-flash",
+            "system_fingerprint": "synthetic-fp",
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {"role": "assistant", "content": '{"ok":true}'},
+                }
+            ],
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+                "prompt_cache_hit_tokens": 0,
+                "prompt_cache_miss_tokens": input_tokens,
+            },
+        },
+        separators=(",", ":"),
+    ).encode()
 
 
 def usage(
@@ -222,7 +259,8 @@ def usage(
 
 def valid(response: CompleteResponse) -> dict[str, Any]:
     """Valid."""
-    return strict_json(response.body)
+    value = strict_json(response.body)
+    return strict_json(value["choices"][0]["message"]["content"].encode())
 
 
 @run_async
@@ -349,11 +387,10 @@ async def test_complete_error_response_has_status_and_no_retry_or_redirect(
             with pytest.raises(DispatchError):
                 await dispatcher.execute(prepared(), context=context(), validate=valid)
             assert len(server.requests) == 1
-            observation = hooks.observations[0]
-            assert observation["transport_outcome"] == "response"
-            assert observation["http_status"] == status
-            assert observation["business_outcome"] == "rejected"
-            assert observation["usage_disposition"] == "unknown"
+            assert hooks.observations == [] and dispatcher.closed
+            audit = dispatcher.recorded_usage()[0]["provider_audit"]
+            assert audit["response_complete"] and audit["http_status"] == status
+            assert audit["usage_evidence"] == "unavailable"
         finally:
             await dispatcher.aclose()
 
@@ -382,9 +419,11 @@ async def test_incomplete_body_preserves_unknown(
                 await dispatcher.execute(
                     prepared(), context=context(), validate=valid, extract_usage=usage
                 )
-            assert dispatcher.recorded_usage() == ()
-            assert hooks.observations[0]["transport_outcome"] == "unknown"
-            assert hooks.observations[0]["http_status"] == 0
+            assert hooks.observations == [] and dispatcher.closed
+            report = dispatcher.recorded_usage()[0]
+            assert report["usage"] is None
+            assert report["provider_audit"]["http_status"] == 0
+            assert not report["provider_audit"]["response_complete"]
         finally:
             await dispatcher.aclose()
 
@@ -425,7 +464,7 @@ async def test_usage_survives_rejected_business_validation(
 
 
 @run_async
-@pytest.mark.parametrize("counts", [(20, 1025), (MAX_INTEGER, 1)])
+@pytest.mark.parametrize("counts", [(20, 1025), (MAX_INTEGER - 1, 1)])
 @pytest.mark.parametrize("ack", ["anomaly", "settled", "unconfirmed"])
 async def test_out_of_reservation_usage_is_preserved_and_never_reopens(
     monkeypatch: pytest.MonkeyPatch,
@@ -436,7 +475,15 @@ async def test_out_of_reservation_usage_is_preserved_and_never_reopens(
     clock = Clock()
     hooks = Hooks(clock)
     hooks.settlement = ack
-    async with HTTPFaultServer(good_response) as server:
+
+    async def overrun(
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        request: ReceivedRequest,
+    ) -> None:
+        await respond(writer, body=chat_body(*counts))
+
+    async with HTTPFaultServer(overrun) as server:
         dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
         try:
             with pytest.raises(DispatchError):
@@ -444,7 +491,6 @@ async def test_out_of_reservation_usage_is_preserved_and_never_reopens(
                     prepared(),
                     context=context(),
                     validate=valid,
-                    extract_usage=lambda r: usage(r, counts[1], counts[0]),
                 )
             assert dispatcher.closed
             assert hooks.observations == []
@@ -482,7 +528,7 @@ async def test_cancel_and_deadline_join_owned_work_preserving_captured_usage(
             await reader.read()
             disconnected.set()
         else:
-            await respond(writer)
+            await respond(writer, body=chat_body())
 
     clock = Clock()
     hooks = Hooks(clock)
@@ -511,7 +557,8 @@ async def test_cancel_and_deadline_join_owned_work_preserving_captured_usage(
         with pytest.raises((DispatchError, asyncio.CancelledError)):
             await asyncio.wait_for(task, 1)
         assert dispatcher.closed
-        assert len(dispatcher.recorded_usage()) == (0 if phase == "read" else 1)
+        assert len(dispatcher.recorded_usage()) == 1
+        assert (dispatcher.recorded_usage()[0]["usage"] is None) == (phase == "read")
         if phase == "read":
             await asyncio.wait_for(disconnected.wait(), 1)
         await dispatcher.aclose()
@@ -542,7 +589,7 @@ async def test_concurrency_rejects_without_queue(
 
 
 @run_async
-@pytest.mark.parametrize("stage", ["validator", "extractor"])
+@pytest.mark.parametrize("stage", ["validator", "capture"])
 async def test_sync_clock_jump_preserves_usage_but_never_accepts(
     monkeypatch: pytest.MonkeyPatch,
     stage: str,
@@ -551,11 +598,15 @@ async def test_sync_clock_jump_preserves_usage_but_never_accepts(
     clock = Clock()
     hooks = Hooks(clock)
 
-    def extract(response: CompleteResponse) -> UsageEvidence:
-        """Extract."""
-        if stage == "extractor":
+    original_capture = dispatch.capture_chat_report
+
+    def capture(*args: Any, **kwargs: Any) -> Any:
+        report = original_capture(*args, **kwargs)
+        if stage == "capture":
             clock.now = 3000
-        return usage(response)
+        return report
+
+    monkeypatch.setattr(dispatch, "capture_chat_report", capture)
 
     def validate(response: CompleteResponse) -> dict[str, Any]:
         """Validate."""
@@ -571,7 +622,6 @@ async def test_sync_clock_jump_preserves_usage_but_never_accepts(
                     prepared(),
                     context=context(),
                     validate=validate,
-                    extract_usage=extract,
                 )
             assert len(dispatcher.recorded_usage()) == 1
             assert hooks.observations == []
@@ -634,7 +684,8 @@ async def test_body_size_is_typed_and_never_corrective_output(
             with pytest.raises(DispatchError) as error:
                 await dispatcher.execute(prepared(), context=context(), validate=valid)
             assert error.value.fact == "size_limit"
-            assert hooks.observations == [] and dispatcher.recorded_usage() == ()
+            assert hooks.observations == [] and len(dispatcher.recorded_usage()) == 1
+            assert dispatcher.recorded_usage()[0]["usage"] is None
         finally:
             await dispatcher.aclose()
 
@@ -832,7 +883,7 @@ async def test_unconfirmed_or_wrong_ack_never_emits_accepted(
 
         async def bad_ack(report: Frame) -> Frame:
             ack = await original(report)
-            ack["usage_hash"] = "d" * 64
+            ack["report_hash"] = "d" * 64
             return ack
 
         monkeypatch.setattr(hooks, "settle", bad_ack)
@@ -930,11 +981,10 @@ async def test_real_tcp_read_timeout_is_timeout_and_cannot_resend(
                 )
             await asyncio.wait_for(disconnected.wait(), 1)
             assert error.value.__context__ is error.value.__cause__ is None
-            observation = hooks.observations[0]
-            assert observation["error_code"] == "TIMEOUT"
-            assert observation["transport_outcome"] == "unknown"
-            assert observation["http_status"] == 0
-            assert dispatcher.recorded_usage() == () and dispatcher.closed
+            assert hooks.observations == [] and dispatcher.closed
+            report = dispatcher.recorded_usage()[0]
+            assert report["usage"] is None
+            assert not report["provider_audit"]["response_complete"]
             assert clock.now == 1000
             with pytest.raises(DispatchError):
                 await dispatcher.execute(prepared(), context=context(), validate=valid)
@@ -986,9 +1036,9 @@ async def test_real_tcp_tls_connect_timeout_is_timeout_without_retry(
             )
         assert received_hello.is_set() and len(connections) == 1
         assert error.value.__context__ is error.value.__cause__ is None
-        assert hooks.observations[0]["error_code"] == "TIMEOUT"
-        assert hooks.observations[0]["transport_outcome"] == "unknown"
-        assert dispatcher.closed and dispatcher.recorded_usage() == ()
+        assert hooks.observations == [] and dispatcher.closed
+        assert dispatcher.recorded_usage()[0]["usage"] is None
+        assert not dispatcher.recorded_usage()[0]["provider_audit"]["response_complete"]
         with pytest.raises(DispatchError):
             await dispatcher.execute(prepared(), context=context(), validate=valid)
         assert len(hooks.intents) == len(connections) == 1

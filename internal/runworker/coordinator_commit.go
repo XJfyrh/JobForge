@@ -26,6 +26,9 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 		if !call.confirmed || call.observation == nil || (call.observation.UsageDisposition == "reported" && !call.settled) {
 			return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 		}
+		if call.intent.Subcall == "chat" && !confirmedChat(call) {
+			return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
+		}
 		if last == nil || call.intent.CallSequence > last.intent.CallSequence {
 			last = call
 		}
@@ -84,6 +87,14 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 	// Even a confirmed intermediate result is resumed through a later Claim;
 	// we do not infer a next step from this read-only response or report Fail.
 	return stepOutcome{Abandoned: true}
+}
+
+func confirmedChat(call *callRecord) bool {
+	return call.confirmed && call.settled && call.report != nil && call.report.Usage != nil && call.report.ProviderAudit != nil &&
+		call.report.ProviderAudit.IdentityState == run.ProviderIdentityCompatible && call.report.ProviderAudit.ModeState == run.ProviderModeNonthinking &&
+		call.observation != nil && call.observation.UsageDisposition == "reported" && call.observation.UsageHash != nil &&
+		*call.observation.UsageHash == call.report.Usage.UsageHash && call.observation.AuditHash != nil &&
+		*call.observation.AuditHash == call.report.ProviderAudit.AuditHash
 }
 
 func acceptedMatches(accepted *agentv1.AcceptedStep, step *agentv1.StepIdentity, runID, hash string, canonical []byte) bool {

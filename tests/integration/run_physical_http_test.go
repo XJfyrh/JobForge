@@ -189,7 +189,7 @@ func TestRunPhysicalHTTPCancelStopsLaterSendsButAllowsLateMetering(t *testing.T)
 	}
 	before := ledgerView(t, h, claimed.Lease)
 	settled, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease,
-		PhysicalCallID: request.PhysicalCallID, Usage: remoteUsage})
+		PhysicalCallID: request.PhysicalCallID, Usage: &remoteUsage})
 	if err != nil || !settled.NewlySettled || !settled.Reservation.UsageKnown {
 		t.Fatalf("late complete usage was not settled: %+v %v", settled, err)
 	}

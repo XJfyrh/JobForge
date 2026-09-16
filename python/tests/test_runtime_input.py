@@ -26,6 +26,29 @@ def test_shared_valid_runtime_projection(case: dict) -> None:
     original = copy.deepcopy(runtime.checkpoint)
     frame["checkpoint"]["snapshot"]["ticket_binding_json"]["subject"] = "mutated"
     assert runtime.checkpoint == original
+    assert runtime.expected_response_model == "deepseek-flash"
+    assert runtime.provider_audit_policy == "deepseek-audit-v1"
+
+
+@pytest.mark.parametrize("field", ["expected_response_model", "provider_audit_policy"])
+@pytest.mark.parametrize("value", [None, "", "other", "DEEPSEEK-FLASH", 1])
+def test_runtime_requires_frozen_audit_profile_selection(
+    field: str, value: object
+) -> None:
+    """Body metadata cannot select the expected model or downgrade audit policy."""
+    frame = copy.deepcopy(FIXTURE["valid"][0]["frame"])
+    frame["input"][field] = value
+    with pytest.raises(RuntimeInputError):
+        parse_runtime_input(frame)
+
+
+@pytest.mark.parametrize("field", ["expected_response_model", "provider_audit_policy"])
+def test_runtime_rejects_missing_audit_profile_selection(field: str) -> None:
+    """The new runtime has no fallback to a historical unaudited profile."""
+    frame = copy.deepcopy(FIXTURE["valid"][0]["frame"])
+    frame["input"].pop(field, None)
+    with pytest.raises(RuntimeInputError):
+        parse_runtime_input(frame)
 
 
 @pytest.mark.parametrize("case", FIXTURE["invalid"], ids=lambda case: case["name"])

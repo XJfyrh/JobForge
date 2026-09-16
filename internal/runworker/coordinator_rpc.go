@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runclock"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
 	v2 "github.com/xjfyrh/jobforge/internal/runprotocol/v2"
@@ -43,7 +44,7 @@ func (c *coordinator) report(ctx context.Context, f v2.Frame, now int64) {
 		return
 	}
 	call := c.calls[f.PhysicalCallID]
-	if call == nil || call.reservation == nil || f.Usage == nil {
+	if call == nil || call.reservation == nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
 	}
@@ -52,13 +53,28 @@ func (c *coordinator) report(ctx context.Context, f v2.Frame, now int64) {
 	}
 	call.report = &f
 	budget := call.reservation.Budget
-	if budget == nil || f.Usage.InputTokens > budget.InputTokens || f.Usage.OutputTokens > budget.OutputTokens ||
-		f.Usage.InputTokens+f.Usage.OutputTokens > budget.TotalTokens {
-		c.fatal = true
-		c.stop("")
-	}
-	if call.observation != nil && call.observation.UsageDisposition == "unknown" {
+	binding, err := v2.ReportBinding(f, c.profile.ExpectedResponseModel)
+	if err != nil || budget == nil || binding.ExecutionBindingHash != call.reservation.ExecutionBindingHash ||
+		v2.Report(f).Verify(binding, f.ReportHash) != nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
+		return
+	}
+	disposition, err := run.FirstReportDisposition(binding, v2.Report(f), run.CallBudget{InputTokens: budget.InputTokens,
+		OutputTokens: budget.OutputTokens, TotalTokens: budget.TotalTokens, CostMicroyuan: budget.CostMicroyuan}, c.profile.Pricing)
+	if err != nil {
+		c.stop("EXECUTOR_PROTOCOL_ERROR")
+		return
+	}
+	if disposition.BatchStopCode != "" {
+		c.fatal = true
+		reason := ""
+		switch disposition.BatchStopCode {
+		case run.BatchStopMeasurementAnomaly, run.BatchStopProviderIdentityInvalid, run.BatchStopProviderModeInvalid:
+			reason = "MODEL_PROTOCOL_ERROR"
+		case run.BatchStopProviderHTTPRejected:
+			reason = "DEPENDENCY_UNAVAILABLE"
+		}
+		c.stop(reason)
 	}
 	c.settleNext(ctx)
 }
@@ -73,7 +89,8 @@ func (c *coordinator) settleNext(ctx context.Context) {
 		}
 		call.settlementAttempted = true
 		c.meteringRPC, c.tasks = true, c.tasks+1
-		request := &agentv1.SettleUsageRequest{Execution: c.lease.Execution, PhysicalCallId: call.id, Usage: usageToWire(call.report.Usage)}
+		request := &agentv1.SettleUsageRequest{Execution: c.lease.Execution, PhysicalCallId: call.id, Usage: usageToWire(call.report.Usage),
+			ProviderAudit: providerAuditToWire(call.report.ProviderAudit), ReportHash: call.report.ReportHash}
 		id, deadline := call.id, c.meteringDeadline
 		go func() {
 			// Accepted original-call accounting explicitly survives lease/parent
@@ -94,6 +111,10 @@ func (c *coordinator) settleNext(ctx context.Context) {
 }
 
 func (c *coordinator) observe(ctx context.Context, call *callRecord) {
+	if c.conversation.Closed() {
+		c.stop("")
+		return
+	}
 	if c.stopped || call.observation == nil || call.confirmed || c.ordinaryRPC ||
 		(call.observation.UsageDisposition == "reported" && !call.settled) {
 		return
@@ -112,6 +133,9 @@ func (c *coordinator) observe(ctx context.Context, call *callRecord) {
 			"rejected": agentv1.BusinessOutcome_BUSINESS_OUTCOME_REJECTED, "unknown": agentv1.BusinessOutcome_BUSINESS_OUTCOME_UNKNOWN}[f.BusinessOutcome]}
 	if request.UsageKnown {
 		request.Usage = usageToWire(call.report.Usage)
+	}
+	if f.AuditHash != nil {
+		request.AuditHash = *f.AuditHash
 	}
 	c.ordinaryRPC, c.tasks = true, c.tasks+1
 	id := call.id
@@ -198,7 +222,9 @@ func (c *coordinator) reserved(ctx context.Context, call *callRecord, done compl
 		return
 	}
 	r := response.Reservation
-	if r.Budget == nil || r.UsageKnown || r.MeasurementAnomaly {
+	binding, bindingErr := v2.ReportBinding(v2.Frame{Binding: c.execute.Binding, PhysicalCallID: call.id, ParameterHash: call.intent.ParameterHash}, c.profile.ExpectedResponseModel)
+	if r.Budget == nil || r.UsageKnown || r.MeasurementAnomaly || bindingErr != nil || r.ExecutionBindingHash != binding.ExecutionBindingHash ||
+		r.PersistedReportHash != "" || r.PersistedAuditHash != "" {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
 	}
@@ -236,12 +262,23 @@ func (c *coordinator) settled(ctx context.Context, call *callRecord, done comple
 	response, ok := done.value.(*agentv1.SettleUsageResponse)
 	settlement := "unconfirmed"
 	if done.err == nil && ok && response != nil && matchingReservation(response.Reservation, call.intent, call.id, c.priceHash) {
-		if response.Reservation.MeasurementAnomaly {
+		if response.ReportConflict && response.BatchFrozen && response.BatchStopCode != "" {
+			settlement = "conflict"
+			c.fatal = true
+			c.stop("EXECUTOR_PROTOCOL_ERROR")
+		} else if persistedReportMatches(response, call) && response.Reservation.MeasurementAnomaly && response.BatchFrozen {
 			settlement = "anomaly"
 			c.fatal = true
-		} else if response.Reservation.UsageKnown {
+			c.stop("MODEL_PROTOCOL_ERROR")
+		} else if persistedReportMatches(response, call) && response.Reservation.UsageKnown && call.report.Usage != nil {
 			settlement = "settled"
-			call.settled = true
+			call.settled = !response.BatchFrozen && response.BatchStopCode == ""
+		} else if persistedReportMatches(response, call) && !response.Reservation.UsageKnown && !response.Reservation.MeasurementAnomaly && response.BatchFrozen {
+			settlement = "recorded"
+		}
+		if response.BatchFrozen || response.BatchStopCode != "" {
+			c.fatal = true
+			c.stop("")
 		}
 	}
 	now, err := runclock.Now()
@@ -250,7 +287,7 @@ func (c *coordinator) settled(ctx context.Context, call *callRecord, done comple
 		return
 	}
 	ack := c.base("metering_ack", now)
-	ack.CallSequence, ack.PhysicalCallID, ack.UsageHash, ack.Settlement = call.intent.CallSequence, call.id, &call.report.Usage.UsageHash, settlement
+	ack.CallSequence, ack.PhysicalCallID, ack.ReportHash, ack.Settlement = call.intent.CallSequence, call.id, call.report.ReportHash, settlement
 	if c.conversation.AcceptMetering(ack, now) != nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
@@ -261,7 +298,7 @@ func (c *coordinator) settled(ctx context.Context, call *callRecord, done comple
 		// Unconfirmed ordinary accounting still abandons execution entirely.
 		if reason := rpcReason(done.err); stopsAuthority(reason) {
 			c.authority.Stop(reason)
-		} else if !c.fatal {
+		} else if settlement == "unconfirmed" {
 			c.authority.Stop("CONTROL_UNCONFIRMED")
 		}
 		c.stop("")
@@ -279,7 +316,9 @@ func (c *coordinator) settled(ctx context.Context, call *callRecord, done comple
 func (c *coordinator) observed(ctx context.Context, call *callRecord, done completion) {
 	response, ok := done.value.(*agentv1.ObserveCallResponse)
 	if !ok || response == nil || !matchingReservation(response.Reservation, call.intent, call.id, c.priceHash) ||
-		response.Reservation.MeasurementAnomaly || response.Reservation.UsageKnown != (call.observation.UsageDisposition == "reported") {
+		call.reservation == nil || response.Reservation.ExecutionBindingHash != call.reservation.ExecutionBindingHash ||
+		response.Reservation.MeasurementAnomaly || response.Reservation.UsageKnown != (call.observation.UsageDisposition == "reported") ||
+		(call.report != nil && (response.Reservation.PersistedReportHash != call.report.ReportHash || response.Reservation.PersistedAuditHash != reportAuditHash(call.report))) {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
 	}

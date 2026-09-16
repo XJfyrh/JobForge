@@ -32,6 +32,7 @@ from jobforge.errors import (
     UnauthorizedError,
 )
 from jobforge.models import Job, JobState
+from jobforge.run_calls import CallBudget, CallUsage, ProviderAudit, RunCall, RunCalls
 from jobforge.run_client import RunClient
 from jobforge.run_models import (
     BudgetAccount,
@@ -70,6 +71,11 @@ __all__ = [
     "TransportError",
     "UnauthorizedError",
     "RunClient",
+    "RunCalls",
+    "RunCall",
+    "CallBudget",
+    "CallUsage",
+    "ProviderAudit",
     "Run",
     "RunState",
     "RunError",
