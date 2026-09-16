@@ -28,7 +28,7 @@ ERROR_CODES = {
 
 
 def strict_json(raw: bytes) -> Any:
-    """Reject duplicate keys, non-finite constants, and trailing JSON."""
+    """Reject duplicate keys, invalid Unicode, deep/non-finite or trailing JSON."""
 
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -47,15 +47,34 @@ def strict_json(raw: bytes) -> Any:
             raise ValueError("non-finite JSON")
         return result
 
+    def tree(value: Any, depth: int = 0) -> None:
+        if depth > 64:
+            raise ValueError("JSON depth")
+        if isinstance(value, dict):
+            for key, child in value.items():
+                key.encode("utf-8", errors="strict")
+                tree(child, depth + 1)
+        elif isinstance(value, list):
+            for child in value:
+                tree(child, depth + 1)
+        elif isinstance(value, str):
+            value.encode("utf-8", errors="strict")
+        elif isinstance(value, (float, int)) and not math.isfinite(float(value)):
+            raise ValueError("non-finite JSON")
+
     try:
-        return json.loads(
+        result = json.loads(
             raw.decode("utf-8"),
             object_pairs_hook=pairs,
             parse_constant=constant,
             parse_float=finite_float,
         )
-    except (ValueError, UnicodeError, RecursionError) as exc:
-        raise ToolError("INVALID_JSON") from exc
+        tree(result)
+        return result
+    except (ValueError, UnicodeError, RecursionError, OverflowError):
+        pass
+    # Raising outside the handler also drops JSONDecodeError.doc from __context__.
+    raise ToolError("INVALID_JSON")
 
 
 def origin(value: str) -> str:

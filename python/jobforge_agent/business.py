@@ -87,6 +87,123 @@ class SnapshotBinding:
             raise ToolError("INVALID_CONFIGURATION")
 
 
+def tool_argument(name: Any, arguments: Any, binding: SnapshotBinding) -> str | None:
+    """Validate the complete model argument against one trusted snapshot."""
+    if not isinstance(name, str) or name not in TOOL_NAMES:
+        raise ToolError("UNKNOWN_TOOL")
+    key = "query" if name == "search_policy" else "order_id"
+    if not isinstance(arguments, dict) or set(arguments) != {key}:
+        raise ToolError("INVALID_ARGUMENT")
+    argument = arguments[key]
+    if name != "search_policy":
+        if argument is not None and not isinstance(argument, str):
+            raise ToolError("INVALID_ARGUMENT")
+        if argument != binding.order_id:
+            raise ToolError("OBJECT_NOT_AUTHORIZED")
+        return argument
+    try:
+        if (
+            not isinstance(argument, str)
+            or not argument.strip()
+            or len(argument.encode("utf-8")) > 512
+        ):
+            raise ToolError("INVALID_ARGUMENT")
+    except UnicodeError as exc:
+        raise ToolError("INVALID_ARGUMENT") from exc
+    return argument
+
+
+def tool_path(binding: SnapshotBinding, name: str) -> str:
+    """Build a fixed business path from trusted binding and registered name."""
+    suffix = {
+        "get_order": "/order",
+        "get_delivery": "/delivery",
+        "search_policy": "/policies/search",
+    }.get(name)
+    if suffix is None:
+        raise ToolError("UNKNOWN_TOOL")
+    return f"/business/v1/snapshots/{binding.snapshot_id}{suffix}"
+
+
+def search_body(embedding: list[float]) -> dict[str, Any]:
+    """Construct the registered search request without caller-selected metadata."""
+    return {
+        "embedding_model": MODEL,
+        "embedding_digest": MODEL_DIGEST,
+        "query_vector": list(embedding),
+    }
+
+
+def validate_read_response(
+    result: dict[str, Any], binding: SnapshotBinding, name: str
+) -> dict[str, Any]:
+    """Verify snapshot, evidence and associated object before accepting a read."""
+    if name not in {"get_order", "get_delivery"}:
+        raise ToolError("UNKNOWN_TOOL")
+    kind = "order" if name == "get_order" else "delivery"
+    if (
+        result.get("snapshot_id") != binding.snapshot_id
+        or result.get("evidence_ref")
+        != f"business-evidence:{binding.snapshot_id}:{kind}"
+    ):
+        raise ToolError("INVALID_EVIDENCE")
+    fact = result.get(kind)
+    if (
+        result.get("kind") != kind
+        or type(result.get("missing")) is not bool
+        or (
+            not result["missing"]
+            and (not isinstance(fact, dict) or fact.get("order_id") != binding.order_id)
+        )
+        or (result["missing"] and fact is not None)
+    ):
+        raise ToolError("INVALID_EVIDENCE")
+    return result
+
+
+def validate_search_response(
+    result: dict[str, Any], binding: SnapshotBinding
+) -> dict[str, Any]:
+    """Verify every returned paragraph's frozen index, policy and evidence ref."""
+    if result.get("snapshot_id") != binding.snapshot_id:
+        raise ToolError("INVALID_EVIDENCE")
+    matches = result.get("matches")
+    if not isinstance(matches, list) or len(matches) > 3:
+        raise ToolError("INVALID_RESPONSE")
+    seen: set[str] = set()
+    for item in matches:
+        if not isinstance(item, dict):
+            raise ToolError("INVALID_RESPONSE")
+        chunk_id = item.get("chunk_id")
+        if (
+            not isinstance(chunk_id, str)
+            or not re.fullmatch("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", chunk_id)
+            or chunk_id in seen
+            or item.get("index_id") != binding.index_id
+            or item.get("policy_version") != binding.policy_version
+            or item.get("evidence_ref")
+            != f"business-policy:{binding.index_id}:{chunk_id}"
+        ):
+            raise ToolError("INVALID_EVIDENCE")
+        text, distance = item.get("text"), item.get("distance")
+        if (
+            not isinstance(text, str)
+            or not text.strip()
+            or isinstance(distance, bool)
+            or not isinstance(distance, (float, int))
+            or not -0.000001 <= distance <= 2.000001
+            or not isinstance(item.get("source"), str)
+        ):
+            raise ToolError("INVALID_RESPONSE")
+        try:
+            if len(text.encode("utf-8")) > 768:
+                raise ToolError("INVALID_RESPONSE")
+        except UnicodeError as exc:
+            raise ToolError("INVALID_RESPONSE") from exc
+        seen.add(chunk_id)
+    return result
+
+
 class BusinessTools:
     """Dispatch one authorized read tool over real HTTP with fixed URL paths."""
 
@@ -124,101 +241,24 @@ class BusinessTools:
         self, name: Any, arguments: Any, *, deadline: float
     ) -> dict[str, Any]:
         """Execute a single fixed capability after validating its entire input."""
-        if not isinstance(name, str) or name not in TOOL_NAMES:
-            raise ToolError("UNKNOWN_TOOL")
-        key = "query" if name == "search_policy" else "order_id"
-        if not isinstance(arguments, dict) or set(arguments) != {key}:
-            raise ToolError("INVALID_ARGUMENT")
-        argument = arguments[key]
-        path = f"/business/v1/snapshots/{self.binding.snapshot_id}"
+        argument = tool_argument(name, arguments, self.binding)
+        path = tool_path(self.binding, name)
         if name != "search_policy":
-            if argument is not None and not isinstance(argument, str):
-                raise ToolError("INVALID_ARGUMENT")
-            if argument != self.binding.order_id:
-                raise ToolError("OBJECT_NOT_AUTHORIZED")
-            kind = "order" if name == "get_order" else "delivery"
             result = await self._http.request(
                 "GET",
-                path + "/" + kind,
+                path,
                 deadline=min(deadline, time.monotonic() + 10),
                 max_response=8 * 1024,
             )
-            if (
-                result.get("snapshot_id") != self.binding.snapshot_id
-                or result.get("evidence_ref")
-                != f"business-evidence:{self.binding.snapshot_id}:{kind}"
-            ):
-                raise ToolError("INVALID_EVIDENCE")
-            fact = result.get(kind)
-            if (
-                result.get("kind") != kind
-                or type(result.get("missing")) is not bool
-                or (
-                    not result["missing"]
-                    and (
-                        not isinstance(fact, dict)
-                        or fact.get("order_id") != self.binding.order_id
-                    )
-                )
-                or (result["missing"] and fact is not None)
-            ):
-                raise ToolError("INVALID_EVIDENCE")
-            return result
-        try:
-            if (
-                not isinstance(argument, str)
-                or not argument.strip()
-                or len(argument.encode("utf-8")) > 512
-            ):
-                raise ToolError("INVALID_ARGUMENT")
-        except UnicodeError as exc:
-            raise ToolError("INVALID_ARGUMENT") from exc
+            return validate_read_response(result, self.binding, name)
+        # tool_argument has already validated the registered search string.
+        assert isinstance(argument, str)
         embeddings = await self._embedding.embed([argument], deadline=deadline)
         result = await self._http.request(
             "POST",
-            path + "/policies/search",
+            path,
             deadline=min(deadline, time.monotonic() + 10),
             max_response=8 * 1024,
-            body={
-                "embedding_model": MODEL,
-                "embedding_digest": MODEL_DIGEST,
-                "query_vector": embeddings[0],
-            },
+            body=search_body(embeddings[0]),
         )
-        if result.get("snapshot_id") != self.binding.snapshot_id:
-            raise ToolError("INVALID_EVIDENCE")
-        matches = result.get("matches")
-        if not isinstance(matches, list) or len(matches) > 3:
-            raise ToolError("INVALID_RESPONSE")
-        seen: set[str] = set()
-        for item in matches:
-            if not isinstance(item, dict):
-                raise ToolError("INVALID_RESPONSE")
-            chunk_id = item.get("chunk_id")
-            if (
-                not isinstance(chunk_id, str)
-                or not re.fullmatch("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", chunk_id)
-                or chunk_id in seen
-                or item.get("index_id") != self.binding.index_id
-                or item.get("policy_version") != self.binding.policy_version
-                or item.get("evidence_ref")
-                != f"business-policy:{self.binding.index_id}:{chunk_id}"
-            ):
-                raise ToolError("INVALID_EVIDENCE")
-            text, distance = item.get("text"), item.get("distance")
-            if (
-                not isinstance(text, str)
-                or not text.strip()
-                or isinstance(distance, bool)
-                or not isinstance(distance, (float, int))
-                or not -0.000001 <= distance <= 2.000001
-                or not isinstance(item.get("source"), str)
-            ):
-                raise ToolError("INVALID_RESPONSE")
-            try:
-                if len(text.encode("utf-8")) > 768:
-                    raise ToolError("INVALID_RESPONSE")
-            except UnicodeError as exc:
-                raise ToolError("INVALID_RESPONSE") from exc
-            seen.add(chunk_id)
-        return result
+        return validate_search_response(result, self.binding)

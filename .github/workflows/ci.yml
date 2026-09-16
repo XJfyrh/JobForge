@@ -128,7 +128,7 @@ jobs:
         run: python -m pytest sdk/python/tests
       - name: Agent S0 probe guardrails (no model calls)
         run: python -m pytest tools/agent_probe_data tools/executorprobe
-      - name: Agent S1 business adapter boundaries (no model calls)
+      - name: Agent S1 adapters and authorized HTTP (real Linux clock, no model calls)
         run: python -m pytest python/tests
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
