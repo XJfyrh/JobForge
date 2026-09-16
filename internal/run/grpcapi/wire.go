@@ -127,6 +127,16 @@ func optionalTime(value *time.Time) *timestamppb.Timestamp {
 	return timestamppb.New(*value)
 }
 
+// authorityTimeToWire fails closed when storage omits its authoritative clock.
+// Transport must never substitute its own wall clock for this observation.
+func authorityTimeToWire(value time.Time) (*timestamppb.Timestamp, error) {
+	stamp := timestamppb.New(value)
+	if value.IsZero() || stamp.CheckValid() != nil {
+		return nil, run.ErrInternal
+	}
+	return stamp, nil
+}
+
 func reservationToWire(value run.CallReservation) (*agentv1.CallReservation, error) {
 	var subcall agentv1.Subcall
 	for code, name := range subcallNames {
@@ -149,6 +159,7 @@ func reservationToWire(value run.CallReservation) (*agentv1.CallReservation, err
 		Subcall: subcall, ParameterHash: value.ParameterHash, PriceHash: value.PriceHash,
 		ReservedAt: timestamppb.New(value.ReservedAt), DispatchExpiresAt: timestamppb.New(value.DispatchExpiresAt),
 		CallDeadline: timestamppb.New(value.CallDeadline), UsageKnown: value.UsageKnown,
+		MeasurementAnomaly: value.MeasurementAnomaly,
 		Budget: &agentv1.CallBudget{InputTokens: value.Budget.InputTokens, OutputTokens: value.Budget.OutputTokens,
 			TotalTokens: value.Budget.TotalTokens, CostMicroyuan: value.Budget.CostMicroyuan}}, nil
 }

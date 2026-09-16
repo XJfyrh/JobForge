@@ -125,6 +125,8 @@ type ReserveCallResponse struct {
 }
 
 // UsageReport contains complete trusted metering and its canonical identity.
+// Counts are nonnegative safe integers; reports above a reservation are retained
+// as anomalies and freeze its accounts rather than being rejected or truncated.
 type UsageReport struct {
 	InputTokens       int64  `json:"input_tokens"`
 	OutputTokens      int64  `json:"output_tokens"`

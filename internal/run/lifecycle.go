@@ -9,6 +9,9 @@ type HeartbeatResult struct {
 	LeaseUntil       time.Time
 	SessionExpiresAt time.Time
 	StopReason       string
+	// AuthorityObservedAt anchors the returned expiries to the database clock,
+	// including stop responses that grant no further execution authority.
+	AuthorityObservedAt time.Time
 }
 
 // StopResult confirms the first attempt closure, not renewed execution rights.

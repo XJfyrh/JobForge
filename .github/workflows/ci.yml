@@ -185,6 +185,11 @@ jobs:
         run: >-
           docker run --rm --init --network none --cpus 1 --memory 256m
           --pids-limit 64 jobforge-executor-probe:s0
+      - name: Verify shared Go and Python BOOTTIME with race detector
+        run: >-
+          docker run --rm --init --network none --cpus 1 --memory 256m
+          --pids-limit 64 jobforge-executor-probe:s0
+          ./clock.test -test.v -test.timeout=30s
 
   proto-lint:
     name: Buf lint

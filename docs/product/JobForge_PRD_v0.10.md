@@ -1,6 +1,6 @@
 # JobForge PRD v0.10：S1-C 云端固定流程与正式执行器
 
-- 日期：2026-09-16；状态：提案，须独立审查和PR接受后实施。
+- 日期：2026-09-16；状态：随 [PR #41](https://github.com/XJfyrh/JobForge/pull/41) 合并接受（`01177e9`），实施与真实云端验收另行报告。
 - 基线：[PRD v0.7](JobForge_PRD_v0.7.md)、[v0.8](JobForge_PRD_v0.8.md)、[v0.9](JobForge_PRD_v0.9.md)。S1-B 已随 [PR #40](https://github.com/XJfyrh/JobForge/pull/40) 合并，提交 `f63300c`。
 - 决策：[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)。本增量不代替S2动态Agent、S3恢复对比、S4审批写入或S5保留集/观测/留存。
 

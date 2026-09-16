@@ -1,6 +1,6 @@
 # ADR-0018：DeepSeek固定流程与正式受监管执行器
 
-- 状态：Proposed，实施前独立审查并按PR接受。
+- 状态：Accepted；随 [PR #41](https://github.com/XJfyrh/JobForge/pull/41) 于2026-09-16合并接受（`01177e9`）。契约接受不等于S1-C实现或真实模型验收通过。
 - 日期：2026-09-16。
 - 关联：[PRD v0.10](../product/JobForge_PRD_v0.10.md)、ADR-0013～0017。
 - 取代范围：细化ADR-0014的正式进程、DeepSeek与计量边界；在S1-C新策略中增补ADR-0017的有限条件分支与方案schema，并升级尚未上线的执行器帧合同。Run仍是唯一调度实体，旧报告不改写。

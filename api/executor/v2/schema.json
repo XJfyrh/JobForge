@@ -1,0 +1,914 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobforge.invalid/api/executor/v2/schema.json",
+  "title": "JobForge supervised executor frame v2",
+  "description": "Strict UTF-8 JSON Lines. Duplicate/unknown keys, null required fields, unpaired surrogates, numbers outside finite binary64 range (including nested integers), depth >64 and trailing content are rejected. Range validation does not round or coerce decoded integers. All times are safe integer CLOCK_BOOTTIME milliseconds within one Linux time namespace. Ordinary and dedicated metering pipes are distinct; metering never grants execution authority.",
+  "x-max-frame-bytes": 393216,
+  "x-sequence": [
+    "execute_step",
+    "(call_intent -> call_permit -> call_observation)*",
+    "step_result"
+  ],
+  "x-conversation-rules": [
+    "All frames bind the first request_id and exact binding. No v1 frames or usage objects in ordinary observations.",
+    "execute_step deadline = emitted_mono_ms + remaining_ms; permit dispatch/call deadlines = emitted_mono_ms + dispatch_ms/call_ms. Receiver queue delay never resets a deadline. Reject future emitted stamps, backward receiver clocks, same-direction backward emitted stamps, overflow, or equality at ordinary expiry.",
+    "One intent and one possible physical send at a time. CanDispatch consumes a fresh permit exactly once before its anchored dispatch deadline; only consumed permits admit metering.",
+    "search_policy order is profile_version, profile_tags, query_embedding, search_policy under one tool_invocation_id.",
+    "Ordinary output is at most 393216 bytes including LF. Dedicated metering_report and metering_ack frames are at most 8192 bytes including LF and cannot be sent on ordinary stdout.",
+    "Metering usage hash is the jobforge.run.usage.v1 length-prefixed SHA256 of decimal input_tokens, output_tokens, cached_input_tokens and receipt_hash. Each token field <= 2^53-1 and cached <= input. Their sum may exceed the wire safe integer bound; retain the original fields for ledger anomaly handling, never reject or truncate that report. Output above 1024 is valid metering, not execution success.",
+    "Reports require the original consumed permit call_sequence, physical_call_id and parameter_hash. One distinct usage per call; identical duplicates are idempotent. No action, cursor or permission fields.",
+    "Reports can arrive before or after the ordinary observation, including after stop or execution expiry. Each pipe/direction orders its own emitted stamps; never compare metering emitted stamps with ordinary arrival order.",
+    "reported observations wait for matching metering usage_hash and a settled ACK before next intent, correction or result. unknown has null usage_hash and retains hold. Existing received reports cannot be bypassed with unknown.",
+    "Token overrun, anomaly/unconfirmed ACK, missing/mismatched report or settlement prevent further execution. Overrun reports remain available for ledger settlement; no ACK can reopen a stopped or expired conversation.",
+    "Caller must drain/join the metering reader and wait/verify process exit before Commit; successful step_result alone is not commit authority.",
+    "Free subcalls have call_ms <=10000, zero token limits and no metering. Chat/query embedding <=60000; ordinary output bound remains 1024. Tool result <=8192, other result/input <=16384, checkpoint <=262144 bytes.",
+    "Denied permits and rejected/unknown observations forbid further sends; only error step_result can terminate. No arbitrary next cursor.",
+    "Permit emission must follow its intent emission; observation/report emission must follow consumed dispatch. A post-settlement intent/result emission must not precede its settled ACK emission.",
+    "An unconfirmed ACK may later be confirmed settled/anomaly with the same usage hash, without reopening execution. A valid report whose ordinary observation hash mismatches is still accepted for settlement while ordinary execution is stopped.",
+    "unknown accepted responses may finish with the full hold retained. A subsequently received valid report is accounted but stops ordinary execution; it cannot retroactively bypass the reported/settled barrier."
+  ],
+  "oneOf": [
+    {
+      "$ref": "#/$defs/execute_step"
+    },
+    {
+      "$ref": "#/$defs/call_intent"
+    },
+    {
+      "$ref": "#/$defs/call_permit"
+    },
+    {
+      "$ref": "#/$defs/call_observation"
+    },
+    {
+      "$ref": "#/$defs/step_result"
+    },
+    {
+      "$ref": "#/$defs/metering_report"
+    },
+    {
+      "$ref": "#/$defs/metering_ack"
+    }
+  ],
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/key"
+        },
+        "worker_id": {
+          "$ref": "#/$defs/key"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/key"
+        },
+        "run_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "step_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "session_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "profile_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "snapshot_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "attempt_no": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "fencing_token": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "cursor_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "step_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "step_kind": {
+          "enum": [
+            "read_ticket",
+            "get_order",
+            "get_delivery",
+            "search_policy",
+            "model_proposal",
+            "protocol_correction",
+            "submit_proposal"
+          ]
+        }
+      },
+      "required": [
+        "tenant_id",
+        "worker_id",
+        "profile_id",
+        "run_id",
+        "step_id",
+        "session_id",
+        "snapshot_id",
+        "profile_hash",
+        "snapshot_hash",
+        "input_hash",
+        "attempt_no",
+        "fencing_token",
+        "cursor_version",
+        "step_sequence",
+        "step_kind"
+      ],
+      "additionalProperties": false
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "cached_input_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "receipt_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "usage_hash": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "cached_input_tokens",
+        "receipt_hash",
+        "usage_hash"
+      ],
+      "additionalProperties": false
+    },
+    "execute_step": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "kind": {
+          "const": "execute_step"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "remaining_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 180000
+        },
+        "trace_context": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^[ -~]*$"
+        },
+        "checkpoint": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 262144
+        },
+        "input": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 16384
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "remaining_ms",
+        "trace_context",
+        "checkpoint",
+        "input",
+        "emitted_mono_ms"
+      ],
+      "additionalProperties": false
+    },
+    "call_intent": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "kind": {
+          "const": "call_intent"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "subcall": {
+          "enum": [
+            "get_order",
+            "get_delivery",
+            "profile_version",
+            "profile_tags",
+            "query_embedding",
+            "search_policy",
+            "chat"
+          ]
+        },
+        "parameter_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "subcall",
+        "parameter_hash",
+        "tool_invocation_id",
+        "emitted_mono_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "const": "chat"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tool_invocation_id": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "tool_invocation_id": {
+                "$ref": "#/$defs/uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "call_permit": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "kind": {
+          "const": "call_permit"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "subcall": {
+          "enum": [
+            "get_order",
+            "get_delivery",
+            "profile_version",
+            "profile_tags",
+            "query_embedding",
+            "search_policy",
+            "chat"
+          ]
+        },
+        "parameter_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "physical_call_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "granted": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "dispatch_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "call_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "input_token_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_token_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "subcall",
+        "parameter_hash",
+        "tool_invocation_id",
+        "physical_call_id",
+        "granted",
+        "error_code",
+        "dispatch_ms",
+        "call_ms",
+        "input_token_limit",
+        "output_token_limit",
+        "emitted_mono_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "granted": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "physical_call_id": {
+                "const": ""
+              },
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              },
+              "dispatch_ms": {
+                "const": 0
+              },
+              "call_ms": {
+                "const": 0
+              },
+              "input_token_limit": {
+                "const": 0
+              },
+              "output_token_limit": {
+                "const": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "physical_call_id": {
+                "$ref": "#/$defs/uuid"
+              },
+              "error_code": {
+                "const": ""
+              },
+              "dispatch_ms": {
+                "minimum": 1
+              },
+              "call_ms": {
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "enum": [
+                  "get_order",
+                  "get_delivery",
+                  "profile_version",
+                  "profile_tags",
+                  "search_policy"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "call_ms": {
+                "maximum": 10000
+              },
+              "input_token_limit": {
+                "const": 0
+              },
+              "output_token_limit": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "const": "chat"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tool_invocation_id": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "tool_invocation_id": {
+                "$ref": "#/$defs/uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "call_observation": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "kind": {
+          "const": "call_observation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "physical_call_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "transport_outcome": {
+          "enum": [
+            "response",
+            "unknown"
+          ]
+        },
+        "http_status": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 599
+        },
+        "business_outcome": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "usage_disposition": {
+          "enum": [
+            "unknown",
+            "reported"
+          ]
+        },
+        "usage_hash": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "physical_call_id",
+        "transport_outcome",
+        "http_status",
+        "business_outcome",
+        "error_code",
+        "emitted_mono_ms",
+        "usage_disposition",
+        "usage_hash"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "usage_disposition": {
+                "const": "reported"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "usage_hash": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "usage_hash": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport_outcome": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "http_status": {
+                "const": 0
+              },
+              "business_outcome": {
+                "const": "unknown"
+              },
+              "usage_disposition": {
+                "const": "unknown"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "http_status": {
+                "minimum": 100
+              },
+              "business_outcome": {
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "business_outcome": {
+                "const": "accepted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step_result": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "kind": {
+          "const": "step_result"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "error"
+          ]
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "result": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 16384
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "outcome",
+        "error_code",
+        "result",
+        "emitted_mono_ms"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "success"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metering_report": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "kind": {
+          "const": "metering_report"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "physical_call_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "parameter_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "usage": {
+          "$ref": "#/$defs/usage"
+        }
+      },
+      "required": [
+        "version",
+        "request_id",
+        "binding",
+        "emitted_mono_ms",
+        "kind",
+        "call_sequence",
+        "physical_call_id",
+        "parameter_hash",
+        "usage"
+      ],
+      "additionalProperties": false
+    },
+    "metering_ack": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 2
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "emitted_mono_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "kind": {
+          "const": "metering_ack"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "physical_call_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "usage_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "settlement": {
+          "enum": [
+            "settled",
+            "anomaly",
+            "unconfirmed"
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "request_id",
+        "binding",
+        "emitted_mono_ms",
+        "kind",
+        "call_sequence",
+        "physical_call_id",
+        "usage_hash",
+        "settlement"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "x-max-metering-frame-bytes": 8192
+}
