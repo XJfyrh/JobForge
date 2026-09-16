@@ -37,10 +37,10 @@ Submit 使用必填 Idempotency-Key（1～128 个 ASCII `[A-Za-z0-9._:-]`，首�
 
 ### 2.2 跨库接纳顺序
 
-1. 鉴权、严格解码，先读取该作用域已接受操作：同指纹返回首次对象，异指纹 CONFLICT。读取既有操作无需 profile 仍可派发或还有余额，但始终检查当前权限和租户。
-2. 未受理时验证不可变 profile、批次授权及有效期、业务键关系。retry 先验证来源资格和业务请求 7 日窗口，继承原 profile/账户/批次；请求只含 schema_version 和可选 run_timeout_seconds，不允许改工单或模型。
+1. 鉴权、严格解码，先读取该作用域已接受操作：同指纹返回首次对象，异指纹 CONFLICT。操作键未受理时，先查同业务键的既有根 Run（Submit）或来源 Run 的既有后继（retry）；同规范内容在短事务内按下述锁序复核并登记新操作键，返回首次对象，异内容 CONFLICT。以上复用仅需当前公开操作权限/tenant，不依赖 profile 仍可执行、余额、批次有效期、retry窗口或业务 capture 服务可用性；不得先 capture 再判断已有对象。
+2. 只有确需创建新 Run 时验证不可变 profile、批次授权及有效期、业务键关系。新 retry 验证来源资格和业务请求 7 日窗口，继承原 profile/账户/批次；请求只含 schema_version 和可选 run_timeout_seconds，不允许改工单或模型。
 3. 在控制事务外使用受信 operator 身份 capture 业务快照，单次 HTTP≤10s、无隐式重试。acquisition key 是域分隔 SHA-256(tenant、submit/retry、操作键、retry 来源)，不是业务意图键。相同操作重发取得同一快照；新 retry 操作可取得新事实。
-4. 验证返回的 tenant、ticket、schema、snapshot/content hash、完整版本向量和索引 profile。然后开启短控制库事务，先锁业务请求（不存在时用唯一键插入竞争），再锁来源 Run（retry），再锁操作记录；锁后读取新鲜 DB 时间，重新验证接纳条件与同键结果。原子保存关系、ready Run、初始游标/事件和操作结果。
+4. 验证返回的 tenant、ticket、schema、snapshot/content hash、完整版本向量和索引 profile。然后开启短控制库事务，先锁业务请求（不存在时用唯一键插入竞争），再锁来源 Run（retry），再锁操作记录。锁后先识别并发已接受的操作/业务根/后继并比较内容：已有匹配对象只登记操作结果并返回；只有仍需创建时才读取新鲜 DB 时间、重新验证动态接纳条件。原子保存关系、ready Run、初始游标/事件和操作结果。
 5. 唯一冲突读取已接受结果并比较，不能盲目成功。业务 capture 已提交但控制事务失败时可能留下孤立快照；同操作后续请求复用。不同 Submit 操作键指向同一业务键时也可能产生未引用快照，返回的仍是首次根 Run。
 
 Run deadline 自首次控制库接纳时间起算；同操作重发不延长。retry 新 Run 可有新 deadline，但不延长原业务请求窗口、批次有效期或未来已经存在的动作许可。没有 initializing 状态或跨库 2PC。
