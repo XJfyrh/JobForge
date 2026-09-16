@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "policy_version": "delivery-policy-dev-v1",
+  "chunking_version": "paragraph-v1",
+  "corpus_sha256": "2b0fef040119960b504b8f55e64d9e8b73095e1b1c2943947abb1fbfb800d62f",
+  "files": [
+    "P01.md",
+    "P02.md",
+    "P03.md",
+    "P04.md",
+    "P05.md",
+    "P06.md",
+    "P07.md",
+    "P08.md",
+    "P09.md",
+    "P10.md"
+  ]
+}

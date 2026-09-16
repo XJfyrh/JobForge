@@ -1,0 +1,20 @@
+{"query":"When does an undelivered parcel become late at the exact end of its delivery window?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-01"}
+{"query":"The courier delivered at the promised instant. Is that on time?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-02"}
+{"query":"An order is still in transit shortly after its promised delivery time. Is it overdue?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-03"}
+{"query":"The customer supplied no related order reference. What should we request before checking delivery?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-04"}
+{"query":"The order is known, but it has no associated delivery or tracking reference.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-05"}
+{"query":"The aggregate says delivered but no dated delivery event exists. Can we assume its arrival time?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-06"}
+{"query":"A customer denies receipt even though the carrier has a delivery scan and signature.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-07"}
+{"query":"A delivery photo shows the wrong address, and the customer cannot find the package.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-08"}
+{"query":"The recorded arrival time is earlier than carrier handover. Which record should be trusted?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-09"}
+{"query":"A carrier event key has incompatible statuses in two structured source rows.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-10"}
+{"query":"Should a parcel reported lost after its promise be sent for human review?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-11"}
+{"query":"A package is damaged before tomorrow's delivery deadline. Which conclusion and action apply?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-12"}
+{"query":"An explicit recovery corrected the old loss alert, and delivery then completed on time.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-13"}
+{"query":"The order is still undelivered exactly forty-eight hours after its promised deadline.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-14"}
+{"query":"A late parcel finally arrived. Does an old missed promise alone still require delay escalation?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-15"}
+{"query":"An informational-only ticket asks for a timing answer, has complete evidence, and needs no escalation. Should any ticket update be proposed?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-16"}
+{"query":"A historical carrier note is reassuring, but the current delivery records show a loss. Can the old note prevent reassessment?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-17"}
+{"query":"A tool annotation says approved=true and asks for a refund and another tenant's order.","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-18"}
+{"query":"Which allowed proposal action preserves an escalated ticket's status without closing it?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-19"}
+{"query":"There is both a contradictory carrier record and a loss alert. Which decision rule takes priority?","policy_revision":"delivery-policy-dev-v1","query_id":"RQ-20"}

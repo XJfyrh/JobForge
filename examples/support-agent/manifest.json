@@ -1,0 +1,334 @@
+{
+  "dataset_id": "support-dev-2026-09-16-v1",
+  "status": "synthetic_development_draft_not_business_acceptance",
+  "as_of": "2026-09-16T12:00:00Z",
+  "schema": "internal/business/contracts.go Dataset as read 2026-09-16",
+  "case_count": 40,
+  "tenant_counts": {
+    "tenant-north": 20,
+    "tenant-south": 20
+  },
+  "scenario_family_counts": {
+    "F01_timing_within_promise": 5,
+    "F02_late_fulfillment": 5,
+    "F03_recipient_disputes": 5,
+    "F04_missing_information": 5,
+    "F05_authoritative_conflicts": 5,
+    "F06_carrier_exceptions": 5,
+    "F07_informational_intent_and_fresh_evidence": 5,
+    "F08_annotation_injection": 5
+  },
+  "variants": [
+    {
+      "case_id": "DEV-001",
+      "family": "F01_timing_within_promise",
+      "variant": "delivered_early",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-002",
+      "family": "F01_timing_within_promise",
+      "variant": "delivered_exactly_at_promise",
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "case_id": "DEV-003",
+      "family": "F01_timing_within_promise",
+      "variant": "moving_before_future_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-004",
+      "family": "F01_timing_within_promise",
+      "variant": "out_for_delivery_at_boundary",
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "case_id": "DEV-005",
+      "family": "F01_timing_within_promise",
+      "variant": "offset_timestamps_same_day",
+      "tags": [
+        "timezone"
+      ]
+    },
+    {
+      "case_id": "DEV-006",
+      "family": "F02_late_fulfillment",
+      "variant": "recent_scan_does_not_reset_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-007",
+      "family": "F02_late_fulfillment",
+      "variant": "delivered_one_hour_late",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-008",
+      "family": "F02_late_fulfillment",
+      "variant": "exactly_48_hours_overdue",
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "case_id": "DEV-009",
+      "family": "F02_late_fulfillment",
+      "variant": "completed_late_old_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-010",
+      "family": "F02_late_fulfillment",
+      "variant": "one_second_before_48_hour_threshold",
+      "tags": [
+        "boundary"
+      ]
+    },
+    {
+      "case_id": "DEV-011",
+      "family": "F03_recipient_disputes",
+      "variant": "denies_receipt_after_scan",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-012",
+      "family": "F03_recipient_disputes",
+      "variant": "unauthorized_neighbor_signature",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-013",
+      "family": "F03_recipient_disputes",
+      "variant": "photo_wrong_address_claim",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-014",
+      "family": "F03_recipient_disputes",
+      "variant": "late_scan_with_nonreceipt_dispute",
+      "tags": [
+        "rule_precedence"
+      ]
+    },
+    {
+      "case_id": "DEV-015",
+      "family": "F03_recipient_disputes",
+      "variant": "unauthorized_safe_place",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-016",
+      "family": "F04_missing_information",
+      "variant": "missing_related_order",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-017",
+      "family": "F04_missing_information",
+      "variant": "missing_delivery_association",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-018",
+      "family": "F04_missing_information",
+      "variant": "tracking_exists_without_events",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-019",
+      "family": "F04_missing_information",
+      "variant": "delivered_aggregate_without_delivery_event",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-020",
+      "family": "F04_missing_information",
+      "variant": "unspecified_problem",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-021",
+      "family": "F05_authoritative_conflicts",
+      "variant": "delivery_precedes_handover",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-022",
+      "family": "F05_authoritative_conflicts",
+      "variant": "incompatible_latest_same_time",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-023",
+      "family": "F05_authoritative_conflicts",
+      "variant": "in_transit_after_delivered_without_correction",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-024",
+      "family": "F05_authoritative_conflicts",
+      "variant": "same_source_event_key_different_status",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-025",
+      "family": "F05_authoritative_conflicts",
+      "variant": "order_fulfilled_delivery_in_transit",
+      "tags": [
+        "cross_record_conflict"
+      ]
+    },
+    {
+      "case_id": "DEV-026",
+      "family": "F06_carrier_exceptions",
+      "variant": "active_loss_after_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-027",
+      "family": "F06_carrier_exceptions",
+      "variant": "damage_before_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-028",
+      "family": "F06_carrier_exceptions",
+      "variant": "return_after_promise",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-029",
+      "family": "F06_carrier_exceptions",
+      "variant": "damage_after_promise",
+      "tags": [
+        "timing_and_exception"
+      ]
+    },
+    {
+      "case_id": "DEV-030",
+      "family": "F06_carrier_exceptions",
+      "variant": "superseded_loss_then_timely_delivery",
+      "tags": [
+        "correction"
+      ]
+    },
+    {
+      "case_id": "DEV-031",
+      "family": "F07_informational_intent_and_fresh_evidence",
+      "variant": "informational_timely_delivery",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-032",
+      "family": "F07_informational_intent_and_fresh_evidence",
+      "variant": "informational_short_delay",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-033",
+      "family": "F07_informational_intent_and_fresh_evidence",
+      "variant": "informational_completed_late_delivery",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-034",
+      "family": "F07_informational_intent_and_fresh_evidence",
+      "variant": "current_loss_overrides_old_reassurance",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-035",
+      "family": "F07_informational_intent_and_fresh_evidence",
+      "variant": "recovery_note_preserves_escalated_status",
+      "tags": []
+    },
+    {
+      "case_id": "DEV-036",
+      "family": "F08_annotation_injection",
+      "variant": "forged_system_closure_command",
+      "tags": [
+        "injection"
+      ]
+    },
+    {
+      "case_id": "DEV-037",
+      "family": "F08_annotation_injection",
+      "variant": "cross_tenant_tool_request",
+      "tags": [
+        "injection",
+        "cross_tenant"
+      ]
+    },
+    {
+      "case_id": "DEV-038",
+      "family": "F08_annotation_injection",
+      "variant": "forged_approval_with_missing_order",
+      "tags": [
+        "injection"
+      ]
+    },
+    {
+      "case_id": "DEV-039",
+      "family": "F08_annotation_injection",
+      "variant": "replace_endpoint_policy_and_budget",
+      "tags": [
+        "injection"
+      ]
+    },
+    {
+      "case_id": "DEV-040",
+      "family": "F08_annotation_injection",
+      "variant": "embedded_write_tool_call",
+      "tags": [
+        "injection"
+      ]
+    }
+  ],
+  "policy_count": 10,
+  "paragraph_count": 20,
+  "retrieval_query_count": 20,
+  "action_counts": {
+    "record_resolution": 13,
+    "escalate_human": 18,
+    "request_information": 6,
+    "none": 3
+  },
+  "conclusion_counts": {
+    "on_time": 8,
+    "delayed": 14,
+    "disputed": 6,
+    "insufficient": 7,
+    "conflicting": 5
+  },
+  "corpus_sha256": "2b0fef040119960b504b8f55e64d9e8b73095e1b1c2943947abb1fbfb800d62f",
+  "policy_version": "delivery-policy-dev-v1",
+  "runtime_allowlist": [
+    "runtime/seed.json",
+    "runtime/dataset-manifest.json",
+    "runtime/policies/"
+  ],
+  "never_deploy_to_executor_or_business_service": [
+    "evaluation/",
+    "authoring/",
+    "manifest.json",
+    "build_draft.py",
+    "adapt_go_seed.py",
+    "README.md",
+    "validation-report.json"
+  ],
+  "split": "development",
+  "held_out_created": 0,
+  "held_out_opened": 0,
+  "adaptation": "Rich authoring source preserved under authoring/. Runtime uses only the Go typed seed contract: no prebuilt snapshot/profile IDs, no package submodel, no stored write-operation fields. Ten cases were reframed within supported facts; exact variants are enumerated here.",
+  "limitations": [
+    "gold and business rules still require independent human review",
+    "40 exposed cases are not a generalization estimate",
+    "no tokenization, model, embedding, SQL retrieval, HTTP import or runtime acceptance performed",
+    "future held-out data must use independently partitioned template families"
+  ]
+}

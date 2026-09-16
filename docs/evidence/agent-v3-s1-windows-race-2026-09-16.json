@@ -1,0 +1,38 @@
+{
+  "command": "go test -race -count=1 -json ./...",
+  "exit_code": 0,
+  "test_passes": 405,
+  "test_failures": 0,
+  "test_skips": [
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestCancelAT25ControlStreamDegradation"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestRealTasksLifecycle"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestBusinessWorkerProcessHelper"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestRealTasksSDK"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestWorkerProcessHelper"
+    }
+  ],
+  "package_passes": 19,
+  "packages_without_tests": 11,
+  "raw_sha256": "167f24fff29bf5acf7671ba42ca1dac9b1fec83ce28964f5326b0ad9049313ef",
+  "business_python": [
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration/business",
+      "Test": "TestBusinessPythonHTTPContract",
+      "Elapsed": 1.81
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # ADR-0016：独立业务快照与版本化政策检索
 
-- 状态：Proposed。
+- 状态：Accepted；随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 于2026-09-16合并接受；S1-A实现验证见[证据](../evidence/agent-v3-s1-business-2026-09-16.md)。
 - 日期：2026-09-16。
 - 关联：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[ADR-0014](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015](0015-approved-business-actions-and-receipts.md)。
 - 范围：细化S1业务读路径、资源准备及新依赖；不改变已接受Run状态、审批或费用预留语义。
@@ -22,6 +22,8 @@
 表族至少包括工单、订单、物流聚合/事件、政策版本、政策chunks、已发布索引和业务快照。每条事实具有tenant与版本，工单绑定订单；没有订单关联与查不到其他tenant资源是不同情况。物流新增事件必须增加聚合版本。
 
 创建快照时在同一个repeatable-read事务中读取工单、订单、物流、当前政策与已发布索引，并保存有界的不可变副本、版本向量、as_of和内容hash。没有可用索引返回DEPENDENCY_UNAVAILABLE，不发布不完整快照。所有后续工具只读取该snapshot，源表更新不改变已有快照。
+
+`as_of` 是版本化工单的受信 `observed_at`（业务观察时点），开发语料固定该值，配送判断不能随验收机器当前时间漂移；`created_at` 单独记录快照事务的实际捕获时间。在线调用者不能覆盖两者。
 
 `tenant + request_key` 唯一约束是快照创建幂等点。请求hash绑定ticket_id与schema版本；相同请求返回首次快照，即使当前业务已变化。并发唯一冲突或序列化冲突进行有界事务重试后读取首次记录；同键异输入返回CONFLICT。需要新事实版本须使用新的业务请求键，不能覆写旧快照。
 
@@ -61,10 +63,12 @@ Python的模型可见工具参数为get_order/get_delivery的关联order_id或�
 
 查询参数绑定 `embedding operator(extensions.<=>) $query::extensions.vector(384)`，在SQL中同时限定tenant和快照绑定index；按距离与chunk_id稳定排序，返回最多3条带版本引用的文本。小语料不创建近似索引，便于核对精确top-k；检索性能不外推到生产规模。
 
+向量转换到float32后，平方范数还须位于float32最小正值至最大值的一半之间，避免pgvector累加下溢/溢出导致有限分量也得到错误余弦距离；不满足返回INVALID_ARGUMENT。固定模型正常输出在此范围内。
+
 ## 验证与替代方案
 
 真实PG验证迁移up/down、角色边界、快照幂等/并发、源数据更新后的不可变读、tenant/关系隔离、policy版本/profile与无效向量拒绝。HTTP/SDK工具测试走实际服务；纯数据库测试可用明确标记的合成向量，但不能替代真实embedding验收。固定20条检索查询报告原始命中和失败，保存模型/语料/index身份，实际重启后检查产物。
 
 替代方案：继续JSON内向量可减少依赖，但无法兑现本轮pgvector契约；远程向量库增加凭据/运行服务；Python直接访问全部业务表减少HTTP却模糊权限与工具边界。选择独立Go业务HTTP＋PG/pgvector、Python薄适配，不引入完整客服框架或通用工具发现。
 
-本ADR接受后才作为S1-A实现依据。它不宣布云端chat、固定流程、调用账本或整个S1已经完成。
+本ADR已接受，作为S1-A实现依据。它不宣布云端chat、固定流程、调用账本或整个S1已经完成。

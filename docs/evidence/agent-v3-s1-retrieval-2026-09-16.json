@@ -1,0 +1,817 @@
+{
+  "date": "2026-09-16",
+  "layer": "real-local-embedding-and-pgvector",
+  "preparation": {
+    "business_requests": 0,
+    "chunk_count": 20,
+    "embedding_requests": 2,
+    "failed_operations": 0,
+    "identity_requests": 4,
+    "kind": "prepare",
+    "ollama_version": "0.32.5",
+    "prepare_id": "d19ffb2f-d98a-402f-a45f-c01de5d16cd5",
+    "profile": {
+      "chunker_version": "paragraph-v1",
+      "corpus_sha256": "2b0fef040119960b504b8f55e64d9e8b73095e1b1c2943947abb1fbfb800d62f",
+      "dimensions": 384,
+      "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+      "embedding_model": "all-minilm:22m",
+      "policy_version": "delivery-policy-dev-v1"
+    },
+    "request_count_semantics": "dispatch_intent_before_send",
+    "schema_version": 1,
+    "state": "prepared",
+    "upload_filename": "d19ffb2f-d98a-402f-a45f-c01de5d16cd5.vectors.json",
+    "upload_sha256": "6b37024fc1709885b689552d28e356b2a6cbe2da306105938a9454009735f340"
+  },
+  "retrieval": {
+    "business_requests": 21,
+    "embedding_requests": 20,
+    "failed_operations": 0,
+    "identity_requests": 40,
+    "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+    "kind": "retrieval",
+    "ollama_version": "0.32.5",
+    "prepare_id": "eb174f6f-6197-4142-b2f6-1611296955c5",
+    "profile": {
+      "chunker_version": "paragraph-v1",
+      "corpus_sha256": "2b0fef040119960b504b8f55e64d9e8b73095e1b1c2943947abb1fbfb800d62f",
+      "dimensions": 384,
+      "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+      "embedding_model": "all-minilm:22m",
+      "policy_version": "delivery-policy-dev-v1"
+    },
+    "profile_hash": "c45f6fc9e9f6bc643536f0d3624a4df43a365a16779ef4e03df8285bb6f4e3b5",
+    "query_set_sha256": "8e6437a36dfef515a3bb59844a95bbd817f56d3c5680dea0d175245693b9dc72",
+    "request_count_semantics": "dispatch_intent_before_send",
+    "rows": [
+      {
+        "matches": [
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.38971332066376707,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.3952588203394848,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P02.1",
+            "distance": 0.4549672496240734,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          }
+        ],
+        "query_id": "RQ-01",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P02.1",
+            "distance": 0.41198505020316056,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          },
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.4390286759614498,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.46018553254773353,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          }
+        ],
+        "query_id": "RQ-02",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.4353847994253627,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.44151782989500366,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P02.2",
+            "distance": 0.47002688943538296,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          }
+        ],
+        "query_id": "RQ-03",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P03.1",
+            "distance": 0.41767043856734354,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P03.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P03.md"
+          },
+          {
+            "chunk_id": "P02.2",
+            "distance": 0.518572354742182,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          },
+          {
+            "chunk_id": "P04.1",
+            "distance": 0.5690354447981789,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          }
+        ],
+        "query_id": "RQ-04",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P02.2",
+            "distance": 0.4853700263467222,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          },
+          {
+            "chunk_id": "P03.1",
+            "distance": 0.5245015792103014,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P03.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P03.md"
+          },
+          {
+            "chunk_id": "P10.1",
+            "distance": 0.6052246932886252,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P10.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P10.md"
+          }
+        ],
+        "query_id": "RQ-05",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P02.1",
+            "distance": 0.4172231953676213,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.4525916463355175,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P02.2",
+            "distance": 0.4655962308885676,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          }
+        ],
+        "query_id": "RQ-06",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P04.2",
+            "distance": 0.4069821349403655,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          },
+          {
+            "chunk_id": "P04.1",
+            "distance": 0.42400714302103004,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.5390352010726798,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          }
+        ],
+        "query_id": "RQ-07",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P04.1",
+            "distance": 0.5821793826497104,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          },
+          {
+            "chunk_id": "P03.1",
+            "distance": 0.6265669608472486,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P03.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P03.md"
+          },
+          {
+            "chunk_id": "P04.2",
+            "distance": 0.6758636203299719,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          }
+        ],
+        "query_id": "RQ-08",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P05.1",
+            "distance": 0.45150716846924566,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.5036630913232771,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.5244832307716029,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          }
+        ],
+        "query_id": "RQ-09",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P05.2",
+            "distance": 0.47502344548981357,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P05.1",
+            "distance": 0.4904736291797567,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P06.2",
+            "distance": 0.5375160343973624,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          }
+        ],
+        "query_id": "RQ-10",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P06.1",
+            "distance": 0.4524095271365901,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          },
+          {
+            "chunk_id": "P04.2",
+            "distance": 0.46163310914630784,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.49743434710334067,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          }
+        ],
+        "query_id": "RQ-11",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.4812062933936818,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P06.1",
+            "distance": 0.49793988441703974,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          },
+          {
+            "chunk_id": "P04.2",
+            "distance": 0.5334128181234348,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          }
+        ],
+        "query_id": "RQ-12",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P06.1",
+            "distance": 0.47524262064869804,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.5196357346014986,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P06.2",
+            "distance": 0.5312334280470543,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          }
+        ],
+        "query_id": "RQ-13",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.36085388893757075,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.4765687529012568,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P02.1",
+            "distance": 0.5348348998629808,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P02.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P02.md"
+          }
+        ],
+        "query_id": "RQ-14",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.2893150448798931,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P07.1",
+            "distance": 0.3012973364301501,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          },
+          {
+            "chunk_id": "P06.1",
+            "distance": 0.33255078404535965,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P06.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P06.md"
+          }
+        ],
+        "query_id": "RQ-15",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P08.1",
+            "distance": 0.21990133346006446,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P08.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P08.md"
+          },
+          {
+            "chunk_id": "P10.1",
+            "distance": 0.3920307807949859,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P10.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P10.md"
+          },
+          {
+            "chunk_id": "P09.1",
+            "distance": 0.4329765011973108,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P09.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P09.md"
+          }
+        ],
+        "query_id": "RQ-16",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P05.2",
+            "distance": 0.4631276914857889,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P08.2",
+            "distance": 0.5178724569970232,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P08.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P08.md"
+          },
+          {
+            "chunk_id": "P07.2",
+            "distance": 0.5591968772402032,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P07.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P07.md"
+          }
+        ],
+        "query_id": "RQ-17",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P09.2",
+            "distance": 0.5736280513336742,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P09.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P09.md"
+          },
+          {
+            "chunk_id": "P01.1",
+            "distance": 0.5905851829749535,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P01.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P01.md"
+          },
+          {
+            "chunk_id": "P04.2",
+            "distance": 0.6107116175546163,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P04.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P04.md"
+          }
+        ],
+        "query_id": "RQ-18",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P08.2",
+            "distance": 0.4189778200030375,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P08.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P08.md"
+          },
+          {
+            "chunk_id": "P09.1",
+            "distance": 0.43325884043501317,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P09.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P09.md"
+          },
+          {
+            "chunk_id": "P08.1",
+            "distance": 0.45564369725115084,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P08.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P08.md"
+          }
+        ],
+        "query_id": "RQ-19",
+        "status": "returned"
+      },
+      {
+        "matches": [
+          {
+            "chunk_id": "P05.2",
+            "distance": 0.5023393632375734,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.2",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P05.1",
+            "distance": 0.5673752604647997,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P05.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P05.md"
+          },
+          {
+            "chunk_id": "P08.1",
+            "distance": 0.5837092796065111,
+            "evidence_ref": "business-policy:f724c93b-6b11-4998-bac6-e091f046e738:P08.1",
+            "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+            "policy_version": "delivery-policy-dev-v1",
+            "source": "P08.md"
+          }
+        ],
+        "query_id": "RQ-20",
+        "status": "returned"
+      }
+    ],
+    "schema_version": 1,
+    "snapshot_id": "8bd45d7f-8538-42d9-bfaf-4c61e74fe30c",
+    "state": "completed"
+  },
+  "evaluation": {
+    "schema_version": 1,
+    "kind": "fixed-policy-retrieval-evaluation",
+    "prepare_id": "eb174f6f-6197-4142-b2f6-1611296955c5",
+    "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+    "profile_hash": "c45f6fc9e9f6bc643536f0d3624a4df43a365a16779ef4e03df8285bb6f4e3b5",
+    "query_set_sha256": "8e6437a36dfef515a3bb59844a95bbd817f56d3c5680dea0d175245693b9dc72",
+    "total_queries": 20,
+    "returned": 20,
+    "hits_at_3": 19,
+    "hit_at_3": 0.95,
+    "mrr_at_3": 0.8083333333333333,
+    "rows": [
+      {
+        "query_id": "RQ-01",
+        "status": "returned",
+        "first_relevant_rank": 3,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-02",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-03",
+        "status": "returned",
+        "first_relevant_rank": 3,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-04",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-05",
+        "status": "returned",
+        "first_relevant_rank": 2,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-06",
+        "status": "returned",
+        "first_relevant_rank": null,
+        "hit_at_3": false,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-07",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-08",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-09",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-10",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-11",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-12",
+        "status": "returned",
+        "first_relevant_rank": 2,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-13",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-14",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-15",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-16",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-17",
+        "status": "returned",
+        "first_relevant_rank": 2,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-18",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-19",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      },
+      {
+        "query_id": "RQ-20",
+        "status": "returned",
+        "first_relevant_rank": 1,
+        "hit_at_3": true,
+        "error_code": null
+      }
+    ]
+  },
+  "restart": {
+    "match_count": 3,
+    "index_id": "f724c93b-6b11-4998-bac6-e091f046e738",
+    "first_chunk": "P01.1",
+    "distance": 0,
+    "real_vector_source": "d19ffb2f-d98a-402f-a45f-c01de5d16cd5",
+    "snapshot_id": "8bd45d7f-8538-42d9-bfaf-4c61e74fe30c"
+  },
+  "raw_retrieval_sha256": "6cdd3ad8aed301e3483316882ce20d8d83afe5ff342cdf696261dc3bb60ad3b5"
+}

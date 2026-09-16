@@ -1,0 +1,13 @@
+# S1 English development corpus
+
+The authoritative import artifact is runtime/seed.json, matching the current Go Dataset/Ticket/Order/Delivery/PolicyVersion fields. It contains 40 tickets across two tenants, 38 related orders, 37 deliveries, and two tenant bindings to one 10-policy corpus. Null relationships intentionally exercise missing-data behavior. No snapshot ID, profile hash, package submodel, write-operation fields, or gold appears in this seed.
+
+Every ticket.observed_at is 2026-09-16T12:00:00Z. The service freezes that registered business observation time into Snapshot.AsOf; its separate CreatedAt is the actual database capture time. Boundary gold therefore does not drift with the execution wall clock. runtime/dataset-manifest.json repeats this registration for reviewers.
+
+runtime/policies/manifest.json pins policy_version=delivery-policy-dev-v1, chunking_version=paragraph-v1 and the corpus hash. The manifest chunking_version maps to Go IndexProfile.chunker_version. Hash sorted filenames by concatenating filename UTF-8 + LF + raw UTF-8 file bytes + LF. Each Markdown file has two HTML paragraph_id comments; only the following body text is embedded. Source is the filename and chunk IDs are P01.1 through P10.2. Python/Go integration must use this same registration.
+
+evaluation/dev_gold.jsonl and evaluation/case-map.jsonl contain the separate 40-case labels and case-to-tenant/ticket mapping. retrieval/queries.jsonl contains only id/query/policy_revision; evaluation/retrieval_gold.jsonl contains relevance labels. Evaluator and authoring files must not be mounted in the business service or executor. manifest.json exposes scenario-family labels and is reviewer-only.
+
+Eight development families have five distinct variants each. The Go-compatible revision uses supported single-delivery evidence, exact timing boundaries, cross-record contradictions, informational-only intent, and current versus historical carrier facts. Three informational_only tickets permit action none only with complete non-escalating evidence under P08. Earlier authoring sources are archived outside the repository and are not runtime inputs.
+
+Independent review checked these 40 labels against the policies. Real database import, embedding and retrieval have now run; see the [S1-A evidence](../../docs/evidence/agent-v3-s1-business-2026-09-16.md). Paragraph byte/word checks are not exact token counts; the real preparation uses truncate=false. The 40-case cloud workflow has not run and its output schema remains for S1-C review. No held-out case has been generated or opened; these 40 cases and eight development families are already exposed and must not be reclassified as unseen.

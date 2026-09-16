@@ -2,6 +2,8 @@
 
 本页记录 JobForge 的开发环境设置、常用检查命令和测试分层。项目使用 Go 1.26 和 PostgreSQL 16。
 
+Agent v3 S1-A使用[独立业务开发指南](agent-v3-business.md)中的`deploy/compose.agent.yaml`（5434/8092/11436），业务迁移不进入旧队列库。新增门禁为`python -m pytest python/tests`、`mypy python/jobforge_agent`和显式设置`JOBFORGE_BUSINESS_TEST_DSN`/`JOBFORGE_TEST_PYTHON`后的`go test -race ./tests/integration/business`；CI的独立pgvector job实际运行。未配置依赖的skip不算通过。真实embedding与20条检索运行在独立模型层，不由确定性测试替代。
+
 ## 项目结构
 
 ```text

@@ -38,7 +38,7 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
-S1实现契约评审：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 业务快照与政策检索](0016-business-snapshots-and-policy-retrieval.md)。ADR-0016仍为Proposed，不提前作为实现依据。
+S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 业务快照与政策检索](0016-business-snapshots-and-policy-retrieval.md)。功能实现和验收仍分别记录。
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
@@ -57,3 +57,4 @@ S1实现契约评审：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 �
 | [ADR-0013](0013-durable-agent-run-and-step-commit.md) | 单一 Run 与持久步骤提交 | Accepted | 2026-09-16 |
 | [ADR-0014](0014-supervised-python-executor-and-call-budget.md) | 受监管 Python 执行器与调用额度 | Accepted | 2026-09-16 |
 | [ADR-0015](0015-approved-business-actions-and-receipts.md) | 审批、受控写入与业务回执 | Accepted | 2026-09-16 |
+| [ADR-0016](0016-business-snapshots-and-policy-retrieval.md) | 独立业务快照与版本化政策检索 | Accepted | 2026-09-16 |
