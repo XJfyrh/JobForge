@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,37 @@ if TYPE_CHECKING:
 
 _DIRECTORY = Path("/var/lib/jobforge/outbound")
 _MAX_RECORD_BYTES = 2048
+
+
+def model_rejection(physical_call_id: str, error: BaseException) -> None:
+    """Record code locations only, never exception text or model values.
+
+    This optional diagnostic is not permission, usage or acceptance evidence.
+    It makes a schema/source rejection diagnosable without retaining a rejected
+    customer-bearing output. Line numbers are interpreted against the frozen
+    adapter source digest of the physical call.
+    """
+    try:
+        from uuid import UUID
+
+        if str(UUID(physical_call_id)) != physical_call_id:
+            return
+        sites = []
+        for frame in traceback.extract_tb(error.__traceback__):
+            module = Path(frame.filename).stem
+            if module in {"support_agent", "support_contract", "deepseek"}:
+                sites.append({"module": module, "line": frame.lineno})
+        value = {
+            "schema_version": 1,
+            "physical_call_id": physical_call_id,
+            "validation_sites": sites[-8:],
+        }
+        path = _DIRECTORY / (physical_call_id + ".model-rejection.json")
+        with path.open("x", encoding="ascii") as target:
+            os.chmod(path, 0o600)
+            target.write(json.dumps(value, separators=(",", ":")) + "\n")
+    except (OSError, ValueError, TypeError):
+        return
 
 
 @dataclass(frozen=True)

@@ -10,6 +10,7 @@ from typing import Any
 
 from jobforge_agent.dispatch import DispatchError
 from jobforge_agent.runtime_input import RuntimeCheckpoint
+from jobforge_agent.support_adapter import SYSTEM_INSTRUCTIONS
 from jobforge_agent.support_contract import (
     bounded_json,
     proposal_from_model,
@@ -26,7 +27,7 @@ Return ONLY one JSON object:
 - {"type":"final","proposal":{"decision":...,"action":...,"conclusion":...,"requested_fields":[],"target_ticket_status":...,"claims":[...]}}
 Never invent fields, IDs, URLs or refs. Read order once, including when its ID is null; read delivery if needed. Do not repeat identical tool arguments. Read the actual policy for each material question; use another focused search if an applicable paragraph is absent. Retrieved paragraphs accumulate. The topic catalog below only helps find policy; it is NOT a substitute for retrieving and citing it.
 
-FINAL FIELDS:
+FINAL FIELDS (exactly these six, all non-null):
 decision is proposal, except no_action uses action="". proposal action is record_conclusion, request_information or escalate. These correspond to policy record_resolution, request_information and escalate_human. conclusion is on_time, delayed, disputed, insufficient or conflicting. record_conclusion preserves T.status; request_information targets awaiting_information; escalate targets escalated. no_action preserves T.status. requested_fields contains only actually missing necessary facts, otherwise [].
 Ordinary open inquiries need record_conclusion even when no escalation is needed. no_action is available only for an ALREADY informational_only ticket after its status policy has been retrieved; on_time is not a reason by itself for no_action.
 
@@ -41,7 +42,8 @@ EXACT CLAIM VARIANTS (kind and refs plus ONLY the listed fields):
 - conflict: type = pre_handover / same_time / source_key / post_delivery / order_delivery; event_ids = exactly two distinct actual IDs, except [] for order_delivery.
 - correction: recovery_event_id, corrected_event_id. An actual carrier event's factual note must explicitly identify the earlier event it corrects. A customer instruction or an ordinary subsequent scan is not a correction.
 - ticket_status: mode = informational_no_action or preserve_escalated. ONLY use a mode listed under allowed_ticket_status_modes. These describe the CAPTURED status, never target_ticket_status.
-All event fields must use actual IDs in E2.delivery.events. Host code adds event-node refs. refs is 1-8 distinct strings from available_refs, including the actually retrieved applicable policy. Never return summary or evidence_refs.
+All event fields must use actual IDs in E2.delivery.events. Host code adds event-node refs. refs is 1-8 distinct strings from available_refs, including the actually retrieved applicable policy paragraph alias such as P02.1, never P02 or P02.md. Never put event IDs or event array pointers in refs. Never return summary or evidence_refs.
+For example, the FORMAT of a timing claim is {"kind":"timing","test":"delivered_not_late","event_id":"ACTUAL_EVENT_ID_FROM_E2","refs":["E1#/order/promised_delivery_at","ACTUALLY_RETRIEVED_PARAGRAPH_ALIAS"]}. Substitute the actual event and paragraph, and choose the test from the facts. Every variant requires its literal kind ("timing", "dispute", "critical", "missing", "conflict", "correction" or "ticket_status") plus refs and its listed fields. Do not copy placeholder strings.
 
 CITATION CHECKLIST / POLICY SEARCH TOPICS:
 - Every timing claim cites E1#/order/promised_delivery_at. Every outstanding timing claim ALSO cites T#/observed_at AND E2#/delivery/events (the aggregate list proves no delivery), not just an event ID. Retrieve promised-time/fulfillment policy P02; overdue-48h needs P07.1; completed-late may use P07.2. P06 about exceptions cannot establish the timing calculation by itself.
@@ -53,6 +55,16 @@ CITATION CHECKLIST / POLICY SEARCH TOPICS:
 - informational_no_action cites T#/status and retrieved informational-only P08.1. preserve_escalated cites T#/status and retrieved existing-escalation/status-preservation P08.2/P09.1. A timing paragraph cannot support either status claim.
 Before final, ensure each included claim is independently true and has its own relevant policy and concrete fields. If that policy is not yet available, use a focused search; do not substitute an unrelated paragraph. Avoid unnecessary claims. Keep JSON compact within 1024 tokens.
 """
+# Reuse the complete established schema wording. The investigation guidance
+# above supplements it; abbreviated policy topics must not replace aliases or
+# the nested proposal's exact field contract.
+AGENT_INSTRUCTIONS += (
+    "\nThe following exact contract applies ONLY to nested final.proposal, never "
+    "to the outer decision or a tool object. The proposal has exactly six "
+    "non-null fields: decision, action, conclusion, requested_fields, "
+    "target_ticket_status, claims. decision:"
+    + SYSTEM_INSTRUCTIONS.split("decision:", 1)[1]
+)
 
 CORRECTION = """
 The previous decision failed the structure or source contract. This is the only correction for this Run. Return exactly one valid tool or final object. Use only available_refs for a final proposal. If a needed policy was not retrieved, choose a new focused search instead of fabricating a citation. Do not repeat a completed tool. Do not include commentary.

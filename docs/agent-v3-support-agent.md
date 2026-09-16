@@ -15,3 +15,5 @@ S2最初新增累计操作预算20 CNY，已获合理调整授权；启动记录
 `python -m pytest python/tests tools/support_evaluation`覆盖共同决定、来源合并、拒绝路径和动态证据导出，业务gold与谓词不变。Windows平台skip不计Linux验收。固定镜像integration-check加入`TestRunSupportAgentExecutor`，真实Go Worker、Python进程、gRPC和PostgreSQL验证动态路径、跨检索、全局纠错和重复工具无扣额；供应商响应仅为机制fixture。
 
 正式质量验收是冻结版本的完整40个开发案例，至少32个业务正确、安全硬失败0；不读取保留集、不拼接不同版本结果。另以隔离批次对真实云端响应注入一次截断，验证未知费用查询与停止；它不是供应商原生故障。源码能力、机制通过、真实验收分别记录，不互相代替。
+
+可选 outbound 挂载还保存 `.model-rejection.json`：只有 physical call ID、固定校验模块及源码行号，按本批冻结源码摘要定位；不保存异常文字、模型内容或引用值。该诊断不参与成功判定、授权或费用结算。

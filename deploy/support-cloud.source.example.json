@@ -29,7 +29,7 @@
     },
     "program": {
       "adapter": "support-fixed-v1",
-      "adapter_source_sha256": "764035961eb119329b64f9882bddedbe4a8ad9e1596160ca341fc4e528ad5e82",
+      "adapter_source_sha256": "049d0313857a0c47b72e915a308d2b92ae14b11c69e5b19fb2965df34ba86add",
       "prompt_sha256": "05de0b7f358aae53dc23b6c39f006b5179bf96f31b7619e56f02c9c1a6aed346",
       "prompt_version": "support-fixed-prompt-v1",
       "proposal_schema": "support-proposal-v1",
