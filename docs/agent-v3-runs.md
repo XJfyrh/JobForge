@@ -1,6 +1,6 @@
 # Agent v3 Run 接入与调用账本
 
-本指南对应 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B。控制服务、Worker RPC、SDK、步骤持久化与三层调用预算已通过本切片验证和三份独立审查，随[PR #40](https://github.com/XJfyrh/JobForge/pull/40)合并。S1-C 的正式受监管执行器、DeepSeek 真实推理与40例固定流程尚未交付；默认配置没有可执行模型，不能把确定性测试结果称作云端业务验收。
+本指南以 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B 为基础，并补充 [ADR-0020](adr/0020-provider-audit-and-batch-stop.md) 的调用审计查询。控制服务、Worker RPC、SDK、步骤与预算随PR #40合并；正式受监管执行器和support固定流程分别随PR #46/#48合并。真实DeepSeek与40案仍未验收；默认配置没有收费profile，不能把确定性测试称作云端业务验收。
 
 ## 服务与数据边界
 
@@ -62,13 +62,25 @@ with RunClient("http://127.0.0.1:8093", "dev-agent-north-operator") as client:
 
 提交、取消、retry 都使用独立 Idempotency-Key。相同业务键和规范内容返回首次根 Run；不同内容冲突。一个失败/取消 Run 只能有一个直接 retry 后继，后继继承预算家族、创建新 Run/快照并从空游标执行。对已受理结果的重发不依赖 profile 仍在线、预算批次仍有效或业务捕获服务可用。
 
-源契约位于 [OpenAPI](../api/run/v2/openapi.yaml)、[Proto](../proto/jobforge/agent/v1/agent.proto)、[执行器帧](../api/executor/v1/schema.json)及其共同 fixture。SDK API 见[SDK说明](../sdk/python/README.md)。Worker RPC 必须带 deadline 和内部 Bearer token；稳定错误使用 `google.rpc.ErrorInfo.reason`，不能解析英文消息判断重试。
+源契约位于 [OpenAPI](../api/run/v2/openapi.yaml)、[Proto](../proto/jobforge/agent/v1/agent.proto)、[执行器帧](../api/executor/v2/schema.json)及其共同 fixture。SDK API 见[SDK说明](../sdk/python/README.md)。Worker RPC 必须带 deadline 和内部 Bearer token；稳定错误使用 `google.rpc.ErrorInfo.reason`，不能解析英文消息判断重试。
 
 CommitStep拒绝过大结果或无法验证的模型方案时，RPC状态为 `INVALID_ARGUMENT`，reason分别保留 `CHECKPOINT_TOO_LARGE`、`MODEL_PROTOCOL_ERROR`。这两类结果错误不能被当作临时内部故障无限重试；Worker只可按登记策略使用一次协议纠正，或以同名永久错误结束attempt。未知服务端错误仍统一脱敏为 `INTERNAL`。
 
-步骤只按服务端注册的 `bounded_readonly_v1` 顺序推进。Worker 提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭 attempt 并释放容量；仅 `no_action` 可以直接成功。B 没有批准或业务写入接口。
+步骤只按服务端注册的有限策略推进，生产support使用 `support_fixed_v1`。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；仅 `no_action` 可以直接成功。当前没有批准或业务写入接口。
 
-重复中间 CommitStep 仍须当前有效 lease；最终提交丢 ACK 后使用只读 GetAcceptedCommit，不用旧 lease 再次提交。自动恢复读取原 Run 已提交步骤，未提交步骤可能重做；人工 retry 空游标不代表断点续作。S3 仍须验收正式 Worker/执行器的实际 Kill/Wait 恢复。
+重复中间CommitStep仍须当前有效lease；最终提交丢ACK后使用只读GetAcceptedCommit。自动恢复读取原Run已提交步骤，未提交步骤可能重做；人工retry为空游标。正式Worker SIGKILL的基础恢复已经在C3b实跑；S3动态Agent完整矩阵及真实云端恢复仍待验收，不宣称恢复模型内部推理进度。
+
+## 只读调用审计
+
+`GET /v2/runs/{run_id}/calls` 和 `RunClient.calls(run_id)` 返回一次事务一致抓取，按ordinal升序最多44项，最终编码含换行≤256KiB；违反硬界限返回固定INTERNAL错误，不截断。没有分页、cursor、limit或tenant参数；reader/operator只能读当前租户Run，跨租户404。该查询不预留额度，也不触发报告、结算或模型请求。
+
+每行包含预留预算、known/held、报告与观察的独立时间/hash、有限provider元数据。`observed_usage`是供应商完整计数；`settled_usage`只表示与冻结价格兼容的已知计量。不兼容模型的计数仍可观察，但不按原价释放hold。reasoning缺省、0、正数或不可用分别保留；reasoning已经含在输出计数中，不二次加费。业务JSON拒绝可以有正常计量。
+
+`audit_status`明确区分 `legacy_not_collected`、`not_applicable`、`missing`、`recorded`。缺报告不证明请求未发出，也不伪造unavailable报告。完整响应摘要不能重建原文；SDK不输出或抓取原始模型内容。共享batch只公开冻结状态和固定原因，不返回其它租户的触发Run/call或Worker权限身份。晚到报告会改变后续视图，证据导出应保留 `captured_at`、报告hash与抓取文件hash。
+
+新审计policy下，每次新Claim/BeginTool/Reserve受已持久chat报告、计量、普通observation及步骤结束屏障约束。首报告不可覆盖；不同报告冲突仅冻结batch，不能把第二份计数算成新财务事实或异常。仅首份结构完整计数超原上限时冻结三个账户。原session晚到确认限原调用30日窗口，不恢复租约或执行权。详见ADR-0020；本层没有解冻、增额或自动审计清理接口。
+
+本增量的unknown停批针对chat。本地query_embedding若没有可用usage，保留既有unknown全额token hold；它没有DeepSeek audit，不伪造report，也不因此产生CHAT_USAGE_UNKNOWN。只有真实响应、业务校验、普通ACK和原期限均满足才能继续后续search。若存在完整embedding usage，则必须先确认同一usage-only report_hash的settled，再汇合普通ACK；完整计数超界仍触发既有异常处理。metadata/business免费调用也继续等待普通ACK。
 
 ## 调用预算与故障判断
 

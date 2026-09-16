@@ -58,3 +58,41 @@ func TestHeartbeatSupportsIdleAndActiveSessionBindings(t *testing.T) {
 		}
 	}
 }
+
+func TestAuditProtocolRetainsExistingFieldNumbers(t *testing.T) {
+	for _, test := range []struct {
+		message proto.Message
+		fields  []string
+	}{
+		{&agentv1.SettleUsageRequest{}, []string{"execution", "physical_call_id", "usage", "provider_audit", "report_hash"}},
+		{&agentv1.SettleUsageResponse{}, []string{"newly_settled", "reservation", "persisted_report_hash", "persisted_audit_hash", "report_conflict", "batch_frozen", "batch_stop_code"}},
+		{&agentv1.CallReservation{}, []string{"physical_call_id", "tool_invocation_id", "subcall", "parameter_hash", "price_hash", "reserved_at", "dispatch_expires_at", "call_deadline", "budget", "usage_known", "measurement_anomaly", "execution_binding_hash", "persisted_report_hash", "persisted_audit_hash"}},
+		{&agentv1.ObserveCallRequest{}, []string{"execution", "step", "physical_call_id", "transport_outcome", "http_status", "error_code", "usage", "business_outcome", "usage_known", "audit_hash"}},
+	} {
+		descriptor := test.message.ProtoReflect().Descriptor()
+		for index, name := range test.fields {
+			field := descriptor.Fields().ByName(protoreflect.Name(name))
+			if field == nil || field.Number() != protoreflect.FieldNumber(index+1) {
+				t.Fatalf("append-only RPC contract changed %s.%s", descriptor.Name(), name)
+			}
+		}
+	}
+}
+
+func TestAuditNullableWirePresenceSurvivesBinaryRoundtrip(t *testing.T) {
+	original := &agentv1.ProviderAudit{Created: proto.Int64(0), ReasoningTokens: proto.Int64(0), ResponseId: proto.String("")}
+	wire, err := proto.Marshal(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded agentv1.ProviderAudit
+	if err = proto.Unmarshal(wire, &decoded); err != nil || !proto.Equal(original, &decoded) || decoded.Created == nil || decoded.ReasoningTokens == nil || decoded.ResponseId == nil || decoded.ResponseModel != nil {
+		t.Fatalf("audit nullable values collapsed: %v", err)
+	}
+	fields := decoded.ProtoReflect().Descriptor().Fields()
+	for _, name := range []string{"response_sha256", "response_id", "response_model", "system_fingerprint", "created", "reasoning_tokens"} {
+		if !fields.ByName(protoreflect.Name(name)).HasOptionalKeyword() {
+			t.Fatalf("audit nullable %s lost explicit presence", name)
+		}
+	}
+}

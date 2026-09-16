@@ -104,7 +104,7 @@ func TestRunExecutorVersionBlocksExecutionButPreservesOriginalMetering(t *testin
 	}
 	usage := ledgerUsage(20, 10)
 	settled, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{
-		Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: usage,
+		Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: &usage,
 	})
 	if err != nil || !settled.NewlySettled || !settled.Reservation.UsageKnown {
 		t.Fatalf("version mismatch destroyed narrow original-call accounting: %v", err)

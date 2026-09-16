@@ -164,7 +164,8 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 			return err
 		}
 		// The Claim response carries a consistent view of all three budgets.
-		if _, err := loadAccounts(ctx, tx, r.TenantID, r.BusinessRequestID, true); err != nil {
+		accounts, err := loadAccounts(ctx, tx, r.TenantID, r.BusinessRequestID, true)
+		if err != nil {
 			return err
 		}
 		capacities := [3]int{worker.Capacity, s.tenantCapacity, s.profileCapacity}
@@ -179,7 +180,8 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		if err := s.checkSession(ctx, tx, principal, principal, sessionID, r.TenantID, r.ProfileID, now, true); err != nil {
 			return err
 		}
-		if _, err := s.ledgerProfile(ctx, tx, r, true); err != nil {
+		profile, err := s.ledgerProfile(ctx, tx, r, true)
+		if err != nil {
 			return err
 		}
 		if !r.RunDeadline.After(now) {
@@ -190,6 +192,12 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 				return err
 			}
 			return saveRun(ctx, tx, &r, &a)
+		}
+		if err := accountsAvailable(accounts, now); err != nil {
+			return err
+		}
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
+			return err
 		}
 		for _, slot := range slots {
 			if slot.Used >= slot.Capacity {

@@ -56,6 +56,7 @@ type coordinator struct {
 	conversation     v2.Conversation
 	execute          v2.Frame
 	priceHash        string
+	profile          run.Profile
 	calls            map[string]*callRecord
 	result           *v2.Frame
 	failure          string
@@ -109,7 +110,8 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Abandoned: true}
 	}
 	frame, err := runinput.BuildExecute(lease, checkpoint, runinput.Selection{ExecutorVersion: w.manifest.ExecutorVersion,
-		AdapterID: selected.AdapterID, ToolInvocationID: toolID}, uuid.NewString(), now, authority.StepDeadline())
+		AdapterID: selected.AdapterID, ToolInvocationID: toolID, ExpectedResponseModel: profile.ExpectedResponseModel,
+		ProviderAuditPolicy: profile.ProviderAuditPolicy}, uuid.NewString(), now, authority.StepDeadline())
 	if err != nil {
 		if errors.Is(err, run.ErrCheckpointTooLarge) || errors.Is(err, v2.ErrFrameLimit) {
 			return stepOutcome{Failure: "CHECKPOINT_TOO_LARGE"}
@@ -123,7 +125,7 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Failure: "DEPENDENCY_UNAVAILABLE"}
 	}
 	c := &coordinator{worker: w, lease: lease, checkpoint: checkpoint, authority: authority, process: process, execute: frame,
-		priceHash: profile.Pricing.Hash, calls: make(map[string]*callRecord), completed: make(chan completion, 4)}
+		priceHash: profile.Pricing.Hash, profile: profile, calls: make(map[string]*callRecord), completed: make(chan completion, 4)}
 	if c.conversation.Accept(frame, now) != nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 	} else {
@@ -138,19 +140,37 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 	if !cleaned(receipt) {
 		return stepOutcome{Fatal: ErrCleanup}
 	}
+	code := receiptFailure(receipt)
+	if c.meteringClosed && !closedMeteringHasTypedExit(receipt) && code != "CHECKPOINT_TOO_LARGE" {
+		code = "EXECUTOR_PROTOCOL_ERROR"
+	}
+	for _, call := range c.calls {
+		if call.intent.Subcall == "chat" && call.reservation != nil && (code != "" || c.failure != "" || c.result == nil) {
+			// Only the fully confirmed second business-validation failure may
+			// finish this case without stopping the batch. Durable storage checks
+			// its exact attempt/step terminal facts before any later permission.
+			secondRejected := c.execute.Binding.StepKind == "protocol_correction" && code == "MODEL_PROTOCOL_ERROR" &&
+				confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
+				call.observation.ErrorCode == "OUTPUT_INVALID" && !c.stopped && c.failure == ""
+			if !secondRejected {
+				c.fatal = true
+			}
+		}
+	}
 	if c.fatal {
-		c.failMeasurementAnomaly(ctx)
-		return stepOutcome{Fatal: run.ErrBudgetExhausted}
+		if c.failure == "" && (code == "TIMEOUT" || code == "DEPENDENCY_UNAVAILABLE") {
+			c.failure = code
+		}
+		if c.failure != "" {
+			c.failStoppedBatch(ctx, c.failure)
+		}
+		return stepOutcome{Fatal: ErrBatchStopped}
 	}
 	if c.authority.Check() != nil || ctx.Err() != nil {
 		return stepOutcome{Abandoned: true}
 	}
 	if c.failure != "" {
 		return stepOutcome{Failure: c.failure}
-	}
-	code := receiptFailure(receipt)
-	if c.meteringClosed && !closedMeteringHasTypedExit(receipt) && code != "CHECKPOINT_TOO_LARGE" {
-		code = "EXECUTOR_PROTOCOL_ERROR"
 	}
 	if code != "" {
 		if code == "abandoned" {
@@ -161,7 +181,18 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 	if c.result == nil {
 		return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 	}
-	return c.commit(ctx)
+	outcome := c.commit(ctx)
+	if outcome.Commit == nil && outcome.Fatal == nil {
+		for _, call := range c.calls {
+			if call.intent.Subcall == "chat" {
+				if outcome.Failure != "" {
+					c.failStoppedBatch(ctx, outcome.Failure)
+				}
+				return stepOutcome{Fatal: ErrBatchStopped}
+			}
+		}
+	}
+	return outcome
 }
 
 // An ACK reader may disappear while its original report is still settling.
@@ -169,6 +200,11 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 // bounded natural Wait before TERM could replace its typed exit with a signal.
 func (c *coordinator) meteringReaderClosed() {
 	c.meteringClosed = true
+	for _, call := range c.calls {
+		if call.intent.Subcall == "chat" && call.reservation != nil {
+			c.fatal = true
+		}
+	}
 	if !c.stopped {
 		c.stopped = true
 		c.conversation.Stop()
@@ -181,13 +217,17 @@ func (c *coordinator) meteringReaderClosed() {
 // settlement. ADR-0018 requires a still-authorized Run to fail permanently while
 // this Worker stops all further Claims. STOP/lease loss always forbids the write.
 func (c *coordinator) failMeasurementAnomaly(ctx context.Context) {
+	c.failStoppedBatch(ctx, "MODEL_PROTOCOL_ERROR")
+}
+
+func (c *coordinator) failStoppedBatch(ctx context.Context, reason string) {
 	if c.authority.Check() != nil || ctx.Err() != nil {
 		return
 	}
 	bounded, cancel := context.WithTimeout(ctx, controlTimeout)
 	defer cancel()
 	_, _ = c.worker.client.FailAttempt(bounded, &agentv1.FailAttemptRequest{Execution: c.lease.Execution,
-		Step: c.checkpoint.NextStep, ErrorCode: "MODEL_PROTOCOL_ERROR"})
+		Step: c.checkpoint.NextStep, ErrorCode: reason})
 }
 
 func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexecutor.Environment {
@@ -204,6 +244,13 @@ func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexec
 }
 
 func (c *coordinator) stop(reason string) {
+	// A chat reservation request may already have committed despite a lost ACK.
+	// Interrupted confirmation cannot be followed by another local Claim.
+	for _, call := range c.calls {
+		if call.intent.Subcall == "chat" {
+			c.fatal = true
+		}
+	}
 	if c.failure == "" && reason != "" {
 		c.failure = reason
 	}
@@ -290,6 +337,10 @@ func (c *coordinator) event(ctx context.Context, event runexecutor.Event) {
 			return
 		}
 		call.observation = &f
+		if c.conversation.Closed() {
+			c.stop("")
+			return
+		}
 		c.observe(ctx, call)
 	case "step_result":
 		if c.result != nil {

@@ -126,7 +126,13 @@ def main() -> None:
             reader.cancel(run_id, idempotency_key="reader-cancel")
         with pytest.raises(ForbiddenError):
             reader.retry(run_id, idempotency_key="reader-retry")
-        for operation in (foreign.get, foreign.steps, foreign.events, foreign.result):
+        for operation in (
+            foreign.get,
+            foreign.steps,
+            foreign.events,
+            foreign.result,
+            foreign.calls,
+        ):
             with pytest.raises(NotFoundError):
                 operation(run_id)
         for write_operation in (foreign.cancel, foreign.retry):
@@ -138,6 +144,11 @@ def main() -> None:
         assert current.budget.run_usage.physical_http == 0
         assert current.version_vector.ticket.id == ticket
         assert client.steps(run_id).items == []
+        for querying in (client, reader):
+            audit = querying.calls(run_id)
+            assert audit.run_id == run_id and audit.items == []
+            assert not audit.batch_frozen and audit.batch_stop_code is None
+            assert audit.captured_at.tzinfo is not None
         events = client.events(run_id, limit=1)
         assert len(events.items) == 1 and events.items[0].sequence >= 1
         result = client.result(run_id)

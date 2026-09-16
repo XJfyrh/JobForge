@@ -50,10 +50,10 @@ def result(*, physical: str = "", correction: bool = False) -> dict[str, Any]:
 
 @run_async
 @pytest.mark.parametrize("reported", [False, True])
-async def test_result_uses_confirmed_free_or_reported_identity(
+async def test_chat_result_requires_report_even_without_optional_usage_callback(
     monkeypatch: pytest.MonkeyPatch, reported: bool
 ) -> None:
-    """Unknown/free calls retain their own identity without a metering report."""
+    """Omitting a legacy callback cannot turn a chat into an unbilled free call."""
     clock = Clock()
     hooks = Hooks(clock)
     async with HTTPFaultServer(good_response) as server:
@@ -67,8 +67,9 @@ async def test_result_uses_confirmed_free_or_reported_identity(
             )
             confirmed = dispatcher.last_confirmed_observation()
             assert confirmed is not None
-            assert confirmed.usage_disposition == (
-                "reported" if reported else "unknown"
+            assert confirmed.usage_disposition == "reported"
+            assert (
+                confirmed.audit_hash == hooks.reports[0]["provider_audit"]["audit_hash"]
             )
             with pytest.raises(FrozenInstanceError):
                 confirmed.physical_call_id = "changed"

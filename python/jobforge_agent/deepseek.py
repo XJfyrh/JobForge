@@ -25,7 +25,8 @@ from jobforge_agent.dispatch import (
 )
 from jobforge_agent.errors import ToolError
 from jobforge_agent.http import strict_json
-from jobforge_agent.protocol_v2 import MAX_INTEGER, usage_hash
+from jobforge_agent.protocol_v2 import MAX_INTEGER
+from jobforge_agent.provider_audit import capture_chat_report
 
 ORIGIN = "https://api.deepseek.com"
 MODEL = "deepseek-flash"
@@ -45,13 +46,6 @@ _ENVELOPE_REQUIRED = {
     "created",
     "model",
     "system_fingerprint",
-}
-_USAGE_REQUIRED = {
-    "prompt_tokens",
-    "completion_tokens",
-    "total_tokens",
-    "prompt_cache_hit_tokens",
-    "prompt_cache_miss_tokens",
 }
 
 
@@ -221,87 +215,45 @@ def _choice(envelope: dict[str, Any]) -> dict[str, Any]:
     return choice
 
 
-def _fingerprint(domain: str, *fields: str) -> str:
-    digest = hashlib.sha256()
-    for value in (domain, *fields):
-        encoded = value.encode("utf-8")
-        digest.update(len(encoded).to_bytes(8, "big"))
-        digest.update(encoded)
-    return digest.hexdigest()
-
-
 def complete_usage(raw: bytes, *, physical_call_id: str) -> CompleteChatUsage | None:
-    """Capture valid usage independently of model content; unknown stays absent.
+    """Project complete compatible usage from the single audit fact extractor.
 
-    A report requires a complete strict envelope and compatible provider identity.
-    The receipt binds the original physical call, complete response digest and
-    bounded identity. No raw response, model text, or caller-selected price remains.
+    Runtime reporting always uses the full CallReport, including audit-only and
+    incompatible-model evidence. This helper exposes only compatible usage and
+    never decides pricing or grants permission.
     """
     if (
         not isinstance(physical_call_id, str)
         or _CALL_ID.fullmatch(physical_call_id) is None
     ):
         raise ToolError("INVALID_ARGUMENT")
-    try:
-        envelope, identity = _envelope(raw)
-    except ToolError:
-        return None
-    usage = envelope.get("usage")
-    if (
-        not isinstance(usage, dict)
-        or not _USAGE_REQUIRED <= usage.keys()
-        or usage.keys()
-        - (_USAGE_REQUIRED | {"prompt_tokens_details", "completion_tokens_details"})
-        or any(not _safe_integer(usage[field]) for field in _USAGE_REQUIRED)
-        or usage["prompt_tokens"]
-        != usage["prompt_cache_hit_tokens"] + usage["prompt_cache_miss_tokens"]
-        or usage["total_tokens"] != usage["prompt_tokens"] + usage["completion_tokens"]
-    ):
-        return None
-    prompt_details = usage.get("prompt_tokens_details", {})
-    completion_details = usage.get("completion_tokens_details", {})
-    if (
-        not isinstance(prompt_details, dict)
-        or prompt_details.keys() - {"cached_tokens"}
-        or (
-            "cached_tokens" in prompt_details
-            and (
-                not _safe_integer(prompt_details["cached_tokens"])
-                or prompt_details["cached_tokens"] != usage["prompt_cache_hit_tokens"]
-            )
-        )
-        or not isinstance(completion_details, dict)
-        or completion_details.keys() - {"reasoning_tokens"}
-    ):
-        return None
-    reasoning = completion_details.get("reasoning_tokens")
-    if "reasoning_tokens" in completion_details and (
-        not _safe_integer(reasoning) or reasoning > usage["completion_tokens"]
-    ):
-        return None
-    receipt = _fingerprint(
-        "jobforge.deepseek.receipt.v1",
-        physical_call_id,
-        identity.response_sha256,
-        identity.response_id,
-        identity.model,
-        identity.system_fingerprint,
-        str(identity.created),
+    captured = capture_chat_report(
+        raw,
+        http_status=200,
+        physical_call_id=physical_call_id,
+        expected_response_model=MODEL,
     )
-    canonical = {
-        "input_tokens": usage["prompt_tokens"],
-        "output_tokens": usage["completion_tokens"],
-        "cached_input_tokens": usage["prompt_cache_hit_tokens"],
-        "receipt_hash": receipt,
-    }
+    audit, usage = captured.provider_audit, captured.usage
+    if usage is None or audit is None or audit.identity_state != "compatible":
+        return None
+    assert audit.response_id is not None and audit.response_model is not None
+    assert audit.system_fingerprint is not None and audit.created is not None
+    assert audit.response_sha256 is not None
+    identity = ResponseIdentity(
+        audit.response_id,
+        audit.response_model,
+        audit.system_fingerprint,
+        audit.created,
+        audit.response_sha256,
+    )
     return CompleteChatUsage(
-        usage["prompt_tokens"],
-        usage["completion_tokens"],
-        usage["prompt_cache_hit_tokens"],
-        receipt,
-        usage_hash(canonical),
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.cached_input_tokens,
+        usage.receipt_hash,
+        usage.usage_hash,
         identity,
-        reasoning,
+        audit.reasoning_tokens,
     )
 
 
@@ -424,5 +376,4 @@ class DeepSeekChat:
             request,
             context=context,
             validate=validate,
-            extract_usage=extract_chat_usage,
         )

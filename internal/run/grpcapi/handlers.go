@@ -196,7 +196,7 @@ func (h *service) ObserveCall(ctx context.Context, request *agentv1.ObserveCallR
 	business := map[agentv1.BusinessOutcome]string{agentv1.BusinessOutcome_BUSINESS_OUTCOME_ACCEPTED: "accepted", agentv1.BusinessOutcome_BUSINESS_OUTCOME_REJECTED: "rejected", agentv1.BusinessOutcome_BUSINESS_OUTCOME_UNKNOWN: "unknown"}
 	command := run.ObserveCallRequest{Lease: lease, Step: step, PhysicalCallID: request.PhysicalCallId,
 		TransportOutcome: transport[request.TransportOutcome], HTTPStatus: int(request.HttpStatus),
-		ErrorCode: request.ErrorCode, BusinessOutcome: business[request.BusinessOutcome], UsageKnown: request.UsageKnown, Usage: usage}
+		ErrorCode: request.ErrorCode, BusinessOutcome: business[request.BusinessOutcome], UsageKnown: request.UsageKnown, Usage: usage, AuditHash: request.AuditHash}
 	if err = command.Validate(); err != nil {
 		return nil, err
 	}
@@ -212,7 +212,8 @@ func (h *service) ObserveCall(ctx context.Context, request *agentv1.ObserveCallR
 }
 
 func (h *service) SettleUsage(ctx context.Context, request *agentv1.SettleUsageRequest) (*agentv1.SettleUsageResponse, error) {
-	if request == nil || !run.ValidUUID(request.PhysicalCallId) || request.Usage == nil {
+	if request == nil || !run.ValidUUID(request.PhysicalCallId) || (request.Usage == nil && request.ProviderAudit == nil) ||
+		(request.ReportHash != "" && !run.ValidHash(request.ReportHash)) {
 		return nil, run.ErrInvalidArgument
 	}
 	principal := authenticated(ctx)
@@ -224,8 +225,13 @@ func (h *service) SettleUsage(ctx context.Context, request *agentv1.SettleUsageR
 	if err != nil {
 		return nil, err
 	}
+	audit, err := providerAuditFromWire(request.ProviderAudit)
+	if err != nil {
+		return nil, err
+	}
 	// Deliberately do not heartbeat, read checkpoint or require a live lease here.
-	result, err := h.api.SettleUsage(ctx, principal, run.SettleUsageRequest{Lease: lease, PhysicalCallID: request.PhysicalCallId, Usage: *usage})
+	result, err := h.api.SettleUsage(ctx, principal, run.SettleUsageRequest{Lease: lease, PhysicalCallID: request.PhysicalCallId,
+		Usage: usage, ProviderAudit: audit, ReportHash: request.ReportHash})
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +239,9 @@ func (h *service) SettleUsage(ctx context.Context, request *agentv1.SettleUsageR
 	if err != nil || reservation.PhysicalCallId != request.PhysicalCallId {
 		return nil, run.ErrInternal
 	}
-	return &agentv1.SettleUsageResponse{Reservation: reservation, NewlySettled: result.NewlySettled}, nil
+	return &agentv1.SettleUsageResponse{Reservation: reservation, NewlySettled: result.NewlySettled,
+		PersistedReportHash: result.PersistedReportHash, PersistedAuditHash: result.PersistedAuditHash,
+		ReportConflict: result.ReportConflict, BatchFrozen: result.BatchFrozen, BatchStopCode: string(result.BatchStopCode)}, nil
 }
 
 func (h *service) CommitStep(ctx context.Context, request *agentv1.CommitStepRequest) (*agentv1.CommitStepResponse, error) {

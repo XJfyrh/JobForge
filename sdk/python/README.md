@@ -30,7 +30,9 @@ with RunClient(
     print(result.available, result.kind, result.ref)
 ```
 
-公开方法为 `submit/get/list/steps/events/result/cancel/retry`。`list` 返回 `items/next_cursor`，`steps/events` 接受 `after/limit` 并返回 `items/next_after`；默认20条、最多100条，SDK不自动翻页或轮询。`steps` 显式读取受保护结果，事件仅含元数据。未有结果时 `available=False`、`kind/ref=None`；`proposal` 只表示待审批方案。
+公开方法为 `submit/get/list/steps/events/result/calls/cancel/retry`。`list` 返回 `items/next_cursor`，`steps/events` 接受 `after/limit` 并返回 `items/next_after`；默认20条、最多100条，SDK不自动翻页或轮询。`steps` 显式读取受保护结果，事件仅含元数据。未有结果时 `available=False`、`kind/ref=None`；`proposal` 只表示待审批方案。
+
+`calls(run_id)` 只发一次GET，返回带 `captured_at` 的 `RunCalls`，最多44条、完整编码≤256KiB，无分页/tenant参数。reader/operator均可读本租户Run；跨租户404。`audit_status`区分历史未采集、免费不适用、新调用缺报告与已记录；缺报告不代表未发送。`observed_usage`保存观测计数，只有 `usage_known` 与 `settled_usage` 表示兼容价格下的已知用量；模型身份不匹配时可以有前者而保留全部hold。reasoning缺省、观测0和不可用分别表示，不返回reasoning正文。共享batch只公开冻结及固定原因，不公开其它租户触发调用。晚到报告可能改变未来查询，保存证据时同时保留抓取时间与报告hash。
 
 提交必须同时提供业务意图键和独立 `idempotency_key`；相同业务内容换提交键仍复用首次根Run。`cancel(run_id, idempotency_key=...)` 返回操作ID和当前Run，运行中取消先进入 `stopping`。`retry(run_id, idempotency_key=..., run_timeout_seconds=3600)` 为failed/cancelled来源创建或复用唯一后继，保留原终态并共享家族预算。新建retry须在原业务请求7日窗口内；不能通过换键重置额度或创建分叉。
 

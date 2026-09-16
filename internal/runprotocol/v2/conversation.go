@@ -142,11 +142,11 @@ func (c *Conversation) acceptObservation(f Frame, now int64) error {
 		return ErrProtocol
 	}
 	if f.UsageDisposition == "unknown" {
-		if call.report != nil {
+		if call.report != nil && call.report.ProviderAudit == nil {
 			return ErrProtocol
 		}
 	} else {
-		if !oneOf(call.permit.Subcall, "chat", "query_embedding") || (call.report != nil && *f.UsageHash != call.report.UsageHash) {
+		if !oneOf(call.permit.Subcall, "chat", "query_embedding") || (call.report != nil && (call.report.Usage == nil || *f.UsageHash != call.report.Usage.UsageHash)) {
 			return ErrProtocol
 		}
 		// Preserve the original observation identity across independent reader
@@ -154,14 +154,25 @@ func (c *Conversation) acceptObservation(f Frame, now int64) error {
 		usageHash := *f.UsageHash
 		f.UsageHash = &usageHash
 	}
+	if f.AuditHash != nil {
+		auditHash := *f.AuditHash
+		f.AuditHash = &auditHash
+		if call.report != nil && (call.report.ProviderAudit == nil || call.report.ProviderAudit.AuditHash != auditHash) {
+			return ErrProtocol
+		}
+	}
 	call.observationDisposition = f.UsageDisposition
 	c.pending, c.pendingHash, c.phase = f, observationHash(f), "observation"
+	if chatStep(c.binding.StepKind) && f.UsageDisposition == "unknown" {
+		c.Stop()
+	}
 	return nil
 }
 
 func (c *Conversation) joinObservation(now int64) error {
 	call := c.metering.calls[c.pending.PhysicalCallID]
-	if c.pending.UsageDisposition == "reported" && call.report != nil && call.report.UsageHash != *c.pending.UsageHash {
+	if call.report != nil && ((c.pending.UsageDisposition == "reported" && (call.report.Usage == nil || call.report.Usage.UsageHash != *c.pending.UsageHash)) ||
+		(c.pending.AuditHash != nil && (call.report.ProviderAudit == nil || call.report.ProviderAudit.AuditHash != *c.pending.AuditHash))) {
 		// A bad ordinary declaration revokes execution without discarding a
 		// valid report already accepted on the independent metering channel.
 		c.Stop()
@@ -218,7 +229,8 @@ func (c *Conversation) AcceptMetering(frame Frame, nowMonoMS int64) error {
 	}
 	c.lastNow = nowMonoMS
 	call := c.metering.calls[frame.PhysicalCallID]
-	if nowMonoMS >= c.deadline || call.overrun || call.observationDisposition == "unknown" || oneOf(call.settlement, "anomaly", "unconfirmed") {
+	if nowMonoMS >= c.deadline || call.overrun || call.observationDisposition == "unknown" ||
+		(call.report != nil && !reportAllowsContinuation(call.report)) || oneOf(call.settlement, "recorded", "anomaly", "conflict", "unconfirmed") {
 		c.Stop()
 	}
 	if c.phase == "observation" && frame.PhysicalCallID == c.pending.PhysicalCallID {

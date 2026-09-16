@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jobforge.invalid/api/executor/v2/schema.json",
   "title": "JobForge supervised executor frame v2",
-  "description": "Strict UTF-8 JSON Lines. Duplicate/unknown keys, null required fields, unpaired surrogates, numbers outside finite binary64 range (including nested integers), depth >64 and trailing content are rejected. Range validation does not round or coerce decoded integers. All times are safe integer CLOCK_BOOTTIME milliseconds within one Linux time namespace. Ordinary and dedicated metering pipes are distinct; metering never grants execution authority.",
+  "description": "Strict UTF-8 JSON Lines. Duplicate/unknown keys, null nonnullable fields, unpaired surrogates, numbers outside finite binary64 range (including nested integers), depth >64 and trailing content are rejected. Range validation does not round or coerce decoded integers. All times are safe integer CLOCK_BOOTTIME milliseconds within one Linux time namespace. Ordinary and dedicated metering pipes are distinct; metering never grants execution authority.",
   "x-max-frame-bytes": 393216,
   "x-sequence": [
     "execute_step",
@@ -15,24 +15,23 @@
     "One intent and one possible physical send at a time. CanDispatch consumes a fresh permit exactly once before its anchored dispatch deadline; only consumed permits admit metering.",
     "search_policy order is profile_version, profile_tags, query_embedding, search_policy under one tool_invocation_id.",
     "Ordinary output is at most 393216 bytes including LF. Dedicated metering_report and metering_ack frames are at most 8192 bytes including LF and cannot be sent on ordinary stdout.",
-    "Metering usage hash is the jobforge.run.usage.v1 length-prefixed SHA256 of decimal input_tokens, output_tokens, cached_input_tokens and receipt_hash. Each token field <= 2^53-1 and cached <= input. Their sum may exceed the wire safe integer bound; retain the original fields for ledger anomaly handling, never reject or truncate that report. Output above 1024 is valid metering, not execution success.",
-    "Reports require the original consumed permit call_sequence, physical_call_id and parameter_hash. One distinct usage per call; identical duplicates are idempotent. No action, cursor or permission fields.",
+    "Metering usage hash is the jobforge.run.usage.v1 length-prefixed SHA256 of decimal input_tokens, output_tokens, cached_input_tokens and receipt_hash. Each token field <= 2^53-1 and cached <= input. For chat, their sum must also be a safe integer. Usage-only query_embedding retains the previous independent counter bounds for ledger anomaly handling. Output above 1024 is valid metering, not execution success.",
     "Reports can arrive before or after the ordinary observation, including after stop or execution expiry. Each pipe/direction orders its own emitted stamps; never compare metering emitted stamps with ordinary arrival order.",
-    "Every observation, including free calls, unknown usage, rejected results and the final HTTP, waits for one ordinary call_observation_ack. Reported observations also require matching standard metering usage_hash and settled ACK. Unknown has null usage_hash and retains hold; no settlement is invented or awaited. Existing received reports cannot be bypassed with unknown.",
     "Token overrun, anomaly/unconfirmed ACK, missing/mismatched report or settlement prevent further execution. Overrun reports remain available for ledger settlement; no ACK can reopen a stopped or expired conversation.",
     "Caller must drain/join the metering reader and wait/verify process exit before Commit; successful step_result alone is not commit authority.",
     "Free subcalls have call_ms <=10000, zero token limits and no metering. Chat/query embedding <=60000; ordinary output bound remains 1024. Tool result <=8192, other result/input <=16384, checkpoint <=262144 bytes.",
-    "Denied permits and rejected/unknown business outcomes forbid further sends; only an error step_result may terminate, after the observation ACK when an observation exists. Unknown usage with an accepted business outcome may succeed after its ACK. No arbitrary next cursor.",
     "Permit emission must follow intent emission; observation/report emission must follow consumed dispatch. Ordinary ACK emission must not precede its observation or the first settled metering ACK. The next intent/result emission must not precede either confirmation. ACK receipt and pending confirmation join check the original call and step deadlines. After joining, receipt of the next intent/result must still be before that call deadline and the step deadline. Once the next intent is accepted, its new permit is bounded by its own call deadline and the original step deadline. No confirmation resets a deadline.",
-    "An unconfirmed ACK may later be confirmed settled/anomaly with the same usage hash, without reopening execution. A valid report whose ordinary observation hash mismatches is still accepted for settlement while ordinary execution is stopped.",
-    "unknown accepted responses may finish only after ordinary observation ACK with the full hold retained. A subsequently received valid report is accounted but stops ordinary execution; it cannot retroactively bypass the reported/settled barrier.",
     "Ordinary call_observation_ack contains exactly the five common fields plus call_sequence, physical_call_id and observation_hash. Match the complete original binding, request, call, sequence and observation hash; matching payload hash alone is insufficient. No negative ACK, result, permit, input or deadline increment is allowed.",
     "Go sends an ordinary ACK only after ObserveCall explicitly succeeds with original call/parameter/tool identity and execution authority remains current. For reported usage, confirm matching SettleUsage first and pass original usage to ObserveCall; unknown passes false/nil. Neither pipe write nor metering ACK is ObserveCall confirmation.",
-    "Observation fingerprint uses SHA256 over the domain and five ordered UTF-8 fields, each prefixed by its uint64 big-endian byte length: jobforge.run.observation.v1, transport_outcome, decimal http_status, mapped domain error_code, business_outcome, usage_hash (empty for unknown). Validate the original wire frame before hashing.",
     "Map errors before building both ObserveCall RPC and observation hash: OUTPUT_INVALID to MODEL_PROTOCOL_ERROR, INPUT_INVALID to INVALID_ARGUMENT, PROTOCOL_ERROR to EXECUTOR_PROTOCOL_ERROR. Empty, TIMEOUT, DEPENDENCY_UNAVAILABLE, PROFILE_UNAVAILABLE and BUDGET_EXHAUSTED remain unchanged. STOP_REQUESTED, STALE_LEASE and CALL_CONFLICT are control refusals only and are forbidden in business observations. Correction still requires original wire OUTPUT_INVALID and the strict registered marker.",
     "The two pipes have independent receipt order. A reported ordinary ACK may arrive before its metering report/settled ACK. Validate and retain at most one immutable pending ordinary ACK for the active call, then join using the first settled ACK emission. Pending state cannot emit intent/result or dispatch.",
     "Wrong identity/hash, malformed or duplicate ordinary ACK, wrong direction clock, causal reversal, expiry and stopping permanently close ordinary execution and clear pending continuation. Anomaly/unconfirmed metering never grants continuation; later correct ordinary or metering ACK cannot revive it. Metering duplicates remain narrowly idempotent, while ordinary ACK duplicates are protocol errors.",
-    "This coordinated internal v2 revision supersedes the old no-observation-ACK sequence under ADR-0019. Deploy only matching fixed Go/Python images with a new immutable executor_version/profile hash; no legacy mode, v3 fallback, or public HTTP/SDK/gRPC change is introduced. Codec fixtures prove neither PostgreSQL commit nor actual process/FD cleanup or real cloud acceptance."
+    "ADR-0020: only linux-v2-audit-runtime-1 with immutable deepseek-audit-v1 policy. No dual codec or legacy ordinary route.",
+    "Reports carry nullable usage and nullable provider_audit (at least one nonnull), with report_hash binding original execution, physical call, parameters, usage and audit. Chat requires audit; only query_embedding may use usage-only. Chat aggregate input+output must be a safe integer; embedding preserves the existing metering fields.",
+    "Chat observation audit_hash matches the report; other calls require null. Observation fingerprint is jobforge.run.observation.v2 followed by transport_outcome, decimal HTTP status, mapped domain error, business outcome, usage_hash_or_empty, audit_hash_or_empty, all uint64 big-endian length prefixed UTF-8.",
+    "Normal chat joins a priceable report, exact persisted report/audit hashes, settled metering ACK and ordinary ObserveCall ACK. FD receipt order may reverse; emission causality and original deadlines remain.",
+    "ACK identifies report_hash. settled requires priceable usage; recorded confirms audit-only or incompatible observed usage without continuation; anomaly confirms measurement freezing; conflict confirms conflict stop; unconfirmed asserts no durable success. Any stop is irreversible. Mode mismatch may settle priceable usage but never continues.",
+    "Free and query_embedding unknown observations require ordinary ACK and no report; embedding retains the full original token hold. Unknown chat observation immediately closes ordinary execution; an original captured report may still arrive on the narrow metering channel. No new observation can reopen stopped execution."
   ],
   "oneOf": [
     {
@@ -626,6 +625,17 @@
               "type": "null"
             }
           ]
+        },
+        "audit_hash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -641,7 +651,8 @@
         "error_code",
         "emitted_mono_ms",
         "usage_disposition",
-        "usage_hash"
+        "usage_hash",
+        "audit_hash"
       ],
       "additionalProperties": false,
       "allOf": [
@@ -848,7 +859,28 @@
           "$ref": "#/$defs/sha256"
         },
         "usage": {
-          "$ref": "#/$defs/usage"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/usage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_audit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provider_audit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "report_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       },
       "required": [
@@ -860,7 +892,9 @@
         "call_sequence",
         "physical_call_id",
         "parameter_hash",
-        "usage"
+        "usage",
+        "provider_audit",
+        "report_hash"
       ],
       "additionalProperties": false
     },
@@ -892,15 +926,18 @@
         "physical_call_id": {
           "$ref": "#/$defs/uuid"
         },
-        "usage_hash": {
-          "$ref": "#/$defs/sha256"
-        },
         "settlement": {
           "enum": [
             "settled",
+            "recorded",
             "anomaly",
+            "conflict",
             "unconfirmed"
           ]
+        },
+        "report_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
       },
       "required": [
@@ -911,7 +948,7 @@
         "kind",
         "call_sequence",
         "physical_call_id",
-        "usage_hash",
+        "report_hash",
         "settlement"
       ],
       "additionalProperties": false
@@ -960,6 +997,149 @@
         "observation_hash"
       ],
       "additionalProperties": false
+    },
+    "provider_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "provider",
+        "response_complete",
+        "http_status",
+        "response_sha256",
+        "identity_state",
+        "response_id",
+        "response_model",
+        "system_fingerprint",
+        "created",
+        "usage_evidence",
+        "reasoning_state",
+        "reasoning_tokens",
+        "mode_state",
+        "audit_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "provider": {
+          "const": "deepseek"
+        },
+        "response_complete": {
+          "type": "boolean"
+        },
+        "http_status": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 599
+        },
+        "response_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity_state": {
+          "enum": [
+            "compatible",
+            "incompatible",
+            "invalid",
+            "unavailable"
+          ]
+        },
+        "response_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "response_model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "system_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage_evidence": {
+          "enum": [
+            "complete",
+            "absent",
+            "invalid",
+            "unavailable"
+          ]
+        },
+        "reasoning_state": {
+          "enum": [
+            "observed",
+            "absent",
+            "invalid",
+            "unavailable"
+          ]
+        },
+        "reasoning_tokens": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mode_state": {
+          "enum": [
+            "nonthinking",
+            "unexpected",
+            "invalid",
+            "unavailable"
+          ]
+        },
+        "audit_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "x-max-encoded-bytes": 2048,
+      "$comment": "Raw and encoded JSON each <=2048 bytes. Runtime verifies state matrix, safe counters/receipt identity and audit/report hashes. Complete response status must be 100..599; no complete response requires zero status and null identity/digest. Null is distinct from observed zero."
     }
   },
   "x-max-metering-frame-bytes": 8192,

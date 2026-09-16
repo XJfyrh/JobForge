@@ -43,6 +43,10 @@ func observationHash(observation Frame) string {
 	if observation.UsageHash != nil {
 		usageHash = *observation.UsageHash
 	}
-	return run.Fingerprint("jobforge.run.observation.v1", observation.TransportOutcome,
-		strconv.FormatInt(observation.HTTPStatus, 10), code, observation.BusinessOutcome, usageHash)
+	auditHash := ""
+	if observation.AuditHash != nil {
+		auditHash = *observation.AuditHash
+	}
+	return run.Fingerprint("jobforge.run.observation.v2", observation.TransportOutcome,
+		strconv.FormatInt(observation.HTTPStatus, 10), code, observation.BusinessOutcome, usageHash, auditHash)
 }

@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b已合并；support固定流程已实现待PR，云端验收待交付 | PR #47已接受provider审计合同；support真实PG/正式进程、v2数据独立审查及真实索引检索见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)。C3b进程恢复证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；完整评分、审计持久桥及40案云端推理仍未验收 |
+| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b及support固定流程已合并，云端验收待交付 | PR #47已接受provider审计合同，PR #48合并support；真实PG/正式进程、v2数据独立审查及真实索引检索见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)。完整评分、审计持久桥及40案云端推理仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -105,3 +105,9 @@ C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、�
 [PR #47](https://github.com/XJfyrh/JobForge/pull/47)最终head `e43e1249c0784acf57e3ef4911087a5caeeb28d1`经两份独立上下文复审及[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35096592640)通过，合并为 `d449bc709b99ad78d3563b2924802e535541a08a`。ADR-0020仅接受合同；同hash重放/不同hash冲突必须先于新财务判定，末次纠正失败的批次屏障严格绑定原attempt/session/fence/step。
 
 随后实现support固定策略、闭集方案和生产adapter；开发数据v2保持40条expected不变，经独立Agent审查并重新完成真实向量化/索引/20查询。实际19/20、RQ-06未命中保留；全仓Windows race与正式Linux进程/PG检查通过，详见[分层证据](evidence/agent-v3-s1-support-2026-09-16.md)。当前仅完成该实现切片，收费profile未启用。provider持久审计、完整评分器及真实40案仍在后续工作中，S1整体未完成。
+
+[PR #48](https://github.com/XJfyrh/JobForge/pull/48)最终head `1046f33fc00bb3c64543d71a97fb2c2c37625723`经两份独立上下文实现审查无P1/P2，[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35100509379)和旧真实模型工作流通过，合并为 `bffe5665f266f0510de94d7bf13a3f8dbc963df2`，树与审查head一致。后者不代表新DeepSeek通过；收费profile仍未启用，继续完成provider审计持久桥和评分。
+
+## S1 provider 持久审计实现
+
+按已接受 ADR-0020 完成有界 typed report、原调用绑定、首报告原子持久/定价、冲突与晚到权限、跨 FD ACK、持久批次 guard 和租户隔离的 Calls HTTP/SDK。实际 Windows/固定 Linux/PG/安装 SDK 与进程故障检查、性能退化和修复后的结果见[分层证据](evidence/agent-v3-s1-provider-audit-2026-09-16.md)。实现仍须最终 head 独立复核与 CI，完整评分器、收费登记/启动器、40案真实云端及整个S1未完成；历史W4失败、AT-25跳过与生产留存未验收不变。

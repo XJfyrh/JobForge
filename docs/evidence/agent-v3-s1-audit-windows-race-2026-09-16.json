@@ -1,0 +1,128 @@
+{
+  "passed_test_events": 1549,
+  "passed_packages": 33,
+  "failures": 0,
+  "skipped_tests": [
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorLateSettlementPreservesTypedExit/already_closed"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorLateSettlementPreservesTypedExit/epipe_event_first"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorLateSettlementPreservesTypedExit/epipe_completion_first"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorObservationACKIncludesFreeCalls/get_order"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportedObservationWaitsForIndependentMetering"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorResultCanPrecedeACKWriteCompletionDelivery"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorLateQueuedACKCannotRenewOriginalCall"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorUnknownChatHasNoOrdinaryACK"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/wrong_report"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/wrong_audit"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/reservation_report"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/conflict"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/unconfirmed"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/recorded"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/internal/runworker",
+      "test": "TestCoordinatorReportConfirmationCannotTrustEchoOrRecorded/mode_stop"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestCancelAT25ControlStreamDegradation"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRealTasksLifecycle"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestBusinessWorkerProcessHelper"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRealTasksSDK"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorCompleteRegisteredFlow/normal-six-steps"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorCompleteRegisteredFlow/one-correction-seven-steps"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorObserveUnconfirmedHasNoFollowingHTTP/before-commit-lock"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorObserveUnconfirmedHasNoFollowingHTTP/after-commit-lost-ack"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorCommitACKLossDoesNotFailOrRepeatStep"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorBudgetRejectionRetainsOriginalFailure"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestRunExecutorCancelDuringRealHTTPStopsProcess"
+    },
+    {
+      "package": "github.com/xjfyrh/jobforge/tests/integration",
+      "test": "TestWorkerProcessHelper"
+    }
+  ],
+  "skipped_packages": [
+    "github.com/xjfyrh/jobforge/benchmarks/e2e",
+    "github.com/xjfyrh/jobforge/cmd/support-business",
+    "github.com/xjfyrh/jobforge/examples/support-agent/runtime",
+    "github.com/xjfyrh/jobforge/internal/ctl",
+    "github.com/xjfyrh/jobforge/internal/migrate",
+    "github.com/xjfyrh/jobforge/internal/notify",
+    "github.com/xjfyrh/jobforge/internal/store",
+    "github.com/xjfyrh/jobforge/internal/store/postgres",
+    "github.com/xjfyrh/jobforge/migrations",
+    "github.com/xjfyrh/jobforge/migrations/business",
+    "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
+  ]
+}

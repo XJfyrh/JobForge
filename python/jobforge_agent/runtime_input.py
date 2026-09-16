@@ -12,7 +12,7 @@ from typing import Any
 
 from jobforge_agent.protocol_v2 import Frame, ProtocolError, encode
 
-EXECUTOR_VERSION = "linux-v2-ack-runtime-1"
+EXECUTOR_VERSION = "linux-v2-audit-runtime-1"
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 HASH = re.compile(r"[0-9a-f]{64}")
@@ -63,6 +63,8 @@ class RuntimeInput:
     adapter_id: str
     tool_invocation_id: str
     checkpoint: RuntimeCheckpoint
+    expected_response_model: str
+    provider_audit_policy: str
 
 
 def _require(value: bool) -> None:
@@ -313,12 +315,21 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
     )
     _object(
         selection,
-        {"schema_version", "executor_version", "adapter_id", "tool_invocation_id"},
+        {
+            "schema_version",
+            "executor_version",
+            "adapter_id",
+            "tool_invocation_id",
+            "expected_response_model",
+            "provider_audit_policy",
+        },
     )
     _require(_integer(selection["schema_version"], 1, 1))
     _require(
         selection["executor_version"] == EXECUTOR_VERSION
         and _match(IDENTIFIER, selection["adapter_id"])
+        and selection["expected_response_model"] == "deepseek-flash"
+        and selection["provider_audit_policy"] == "deepseek-audit-v1"
     )
     _require(
         _match(UUID, selection["tool_invocation_id"])
@@ -359,4 +370,6 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
         selection["adapter_id"],
         selection["tool_invocation_id"],
         copy.deepcopy(checkpoint),
+        selection["expected_response_model"],
+        selection["provider_audit_policy"],
     )

@@ -21,6 +21,7 @@ from jobforge.errors import (
     TransportError,
     from_response,
 )
+from jobforge.run_calls import MAX_CALL_RESPONSE_BYTES, RunCalls
 from jobforge.run_models import (
     MAX_SAFE_INTEGER,
     Run,
@@ -165,6 +166,14 @@ class RunClient:
         """Read result availability; this does not dereference protected content."""
         return self._request(RunResult, "result", "GET", _path(run_id) + "/result")
 
+    def calls(self, run_id: str) -> RunCalls:
+        """Capture this Run's call audit once; observed usage is not known cost.
+
+        There is no pagination, implicit polling or audit mutation. Missing
+        reports do not prove that a provider request was never sent.
+        """
+        return self._request(RunCalls, "calls", "GET", _path(run_id) + "/calls")
+
     def cancel(self, run_id: str, *, idempotency_key: str) -> RunCancellation:
         """Accept cancellation; running execution first enters stopping.
 
@@ -250,6 +259,11 @@ class RunClient:
             if not success:
                 span.set_status(StatusCode.ERROR, "server rejected request")
             try:
+                if (
+                    operation == "calls"
+                    and len(response.content) > MAX_CALL_RESPONSE_BYTES
+                ):
+                    raise ValueError("oversized call evidence")
                 data = json.loads(
                     response.content.decode("utf-8"),
                     object_pairs_hook=_unique_object,

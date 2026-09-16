@@ -32,6 +32,7 @@ type fixtures struct {
 	Steps        run.StepPage       `json:"steps"`
 	Events       run.EventPage      `json:"events"`
 	Result       run.Result         `json:"result"`
+	CallReport   run.CallsResponse  `json:"call_report"`
 	Errors       []errorFixture     `json:"errors"`
 }
 
@@ -93,6 +94,10 @@ func (a *testAPI) Events(ctx context.Context, tenant, id string, after int64, li
 
 func (a *testAPI) Result(ctx context.Context, tenant, id string) (run.Result, error) {
 	return a.fixture.Result, a.record(ctx, "result", tenant, id)
+}
+
+func (a *testAPI) Calls(ctx context.Context, tenant, id string) (run.CallsResponse, error) {
+	return a.fixture.CallReport, a.record(ctx, "calls", tenant, id)
 }
 
 func (a *testAPI) Cancel(ctx context.Context, tenant, id, key string) (run.CancelResponse, error) {

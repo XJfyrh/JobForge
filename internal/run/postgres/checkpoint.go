@@ -125,6 +125,19 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 		if err != nil {
 			return err
 		}
+		profile, err := s.ledgerProfile(ctx, tx, r, false)
+		if err != nil {
+			return err
+		}
+		var accounts [3]budgetRow
+		if profile.AuditEnabled() {
+			// Only audited commits need the frozen-account barrier. Preserve
+			// Run -> accounts -> attempt resource locks for that path.
+			accounts, err = loadAccounts(ctx, tx, r.TenantID, r.BusinessRequestID, true)
+			if err != nil {
+				return err
+			}
+		}
 		var resources attemptResources
 		if req.Step.Kind == "submit_proposal" {
 			resources, err = lockAttemptResources(ctx, tx, r, a)
@@ -141,6 +154,13 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 		}
 		if err := agentrun.CheckExecution(r, a, req.Lease, now); err != nil {
 			return err
+		}
+		// Authority precedes acknowledgement or batch status. Original-call
+		// confirmation must not enter the pending-chat guard it releases.
+		if profile.AuditEnabled() {
+			if err := accountsUnfrozen(accounts); err != nil {
+				return err
+			}
 		}
 		prior, priorErr := readStep(tx.QueryRow(ctx, "select "+stepColumns+" from run_steps where tenant_id=$1 and run_id=$2 and step_id=$3", r.TenantID, r.ID, req.Step.ID))
 		if priorErr == nil {
@@ -167,9 +187,11 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 		if a.ActiveCallID != nil {
 			return agentrun.ErrCallConflict
 		}
-		profile, err := s.ledgerProfile(ctx, tx, r, true)
-		if err != nil {
-			return err
+		// The immutable persisted profile was read above. Only a new commit
+		// needs current availability; accepted replays survive disablement.
+		registered, ok := s.profiles[r.ProfileID]
+		if !ok || !registered.Executable || registered.Hash != profile.Hash {
+			return agentrun.ErrProfileUnavailable
 		}
 		checkpoint, err := loadCheckpoint(ctx, tx, r, a)
 		if err != nil {
@@ -182,7 +204,7 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 		if requireProposal && (!decision.CloseAttempt || decision.Proposal == nil || decision.Proposal.Decision != "proposal") {
 			return agentrun.ErrInvalidTransition
 		}
-		if err := validateCommitObservation(ctx, tx, req, decision.Result); err != nil {
+		if err := validateCommitObservation(ctx, tx, req, decision.Result, profile); err != nil {
 			return err
 		}
 		// Any locks acquired above can outlive the lease. Re-read database time
@@ -230,7 +252,7 @@ func (s *Store) commitStep(ctx context.Context, principal string, req agentrun.C
 	return response, err
 }
 
-func validateCommitObservation(ctx context.Context, tx pgx.Tx, req agentrun.CommitStepRequest, result agentrun.StepResult) error {
+func validateCommitObservation(ctx context.Context, tx pgx.Tx, req agentrun.CommitStepRequest, result agentrun.StepResult, profile agentrun.Profile) error {
 	if req.Step.Kind == "read_ticket" || req.Step.Kind == "submit_proposal" {
 		return nil
 	}
@@ -249,6 +271,13 @@ func validateCommitObservation(ctx context.Context, tx pgx.Tx, req agentrun.Comm
 	}
 	if *call.BusinessOutcome != wantOutcome {
 		return agentrun.ErrCallConflict
+	}
+	if profile.AuditEnabled() {
+		hash, err := agentrun.ExecutionBindingHash(req.Lease, req.Step)
+		if err != nil || hash != call.Reservation.ExecutionBindingHash ||
+			(call.Reservation.Subcall == agentrun.SubcallChat && !persistedChatObservation(call, profile)) {
+			return agentrun.ErrCallConflict
+		}
 	}
 	sequence := agentrun.ToolSequence(req.Step.Kind)
 	if len(sequence) == 0 {

@@ -18,17 +18,19 @@ type Pricing struct {
 // Profile freezes the host-registered workflow and physical resource bounds.
 // Deployment code supplies it; public requests may only select its immutable ID.
 type Profile struct {
-	ID                  string          `json:"profile_id"`
-	Hash                string          `json:"profile_hash"`
-	Strategy            string          `json:"strategy"`
-	ExecutorVersion     string          `json:"executor_version"`
-	Executable          bool            `json:"-"`
-	MaxInputTokens      int64           `json:"max_input_tokens"`
-	MaxOutputTokens     int64           `json:"max_output_tokens"`
-	FamilyTokenLimit    int64           `json:"family_token_limit"`
-	FamilyCostMicroyuan int64           `json:"family_cost_microyuan"`
-	Pricing             Pricing         `json:"pricing"`
-	Definition          json.RawMessage `json:"definition"`
+	ID                    string          `json:"profile_id"`
+	Hash                  string          `json:"profile_hash"`
+	Strategy              string          `json:"strategy"`
+	ExecutorVersion       string          `json:"executor_version"`
+	ProviderAuditPolicy   string          `json:"provider_audit_policy,omitempty"`
+	ExpectedResponseModel string          `json:"expected_response_model,omitempty"`
+	Executable            bool            `json:"-"`
+	MaxInputTokens        int64           `json:"max_input_tokens"`
+	MaxOutputTokens       int64           `json:"max_output_tokens"`
+	FamilyTokenLimit      int64           `json:"family_token_limit"`
+	FamilyCostMicroyuan   int64           `json:"family_cost_microyuan"`
+	Pricing               Pricing         `json:"pricing"`
+	Definition            json.RawMessage `json:"definition"`
 }
 
 // WorkerConfig is administrator-controlled; registration cannot widen it.

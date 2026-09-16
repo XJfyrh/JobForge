@@ -212,7 +212,11 @@ async def run() -> int:
                 runtime.executor_version,
             )
             dispatcher = AuthorizedDispatcher(
-                frame, hooks=hooks, endpoints=_endpoints(binding["step_kind"])
+                frame,
+                hooks=hooks,
+                endpoints=_endpoints(binding["step_kind"]),
+                expected_response_model=runtime.expected_response_model,
+                provider_audit_policy=runtime.provider_audit_policy,
             )
             remaining = frame["emitted_mono_ms"] + frame["remaining_ms"] - boottime_ms()
             if remaining <= 0:

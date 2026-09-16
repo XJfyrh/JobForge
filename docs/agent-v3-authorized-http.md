@@ -18,6 +18,8 @@
 
 ## DeepSeek 约束
 
+当前版本在有界读取后、业务校验前冻结 typed provider audit，通过独立计量 FD 交 Go 持久上报；不再把内存审计当作可查询证据。五类 report ACK、模型身份/模式停发、observed 与 settled 的区别见[审计指南](agent-v3-provider-audit.md)。本页原 C2 验证计数只代表历史模块层。
+
 固定官方 Chat Completions 路径、`deepseek-flash`、非思考、非流式、JSON object、temperature=0、最多1024输出 tokens。模型可见业务内容16KiB、请求及完整响应各64KiB、模型内容16KiB；超限明确失败。适配器不装载业务 gold，不接收动态工具、模型 URL 或命令。业务方案校验器由后续登记策略提供，本层不决定政策结论或安排纠正。
 
 usage 的原始整数必须精确且内部一致；缺失、矛盾、断连或截断保持 unknown，不填零。完整 usage 与模型内容 JSON/方案是否合法分别处理。模型响应身份用于审计和漂移检测，不能证明服务端版本被不可变锁定。费用计算、持久预留和5元批次硬上限仍由控制账本负责；本切片不注册可执行 profile，不发送收费验收。

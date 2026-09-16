@@ -90,3 +90,18 @@ func matchingReservation(reservation *agentv1.CallReservation, intent v2.Frame, 
 	return reservation != nil && reservation.PhysicalCallId == id && reservation.ToolInvocationId == intent.ToolInvocationID &&
 		reservation.Subcall == subcall(intent.Subcall) && reservation.ParameterHash == intent.ParameterHash && reservation.PriceHash == price
 }
+
+func reportAuditHash(report *v2.Frame) string {
+	if report.ProviderAudit == nil {
+		return ""
+	}
+	return report.ProviderAudit.AuditHash
+}
+
+func persistedReportMatches(response *agentv1.SettleUsageResponse, call *callRecord) bool {
+	return !response.ReportConflict && response.PersistedReportHash == call.report.ReportHash &&
+		response.PersistedAuditHash == reportAuditHash(call.report) &&
+		response.Reservation.PersistedReportHash == response.PersistedReportHash &&
+		response.Reservation.PersistedAuditHash == response.PersistedAuditHash &&
+		response.Reservation.ExecutionBindingHash == call.reservation.ExecutionBindingHash
+}

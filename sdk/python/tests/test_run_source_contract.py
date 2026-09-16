@@ -105,9 +105,10 @@ def test_all_sdk_wire_fields_match_the_source_exactly() -> None:
 
 
 def test_source_exposes_no_worker_or_approval_write_api() -> None:
-    """S1-B's API is confined to the seven public Run operations."""
-    assert len(OPENAPI["paths"]) == 7
-    assert sum(len(path) for path in OPENAPI["paths"].values()) == 8
+    """ADR-0020 adds one read route and no execution or approval mutation."""
+    assert len(OPENAPI["paths"]) == 8
+    assert sum(len(path) for path in OPENAPI["paths"].values()) == 9
+    assert set(OPENAPI["paths"]["/v2/runs/{run_id}/calls"]) == {"get"}
     for path in OPENAPI["paths"]:
         assert all(
             word not in path for word in ("approval", "reserve", "settle", "worker")

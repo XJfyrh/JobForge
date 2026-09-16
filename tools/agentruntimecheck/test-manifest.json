@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "executor_version": "linux-v2-ack-runtime-1",
+  "executor_version": "linux-v2-audit-runtime-1",
   "profiles": [
     {
-      "profile_id": "c3b-runtime-profile-v1",
-      "profile_hash": "2f0def7e3a081916b7aa69285a7a4e8705062713781a4ecc9a71ed3c7b591eae",
+      "profile_id": "c3b-runtime-profile-audit-v1",
+      "profile_hash": "26ba5afbe6ad9f1163cabd042b9245a947cc2398d8fed45c49d7551b51a05890",
       "adapter_id": "bounded-readonly-mechanism-v1"
     },
     {
-      "profile_id": "support-executor-synthetic-v1",
-      "profile_hash": "4a9efdc9a335cd268bf8819f8df2f78f651dcabbcca1d6064de75ebfba9bbb86",
+      "profile_id": "support-executor-synthetic-audit-v1",
+      "profile_hash": "f8c63c37da66a142923d06e81a3772f52c3d4618e169d2e2dde8c501dfe3dafd",
       "adapter_id": "support-fixed-v1"
     }
   ]

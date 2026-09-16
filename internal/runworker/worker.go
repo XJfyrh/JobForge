@@ -16,6 +16,8 @@ var (
 	ErrCleanup = errors.New("executor cleanup unconfirmed")
 	// ErrAuthority indicates irreversible loss of local execution permission.
 	ErrAuthority = errors.New("execution authority lost")
+	// ErrBatchStopped requires a new explicit operational decision before work.
+	ErrBatchStopped = errors.New("audited batch continuation stopped")
 )
 
 // Config is trusted deployment input. Credentials never enter manifest/frames.
@@ -41,7 +43,8 @@ func New(client agentv1.AgentServiceClient, manifest Manifest, config Config) (*
 	w := &Worker{client: client, manifest: manifest, profiles: make(map[string]run.Profile), environments: make(map[string]runexecutor.Environment)}
 	w.manifest.Profiles = slices.Clone(manifest.Profiles)
 	for _, p := range config.Profiles {
-		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != runinput.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) {
+		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != runinput.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
+			p.ValidateAuditPolicy() != nil || !p.AuditEnabled() || p.ExpectedResponseModel != "deepseek-flash" {
 			return nil, run.ErrProfileUnavailable
 		}
 		if _, exists := w.profiles[p.ID]; exists {

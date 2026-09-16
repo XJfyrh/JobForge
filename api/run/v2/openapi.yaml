@@ -406,6 +406,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/calls:
+    get:
+      operationId: getRunCalls
+      summary: Read bounded tenant-scoped call audit once
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: One captured call audit; observed usage is not necessarily priced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunCalls'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      description: No cursor, limit, tenant selector or audit mutations. Reader and operator may query;
+        foreign Run is 404. Complete encoded response is <=256KiB, never truncated.
   /v2/runs/{run_id}/cancel:
     post:
       operationId: cancelRun
@@ -1335,3 +1400,391 @@ components:
       description: Unavailable means available=false and kind/ref=null. Available means kind and ref are
         non-null. awaiting_approval exposes a proposal, never an applied action. References require current
         tenant authorization and are not fetched automatically.
+    ProviderAudit:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - provider
+      - response_complete
+      - http_status
+      - response_sha256
+      - identity_state
+      - response_id
+      - response_model
+      - system_fingerprint
+      - created
+      - usage_evidence
+      - reasoning_state
+      - reasoning_tokens
+      - mode_state
+      - audit_hash
+      properties:
+        schema_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          const: 1
+        provider:
+          type: string
+          enum:
+          - deepseek
+        response_complete:
+          type: boolean
+        http_status:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        response_sha256:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+        identity_state:
+          type: string
+          enum:
+          - compatible
+          - incompatible
+          - invalid
+          - unavailable
+        response_id:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+        response_model:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+        system_fingerprint:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+        created:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+        usage_evidence:
+          type: string
+          enum:
+          - complete
+          - absent
+          - invalid
+          - unavailable
+        reasoning_state:
+          type: string
+          enum:
+          - observed
+          - absent
+          - invalid
+          - unavailable
+        reasoning_tokens:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+        mode_state:
+          type: string
+          enum:
+          - nonthinking
+          - unexpected
+          - invalid
+          - unavailable
+        audit_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      description: ADR-0020 fixed-adapter metadata, never raw response/reasoning/tool text. Nullable identity
+        preserves unavailable values; reasoning absent differs from observed zero. Encoded audit <=2048 bytes.
+    CallUsage:
+      type: object
+      additionalProperties: false
+      required:
+      - input_tokens
+      - output_tokens
+      - cached_input_tokens
+      - receipt_hash
+      - usage_hash
+      properties:
+        input_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        output_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        cached_input_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        receipt_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        usage_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      description: Complete observed counters do not imply compatible pricing. Only settled_usage and usage_known
+        represent known metering. Hashes are exact ADR-0020 metadata.
+    CallBudget:
+      type: object
+      additionalProperties: false
+      required:
+      - input_tokens
+      - output_tokens
+      - total_tokens
+      - cost_microyuan
+      properties:
+        input_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        output_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        total_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    RunCall:
+      type: object
+      additionalProperties: false
+      required:
+      - physical_call_id
+      - step_id
+      - step_kind
+      - attempt_no
+      - ordinal
+      - subcall
+      - parameter_hash
+      - profile_id
+      - profile_hash
+      - price_hash
+      - reserved_at
+      - dispatch_expires_at
+      - call_deadline
+      - observed_at
+      - report_recorded_at
+      - settled_at
+      - reserved
+      - known_tokens
+      - known_cost_microyuan
+      - held_tokens
+      - held_cost_microyuan
+      - usage_known
+      - measurement_anomaly
+      - report_hash
+      - audit_hash
+      - provider_audit
+      - observed_usage
+      - settled_usage
+      - report_conflict
+      - audit_status
+      - transport_outcome
+      - http_status
+      - error_code
+      - business_outcome
+      properties:
+        physical_call_id:
+          type: string
+          format: uuid
+        step_id:
+          type: string
+          format: uuid
+        step_kind:
+          type: string
+          enum:
+          - get_order
+          - get_delivery
+          - search_policy
+          - model_proposal
+          - protocol_correction
+        attempt_no:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        ordinal:
+          type: integer
+          minimum: 1
+          maximum: 44
+        subcall:
+          type: string
+          enum:
+          - get_order
+          - get_delivery
+          - profile_version
+          - profile_tags
+          - query_embedding
+          - search_policy
+          - chat
+        parameter_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        profile_id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          maxLength: 128
+          minLength: 1
+        profile_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        price_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        reserved_at:
+          type: string
+          format: date-time
+        dispatch_expires_at:
+          type: string
+          format: date-time
+        call_deadline:
+          type: string
+          format: date-time
+        observed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        report_recorded_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        settled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        reserved:
+          $ref: '#/components/schemas/CallBudget'
+        known_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        known_cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        held_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        held_cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        usage_known:
+          type: boolean
+        measurement_anomaly:
+          type: boolean
+        report_hash:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+        audit_hash:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+        provider_audit:
+          anyOf:
+          - $ref: '#/components/schemas/ProviderAudit'
+          - type: 'null'
+        observed_usage:
+          anyOf:
+          - $ref: '#/components/schemas/CallUsage'
+          - type: 'null'
+        settled_usage:
+          anyOf:
+          - $ref: '#/components/schemas/CallUsage'
+          - type: 'null'
+        report_conflict:
+          type: boolean
+        audit_status:
+          type: string
+          enum:
+          - legacy_not_collected
+          - not_applicable
+          - missing
+          - recorded
+        transport_outcome:
+          anyOf:
+          - type: string
+            enum:
+            - response
+            - unknown
+          - type: 'null'
+        http_status:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+        error_code:
+          anyOf:
+          - type: string
+          - type: 'null'
+        business_outcome:
+          anyOf:
+          - type: string
+            enum:
+            - accepted
+            - rejected
+            - unknown
+          - type: 'null'
+      description: One authorized physical-call row; observed_usage and settled_usage have different meanings.
+        Missing report never proves the request was not sent. No execution token, worker/session identity,
+        fence or full payload is exposed.
+    RunCalls:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - captured_at
+      - batch_frozen
+      - batch_stop_code
+      - items
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        captured_at:
+          type: string
+          format: date-time
+        batch_frozen:
+          type: boolean
+        batch_stop_code:
+          anyOf:
+          - type: string
+            enum:
+            - MEASUREMENT_ANOMALY
+            - PROVIDER_HTTP_REJECTED
+            - PROVIDER_IDENTITY_INVALID
+            - PROVIDER_MODE_INVALID
+            - CHAT_USAGE_UNKNOWN
+            - REPORT_CONFLICT
+          - type: 'null'
+        items:
+          type: array
+          maxItems: 44
+          items:
+            $ref: '#/components/schemas/RunCall'
+      description: Repeatable-read captured view, ascending unique ordinal, at most 44 rows and encoded response
+        including LF <=256KiB. Late reports may change future captures. Batch reason may be shared but no
+        foreign triggering identifiers are returned.

@@ -541,10 +541,15 @@ class _FakeCoordinator:
             "emitted_mono_ms": 1000,
             "call_sequence": report["call_sequence"],
             "physical_call_id": CALL_ID,
-            "usage_hash": report["usage"]["usage_hash"],
-            "settlement": "anomaly"
-            if report["usage"]["output_tokens"] > 1024
-            else "settled",
+            "report_hash": report["report_hash"],
+            "settlement": (
+                "recorded"
+                if report["usage"] is None
+                or report["provider_audit"]["identity_state"] != "compatible"
+                else "anomaly"
+                if report["usage"]["output_tokens"] > 1024
+                else "settled"
+            ),
         }
 
 
@@ -620,8 +625,7 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
             adapter = DeepSeekChat(dispatcher)
 
             def validate(proposal: dict[str, Any]) -> str:
-                if scenario != "unknown_usage":
-                    assert len(dispatcher.recorded_usage()) == 1
+                assert len(dispatcher.recorded_usage()) == 1
                 if scenario == "schema_rejection":
                     raise ValueError("sensitive-test-sentinel")
                 if proposal != {"answer": "synthetic"}:
@@ -629,7 +633,7 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
                 return "accepted synthetic proposal"
 
             try:
-                if scenario in {"valid", "unknown_usage"}:
+                if scenario == "valid":
                     assert (
                         await adapter.propose(
                             MESSAGES, context=CONTEXT, validate_proposal=validate
@@ -651,8 +655,6 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
                         "bad_content",
                         "schema_rejection",
                         "finish_length",
-                        "http429",
-                        "http503",
                     }:
                         # C1 blocks further calls after a confirmed rejection,
                         # while preserving the error step_result path.
@@ -665,16 +667,15 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
                 assert server.requests[0].body == expected.body
                 assert hooks.intents[0]["parameter_hash"] == expected.parameter_hash
                 assert server.requests[0].path == CHAT_PATH
-                if scenario in {
-                    "unknown_usage",
-                    "wrong_identity",
-                    "http429",
-                    "http503",
-                }:
-                    assert not dispatcher.recorded_usage() and not hooks.reports
-                    assert not dispatcher.recorded_audit()
+                assert len(dispatcher.recorded_usage()) == len(hooks.reports) == 1
+                captured_audit = hooks.reports[0]["provider_audit"]
+                assert (
+                    captured_audit["response_sha256"]
+                    == hashlib.sha256(_wire(value)).hexdigest()
+                )
+                if scenario in {"unknown_usage", "http429", "http503"}:
+                    assert hooks.reports[0]["usage"] is None
                 else:
-                    assert len(dispatcher.recorded_usage()) == len(hooks.reports) == 1
                     expected_output = 1025 if scenario == "overrun" else 5
                     assert hooks.reports[0]["usage"]["output_tokens"] == expected_output
                     audit = dispatcher.recorded_audit()[0]
@@ -682,9 +683,12 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
                     assert (
                         audit.receipt_hash == hooks.reports[0]["usage"]["receipt_hash"]
                     )
-                    assert json.loads(audit.provider_identity)["model"] == MODEL
                     assert (
-                        json.loads(audit.provider_identity)["sha256"]
+                        json.loads(audit.provider_identity)["response_model"]
+                        == value["model"]
+                    )
+                    assert (
+                        json.loads(audit.provider_identity)["response_sha256"]
                         == hashlib.sha256(_wire(value)).hexdigest()
                     )
                     assert audit.reasoning_tokens == (
@@ -700,15 +704,12 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
                     "overrun",
                     "bad_choices",
                     "reasoning_enabled",
+                    "unknown_usage",
+                    "http429",
+                    "http503",
                 }:
                     assert not hooks.observations
-                if scenario.startswith("http"):
-                    assert hooks.observations[0]["transport_outcome"] == "response"
-                    assert hooks.observations[0]["business_outcome"] == "rejected"
-                    assert hooks.observations[0]["usage_disposition"] == "unknown"
-                if scenario == "unknown_usage":
-                    assert hooks.observations[0]["usage_disposition"] == "unknown"
-                if scenario not in {"valid", "unknown_usage"}:
+                if scenario != "valid":
                     with pytest.raises(DispatchError):
                         await adapter.propose(
                             MESSAGES, context=CONTEXT, validate_proposal=validate

@@ -87,6 +87,10 @@ func assertRunMigrationTables(ctx context.Context, t *testing.T, pool *pgxpool.P
 
 func downRunMigration(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
+	auditDown, err := migrations.FS.ReadFile("0024_provider_audit_report.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
 	content, err := migrations.FS.ReadFile("0023_create_agent_runs.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -96,10 +100,13 @@ func downRunMigration(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err = tx.Exec(ctx, string(auditDown)); err != nil {
+		t.Fatalf("0024 down migration before 0023: %v", err)
+	}
 	if _, err = tx.Exec(ctx, string(content)); err != nil {
 		t.Fatalf("0023 down migration: %v", err)
 	}
-	if _, err = tx.Exec(ctx, "delete from schema_migrations where version=23"); err != nil {
+	if _, err = tx.Exec(ctx, "delete from schema_migrations where version in (23,24)"); err != nil {
 		t.Fatal(err)
 	}
 	if err = tx.Commit(ctx); err != nil {

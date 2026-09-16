@@ -1,0 +1,1275 @@
+{
+  "binding_vectors": [
+    {
+      "binding": {
+        "attempt_no": 2,
+        "cursor_version": 4,
+        "fencing_token": 3,
+        "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "profile_id": "audit-profile-v1",
+        "run_id": "11111111-1111-4111-8111-111111111111",
+        "session_id": "22222222-2222-4222-8222-222222222222",
+        "snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "snapshot_id": "44444444-4444-4444-8444-444444444444",
+        "step_id": "33333333-3333-4333-8333-333333333333",
+        "step_kind": "model_proposal",
+        "step_sequence": 5,
+        "tenant_id": "tenant-a",
+        "worker_id": "worker-a"
+      },
+      "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+      "name": "original-reservation"
+    }
+  ],
+  "budget": {
+    "input_tokens": 100,
+    "output_tokens": 20,
+    "total_tokens": 120,
+    "cost_microyuan": 92
+  },
+  "invalid_audits": [
+    {
+      "name": "missing-nullable",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "duplicate-key",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "unknown-key",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"extra\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "scalar-null",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":null,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "integer-string",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":\"0\",\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "fractional-number",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0.0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "exponent-number",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0e0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "boolean-number",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":false,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "reasoning-integer-string",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":\"0\",\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "reasoning-boolean",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":false,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "trailing-json",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}{}"
+    },
+    {
+      "name": "unpaired-surrogate",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"\\ud800\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "oversize-raw",
+      "raw": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      {\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}"
+    },
+    {
+      "name": "invalid-utf8",
+      "raw_base64": "eyJzY2hlbWFfdmVyc2lvbiI6MSwicHJvdmlkZXIiOiJkZWVwc2VlayIsInJlc3BvbnNlX2NvbXBsZXRlIjp0cnVlLCJodHRwX3N0YXR1cyI6MjAwLCJyZXNwb25zZV9zaGEyNTYiOiJlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlIiwiaWRlbnRpdHlfc3RhdGUiOiJjb21wYXRpYmxlIiwicmVzcG9uc2VfaWQiOiL/IiwicmVzcG9uc2VfbW9kZWwiOiJkZWVwc2Vlay1mbGFzaCIsInN5c3RlbV9maW5nZXJwcmludCI6InN5bnRoZXRpYy1mcC0xIiwiY3JlYXRlZCI6MCwidXNhZ2VfZXZpZGVuY2UiOiJjb21wbGV0ZSIsInJlYXNvbmluZ19zdGF0ZSI6ImFic2VudCIsInJlYXNvbmluZ190b2tlbnMiOm51bGwsIm1vZGVfc3RhdGUiOiJub250aGlua2luZyIsImF1ZGl0X2hhc2giOiJiNGQ0NWM4NWY1ZmZjM2I4ODBlNGI1MmNhZWUzZTAxMzE2Nzg1Mjk5ZmExYTIwMjVmYjQwYzljMGJlY2JmMGUzIn0="
+    },
+    {
+      "name": "missing-created-identity",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":null,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"6a29142bb1fd554b63458ccf1d5a201a2003872f6bb3bcf692a4ba6818630b5a\"}"
+    },
+    {
+      "name": "empty-identifier",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"9c48b0e0c2b7707e34de7b464adc5fe64eb9735d71dee92880fa219f7809f7cd\"}"
+    },
+    {
+      "name": "overlong-identifier",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"bf4a0ba46e1a6e35d8896a04d0b959a26169d17cdce09eb5c9b6725b7b651e11\"}"
+    },
+    {
+      "name": "unsafe-created",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":9007199254740992,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"daae11f3db73b37684c25c992fc08ffc5aab62f008135a132c4392e6f949a18b\"}"
+    },
+    {
+      "name": "negative-created",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":-1,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"3e8109242234929835cf2bc262749120fbc1d9b70117f4e8dd5655ffcc60564f\"}"
+    },
+    {
+      "name": "uppercase-response-hash",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"7687f702bb85469203a5fd532de755cb867eab6f063fc712869edba3ca0593ff\"}"
+    },
+    {
+      "name": "unknown-enum",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"COMPATIBLE\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"713214d8448848333b7bd2c4c16abd271d47a104e7fafc4056a3b73048f3ec3b\"}"
+    },
+    {
+      "name": "wrong-provider",
+      "raw": "{\"schema_version\":1,\"provider\":\"other\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"ebc2ea461e00a5a1f9a3ab742281436ff84e0f4a13bdb95bd086812233f77966\"}"
+    },
+    {
+      "name": "wrong-version",
+      "raw": "{\"schema_version\":2,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"7475cee0aeefb076bc9db9e331ab59ed651740171d8eb87d808d156175f8bcc6\"}"
+    },
+    {
+      "name": "complete-with-zero-http-status",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":0,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"c8e1d031cc3fb3d7ce305069e1420dda2ed0f58a9a57a8b0fc00b87c9030edaf\"}"
+    },
+    {
+      "name": "complete-with-invalid-http-status",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":600,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"46ae154521102594b77f4c738584f9631710830ec246b4931ec7b963a02e2ed8\"}"
+    },
+    {
+      "name": "complete-with-null-body-hash",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":null,\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"9c6499b9a9ac5d5526e9ce7a7d3020c22caa2d70aa0f112f8fc7adb84faca9ad\"}"
+    },
+    {
+      "name": "complete200-with-unavailable-identity",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"unavailable\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"f5e954dea818a27560c0b88e231329369c8c0778d06a9b605d77e62c8e4cc5e5\"}"
+    },
+    {
+      "name": "incomplete-with-http-status",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":false,\"http_status\":200,\"response_sha256\":null,\"identity_state\":\"unavailable\",\"response_id\":null,\"response_model\":null,\"system_fingerprint\":null,\"created\":null,\"usage_evidence\":\"unavailable\",\"reasoning_state\":\"unavailable\",\"reasoning_tokens\":null,\"mode_state\":\"unavailable\",\"audit_hash\":\"04426e9326cef80c5f4e9cb14c6c48733c2fd78065195eea34ecee6204f6c39a\"}"
+    },
+    {
+      "name": "non200-with-identity",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":429,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"5e72bd8b63c522c42b7225b57f8dd325e3d57985c53dad9fcbdd592671ef6c22\"}"
+    },
+    {
+      "name": "observed-null",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"observed\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"070b12698ea863104fc03dade98d64a1314694f4b8771693715838648e126484\"}"
+    },
+    {
+      "name": "absent-zero",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":0,\"mode_state\":\"nonthinking\",\"audit_hash\":\"f348e49ffa11ff8a470886bd7729650cc2920a1f85e087ad973a3c7ad77475ec\"}"
+    },
+    {
+      "name": "positive-nonthinking",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"observed\",\"reasoning_tokens\":1,\"mode_state\":\"nonthinking\",\"audit_hash\":\"9bd22a4368b002c39a4528284ff57ae8b26066cca4abf07cc378206912cfe512\"}"
+    },
+    {
+      "name": "invalid-reasoning-with-complete-usage",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"invalid\",\"reasoning_tokens\":null,\"mode_state\":\"invalid\",\"audit_hash\":\"a21919aa4570886374cee51e58589636001ae008856e01daf42195412433bb87\"}"
+    },
+    {
+      "name": "isolated-reasoning",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"invalid\",\"reasoning_state\":\"observed\",\"reasoning_tokens\":0,\"mode_state\":\"unavailable\",\"audit_hash\":\"b74ad89c1b87202706cf840d6a68bdc9d7bbeaf996d0146433424765be7ce733\"}"
+    },
+    {
+      "name": "wrong-audit-hash",
+      "raw": "{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\"}"
+    }
+  ],
+  "invalid_reports": [
+    {
+      "name": "wrong-receipt",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"usage_hash\":\"1cfabf95d1e6227e3410d180ea33111c8f0d2552c0dd87f27c76924ff3ff160d\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "dfda4131de64724010410227ce8753c6dbf38e8c77b2137b88fd0a22452d992a"
+    },
+    {
+      "name": "wrong-usage-hash",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "c81bf061ffea7a29af5d097d186375758f7c1a2c5bb987a0b555401a1be5f74a"
+    },
+    {
+      "name": "complete-with-null-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":null,\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "e295099b1f0c189ae2ab42d70d8eb936a47f986a9a53f94a333d8c7a1bf4e4cf"
+    },
+    {
+      "name": "chat-with-null-audit",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":null}",
+      "report_hash": "569ad86c72da68f4e23a5f1c668ea3ff36245fa8470732c60f1f761e8e69b1ed"
+    },
+    {
+      "name": "unsafe-complete-total",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":9007199254740991,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"fc67d4659987c6e7fce69a0010b27d2045812dd68b3a3ade4ddcadb668f9098d\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "0c7bc3611c27456c0d4ad32cbaff1d7eaaa9289a44b1cf079b8a9dceef43e115"
+    },
+    {
+      "name": "reasoning-over-completion",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"observed\",\"reasoning_tokens\":3,\"mode_state\":\"unexpected\",\"audit_hash\":\"0ec793fa735ecf2d32e027256b273ae9ec25a30cbd798271cc55f7ce6ff01a6c\"}}",
+      "report_hash": "767311f0dfcd67900d16096079a5181d541677942dee59f78750b1cb06944db0"
+    },
+    {
+      "name": "unknown-with-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"absent\",\"reasoning_state\":\"unavailable\",\"reasoning_tokens\":null,\"mode_state\":\"unavailable\",\"audit_hash\":\"c47f57ba479f9fc535a6f8ee99c09c2feb7931dc4a5c10e01a1036e9ba1ec437\"}}",
+      "report_hash": "45ac4ca669081915468c0c7859adeee9555a5a3019eaa2163be619b73761ca10"
+    },
+    {
+      "name": "wrong-report-hash",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    },
+    {
+      "name": "wrong-execution-binding",
+      "binding": {
+        "execution_binding_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    },
+    {
+      "name": "wrong-parameter-binding",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    },
+    {
+      "name": "wrong-physical-call",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "66666666-6666-4666-8666-666666666666",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    },
+    {
+      "name": "wrong-expected-model",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "other-model"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    },
+    {
+      "name": "nonchat-with-audit",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "query_embedding",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    },
+    {
+      "name": "free-call-with-report",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "get_order",
+        "expected_response_model": "deepseek-flash"
+      },
+      "raw": "{\"usage\":{\"input_tokens\":10,\"output_tokens\":2,\"cached_input_tokens\":4,\"receipt_hash\":\"16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c\",\"usage_hash\":\"feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc\"},\"provider_audit\":{\"schema_version\":1,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3\"}}",
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d"
+    }
+  ],
+  "observations": [
+    {
+      "name": "accepted",
+      "physical_call_id": "55555555-5555-4555-8555-555555555555",
+      "transport_outcome": "response",
+      "http_status": 200,
+      "error_code": "",
+      "business_outcome": "accepted",
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "cached_input_tokens": 4,
+        "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+        "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+      },
+      "audit_hash": "b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3",
+      "observation_hash": "e0c72308dfba1f9dae7ef39367b77b72122a9de13b0b9d79f913bc45345ae8e0"
+    },
+    {
+      "name": "schema-rejected",
+      "physical_call_id": "55555555-5555-4555-8555-555555555555",
+      "transport_outcome": "response",
+      "http_status": 200,
+      "error_code": "MODEL_PROTOCOL_ERROR",
+      "business_outcome": "rejected",
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "cached_input_tokens": 4,
+        "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+        "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+      },
+      "audit_hash": "b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3",
+      "observation_hash": "c4c93010f2e8fcd005cddc4e1ac949a71b58d20c8536dea9b31c6769a6cd8a84"
+    },
+    {
+      "name": "unknown-chat",
+      "physical_call_id": "55555555-5555-4555-8555-555555555555",
+      "transport_outcome": "unknown",
+      "http_status": 0,
+      "error_code": "TIMEOUT",
+      "business_outcome": "unknown",
+      "usage": null,
+      "audit_hash": "51244defa351cb2954efaed33bff1a3de3620ebc7cddbb2cc4c9f81f4c1f273c",
+      "observation_hash": "8ee57f9a17bd6fab9a125f55b44645e3e49ae9d01c413be2ed7dccfea2cd2118"
+    },
+    {
+      "name": "free-response",
+      "physical_call_id": "55555555-5555-4555-8555-555555555555",
+      "transport_outcome": "response",
+      "http_status": 200,
+      "error_code": "",
+      "business_outcome": "accepted",
+      "usage": null,
+      "audit_hash": "",
+      "observation_hash": "2ff0968eda7cfc52e930756d43879ab503ad581e8b9e6d8ffad03725077ec33c"
+    }
+  ],
+  "price": {
+    "hash": "",
+    "denominator": 10,
+    "input_miss_microyuan": 7,
+    "input_hit_microyuan": 2,
+    "output_microyuan": 11
+  },
+  "schema_version": 1,
+  "valid_reports": [
+    {
+      "name": "reasoning-absent",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "nonthinking",
+          "audit_hash": "b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3"
+        }
+      },
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": ""
+      }
+    },
+    {
+      "name": "business-schema-rejected-metering-unchanged",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "nonthinking",
+          "audit_hash": "b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3"
+        }
+      },
+      "report_hash": "74c6204e089238f4b332a7bbf25da8b4f577c60a30ea28407a0d8698c7dd928d",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": ""
+      }
+    },
+    {
+      "name": "reasoning-explicit-zero",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "observed",
+          "reasoning_tokens": 0,
+          "mode_state": "nonthinking",
+          "audit_hash": "1a8d37c2362d398acd6535aa50fdf1d4d4f8d176dc73bbbd9a25070999ba305f"
+        }
+      },
+      "report_hash": "beca7a8d9b56a516a901337f50ae9951f70be32e63a136eea0318d59be23d215",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": ""
+      }
+    },
+    {
+      "name": "reasoning-positive",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "observed",
+          "reasoning_tokens": 2,
+          "mode_state": "unexpected",
+          "audit_hash": "dd7e7f6aaef901e762168d279cf41a04851bf85cc34bee07b82cb2a0e863ddeb"
+        }
+      },
+      "report_hash": "317a456ff9818e5d6f1844eb0799f53a6d1f19fb4a10b5de8913a5d17355320b",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": "PROVIDER_MODE_INVALID"
+      }
+    },
+    {
+      "name": "unexpected-thinking-or-tools",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "unexpected",
+          "audit_hash": "6b4b546cbefdb079087790e58944f04977a86b7dba99b5c704528aa8c9c6b6db"
+        }
+      },
+      "report_hash": "64bae5908f683d03c31effeb2c95ac16a745da964d876a39e7e69a7a09ec0017",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": "PROVIDER_MODE_INVALID"
+      }
+    },
+    {
+      "name": "invalid-choice-complete-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "feb54145ee5d46899a0ef598e24ae6fe6aa51b2fc72ce2f1bb3bb610ff751dcc"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "invalid",
+          "audit_hash": "f32fdd7ba1a475f4b439036b4e4014dbf4eeaa8de674b14373a0739690fa59a1"
+        }
+      },
+      "report_hash": "087c84c1c583878694dd19548f07e46701338924d2b6534b60ebd8491b619cdd",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 12,
+        "known_cost_microyuan": 8,
+        "settlement": "settled",
+        "batch_stop_code": "PROVIDER_MODE_INVALID"
+      }
+    },
+    {
+      "name": "incompatible-complete-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "58e8362d610de7dadabe3cad5cee335ad0c816964965d5d981c23db9057e5ce5",
+          "usage_hash": "c278bf6eca5b67214523d7fdc137af5cbcd7924ba3bfa6d3882d86a0ee213214"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "incompatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "other-model",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "nonthinking",
+          "audit_hash": "d933eff456df5709d362c1792769ac8758dbb48dfcda87a6ff9439d0cbecd50a"
+        }
+      },
+      "report_hash": "c98c621c9e690b95c1f550b9e21a2a0d6b644ad351c216cc88dc253aeef45379",
+      "receipt_hash": "58e8362d610de7dadabe3cad5cee335ad0c816964965d5d981c23db9057e5ce5",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_IDENTITY_INVALID"
+      }
+    },
+    {
+      "name": "incompatible-token-anomaly",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 101,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "58e8362d610de7dadabe3cad5cee335ad0c816964965d5d981c23db9057e5ce5",
+          "usage_hash": "02034055cde5771173502f6c6be03a61556d54eb13f7a41464f59020daa01e21"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "incompatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "other-model",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "nonthinking",
+          "audit_hash": "d933eff456df5709d362c1792769ac8758dbb48dfcda87a6ff9439d0cbecd50a"
+        }
+      },
+      "report_hash": "d2db76eb9ea71a7dff179d630c50976e1d325c8dbde120a391d956715a010690",
+      "receipt_hash": "58e8362d610de7dadabe3cad5cee335ad0c816964965d5d981c23db9057e5ce5",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": true,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "anomaly",
+        "batch_stop_code": "MEASUREMENT_ANOMALY"
+      }
+    },
+    {
+      "name": "compatible-token-anomaly",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 101,
+          "output_tokens": 2,
+          "cached_input_tokens": 4,
+          "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+          "usage_hash": "e5997965ee30a789d151b04231455803bc419029336ccb53f8583d3d8291481e"
+        },
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "complete",
+          "reasoning_state": "absent",
+          "reasoning_tokens": null,
+          "mode_state": "nonthinking",
+          "audit_hash": "b4d45c85f5ffc3b880e4b52caee3e01316785299fa1a2025fb40c9c0becbf0e3"
+        }
+      },
+      "report_hash": "90dce0bd7a7041ddec8d0e042a19c6b6c489db78f40d99fcbf9242a3d24d4148",
+      "receipt_hash": "16375a5e82077d0de9a11e72756567243bc4d12c504b00355aea7721a2a34a5c",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": true,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "anomaly",
+        "batch_stop_code": "MEASUREMENT_ANOMALY"
+      }
+    },
+    {
+      "name": "invalid-partial-identity",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "invalid",
+          "response_id": null,
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "unavailable",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "de7d8d1238226ed3efbed84aec612ccf88440f46f1aca93681153f6f2e2f411e"
+        }
+      },
+      "report_hash": "c3b1e7ea0f20fd187f92dfe56c9f5e0b3b10208fa23a805ab30de12038a55d9c",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_IDENTITY_INVALID"
+      }
+    },
+    {
+      "name": "invalid-identity-with-absent-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "invalid",
+          "response_id": null,
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "absent",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "7f1ee9a2c4ab754da827b6f314fb4ca588951a229875fa53062f97037ed32a44"
+        }
+      },
+      "report_hash": "1a01b55093d026fb5a0846eacfc1c8ff08dfef404b374b4ad933f0899a54dc17",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_IDENTITY_INVALID"
+      }
+    },
+    {
+      "name": "invalid-identity-with-invalid-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "invalid",
+          "response_id": null,
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "invalid",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "4c32a4b70c40f3980369c24f9cc78f0fa1ef3f406fe5095109ce392399115bf5"
+        }
+      },
+      "report_hash": "38c1be0541e05563805cc1274c5e50331286e3ef1ef2fa883e25b5e4e922ebd3",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_IDENTITY_INVALID"
+      }
+    },
+    {
+      "name": "invalid-identity-with-invalid-reasoning",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "invalid",
+          "response_id": null,
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "unavailable",
+          "reasoning_state": "invalid",
+          "reasoning_tokens": null,
+          "mode_state": "invalid",
+          "audit_hash": "c761a7900d758249985d000575b524492f41268107500497a5c01fa50b71bec6"
+        }
+      },
+      "report_hash": "e3722b197f3f28c11dfa7f5c780b1ae6852b38f8fd4450a2d35ba45ac162ccf9",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_IDENTITY_INVALID"
+      }
+    },
+    {
+      "name": "reasoning-invalid",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "invalid",
+          "reasoning_state": "invalid",
+          "reasoning_tokens": null,
+          "mode_state": "invalid",
+          "audit_hash": "02e08ac8ed1e914e7f0e7b14b30c584051a5c6a6eb4be5a1a4a740fc64b9debf"
+        }
+      },
+      "report_hash": "f287109ea85c82cfd6244b46c45eb8b44030c36727e45bc6d93913205627f1ca",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_MODE_INVALID"
+      }
+    },
+    {
+      "name": "usage-absent",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "absent",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "c47f57ba479f9fc535a6f8ee99c09c2feb7931dc4a5c10e01a1036e9ba1ec437"
+        }
+      },
+      "report_hash": "9f3b484ac1a935da48f2f82be647e453eaa0576ad3bb9485b755080329dfe3ef",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "CHAT_USAGE_UNKNOWN"
+      }
+    },
+    {
+      "name": "usage-invalid",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "invalid",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "03a74e5967fb761e0eb1a4720eb4e7d9ceaac5f6427bc0ae8f3431d04adb7c0c"
+        }
+      },
+      "report_hash": "f146d944210ebf4cf8203a98da605b6534d7037ca941fba13b33347f891378c3",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "CHAT_USAGE_UNKNOWN"
+      }
+    },
+    {
+      "name": "complete-identity-unavailable-usage",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response-1",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fp-1",
+          "created": 0,
+          "usage_evidence": "unavailable",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "6195ee9b8a8ac2d113c59941ba00ec9b8969f0ac54d25cda82b403ca17527fc1"
+        }
+      },
+      "report_hash": "15bb6737017ed3ce1af4e43438a9c0cf5a440509cc40c59d46c3a57a6976d62e",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "CHAT_USAGE_UNKNOWN"
+      }
+    },
+    {
+      "name": "incomplete-response",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": false,
+          "http_status": 0,
+          "response_sha256": null,
+          "identity_state": "unavailable",
+          "response_id": null,
+          "response_model": null,
+          "system_fingerprint": null,
+          "created": null,
+          "usage_evidence": "unavailable",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "51244defa351cb2954efaed33bff1a3de3620ebc7cddbb2cc4c9f81f4c1f273c"
+        }
+      },
+      "report_hash": "a5a8cab6d8914dbbea3202acc0ae55ce2b0a07a41428296276ab708cffd17f53",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "CHAT_USAGE_UNKNOWN"
+      }
+    },
+    {
+      "name": "complete-http-rejected",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "chat",
+        "expected_response_model": "deepseek-flash"
+      },
+      "report": {
+        "usage": null,
+        "provider_audit": {
+          "schema_version": 1,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 429,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "unavailable",
+          "response_id": null,
+          "response_model": null,
+          "system_fingerprint": null,
+          "created": null,
+          "usage_evidence": "unavailable",
+          "reasoning_state": "unavailable",
+          "reasoning_tokens": null,
+          "mode_state": "unavailable",
+          "audit_hash": "95645b553fede3556d750578b56baafd7be564945ef621d321514c929ad1a033"
+        }
+      },
+      "report_hash": "8a384d9e719d8c0128dc6526ae88851e315a52b3c893a1d3e34f78165d209892",
+      "receipt_hash": "",
+      "disposition": {
+        "price_eligible": false,
+        "measurement_anomaly": false,
+        "usage_known": false,
+        "known_tokens": 0,
+        "known_cost_microyuan": 0,
+        "settlement": "recorded",
+        "batch_stop_code": "PROVIDER_HTTP_REJECTED"
+      }
+    },
+    {
+      "name": "embedding-no-provider-audit",
+      "binding": {
+        "execution_binding_hash": "63e05721d436671f6685a53089ae19c988befc4a5ffbcd827d2d4c5df8ea46ca",
+        "physical_call_id": "55555555-5555-4555-8555-555555555555",
+        "parameter_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "subcall": "query_embedding",
+        "expected_response_model": ""
+      },
+      "report": {
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "receipt_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "usage_hash": "7d96d1056c1f4e19a977c539b3c766f7689c4cb01687fedff3646b6f4b55de04"
+        },
+        "provider_audit": null
+      },
+      "report_hash": "62b90dbf7c0b82769fbf4c5cc3e134afc092000873aa770cca7e6c8326324d8b",
+      "receipt_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "disposition": {
+        "price_eligible": true,
+        "measurement_anomaly": false,
+        "usage_known": true,
+        "known_tokens": 10,
+        "known_cost_microyuan": 0,
+        "settlement": "settled",
+        "batch_stop_code": ""
+      }
+    }
+  ]
+}

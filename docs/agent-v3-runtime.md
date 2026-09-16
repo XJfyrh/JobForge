@@ -2,7 +2,7 @@
 
 S1-C3b 实现 [PRD v0.11](product/JobForge_PRD_v0.11.md) / [ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md) 的正式进程接缝：Go Worker、严格 checkpoint 投影、固定 Python guardian/step、独立普通与计量管道，以及真实控制 PostgreSQL/gRPC 的机制测试。逐项运行结果见 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)，阶段状态见 [实施记录](agent-v3-progress.md)。本文中的复现命令不等于该层检查已通过。
 
-**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。默认部署仍不启用收费 profile/manifest，供应商持久审计按 ADR-0020 另行实现后才能运行首批云端验收。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 整体及 S2～S5 仍未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。当前运行时加入 ADR-0020 的[供应商持久报告与批次停止](agent-v3-provider-audit.md)，默认部署仍不启用收费 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 整体及 S2～S5 仍未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
 
 ## 执行权与组件
 
@@ -18,13 +18,13 @@ flowchart LR
 
 PostgreSQL 仍是唯一事实源；Go 独占 Worker session、Run lease、心跳和控制 RPC。`internal/runworker` 持有原 v2 Conversation，`internal/runexecutor` 只管理固定进程和 I/O，不解释调度、预算或下一游标。Python 只执行当前登记单步，不 Claim、不续租、不重试 Run，也没有任务队列。交付仍为 at-least-once，外部副作用仍须业务幂等。
 
-Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 均须为 `linux-v2-ack-runtime-1`；控制面在登记及后续 session 校验中拒绝混合版本。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
+Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 均须为 `linux-v2-audit-runtime-1`；控制面在登记及后续 session 校验中拒绝混合版本。全部执行 profile 还须有固定审计 policy 和 expected model。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
 
 5s Heartbeat 与普通控制 RPC/管道独立运行。RPC 均有截止，普通控制请求最多 2s；20ms 本地 watchdog 独立检查 Linux `CLOCK_BOOTTIME`。Register/Claim/Heartbeat 用 RPC 发起单调时间和服务端锁后观测时间保守映射 session/lease/attempt/Run 截止，扣除整个往返等待；迟到回调不能恢复已失效的旧执行权。Heartbeat 可更新 lease/session，不能延长固定 attempt/Run 或已经授予的物理调用期限。Windows 原生不支持分支测试不能替代同一 Linux 容器验收。
 
 ## 输入、部署与秘密
 
-`execute_step.input` 恰有 `schema_version/executor_version/adapter_id/tool_invocation_id`。工具 invocation UUID 来自 Go 已确认的 BeginTool；其他步骤为空串。没有请求者提供的命令、模块、文件路径、endpoint、query/messages 或秘密。
+`execute_step.input` 恰有 `schema_version/executor_version/adapter_id/tool_invocation_id/expected_response_model/provider_audit_policy`。工具 invocation UUID 来自 Go 已确认的 BeginTool；其他步骤为空串。model 和 policy 来自已验证的不可变 profile。没有请求者提供的命令、模块、文件路径、endpoint、query/messages 或秘密。
 
 [运行输入源合同](../api/executor/v2/runtime-input.md)和 [schema](../api/executor/v2/runtime-input.schema.json)沿用 RPC 字段名，将 JSON bytes 投影为对象。Go 使用现有领域 canonicalizer 验证 accepted 结果、CommitHash、NextInputHash 全链、序号、资源和 result_ref；最新资源还须与原 Claim 一致。Python 验证形状与字符串链，不重新实现任意 decimal 规范化。原 JSON 与最终编码大小分别校验，超限不裁剪历史。
 
@@ -44,7 +44,7 @@ Go/Python 只读固定 `/etc/jobforge/executor.json`：顶层恰有 `schema_vers
 
 ## ACK、退出与 Commit 屏障
 
-每次物理 HTTP 必须先获得新持久许可；重复或不确定 Reserve ACK 不允许发送。发送后，免费、unknown 和最后一次调用也必须等待 ObserveCall 的明确持久确认及匹配 `call_observation_ack`。reported usage 还需同调用/同 hash 的 settled 确认。两条 FD 可以反序到达，原 Conversation 汇合确认；管道 write、flush 或 SettleUsage 都不能替代 ObserveCall。
+每次物理 HTTP 必须先获得新持久许可；重复或不确定 Reserve ACK 不允许发送。正常继续前，免费、非 chat unknown 和最后一次调用也必须等待 ObserveCall 的明确持久确认及匹配 `call_observation_ack`。reported usage 还需同调用/同 report hash 的 settled 确认；chat 的 report/receipt/audit/usage 全部匹配。两条 FD 可以反序到达，原 Conversation 汇合确认；管道 write、flush 或 SettleUsage 都不能替代 ObserveCall。chat unknown、身份/模式不兼容或 report 冲突停止普通执行并持久停批，recorded 不是继续许可。
 
 Python finalizer 复用 dispatcher 的原 Conversation，只写一次标准 step_result 后退出，不等待 Commit ACK。Go 只有在合法结果与完整确认链、当前执行权、实际 Wait、普通 EOF、计量 EOF、reader/writer Join、stderr ≤8KiB、旧组完全消失且无尾随协议错误全部成立时才 Commit。Commit ACK 不确定时，只对原身份/hash有界查询 GetAcceptedCommit；即使找到匹配回执，也不伪造下一游标或重发业务步骤，后续由新 Claim/GetCheckpoint 收敛。
 
@@ -104,7 +104,7 @@ docker run --rm --init --network none jobforge-agent-runtime:integration /app/wo
 docker run --rm --init -e 'JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1' -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
 ```
 
-`worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 的默认命令执行已用 race 编译的 `TestRunExecutor` 和 `TestRunSupportExecutor` 集成测试。后者经正式 support adapter 验证完整方案和一次纠正，固定回环模型仍是合成响应，不能当真实 DeepSeek 结果。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
+`worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 默认执行已用 race 编译的 `TestRunExecutor`、`TestRunSupportExecutor` 和 `TestRunProviderAuditExecutor`。support 场景经正式 adapter 验证完整方案和一次纠正；审计场景在真实 PG/gRPC/FD 中验证提交前数据库锁阻塞、提交后 ACK 丢失、停批和第二次纠正终态。固定回环模型仍是合成响应，不能当真实 DeepSeek 结果。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
 
 仅 integration target 在构建时运行 [test_install.py](../tools/agentruntimecheck/test_install.py)，将固定测试 registry 和固定 loopback 供应商 origin 安装到该测试镜像。它没有运行时 URL/模块开关，也不进入生产 Dockerfile。合成服务的调用计数用于检查“未确认时后续 HTTP 为 0”等执行机制，不能记作实际供应商调用。
 

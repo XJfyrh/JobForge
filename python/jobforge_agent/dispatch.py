@@ -25,7 +25,13 @@ from jobforge_agent.protocol_v2 import (
     Frame,
     ProtocolError,
     encode,
+    report_hash,
     usage_hash,
+)
+from jobforge_agent.provider_audit import (
+    CallReport,
+    ProviderAudit,
+    capture_chat_report,
 )
 
 EndpointAlias = Literal["business", "ollama", "deepseek"]
@@ -126,6 +132,7 @@ class ConfirmedObservation:
     error_code: str
     usage_disposition: str
     usage_hash: str | None
+    audit_hash: str | None
     observation_hash: str
     ack_emitted_mono_ms: int
 
@@ -282,6 +289,8 @@ class AuthorizedDispatcher:
         hooks: DispatchHooks,
         endpoints: Mapping[EndpointAlias, Endpoint],
         clock: Callable[[], int] = boottime_ms,
+        expected_response_model: str = "deepseek-flash",
+        provider_audit_policy: str = "deepseek-audit-v1",
     ) -> None:
         """Bind the original frame without an unauthorised fallback path."""
         if hooks is None or any(
@@ -290,6 +299,12 @@ class AuthorizedDispatcher:
         ):
             raise DispatchError("INPUT_INVALID")
         self._clock = clock
+        if (
+            expected_response_model != "deepseek-flash"
+            or provider_audit_policy != "deepseek-audit-v1"
+        ):
+            raise DispatchError("PROFILE_UNAVAILABLE")
+        self._expected_response_model = expected_response_model
         self._last_now = -1
         self._conversation = Conversation()
         self._start = copy.deepcopy(execute_step)
@@ -347,11 +362,11 @@ class AuthorizedDispatcher:
         self._stopped.set()
 
     def recorded_usage(self) -> tuple[Frame, ...]:
-        """Copy bounded already-complete reports, including after cancellation."""
+        """Copy frozen usage/audit reports, including audit-only stopped calls."""
         return tuple(copy.deepcopy(self._reports))
 
     def recorded_audit(self) -> tuple[CapturedUsageAudit, ...]:
-        """Read immutable identity/count audit facts beside the captured reports."""
+        """Read bounded audit metadata; only report ACKs can confirm persistence."""
         return tuple(self._audits)
 
     def last_confirmed_observation(self) -> ConfirmedObservation | None:
@@ -518,7 +533,9 @@ class AuthorizedDispatcher:
             physical_call_id=permit["physical_call_id"],
             parameter_hash=request.parameter_hash,
             usage=usage,
+            provider_audit=None,
         )
+        report["report_hash"] = report_hash(report)
         self._conversation.accept_metering(report, self._now())
         self._reports.append(copy.deepcopy(report))
         # Preserve independently valid usage even if a trusted adapter supplies
@@ -550,6 +567,40 @@ class AuthorizedDispatcher:
         )
         return report
 
+    def _capture_chat(
+        self,
+        complete: CompleteResponse | None,
+        permit: Frame,
+        request: PreparedRequest,
+    ) -> Frame:
+        captured: CallReport = capture_chat_report(
+            complete.body if complete is not None else None,
+            http_status=complete.status_code if complete is not None else 0,
+            physical_call_id=permit["physical_call_id"],
+            expected_response_model=self._expected_response_model,
+        )
+        report = self._frame(
+            "metering_report",
+            call_sequence=permit["call_sequence"],
+            physical_call_id=permit["physical_call_id"],
+            parameter_hash=request.parameter_hash,
+            **captured.to_dict(),
+        )
+        report["report_hash"] = report_hash(report)
+        self._conversation.accept_metering(report, self._now())
+        self._reports.append(copy.deepcopy(report))
+        audit = captured.provider_audit
+        assert isinstance(audit, ProviderAudit)
+        self._audits.append(
+            CapturedUsageAudit(
+                permit["physical_call_id"],
+                captured.usage.receipt_hash if captured.usage else "",
+                json.dumps(audit.to_dict(), separators=(",", ":")),
+                audit.reasoning_tokens,
+            )
+        )
+        return report
+
     async def _send(
         self,
         request: PreparedRequest,
@@ -571,8 +622,9 @@ class AuthorizedDispatcher:
         )
         now = self._guard(deadline)
         self._conversation.can_dispatch(permit["physical_call_id"], now)
-        response = await client.send(outbound, stream=True)
+        response: httpx.Response | None = None
         try:
+            response = await client.send(outbound, stream=True)
             if response.headers.get("content-encoding", "identity") != "identity":
                 raise DispatchError("PROTOCOL_ERROR")
             length = response.headers.get("content-length")
@@ -596,15 +648,23 @@ class AuthorizedDispatcher:
                 request.parameter_hash,
             )
             received.append(complete)
-            if extract_usage is not None:
+            if request.subcall == "chat":
+                captured.append(self._capture_chat(complete, permit, request))
+            elif extract_usage is not None:
                 evidence = extract_usage(complete)
                 if evidence is not None:
                     captured.append(self._capture(evidence, permit, request))
             return complete
         finally:
+            # A consumed chat permit always retains one immutable fact, including
+            # cancellation before a complete body. Never replace it with a later
+            # response or wait for more provider data during shutdown.
+            if request.subcall == "chat" and not captured:
+                captured.append(self._capture_chat(None, permit, request))
             # Resource cleanup has a fixed ceiling and never spawns detached work.
-            async with asyncio.timeout(0.1):
-                await response.aclose()
+            if response is not None:
+                async with asyncio.timeout(0.1):
+                    await response.aclose()
 
     async def execute(
         self,
@@ -614,7 +674,11 @@ class AuthorizedDispatcher:
         validate: Callable[[CompleteResponse], T],
         extract_usage: Callable[[CompleteResponse], UsageEvidence | None] | None = None,
     ) -> T:
-        """Authorize exactly once and return only after validation/confirmations."""
+        """Authorize once and return only after report and ordinary confirmations.
+
+        Chat facts are always captured by the fixed adapter before validation;
+        extract_usage is used only by the existing nonchat embedding adapter.
+        """
         if self._busy:
             raise DispatchError("CALL_CONFLICT")
         self._busy = True
@@ -747,8 +811,15 @@ class AuthorizedDispatcher:
                 "unknown" if complete is None else "rejected" if failure else "accepted"
             ),
             error_code=failure.code if failure else "",
-            usage_disposition="reported" if captured else "unknown",
-            usage_hash=captured[0]["usage"]["usage_hash"] if captured else None,
+            usage_disposition="reported"
+            if captured and captured[0]["usage"] is not None
+            else "unknown",
+            usage_hash=captured[0]["usage"]["usage_hash"]
+            if captured and captured[0]["usage"] is not None
+            else None,
+            audit_hash=captured[0]["provider_audit"]["audit_hash"]
+            if captured and captured[0]["provider_audit"] is not None
+            else None,
         )
         self._guard(deadline)
         self._conversation.accept(observation, self._now())
@@ -766,6 +837,7 @@ class AuthorizedDispatcher:
             observation["error_code"],
             observation["usage_disposition"],
             observation["usage_hash"],
+            observation["audit_hash"],
             ack["observation_hash"],
             ack["emitted_mono_ms"],
         )

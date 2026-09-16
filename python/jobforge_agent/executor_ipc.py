@@ -130,6 +130,11 @@ class PipeHooks:
             fields = ("physical_call_id",)
         if any(frame[field] != pending.source[field] for field in fields):
             raise ProtocolError()
+        if (
+            pending.kind == "metering_ack"
+            and frame["report_hash"] != pending.source["report_hash"]
+        ):
+            raise ProtocolError()
         self._pending[metering] = None
         if pending.future.done():
             raise ProtocolError()

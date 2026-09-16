@@ -54,6 +54,9 @@ func New(pool *pgxpool.Pool, options Options) (*Store, error) {
 	s := &Store{pool: pool, profiles: make(map[string]agentrun.Profile), workers: make(map[string]agentrun.WorkerConfig),
 		tenantCapacity: options.TenantCapacity, profileCapacity: options.ProfileCapacity}
 	for _, p := range options.Profiles {
+		if err := p.ValidateAuditPolicy(); err != nil {
+			return nil, err
+		}
 		_, hashErr := hex.DecodeString(p.Hash)
 		if !agentrun.ValidIdentifier(p.ID) || len(p.Hash) != 64 || hashErr != nil || p.Hash != strings.ToLower(p.Hash) ||
 			p.MaxInputTokens < 1 || p.MaxInputTokens > agentrun.MaxSafeInteger || p.MaxOutputTokens < 1 || p.MaxOutputTokens > 1024 ||

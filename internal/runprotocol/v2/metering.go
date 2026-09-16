@@ -1,11 +1,18 @@
 package runprotocol
 
+import (
+	"reflect"
+
+	"github.com/xjfyrh/jobforge/internal/run"
+)
+
 type meteredCall struct {
 	permit                 Frame
 	dispatched, overrun    bool
 	dispatchedAt           int64
 	observationDisposition string
-	report                 *Usage
+	report                 *run.CallReport
+	reportHash             string
 	reportEmitted          int64
 	ackEmitted             int64
 	settlement             string
@@ -39,20 +46,30 @@ func (m *MeteringReceiver) Accept(f Frame, nowMonoMS int64) error {
 		if f.ParameterHash != call.permit.ParameterHash || f.EmittedMonoMS < m.lastReport {
 			return ErrProtocol
 		}
-		if call.report != nil && *call.report != *f.Usage {
+		report := Report(f)
+		if call.report != nil && (call.reportHash != f.ReportHash || !reflect.DeepEqual(*call.report, report)) {
 			return ErrProtocol
 		}
 		if call.report == nil {
-			copyUsage := *f.Usage
-			call.report = &copyUsage
+			raw, err := run.CallReportJSON(report)
+			if err != nil {
+				return ErrProtocol
+			}
+			copyReport, err := run.DecodeCallReport(raw)
+			if err != nil {
+				return ErrProtocol
+			}
+			call.report, call.reportHash = &copyReport, f.ReportHash
 			// Duplicate delivery does not rewrite the first report's identity or
 			// make a previously issued settlement confirmation invalid.
 			call.reportEmitted = f.EmittedMonoMS
-			call.overrun = copyUsage.InputTokens > call.permit.InputTokenLimit || copyUsage.OutputTokens > call.permit.OutputTokenLimit
+			call.overrun = report.Usage != nil && (report.Usage.InputTokens > call.permit.InputTokenLimit || report.Usage.OutputTokens > call.permit.OutputTokenLimit ||
+				(call.permit.Subcall == "query_embedding" && report.Usage.CachedInputTokens != 0))
 		}
 		m.lastReport = f.EmittedMonoMS
 	} else {
-		if f.EmittedMonoMS < m.lastAck || call.report == nil || f.EmittedMonoMS < call.reportEmitted || *f.UsageHash != call.report.UsageHash || (!oneOf(call.settlement, "", "unconfirmed") && call.settlement != f.Settlement) || (call.overrun && f.Settlement == "settled") {
+		if f.EmittedMonoMS < m.lastAck || call.report == nil || f.EmittedMonoMS < call.reportEmitted || f.ReportHash != call.reportHash || (!oneOf(call.settlement, "", "unconfirmed") && call.settlement != f.Settlement) ||
+			(f.Settlement == "settled" && (call.overrun || !priceable(call.report))) || (f.Settlement == "recorded" && priceable(call.report)) {
 			return ErrProtocol
 		}
 		// A repeated final ACK confirms the same settlement. It cannot move

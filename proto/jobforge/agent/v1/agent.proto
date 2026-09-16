@@ -368,6 +368,12 @@ message CallReservation {
   // Trusted out-of-bound metering was retained and all three accounts frozen.
   // The full hold remains; usage_known=false is not permission to send again.
   bool measurement_anomaly = 11;
+  // Original validated lease/step binding; empty for legacy reservations.
+  string execution_binding_hash = 12;
+  // Actual first persisted report identity; never a dispatch permission.
+  string persisted_report_hash = 13;
+  // Actual persisted provider audit identity, empty when not applicable.
+  string persisted_audit_hash = 14;
 }
 
 // ReserveCallResponse authorizes sending only on the first successful response.
@@ -416,6 +422,97 @@ message UsageReport {
   string usage_hash = 5;
 }
 
+// ProviderIdentityState separates safe identity from frozen-profile compatibility.
+enum ProviderIdentityState {
+  // Missing identity state is invalid input.
+  PROVIDER_IDENTITY_STATE_UNSPECIFIED = 0;
+  // Complete safe identity matches the original profile.
+  PROVIDER_IDENTITY_STATE_COMPATIBLE = 1;
+  // Complete safe identity names another model; its counters are not priceable.
+  PROVIDER_IDENTITY_STATE_INCOMPATIBLE = 2;
+  // A complete response has invalid or ambiguous identity fields.
+  PROVIDER_IDENTITY_STATE_INVALID = 3;
+  // No interpretable complete Chat Completion identity was received.
+  PROVIDER_IDENTITY_STATE_UNAVAILABLE = 4;
+}
+
+// ProviderUsageEvidence distinguishes complete observed counters from pricing.
+enum ProviderUsageEvidence {
+  // Missing evidence state is invalid input.
+  PROVIDER_USAGE_EVIDENCE_UNSPECIFIED = 0;
+  // Safe internally consistent counters and receipt identity were captured.
+  PROVIDER_USAGE_EVIDENCE_COMPLETE = 1;
+  // A valid response object omitted usage.
+  PROVIDER_USAGE_EVIDENCE_ABSENT = 2;
+  // Present counters or details violate the fixed contract.
+  PROVIDER_USAGE_EVIDENCE_INVALID = 3;
+  // No complete interpretable usage evidence exists.
+  PROVIDER_USAGE_EVIDENCE_UNAVAILABLE = 4;
+}
+
+// ProviderReasoningState preserves absence separately from observed zero.
+enum ProviderReasoningState {
+  // Missing reasoning state is invalid input.
+  PROVIDER_REASONING_STATE_UNSPECIFIED = 0;
+  // A safe count bounded by this report's output tokens was observed.
+  PROVIDER_REASONING_STATE_OBSERVED = 1;
+  // Complete usage omitted reasoning details.
+  PROVIDER_REASONING_STATE_ABSENT = 2;
+  // Present reasoning details are invalid; no count is retained.
+  PROVIDER_REASONING_STATE_INVALID = 3;
+  // Incomplete usage cannot establish a reasoning count.
+  PROVIDER_REASONING_STATE_UNAVAILABLE = 4;
+}
+
+// ProviderModeState describes only the fixed no-thinking/no-tools envelope.
+enum ProviderModeState {
+  // Missing mode state is invalid input.
+  PROVIDER_MODE_STATE_UNSPECIFIED = 0;
+  // The captured envelope satisfies the fixed mode.
+  PROVIDER_MODE_STATE_NONTHINKING = 1;
+  // Reasoning or tools were unexpectedly present; their contents are not saved.
+  PROVIDER_MODE_STATE_UNEXPECTED = 2;
+  // The response envelope or reasoning detail is invalid.
+  PROVIDER_MODE_STATE_INVALID = 3;
+  // The mode could not be established from complete evidence.
+  PROVIDER_MODE_STATE_UNAVAILABLE = 4;
+}
+
+// ProviderAudit is bounded typed metadata, never a response body or authority.
+// Optional strings/integers preserve explicit null versus a meaningful zero.
+message ProviderAudit {
+  // Exactly one for the accepted audit schema.
+  int32 schema_version = 1;
+  // Exactly deepseek, never an endpoint or caller-selected provider.
+  string provider = 2;
+  // True only after the complete bounded body was captured.
+  bool response_complete = 3;
+  // Complete HTTP status 100..599, or zero without a complete response.
+  int32 http_status = 4;
+  // Lowercase digest of the complete original body, absent when incomplete.
+  optional string response_sha256 = 5;
+  // Safe identity and compatibility with the immutable expected response model.
+  ProviderIdentityState identity_state = 6;
+  // Safe original identifier, absent when invalid/unavailable; never truncated.
+  optional string response_id = 7;
+  // Safe actual returned model; never replaced with the expected model.
+  optional string response_model = 8;
+  // Bounded observation only, not an immutable provider-version guarantee.
+  optional string system_fingerprint = 9;
+  // Original safe integer timestamp, including explicit zero when observed.
+  optional int64 created = 10;
+  // Complete observed usage does not itself grant pricing eligibility.
+  ProviderUsageEvidence usage_evidence = 11;
+  // Whether a safe reasoning count was observed, absent, invalid or unavailable.
+  ProviderReasoningState reasoning_state = 12;
+  // Only present for observed reasoning; bounded by this report's output tokens.
+  optional int64 reasoning_tokens = 13;
+  // Fixed envelope mode without retaining reasoning or tool contents.
+  ProviderModeState mode_state = 14;
+  // Exact lowercase ADR-0020 audit fingerprint, recomputed before acceptance.
+  string audit_hash = 15;
+}
+
 // ObserveCallRequest reports only the current active call and never a cursor.
 message ObserveCallRequest {
   // Current live execution identity.
@@ -436,6 +533,8 @@ message ObserveCallRequest {
   BusinessOutcome business_outcome = 8;
   // Must exactly match usage presence; free HTTP calls cannot invent paid usage.
   bool usage_known = 9;
+  // Original persisted audit hash for audited chat; otherwise empty.
+  string audit_hash = 10;
 }
 
 // ObserveCallResponse reports ledger state without changing step progress.
@@ -452,6 +551,10 @@ message SettleUsageRequest {
   string physical_call_id = 2;
   // Complete profile-validated usage, not a receipt string alone.
   UsageReport usage = 3;
+  // Required for audited chat, absent for embedding and legacy original calls.
+  ProviderAudit provider_audit = 4;
+  // Original binding/call/parameter/usage/audit fingerprint; legacy calls omit it.
+  string report_hash = 5;
 }
 
 // SettleUsageResponse confirms idempotent settlement without Run mutation.
@@ -460,6 +563,16 @@ message SettleUsageResponse {
   bool newly_settled = 1;
   // Updated own-call audit record; active_call is never changed by this RPC.
   CallReservation reservation = 2;
+  // Actual first report hash after commit, never a reflection of request data.
+  string persisted_report_hash = 3;
+  // Actual persisted audit hash, empty when no audit is applicable.
+  string persisted_audit_hash = 4;
+  // Conflicting second report triggered a committed batch stop, not acceptance.
+  bool report_conflict = 5;
+  // Actual batch frozen fact read in the committed report transaction.
+  bool batch_frozen = 6;
+  // Fixed ADR-0020 first-write-wins stop reason, empty when no cause is recorded.
+  string batch_stop_code = 7;
 }
 
 // CommitStepRequest commits content, never a caller-selected next cursor.

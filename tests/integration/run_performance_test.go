@@ -266,14 +266,19 @@ func runPerfSourceQuery(t *testing.T, name, function, match string) string {
 		return file
 	}
 	constants := make(map[string]string)
-	ast.Inspect(parse("store.go"), func(node ast.Node) bool {
-		if value, ok := node.(*ast.ValueSpec); ok && len(value.Names) == 1 && len(value.Values) == 1 {
-			if literal, ok := value.Values[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
-				constants[value.Names[0].Name], _ = strconv.Unquote(literal.Value)
+	// Shared projection columns can live beside the production query. Resolve
+	// those source constants as well as the original store-level projections;
+	// do not replace an unrecognized query with a second hand-written SQL copy.
+	for _, source := range []string{"store.go", name} {
+		ast.Inspect(parse(source), func(node ast.Node) bool {
+			if value, ok := node.(*ast.ValueSpec); ok && len(value.Names) == 1 && len(value.Values) == 1 {
+				if literal, ok := value.Values[0].(*ast.BasicLit); ok && literal.Kind == token.STRING {
+					constants[value.Names[0].Name], _ = strconv.Unquote(literal.Value)
+				}
 			}
-		}
-		return true
-	})
+			return true
+		})
+	}
 	var evaluate func(ast.Expr) (string, bool)
 	evaluate = func(expr ast.Expr) (string, bool) {
 		switch value := expr.(type) {

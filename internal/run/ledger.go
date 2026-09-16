@@ -103,19 +103,22 @@ type CallBudget struct {
 
 // CallReservation is an audit record, never permission to replay a network send.
 type CallReservation struct {
-	PhysicalCallID     string
-	ToolInvocationID   string
-	Subcall            Subcall
-	ParameterHash      string
-	PriceHash          string
-	Ordinal            int64
-	ReservedAt         time.Time
-	DispatchExpiresAt  time.Time
-	CallDeadline       time.Time
-	Budget             CallBudget
-	UsageKnown         bool
-	MeasurementAnomaly bool
-	ReportedUsage      *UsageReport
+	PhysicalCallID       string
+	ToolInvocationID     string
+	Subcall              Subcall
+	ParameterHash        string
+	PriceHash            string
+	Ordinal              int64
+	ReservedAt           time.Time
+	DispatchExpiresAt    time.Time
+	CallDeadline         time.Time
+	Budget               CallBudget
+	UsageKnown           bool
+	MeasurementAnomaly   bool
+	ReportedUsage        *UsageReport
+	ExecutionBindingHash string
+	PersistedReportHash  string
+	PersistedAuditHash   string
 }
 
 // ReserveCallResponse permits one send only when NewlyReserved is true.
@@ -161,6 +164,7 @@ type ObserveCallRequest struct {
 	BusinessOutcome  string
 	UsageKnown       bool
 	Usage            *UsageReport
+	AuditHash        string
 }
 
 // Validate rejects ambiguous transport, output and usage combinations.
@@ -197,13 +201,20 @@ func (r ObserveCallRequest) Hash() string {
 type SettleUsageRequest struct {
 	Lease          Lease
 	PhysicalCallID string
-	Usage          UsageReport
+	Usage          *UsageReport
+	ProviderAudit  *ProviderAudit
+	ReportHash     string
 }
 
 // SettleUsageResponse distinguishes the first settlement from an identical retry.
 type SettleUsageResponse struct {
-	Reservation  CallReservation
-	NewlySettled bool
+	Reservation         CallReservation
+	NewlySettled        bool
+	PersistedReportHash string
+	PersistedAuditHash  string
+	ReportConflict      bool
+	BatchFrozen         bool
+	BatchStopCode       BatchStopCode
 }
 
 // ValidHash checks the canonical lower-case representation shared by ledgers.

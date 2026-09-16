@@ -28,7 +28,7 @@ import (
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
-const executorProfileID = "c3b-runtime-profile-v1"
+const executorProfileID = "c3b-runtime-profile-audit-v1"
 
 func setupExecutorHarness(t *testing.T) *runHarness {
 	t.Helper()
@@ -38,6 +38,8 @@ func setupExecutorHarness(t *testing.T) *runHarness {
 	h := setupRunHarness(t)
 	h.Profile.ID, h.Profile.Hash = executorProfileID, agentrun.Fingerprint(executorProfileID)
 	h.Profile.ExecutorVersion = runinput.ExecutorVersion
+	h.Profile.ProviderAuditPolicy = agentrun.ProviderAuditPolicyDeepSeekV1
+	h.Profile.ExpectedResponseModel = "deepseek-flash"
 	h.Profile.MaxOutputTokens = 1024
 	h.Principal = "c3b-runtime-worker"
 	h.Options = runpostgres.Options{Profiles: []agentrun.Profile{h.Profile}, Workers: []agentrun.WorkerConfig{{ID: h.Principal, Tenants: []string{"tenant-a"}, ProfileIDs: []string{h.Profile.ID}, Capacity: 1}}, TenantCapacity: 1, ProfileCapacity: 1}
@@ -61,6 +63,8 @@ type executorRPCFaults struct {
 	target          string
 	observe         func(context.Context, *agentv1.ObserveCallRequest, ...grpc.CallOption) (*agentv1.ObserveCallResponse, error)
 	commit          func(context.Context, *agentv1.CommitStepRequest, ...grpc.CallOption) (*agentv1.CommitStepResponse, error)
+	settle          func(context.Context, *agentv1.SettleUsageRequest, ...grpc.CallOption) (*agentv1.SettleUsageResponse, error)
+	reserve         func(context.Context, *agentv1.ReserveCallRequest, ...grpc.CallOption) (*agentv1.ReserveCallResponse, error)
 	confirmed       chan struct{}
 	confirmOnce     sync.Once
 	failed          atomic.Int64
@@ -68,6 +72,20 @@ type executorRPCFaults struct {
 	commitAttempts  atomic.Int64
 	claimAttempts   atomic.Int64
 	looped          chan struct{}
+}
+
+func (c *executorRPCFaults) ReserveCall(ctx context.Context, req *agentv1.ReserveCallRequest, opts ...grpc.CallOption) (*agentv1.ReserveCallResponse, error) {
+	if c.reserve != nil {
+		return c.reserve(ctx, req, opts...)
+	}
+	return c.AgentServiceClient.ReserveCall(ctx, req, opts...)
+}
+
+func (c *executorRPCFaults) SettleUsage(ctx context.Context, req *agentv1.SettleUsageRequest, opts ...grpc.CallOption) (*agentv1.SettleUsageResponse, error) {
+	if c.settle != nil {
+		return c.settle(ctx, req, opts...)
+	}
+	return c.AgentServiceClient.SettleUsage(ctx, req, opts...)
 }
 
 func (c *executorRPCFaults) Claim(ctx context.Context, req *agentv1.ClaimRequest, opts ...grpc.CallOption) (*agentv1.ClaimResponse, error) {
@@ -133,20 +151,24 @@ func executorGateway(t *testing.T, h *runHarness) *executorRPCFaults {
 }
 
 type executorHTTPFixture struct {
-	mu             sync.Mutex
-	counts         map[string]int
-	correction     bool
-	blockOrder     bool
-	blockFirstChat atomic.Bool
-	anomalyInput   atomic.Int64
-	orderSeen      chan struct{}
-	orderOnce      sync.Once
-	chatSeen       chan struct{}
-	chatOnce       sync.Once
-	chatRelease    chan struct{}
-	BusinessOrigin string
-	snapshot       agentrun.SnapshotBinding
-	badRequest     atomic.Bool
+	mu              sync.Mutex
+	counts          map[string]int
+	correction      bool
+	responseModel   string
+	omitUsage       bool
+	reasoningTokens int64
+	rejectEveryChat bool
+	blockOrder      bool
+	blockFirstChat  atomic.Bool
+	anomalyInput    atomic.Int64
+	orderSeen       chan struct{}
+	orderOnce       sync.Once
+	chatSeen        chan struct{}
+	chatOnce        sync.Once
+	chatRelease     chan struct{}
+	BusinessOrigin  string
+	snapshot        agentrun.SnapshotBinding
+	badRequest      atomic.Bool
 }
 
 func (f *executorHTTPFixture) count(path string) int {
@@ -268,10 +290,22 @@ func (f *executorHTTPFixture) serve(w http.ResponseWriter, r *http.Request) {
 			inputTokens = anomalous
 		}
 		content, _ := json.Marshal(map[string]any{"decision": "no_action", "summary": "Synthetic mechanism result", "evidence_refs": []string{"business-evidence:" + f.snapshot.ID + ":ticket", "business-policy:" + f.snapshot.IndexID + ":P01.1"}, "action": ""})
-		if f.correction && number == 1 {
+		if f.rejectEveryChat || (f.correction && number == 1) {
 			content = []byte(`{"invalid":"fixture"}`)
 		}
-		response = map[string]any{"id": "synthetic-chat", "object": "chat.completion", "created": 1, "model": "deepseek-flash", "system_fingerprint": "fp_synthetic", "choices": []any{map[string]any{"index": 0, "finish_reason": "stop", "logprobs": nil, "message": map[string]any{"role": "assistant", "content": string(content)}}}, "usage": map[string]any{"prompt_tokens": inputTokens, "completion_tokens": 5, "total_tokens": inputTokens + 5, "prompt_cache_hit_tokens": 2, "prompt_cache_miss_tokens": inputTokens - 2}}
+		model := f.responseModel
+		if model == "" {
+			model = "deepseek-flash"
+		}
+		chat := map[string]any{"id": "synthetic-chat", "object": "chat.completion", "created": 1, "model": model, "system_fingerprint": "fp_synthetic", "choices": []any{map[string]any{"index": 0, "finish_reason": "stop", "logprobs": nil, "message": map[string]any{"role": "assistant", "content": string(content)}}}}
+		if !f.omitUsage {
+			usage := map[string]any{"prompt_tokens": inputTokens, "completion_tokens": 5, "total_tokens": inputTokens + 5, "prompt_cache_hit_tokens": 2, "prompt_cache_miss_tokens": inputTokens - 2}
+			if f.reasoningTokens > 0 {
+				usage["completion_tokens_details"] = map[string]any{"reasoning_tokens": f.reasoningTokens}
+			}
+			chat["usage"] = usage
+		}
+		response = chat
 	default:
 		f.badRequest.Store(true)
 		w.WriteHeader(404)

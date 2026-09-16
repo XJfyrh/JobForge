@@ -19,7 +19,7 @@ import (
 	runpostgres "github.com/xjfyrh/jobforge/internal/run/postgres"
 )
 
-const supportExecutorProfileID = "support-executor-synthetic-v1"
+const supportExecutorProfileID = "support-executor-synthetic-audit-v1"
 
 func supportExecutorHarness(t *testing.T, key string, withOrder bool) *runHarness {
 	t.Helper()

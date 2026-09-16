@@ -274,12 +274,12 @@ func TestRunLedgerRejectedBusinessOutputStillSettlesValidUsage(t *testing.T) {
 	if after.CursorVersion != before.CursorVersion || after.State != agentrun.Running {
 		t.Fatal("usage settlement advanced business progress")
 	}
-	duplicate, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: usage})
+	duplicate, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: &usage})
 	if err != nil || duplicate.NewlySettled || !duplicate.Reservation.UsageKnown || !reflect.DeepEqual(after.Budget, ledgerView(t, h, claimed.Lease).Budget) {
 		t.Fatalf("duplicate settlement changed balances: %+v %v", duplicate, err)
 	}
 	conflict := ledgerUsage(11, 2)
-	if _, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: conflict}); !errors.Is(err, agentrun.ErrCallConflict) {
+	if _, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: &conflict}); !errors.Is(err, agentrun.ErrCallConflict) {
 		t.Fatalf("conflicting usage accepted: %v", err)
 	}
 }
@@ -314,7 +314,7 @@ func TestRunLedgerLateUsagePreservesNewAttemptAndTerminalRun(t *testing.T) {
 	}
 	before := ledgerView(t, h, claimed.Lease)
 	usage := ledgerUsage(10, 2)
-	settled, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: old.Lease, PhysicalCallID: oldRequest.PhysicalCallID, Usage: usage})
+	settled, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: old.Lease, PhysicalCallID: oldRequest.PhysicalCallID, Usage: &usage})
 	if err != nil || !settled.NewlySettled || !settled.Reservation.UsageKnown {
 		t.Fatalf("expired old-session usage rejected: %+v %v", settled, err)
 	}
@@ -334,7 +334,7 @@ func TestRunLedgerLateUsagePreservesNewAttemptAndTerminalRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	terminal := ledgerView(t, h, claimed.Lease)
-	settled, err = h.Store.SettleUsage(h.Ctx, secondPrincipal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: newRequest.PhysicalCallID, Usage: usage})
+	settled, err = h.Store.SettleUsage(h.Ctx, secondPrincipal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: newRequest.PhysicalCallID, Usage: &usage})
 	if err != nil || !settled.NewlySettled {
 		t.Fatalf("terminal usage rejected: %+v %v", settled, err)
 	}
@@ -356,7 +356,7 @@ func TestRunLedgerUsageAnomalyFreezesAllScopesWithoutRefund(t *testing.T) {
 	ledgerObserve(t, h, request, "unknown", "unknown", nil)
 	before := ledgerView(t, h, claimed.Lease)
 	usage := ledgerUsage(reservation.Budget.InputTokens+1, 1)
-	response, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: usage})
+	response, err := h.Store.SettleUsage(h.Ctx, h.Principal, agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: &usage})
 	if err != nil || response.NewlySettled || response.Reservation.UsageKnown || !response.Reservation.MeasurementAnomaly ||
 		response.Reservation.ReportedUsage == nil || *response.Reservation.ReportedUsage != usage {
 		t.Fatalf("anomalous usage not preserved explicitly: %+v %v", response, err)
@@ -384,7 +384,7 @@ func TestRunLedgerSettlementWindowAndWrongPrincipalNeverRefund(t *testing.T) {
 	ledgerReserve(t, h, request)
 	usage := ledgerUsage(10, 2)
 	before := ledgerView(t, h, claimed.Lease)
-	settlement := agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: usage}
+	settlement := agentrun.SettleUsageRequest{Lease: claimed.Lease, PhysicalCallID: request.PhysicalCallID, Usage: &usage}
 	if _, err := h.Store.SettleUsage(h.Ctx, "contract-worker-2", settlement); !errors.Is(err, agentrun.ErrForbidden) {
 		t.Fatalf("different principal settled another call: %v", err)
 	}

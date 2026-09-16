@@ -4,6 +4,7 @@ import asyncio
 import copy
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
@@ -11,6 +12,7 @@ from uuid import uuid4
 import pytest
 from http_fault_server import HTTPFaultServer, ReceivedRequest, respond
 from jobforge_agent import dispatch as agent_dispatch
+from jobforge_agent import run_tools as agent_run_tools
 from jobforge_agent.business import SnapshotBinding
 from jobforge_agent.dispatch import (
     AuthorizedDispatcher,
@@ -106,7 +108,7 @@ class SyntheticHooks:
         }
         ack.update(
             kind="metering_ack",
-            usage_hash=report["usage"]["usage_hash"],
+            report_hash=report["report_hash"],
             settlement=(
                 "anomaly" if report["usage"]["input_tokens"] > 1000 else self.settlement
             ),
@@ -267,6 +269,29 @@ def _fingerprint(*fields: str) -> str:
         digest.update(len(raw).to_bytes(8, "big"))
         digest.update(raw)
     return digest.hexdigest()
+
+
+@pytest.mark.parametrize("settlement", ["settled", "anomaly"])
+def test_embedding_cached_tokens_remain_reported_but_cannot_continue(
+    monkeypatch: pytest.MonkeyPatch,
+    settlement: str,
+) -> None:
+    """A structurally valid anomalous embedding report cannot reach policy HTTP."""
+    original = agent_run_tools._embedding_usage
+
+    def cached(response: Any) -> Any:
+        evidence = original(response)
+        assert evidence is not None
+        return replace(evidence, cached_input_tokens=1)
+
+    monkeypatch.setattr(agent_run_tools, "_embedding_usage", cached)
+    requests, hooks, reports = asyncio.run(
+        _case("search_policy", settlement=settlement, expect_failure=True)
+    )
+    assert len(requests) == len(hooks.intents) == 3
+    assert len(reports) == 1 and reports[0]["provider_audit"] is None
+    assert reports[0]["usage"]["cached_input_tokens"] == 1
+    assert len(hooks.observations) == 2
 
 
 @pytest.mark.parametrize(
@@ -448,7 +473,9 @@ def test_unobserved_embedding_usage_stays_unknown(failure: str) -> None:
     requests, hooks, usage = asyncio.run(_case("search_policy", failure=failure))
     assert len(requests) == 4
     assert all(item["usage_disposition"] == "unknown" for item in hooks.observations)
-    assert usage == ()
+    assert all(item["audit_hash"] is None for item in hooks.observations)
+    assert all(item["business_outcome"] == "accepted" for item in hooks.observations)
+    assert usage == () and hooks.reports == []
 
 
 @pytest.mark.parametrize("condition", ["usage_overrun", "settlement_unconfirmed"])
@@ -525,7 +552,10 @@ def test_no_associated_order_preserves_explicit_missing_result(name: str) -> Non
     assert usage == ()
 
 
-@pytest.mark.parametrize("call_sequence", [1, 2, 3, 4])
+@pytest.mark.parametrize(
+    ("call_sequence", "usage_observed"),
+    [(1, True), (2, True), (3, True), (4, True), (3, False)],
+)
 @pytest.mark.parametrize(
     "confirmation",
     [
@@ -543,7 +573,10 @@ def test_no_associated_order_preserves_explicit_missing_result(name: str) -> Non
     ],
 )
 def test_search_http_and_final_return_wait_for_observation_ack(
-    monkeypatch: pytest.MonkeyPatch, call_sequence: int, confirmation: str
+    monkeypatch: pytest.MonkeyPatch,
+    call_sequence: int,
+    usage_observed: bool,
+    confirmation: str,
 ) -> None:
     """Real TCP waits for free, settled and final ACKs from a synthetic peer."""
 
@@ -553,7 +586,10 @@ def test_search_http_and_final_return_wait_for_observation_ack(
             writer: asyncio.StreamWriter,
             request: ReceivedRequest,
         ) -> None:
-            await respond(writer, body=json.dumps(_payload(request.path)).encode())
+            payload = _payload(request.path)
+            if request.path == "/api/embed" and not usage_observed:
+                payload.pop("prompt_eval_count")
+            await respond(writer, body=json.dumps(payload).encode())
 
         now = [1000]
         reached, release = asyncio.Event(), asyncio.Event()
@@ -628,6 +664,10 @@ def test_search_http_and_final_return_wait_for_observation_ack(
                     assert result["snapshot_id"] == SNAPSHOT
                     assert len(server.requests) == len(hooks.intents) == 4
                     assert not dispatcher.closed
+                    if not usage_observed:
+                        assert dispatcher.recorded_usage() == () and hooks.reports == []
+                        assert hooks.observations[2]["usage_disposition"] == "unknown"
+                        assert hooks.observations[2]["audit_hash"] is None
                     return
                 with pytest.raises((DispatchError, asyncio.CancelledError)) as error:
                     await task
@@ -643,7 +683,9 @@ def test_search_http_and_final_return_wait_for_observation_ack(
                     )
                     assert error.value.code == expected
                 assert dispatcher.closed
-                assert len(dispatcher.recorded_usage()) == (call_sequence >= 3)
+                assert len(dispatcher.recorded_usage()) == (
+                    call_sequence >= 3 and usage_observed
+                )
                 with pytest.raises(DispatchError):
                     await tools.execute("search_policy", arguments, context=CONTEXT)
                 assert len(server.requests) == len(hooks.intents) == call_sequence

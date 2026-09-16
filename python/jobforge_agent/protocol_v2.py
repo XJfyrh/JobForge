@@ -11,6 +11,15 @@ import math
 import re
 from typing import Any, BinaryIO
 
+from jobforge_agent.provider_audit import (
+    MAX_AUDIT_BYTES,
+    CallReport,
+    ReportBinding,
+    decode_call_report,
+    execution_binding_hash,
+    observation_hash_v2,
+)
+
 MAX_FRAME_BYTES = 384 * 1024
 MAX_METERING_FRAME_BYTES = 8 * 1024
 MAX_CHECKPOINT_BYTES = 256 * 1024
@@ -46,6 +55,7 @@ _KINDS = {
         "error_code",
         "usage_disposition",
         "usage_hash",
+        "audit_hash",
     },
     "call_observation_ack": {
         "call_sequence",
@@ -53,8 +63,15 @@ _KINDS = {
         "observation_hash",
     },
     "step_result": {"outcome", "error_code", "result"},
-    "metering_report": {"call_sequence", "physical_call_id", "parameter_hash", "usage"},
-    "metering_ack": {"call_sequence", "physical_call_id", "usage_hash", "settlement"},
+    "metering_report": {
+        "call_sequence",
+        "physical_call_id",
+        "parameter_hash",
+        "usage",
+        "provider_audit",
+        "report_hash",
+    },
+    "metering_ack": {"call_sequence", "physical_call_id", "report_hash", "settlement"},
 }
 _METERING_KINDS = {"metering_report", "metering_ack"}
 _BINDING = {
@@ -148,9 +165,11 @@ def _json_tree(value: Any, depth: int = 0) -> None:
         _require(math.isfinite(float(value)))
 
 
-def _object(value: Any, fields: set[str], nullable: str = "") -> None:
+def _object(
+    value: Any, fields: set[str], nullable: frozenset[str] = frozenset()
+) -> None:
     _require(isinstance(value, dict) and value.keys() == fields)
-    _require(all(item is not None or key == nullable for key, item in value.items()))
+    _require(all(item is not None or key in nullable for key, item in value.items()))
 
 
 def _integer(value: Any, low: int, high: int) -> bool:
@@ -233,22 +252,69 @@ def observation_error_code(code: str) -> str:
 
 
 def observation_hash(frame: Frame) -> str:
-    """Fingerprint a strict observation using domain errors and original usage."""
+    """Fingerprint the new strict observation including its captured audit."""
     encode(frame)
     _require(frame["kind"] == "call_observation")
-    digest = hashlib.sha256()
-    for value in (
-        "jobforge.run.observation.v1",
-        frame["transport_outcome"],
-        str(frame["http_status"]),
-        observation_error_code(frame["error_code"]),
-        frame["business_outcome"],
-        frame["usage_hash"] or "",
-    ):
-        raw = value.encode("utf-8")
-        digest.update(len(raw).to_bytes(8, "big"))
-        digest.update(raw)
-    return digest.hexdigest()
+    return observation_hash_v2(
+        transport_outcome=frame["transport_outcome"],
+        http_status=frame["http_status"],
+        mapped_domain_error_code=observation_error_code(frame["error_code"]),
+        business_outcome=frame["business_outcome"],
+        usage_hash=frame["usage_hash"],
+        audit_hash=frame["audit_hash"],
+    )
+
+
+def _chat(frame: Frame) -> bool:
+    return frame["binding"]["step_kind"] in {"model_proposal", "protocol_correction"}
+
+
+def _report(frame: Frame) -> CallReport:
+    return decode_call_report(
+        _json_bytes(
+            {"usage": frame["usage"], "provider_audit": frame["provider_audit"]}
+        )
+    )
+
+
+def _report_binding(frame: Frame) -> ReportBinding:
+    return ReportBinding(
+        execution_binding_hash(frame["binding"]),
+        frame["physical_call_id"],
+        frame["parameter_hash"],
+        "chat" if _chat(frame) else "query_embedding",
+        "deepseek-flash" if _chat(frame) else "",
+    )
+
+
+def report_hash(frame: Frame) -> str:
+    """Hash a coherent call report against its original full frame binding."""
+    return _report(frame).hash(_report_binding(frame))
+
+
+def _priceable(report: Frame) -> bool:
+    audit = report["provider_audit"]
+    return report["usage"] is not None and (
+        audit is None or audit["identity_state"] == "compatible"
+    )
+
+
+def _ordinary_report(report: Frame) -> bool:
+    audit = report["provider_audit"]
+    return _priceable(report) and (
+        audit is None or audit["mode_state"] == "nonthinking"
+    )
+
+
+def _within_reservation(report: Frame, permit: Frame) -> bool:
+    usage = report["usage"]
+    return usage is not None and (
+        usage["input_tokens"] <= permit["input_token_limit"]
+        and usage["output_tokens"] <= permit["output_token_limit"]
+        and (
+            permit["subcall"] != "query_embedding" or usage["cached_input_tokens"] == 0
+        )
+    )
 
 
 def _permit(frame: Frame) -> None:
@@ -283,7 +349,11 @@ def _validate(frame: Frame) -> None:
     _object(
         frame,
         _COMMON | _KINDS[kind],
-        "usage_hash" if kind == "call_observation" else "",
+        frozenset({"usage_hash", "audit_hash"})
+        if kind == "call_observation"
+        else frozenset({"usage", "provider_audit"})
+        if kind == "metering_report"
+        else frozenset(),
     )
     _require(_integer(frame["version"], 2, 2))
     _require(_integer(frame["emitted_mono_ms"], 0, MAX_INTEGER))
@@ -313,6 +383,11 @@ def _validate(frame: Frame) -> None:
     elif kind == "call_observation":
         _require(_integer(frame["call_sequence"], 1, 44))
         _require(_match(_UUID, frame["physical_call_id"]))
+        _require(
+            _match(_HASH, frame["audit_hash"])
+            if _chat(frame)
+            else frame["audit_hash"] is None
+        )
         _require(
             _member(frame["usage_disposition"], {"unknown", "reported"})
             and (
@@ -344,11 +419,15 @@ def _validate(frame: Frame) -> None:
         _require(_match(_UUID, frame["physical_call_id"]))
         if kind == "metering_report":
             _require(_match(_HASH, frame["parameter_hash"]))
-            _usage(frame["usage"])
+            _require(_chat(frame) or frame["binding"]["step_kind"] == "search_policy")
+            _report(frame).verify(_report_binding(frame), frame["report_hash"])
         else:
-            _require(_match(_HASH, frame["usage_hash"]))
+            _require(_match(_HASH, frame["report_hash"]))
             _require(
-                _member(frame["settlement"], {"settled", "anomaly", "unconfirmed"})
+                _member(
+                    frame["settlement"],
+                    {"settled", "recorded", "anomaly", "conflict", "unconfirmed"},
+                )
             )
     else:
         _require(isinstance(frame["result"], dict))
@@ -405,7 +484,12 @@ def _decode(line: bytes, metering: bool) -> Frame:
 def _raw_sizes(text: str, frame: Frame) -> None:
     # Limits measure source UTF-8 bytes, so whitespace and escaped Unicode cannot
     # create different Go/Python acceptance decisions at a protected-data boundary.
-    limits = {"checkpoint": MAX_CHECKPOINT_BYTES, "input": 16384, "result": 16384}
+    limits = {
+        "checkpoint": MAX_CHECKPOINT_BYTES,
+        "input": 16384,
+        "result": 16384,
+        "provider_audit": MAX_AUDIT_BYTES,
+    }
     if frame["binding"]["step_kind"] in {
         "read_ticket",
         "get_order",
@@ -650,14 +734,22 @@ class Conversation:
             _require(call["permit"]["subcall"] in {"chat", "query_embedding"})
             _require(
                 call["report"] is None
-                or frame["usage_hash"] == call["report"]["usage"]["usage_hash"]
+                or (
+                    call["report"]["usage"] is not None
+                    and frame["usage_hash"] == call["report"]["usage"]["usage_hash"]
+                )
             )
-        else:
+        elif call["permit"]["subcall"] != "chat":
             _require(call["report"] is None)
         self._phase = "observation_ack"
         call["observation"] = frame
         self._call_index += 1
         self._blocked = frame["business_outcome"] != "accepted"
+        if (
+            call["permit"]["subcall"] == "chat"
+            and frame["usage_disposition"] != "reported"
+        ):
+            self._closed = True
         self._join(call, now)
 
     def _observe_ack(self, frame: Frame, now: int) -> None:
@@ -682,12 +774,16 @@ class Conversation:
         observation, report = call["observation"], call["report"]
         if observation is None:
             return
-        if report is not None and observation["usage_disposition"] == "unknown":
-            self._closed = True
-            return
-        if (
-            report is not None
-            and observation["usage_hash"] != report["usage"]["usage_hash"]
+        if report is not None and (
+            observation["usage_hash"]
+            != (report["usage"]["usage_hash"] if report["usage"] is not None else None)
+            or observation["audit_hash"]
+            != (
+                report["provider_audit"]["audit_hash"]
+                if report["provider_audit"] is not None
+                else None
+            )
+            or not _ordinary_report(report)
         ):
             # Preserve independently validated usage even when ordinary output
             # lied about its hash; the caller can still settle the original call.
@@ -776,28 +872,21 @@ class Conversation:
         if frame["kind"] == "metering_report":
             _require(frame["parameter_hash"] == permit["parameter_hash"])
             old = call["report"]
-            _require(old is None or old["usage"] == frame["usage"])
+            _require(old is None or old["report_hash"] == frame["report_hash"])
             if old is None:
                 call["report"] = frame
-            usage = frame["usage"]
-            if (
-                usage["input_tokens"] > permit["input_token_limit"]
-                or usage["output_tokens"] > permit["output_token_limit"]
-            ):
+            if not _ordinary_report(frame) or not _within_reservation(frame, permit):
                 self._closed = True
         else:
             report = call["report"]
             _require(
-                report is not None
-                and report["usage"]["usage_hash"] == frame["usage_hash"]
+                report is not None and report["report_hash"] == frame["report_hash"]
             )
             _require(frame["emitted_mono_ms"] >= report["emitted_mono_ms"])
+            _require(frame["settlement"] != "recorded" or not _priceable(report))
             _require(
                 frame["settlement"] != "settled"
-                or (
-                    report["usage"]["input_tokens"] <= permit["input_token_limit"]
-                    and report["usage"]["output_tokens"] <= permit["output_token_limit"]
-                )
+                or (_priceable(report) and _within_reservation(report, permit))
             )
             previous = call["settlement"]
             _require(previous in {"", "unconfirmed", frame["settlement"]})
