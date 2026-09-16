@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "4f854702212993aba8aa897bca31d97f2643c508",
+  "started_at": "2026-09-16T15:20:23.854496662Z",
+  "finished_at": "2026-09-16T15:21:49.927810281Z",
+  "container_exit_code": 1,
+  "container_oom_killed": false,
+  "container_restart_count": 0,
+  "provider_preflight": {
+    "observed_at": "2026-09-16T15:18:30.629277+00:00",
+    "inference_requests": 0,
+    "models_status": 200,
+    "expected_model_available": true,
+    "balance_status": 200,
+    "account_available": true,
+    "passed": true
+  },
+  "artifacts": {
+    "registration.json": "84fa097f4cf734f08f7e08754e855af851693892ddce1ed81b55dbcfd12a64e7",
+    "evidence.json": "62964de042360f7c858891fe33bf77df4ce9800897d8436779a4e3e0d4a53547",
+    "report.json": "ae71003b51f924893c757e3a1fa021ab415aef566ad0633659ae208a3d64557f",
+    "business-before.json": "28346b4bd77ab80cabc65a36d18f8a803728adfd912e6e6399778e57434382fe",
+    "business-after.json": "b9392d754ffaa51eeba865b64614cc6513d87b7eb10442ababce020ff8abf970",
+    "runtime-receipt.json": "281f5dcd5bd7b8584af2f6e5355c98686fb0c5411ca9fc35c494300a7ab34f91"
+  },
+  "control_budget_batch_id": "a4ad1772-3af9-4985-8040-5e3ed6aba1a9",
+  "completed_attempts": 15,
+  "accepted_runs": 16,
+  "unattempted_cases": 24,
+  "full_business_acceptance": false,
+  "worker_exit_root_cause": "not_identified_missing_diagnostic"
+}
