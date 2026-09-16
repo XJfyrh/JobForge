@@ -1,6 +1,6 @@
 # Agent v3 S1-C2：受控 HTTP 与云端适配
 
-本切片按已接受的[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)实现正式执行器的 Python 网络边界。模块已通过本地确定性验证，等待 PR 独立审查与 CI；正式 Worker、guardian/FD 桥接、部署 profile、40 案固定流程和 DeepSeek 实际调用另行交付，不能由本页的模块测试代替。
+本切片按已接受的[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)实现正式执行器的 Python 网络边界。[PR #43](https://github.com/XJfyrh/JobForge/pull/43)已通过两份独立审查及最终七项CI并合并为`5647d7c`；正式 Worker、guardian/FD 桥接、部署 profile、40 案固定流程和 DeepSeek 实际调用另行交付，不能由本页的模块测试代替。
 
 ## 所有权与调用顺序
 
@@ -8,7 +8,7 @@
 
 派发层向执行器协调者申请许可，使用 v2 Conversation 验证绑定、顺序和原期限，在实际发送前消费一次许可；同一 body bytes 只交 HTTP transport 一次。客户端关闭自动重试、重定向和代理环境继承，拒绝并发排队。在线期限统一为 Linux CLOCK_BOOTTIME；Windows 真实运行使用 Linux 容器，测试可以显式注入时钟。
 
-`DispatchHooks` 是可信协调者的入口：authorize 必须返回对应许可，observe 必须等到 Go 的持久确认，settle 必须返回对应计量 ACK。当前仅测试协调者替身，未实现它们到 Go 的 IPC 桥接；现有 v2 没有 observation ACK，下一切片必须先补充受审契约，不能把写入管道当成持久确认。HTTP 模块本身不连接数据库或替代持久授权。
+`DispatchHooks` 是可信协调者的入口：authorize 必须返回对应许可，observe 必须等到 Go 的持久确认，settle 必须返回对应计量 ACK。当前仅测试协调者替身，未实现它们到 Go 的 IPC 桥接；现有 v2 没有 observation ACK，[ADR-0019提案](adr/0019-executor-confirmation-and-exit-contract.md)先补充该受审契约，不能把写入管道当成持久确认。HTTP 模块本身不连接数据库或替代持久授权。
 
 完整响应和业务有效响应分开。先有界读取并捕获完整可信计量，再验证业务结果，最后报告 observation。版本、模型 digest、向量、snapshot/index/policy 和来源绑定均须在 accepted 之前通过。search_policy 的 version、tags、embedding、search 四次请求分别授权；坏前置响应不能触发后继 HTTP。
 

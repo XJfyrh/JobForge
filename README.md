@@ -107,7 +107,7 @@ docker compose -f deploy/compose.yaml --profile durable-events up -d --build
 | [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
-| [下一阶段路线 v3](docs/plans/agent-execution-roadmap-v3.md) | 可恢复业务 Agent；S0/S1-A/B/C1已合并，C2受控HTTP已本地验证、待PR审查，S2～S5待实现 |
+| [下一阶段路线 v3](docs/plans/agent-execution-roadmap-v3.md) | 可恢复业务 Agent；S0/S1-A/B/C1/C2已合并，C3正式进程契约提案中，S2～S5待实现 |
 | [Agent v3 Run开发](docs/agent-v3-runs.md) | Run API/SDK、内部Worker协议、调用预算、分层测试与启动 |
 | [Agent v3 实施记录](docs/agent-v3-progress.md) | 新 PRD/ADR、试验证据与分阶段验收状态 |
 | [路线 v2 对照](docs/plans/agent-execution-roadmap-v2.md) | 有界工具调用与公平评测；保留此前候选方案 |

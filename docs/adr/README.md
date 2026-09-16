@@ -64,3 +64,7 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受，细化 S1-B；实现与验收状态单独记录。
 
 ADR-0018 与 [PRD v0.10](../product/JobForge_PRD_v0.10.md) 随 [PR #41](https://github.com/XJfyrh/JobForge/pull/41) 接受，细化 S1-C；正式执行器与真实云端验收仍需实现和单独验证。
+
+## 待审增量
+
+[ADR-0019 执行器观察确认与固定退出合同](0019-executor-confirmation-and-exit-contract.md)与[PRD v0.11](../product/JobForge_PRD_v0.11.md)处于Proposed状态。若接受，将明确取代ADR-0018普通observation后的继续执行序列；当前不改变既有Accepted决策或声称正式进程已验收。

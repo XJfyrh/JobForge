@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1已合并；C2已本地验证、PR #43审查中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run基线与最终CI/独立审查；C1协议、权威时间、独立计量和Linux共享时钟经PR #42交付；C2修复审查超时分类后663项Python/485项Linux通过；云端推理/固定流程仍未验收 |
+| S1 业务与基线 | S1-A/B/C1/C2已合并；C3正式进程契约提案中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run基线与最终CI/独立审查；C1协议/时间/计量经PR #42交付；C2经PR #43合并，663项Python/485项Linux、最终七项CI和两独立复审通过；云端推理/固定流程仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 未开始 | S1-B提供checkpoint事务；正式Worker/执行器真实进程恢复仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -79,3 +79,9 @@ Windows全仓race有405个测试通过事件、5个明确skip；新增业务真�
 ## S1-C 契约准备
 
 [PRD v0.10](product/JobForge_PRD_v0.10.md)与[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)细化云端profile、正式执行器、独立异常计量、固定流程与可核对开发评分。[PR #41](https://github.com/XJfyrh/JobForge/pull/41)经两份独立上下文审查与[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35074431057)通过，已合并为`01177e9`。[协议/时钟/RPC接缝](agent-v3-executor-protocol.md)已随PR #42合并为`b9ba908`；最终七项CI、两独立复审和Windows901项测试/子测试通过。当前实现[受控HTTP与DeepSeek适配](agent-v3-authorized-http.md)；未运行DeepSeek推理，不把40案离线标签核对当作业务验收。
+
+## S1-C2合并与C3契约调查
+
+2026-09-16，受控HTTP/DeepSeek模块[PR #43](https://github.com/XJfyrh/JobForge/pull/43)合并为`5647d7c`。最终`4eed461c`修复独立审查的超时分类P2后，两份新上下文复审无剩余问题，七项CI通过；本地Windows全Python663项、Linux容器485项、真实依赖全仓race901项测试/子测试事件通过，5个skip明确保留。详见[证据](evidence/agent-v3-s1c2-http-2026-09-16.md)。尚无DeepSeek推理、正式Worker或40案结果。
+
+C3实施调查发现：现有v2缺普通observation持久ACK，已关闭会话的大小错误缺类型化退出路由；管道write不能替代数据库确认。因此先提出[PRD v0.11](product/JobForge_PRD_v0.11.md)与[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)，通过PR独立审查后才同步源合同/codec并实现正式进程。provider身份持久审计和跨队列trace来源也尚未交付，不能拿C2内存audit/HTTP透传当作通过。技术调查和决策继续归档仓库外。
