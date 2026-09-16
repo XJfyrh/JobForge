@@ -64,10 +64,10 @@ func startPeer(t *testing.T, mode string) (*Process, context.Context) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
-	return startPeerWithContext(t, ctx, mode), ctx
+	return startPeerWithContext(ctx, t, mode), ctx
 }
 
-func startPeerWithContext(t *testing.T, ctx context.Context, mode string) *Process {
+func startPeerWithContext(ctx context.Context, t *testing.T, mode string) *Process {
 	t.Helper()
 	requireProcessTests(t)
 	pipes, err := newPipes()
@@ -329,7 +329,7 @@ func TestBlockedMeteringWriteDoesNotDelayStop(t *testing.T) {
 func TestContextCancellationDuringStopPublicationCleansProcess(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
-	p := startPeerWithContext(t, ctx, "block_input")
+	p := startPeerWithContext(ctx, t, "block_input")
 	select {
 	case event := <-p.Events():
 		if event.Kind != FrameReceived {

@@ -23,3 +23,7 @@
 调查线索是[CI 35117180332](https://github.com/XJfyrh/JobForge/actions/runs/35117180332)的`before-commit-lock`收尾超时。原失败没有此处栈，不能直接认定它或此前另一CI超时就是本竞态。定向原用例在宿主PG网络及相同容器网络分别10次通过；后续[带栈CI 35118249801](https://github.com/XJfyrh/JobForge/actions/runs/35118249801)八项通过。这些不覆盖原失败记录；本修复的直接证据是上述确定时序红绿结果。
 
 首批真实云端中断原因仍缺直接证据，业务提示质量仍待真实复验；本修复不表示S1或整个路线完成。历史W4性能门禁失败、AT-25跳过和生产长期留存未验收继续保留。此改动只影响停止清理分支，没有修改Claim或数据库热路径，未追加性能基准。
+
+独立修复PR的首次[CI 35119402012](https://github.com/XJfyrh/JobForge/actions/runs/35119402012)在安装Buf时遇到GitHub匿名API限流，尚未执行lint。根据该action实际输入定义，补传工作流既有的只读`github.token`，不增加权限或改变Buf版本/检查项；失败不是Proto lint结果，不以重跑覆盖。
+
+同次CI的Go lint另发现新增测试helper的`context.Context`不在首参数；仅调整helper及两处调用的参数顺序，保持测试语义不变。该次其余六项检查成功，包含全量Go race/真实PG、S0进程及S1运行时联合检查；这些有效结果保留，补丁后最终门禁由新提交CI确认。
