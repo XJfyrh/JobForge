@@ -1,6 +1,6 @@
 # ADR-0017：Run 接纳、执行权与物理调用账本
 
-- 状态：Proposed；独立评审合并后才作为实现依据。
+- 状态：Accepted；随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 于2026-09-16合并接受。契约接受不代表 S1-B 已实现或验收。
 - 日期：2026-09-16。
 - 关联：[PRD v0.9](../product/JobForge_PRD_v0.9.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[0014](0014-supervised-python-executor-and-call-budget.md)、[0015](0015-approved-business-actions-and-receipts.md)、[0016](0016-business-snapshots-and-policy-retrieval.md)。
 - 取代范围：无；细化此前未固定的接纳、重试家族额度和线协议边界。旧版本历史结论保持不变。

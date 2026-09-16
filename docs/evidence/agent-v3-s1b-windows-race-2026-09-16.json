@@ -1,0 +1,44 @@
+{
+  "command": "go test -race -count=1 -json ./...",
+  "exit_code": 0,
+  "test_pass_events": 765,
+  "failed": [],
+  "skipped": [
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestCancelAT25ControlStreamDegradation"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestRealTasksLifecycle"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestBusinessWorkerProcessHelper"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestRealTasksSDK"
+    },
+    {
+      "Package": "github.com/xjfyrh/jobforge/tests/integration",
+      "Test": "TestWorkerProcessHelper"
+    }
+  ],
+  "scope_note": "Local S1-B WIP source before later performance test and review changes; dependent model/lifecycle skips are not acceptance passes.",
+  "packages_without_tests": [
+    "github.com/xjfyrh/jobforge/benchmarks/e2e",
+    "github.com/xjfyrh/jobforge/cmd/agent-control",
+    "github.com/xjfyrh/jobforge/cmd/support-business",
+    "github.com/xjfyrh/jobforge/examples/support-agent/runtime",
+    "github.com/xjfyrh/jobforge/internal/ctl",
+    "github.com/xjfyrh/jobforge/internal/migrate",
+    "github.com/xjfyrh/jobforge/internal/notify",
+    "github.com/xjfyrh/jobforge/internal/run/grpcapi",
+    "github.com/xjfyrh/jobforge/internal/store",
+    "github.com/xjfyrh/jobforge/internal/store/postgres",
+    "github.com/xjfyrh/jobforge/migrations",
+    "github.com/xjfyrh/jobforge/migrations/business",
+    "github.com/xjfyrh/jobforge/proto/jobforge/worker/v1"
+  ]
+}

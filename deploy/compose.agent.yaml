@@ -1,7 +1,57 @@
-# S1-A business dependency only. No Run scheduler or paid model invocation.
+# Business dependency plus optional Run control. No paid model is registered here.
 name: jobforge-agent-v3
 
 services:
+  control-postgres:
+    profiles: [control]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jobforge_agent
+      POSTGRES_PASSWORD: jobforge_agent
+      POSTGRES_DB: jobforge_agent
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - control-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobforge_agent -d jobforge_agent"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  control:
+    profiles: [control]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.agent-control
+    environment:
+      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_agent?sslmode=disable
+      JOBFORGE_AGENT_CONFIG: /etc/jobforge/run.json
+      JOBFORGE_AGENT_HTTP_ADDR: "0.0.0.0:8093"
+      JOBFORGE_AGENT_GRPC_ADDR: "0.0.0.0:9093"
+      JOBFORGE_AGENT_BUSINESS_URL: http://business:8092
+      # Synthetic local identities only; cloud secrets never enter this file.
+      JOBFORGE_AGENT_BUSINESS_KEYS: >-
+        {"tenant-north":"dev-north-operator-key","tenant-south":"dev-south-operator-key"}
+      JOBFORGE_AGENT_API_KEYS: >-
+        {"dev-agent-north-operator":{"tenant_id":"tenant-north","role":"operator"},
+         "dev-agent-north-reader":{"tenant_id":"tenant-north","role":"reader"},
+         "dev-agent-south-operator":{"tenant_id":"tenant-south","role":"operator"}}
+      JOBFORGE_AGENT_WORKER_KEYS: '{"agent-worker-1":"dev-agent-worker-token"}'
+    volumes:
+      - ./agent-run.empty.json:/etc/jobforge/run.json:ro
+    ports:
+      - "127.0.0.1:8093:8093"
+      - "127.0.0.1:9093:9093"
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 128m
+
   ollama:
     profiles: [models]
     image: ollama/ollama:0.32.5@sha256:4dea9fb511947e24a84237bb636b0203abcb2ff0d3fbc7b4ff865deb91362131
@@ -54,5 +104,6 @@ services:
     mem_limit: 128m
 
 volumes:
+  control-pgdata:
   business-pgdata:
   business-models:

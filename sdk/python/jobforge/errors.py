@@ -25,7 +25,14 @@ class JobForgeError(Exception):
     @property
     def retryable(self) -> bool:
         """Whether a caller may retry, with its own bounded policy."""
-        return self.code in ("QUEUE_OVERLOADED", "INTERNAL", "TRANSPORT", "TIMEOUT")
+        return self.code in (
+            "QUEUE_OVERLOADED",
+            "RATE_LIMITED",
+            "DEPENDENCY_UNAVAILABLE",
+            "INTERNAL",
+            "TRANSPORT",
+            "TIMEOUT",
+        )
 
 
 class InvalidArgumentError(JobForgeError):
@@ -119,6 +126,34 @@ class InternalError(JobForgeError):
         super().__init__("INTERNAL", message)
 
 
+class RateLimitedError(JobForgeError):
+    """The caller's bounded request rate was exceeded (HTTP 429)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("RATE_LIMITED", message)
+
+
+class DependencyUnavailableError(JobForgeError):
+    """A required dependency is temporarily unavailable (HTTP 503)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("DEPENDENCY_UNAVAILABLE", message)
+
+
+class ProfileUnavailableError(JobForgeError):
+    """The exact immutable execution profile is unavailable (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("PROFILE_UNAVAILABLE", message)
+
+
+class BudgetExhaustedError(JobForgeError):
+    """A shared budget cannot authorize new execution (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("BUDGET_EXHAUSTED", message)
+
+
 # Mapping from error code to exception factory. Mapped subclasses accept a
 # single message argument and pin their own code, so the map is typed as a
 # callable instead of type[JobForgeError].
@@ -134,6 +169,10 @@ _ERROR_MAP: dict[str, Callable[[str], JobForgeError]] = {
     "INVALID_TRANSITION": InvalidTransitionError,
     "QUEUE_OVERLOADED": QueueOverloadedError,
     "INTERNAL": InternalError,
+    "RATE_LIMITED": RateLimitedError,
+    "DEPENDENCY_UNAVAILABLE": DependencyUnavailableError,
+    "PROFILE_UNAVAILABLE": ProfileUnavailableError,
+    "BUDGET_EXHAUSTED": BudgetExhaustedError,
 }
 
 

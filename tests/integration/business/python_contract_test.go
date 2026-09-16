@@ -140,11 +140,11 @@ func TestBusinessPythonHTTPContract(t *testing.T) {
 		ModelRequests   int    `json:"model_requests"`
 	}
 	if err := json.Unmarshal(output.Bytes(), &result); err != nil || result.Status != "passed" ||
-		result.HTTPRequests != 4 || result.LocalRejections != 2 || result.ModelRequests != 0 {
+		result.HTTPRequests != 5 || result.LocalRejections != 2 || result.ModelRequests != 0 {
 		t.Fatal("Python business HTTP contract did not return the expected bounded result")
 	}
-	if requests.Load() != 4 {
-		t.Fatalf("local rejection dispatched business HTTP: got %d requests, want 4", requests.Load())
+	if requests.Load() != 5 {
+		t.Fatalf("local rejection dispatched business HTTP: got %d requests, want 5", requests.Load())
 	}
 	if crossTenantStatus.Load() != http.StatusNotFound {
 		t.Fatalf("cross-tenant HTTP status = %d, want 404", crossTenantStatus.Load())

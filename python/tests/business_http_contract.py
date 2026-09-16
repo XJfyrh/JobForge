@@ -18,6 +18,7 @@ from jobforge_agent.business import BusinessTools, SnapshotBinding
 from jobforge_agent.embedding import MODEL, MODEL_DIGEST, OllamaEmbedding
 from jobforge_agent.errors import ToolError
 from jobforge_agent.http import BoundedHTTP, strict_json
+from jobforge_agent.retrieval import snapshot_binding
 
 
 def read_input() -> dict[str, Any]:
@@ -85,6 +86,26 @@ async def check(value: dict[str, Any]) -> dict[str, Any]:
     )
     local_rejections = 0
     try:
+        metadata = await search.request(
+            "GET",
+            f"/business/v1/snapshots/{binding.snapshot_id}",
+            deadline=deadline,
+            max_response=8192,
+        )
+        assert metadata["version_vector"]["schema_version"] == 1
+        assert metadata["version_vector"]["order"] == {
+            "id": binding.order_id,
+            "exists": True,
+            "revision": 1,
+        }
+        # Existing S1-A callers continue reading their binding from metadata
+        # while S1-B receives the additional authoritative version vector.
+        assert (
+            snapshot_binding(
+                metadata, binding.snapshot_id, metadata["index"]["profile"]
+            )
+            == binding
+        )
         for name, kind in (("get_order", "order"), ("get_delivery", "delivery")):
             result = await tools.execute(
                 name, {"order_id": binding.order_id}, deadline=deadline
@@ -146,7 +167,7 @@ async def check(value: dict[str, Any]) -> dict[str, Any]:
                 local_rejections += 1
             else:
                 raise AssertionError("local capability guard accepted invalid input")
-        assert len(requests) == before_rejections == 4
+        assert len(requests) == before_rejections == 5
         assert model_requests == []
         return {
             "status": "passed",

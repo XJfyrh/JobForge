@@ -2,9 +2,11 @@
 
 本文档描述 JobForge 分布式任务编排平台的系统架构。当前产品边界与验收语义见 [PRD v0.6](product/JobForge_PRD_v0.6.md)，其上游可靠性不变量继续生效；架构决策见 [ADR 目录](adr/README.md)。
 
-Agent v3按[PRD v0.7](product/JobForge_PRD_v0.7.md)与[v0.8](product/JobForge_PRD_v0.8.md)分阶段推进。S1-A新增独立`support-business` HTTP进程和专属PG/pgvector库，Python只通过三个预注册读工具访问冻结快照；免费固定embedding在事务外准备，由受信Go装载命令原子发布。业务runtime、loader和schema owner分权，gold不进入运行镜像。[启动与边界](agent-v3-business.md)描述此切片；它尚未提供新Run调度器、DeepSeek调用或审批写入，不能将下列v0.6运行图当作新Agent全链路已验收。
+Agent v3按[PRD v0.7](product/JobForge_PRD_v0.7.md)与[v0.8](product/JobForge_PRD_v0.8.md)分阶段推进。S1-A新增独立`support-business` HTTP进程和专属PG/pgvector库，Python只通过三个预注册读工具访问冻结快照；免费固定embedding在事务外准备，由受信Go装载命令原子发布。业务runtime、loader和schema owner分权，gold不进入运行镜像。[启动与边界](agent-v3-business.md)描述此切片；Run控制由后续S1-B提供。DeepSeek调用与审批写入仍未交付，不能将下列v0.6运行图当作新Agent全链路已验收。
 
 ## 架构概览
+
+S1-B 在 [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 接受后新增 `agent-control`，独立提供 Run API/Worker RPC/有界恢复扫描，只在控制 PostgreSQL 中调度 runs。步骤、审批方案和逐物理调用账本不是第二队列；业务服务依然独立。当前分支的生产存储及确定性真实 PG/HTTP 验证不能代替 S1-C 的正式 DeepSeek 执行器或 S4 的业务写入。启动、结果权限及 unknown 预算说明见 [Run 指南](agent-v3-runs.md)。
 
 ```mermaid
 flowchart LR

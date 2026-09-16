@@ -6,6 +6,42 @@ Python 3.10+，同步 HTTP 客户端。安装（仓库根目录）：
 python -m pip install './sdk/python[dev]'
 ```
 
+## Run v2
+
+`RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 ADR-0017；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；S1-B 没有默认收费模型或批准/写入接口。
+
+```python
+import os
+from jobforge import RunClient
+
+with RunClient(
+    os.environ["JOBFORGE_API_URL"], os.environ["JOBFORGE_API_KEY"]
+) as client:
+    accepted = client.submit(
+        ticket_id="T01",
+        business_request_key="ticket-T01-review-v1",
+        profile_id=os.environ["JOBFORGE_RUN_PROFILE"],
+        budget_batch_id=os.environ["JOBFORGE_RUN_BUDGET_BATCH"],
+        idempotency_key="submit-ticket-T01-v1",
+    )
+    run = client.get(accepted.run.run_id)
+    print(run.state, run.error, run.budget.family.held_cost_microyuan)
+    result = client.result(run.run_id)
+    print(result.available, result.kind, result.ref)
+```
+
+公开方法为 `submit/get/list/steps/events/result/cancel/retry`。`list` 返回 `items/next_cursor`，`steps/events` 接受 `after/limit` 并返回 `items/next_after`；默认20条、最多100条，SDK不自动翻页或轮询。`steps` 显式读取受保护结果，事件仅含元数据。未有结果时 `available=False`、`kind/ref=None`；`proposal` 只表示待审批方案。
+
+提交必须同时提供业务意图键和独立 `idempotency_key`；相同业务内容换提交键仍复用首次根Run。`cancel(run_id, idempotency_key=...)` 返回操作ID和当前Run，运行中取消先进入 `stopping`。`retry(run_id, idempotency_key=..., run_timeout_seconds=3600)` 为failed/cancelled来源创建或复用唯一后继，保留原终态并共享家族预算。新建retry须在原业务请求7日窗口内；不能通过换键重置额度或创建分叉。
+
+Run响应使用完整、严格类型模型，未知/重复/缺少字段、非法状态/时间、浮点/布尔金额或超过 `2**53-1` 的计数均被拒绝。所有金额是CNY microyuan整数；`used.tokens/cost_microyuan` 是确认用量加保守hold，`known_*` 与 `held_*` 分别展示，不代表供应商实际账单。failed Run查询仍返回HTTP 200，执行失败在 `run.error`。
+
+SDK每次方法调用最多发送一次HTTP请求，不隐式重试、跟随重定向、发送后台工作或自动解引用结果。超时可能已受理，调用方须保留原操作键。新增稳定异常为 `RateLimitedError`、`DependencyUnavailableError`、`ProfileUnavailableError` 和 `BudgetExhaustedError`；`retryable` 只提供调用方策略提示，不会触发发送。TraceContext自动继承当前上下文，也可显式传 `traceparent/tracestate`；span只记录操作和HTTP状态。
+
+确定性SDK测试和源/共同fixture一致性检查使用 `python -m pytest sdk/python/tests`。真实HTTP入口为 `sdk/python/tests/run_http_contract.py <url> <profile_id> <budget_batch_id> <ticket_id>`，由Go测试建立生产router和真实PostgreSQL后调用；没有运行该入口不能把MockTransport单测当成真实服务验收。
+
+## 旧 Job API
+
 ```python
 import os
 from jobforge import JobForgeClient
