@@ -1,6 +1,6 @@
 # JobForge PRD v0.8：S1 真实业务工具与固定流程
 
-- 日期：2026-09-16；状态：S1增量契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受；S1-A已通过验收并随 [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 合并，S1-B/C尚未实现。
+- 日期：2026-09-16；状态：S1增量契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受；S1-A已通过验收并随 [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 合并，S1-B随[PR #40](https://github.com/XJfyrh/JobForge/pull/40)合并；S1-C尚未实现。
 - 基线：[PRD v0.7](JobForge_PRD_v0.7.md)、[路线v3](../plans/agent-execution-roadmap-v3.md)。本增量细化S1，不缩减S2～S5及整体退出条件。
 - 决策：[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)；后续Run/调用协议继续服从ADR-0013～0015，需在实现前细化源协议。
 
@@ -51,4 +51,4 @@ S1-B可提前实现后续阶段依赖的有限Run/步骤基础，但不能为演
 
 云端chat优先DeepSeek。真实请求开始前必须在已实现账本中冻结明确批次额度B、价格版本、最大输入/输出计费上界和物理调用次数；供应商超时/进程退出不能当作零消耗。无法确认上界的模式不纳入硬预算承诺。本阶段不追加本地chat候选，embedding独立选型。
 
-当前[S1-A证据](../evidence/agent-v3-s1-business-2026-09-16.md)记录独立业务快照、工具和真实检索。Run/账本、DeepSeek固定流程与40例模型评分仍未实现/验收，因此S1尚未完成。历史远程模型/生产留存未验收、W4失败与AT-25跳过继续留在原报告；新阶段不沿用它们冒充新的成功或失败结论。
+当前[S1-A证据](../evidence/agent-v3-s1-business-2026-09-16.md)记录独立业务快照、工具和真实检索。Run/账本已随S1-B验收合并，DeepSeek固定流程与40例模型评分仍未实现/验收，因此S1尚未完成。历史远程模型/生产留存未验收、W4失败与AT-25跳过继续留在原报告；新阶段不沿用它们冒充新的成功或失败结论。

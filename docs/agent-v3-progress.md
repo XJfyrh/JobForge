@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A已合并；S1-B契约PR #39已接受，实现分支验证中；C未实现 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run性能基线，尚待PR CI和独立实现审查；云端推理/固定流程仍未验收 |
+| S1 业务与基线 | S1-A/B已合并；S1-C增量契约提案，未实施 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run基线与最终CI/独立审查；云端推理/固定流程仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 未开始 | S1-B提供checkpoint事务；正式Worker/执行器真实进程恢复仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -70,8 +70,12 @@ Windows全仓race有405个测试通过事件、5个明确skip；新增业务真�
 
 接下来按 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017提案](adr/0017-run-admission-and-call-ledger.md) 审查 S1-B 的接纳、Run租约、共享家族额度及逐物理调用合同。尚无生产Run/账本、正式执行器或收费chat请求，S1整体仍未完成。历史W4失败、AT-25跳过、远程模型和生产留存未验收不变。
 
-## S1-B 实现验证
+## S1-B 实现验证与合并
 
 2026-09-16，契约 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 已合并（`696404e`）。实现分支交付独立 `agent-control`、Run HTTP/SDK/Worker RPC、原子执行权、检查点和三层逐调用账本。Windows全仓race通过765个测试事件，5个测试skip明确保留；后补接纳/Claim/审批与128Run定向性能另已实际运行。新控制Compose从空库完成bootstrap和健康/鉴权查询。详见[需求映射与证据](evidence/agent-v3-s1b-runs-2026-09-16.md)。
 
-当前仍待实现PR的CI与独立上下文审查，不能将S1-B或整个S1标成已交付。正式执行器与DeepSeek收费调用未开始；真实模型、完整Agent质量、生产留存以及历史W4失败和AT-25跳过继续分别披露。
+实现[PR #40](https://github.com/XJfyrh/JobForge/pull/40)已合并为`f63300c`；最终head `43241c9`经过三份独立审查，修复一项RPC结果错误映射P2后无阻断，[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35072274898)全部通过。S1-B完成，整个S1尚未完成。正式执行器与DeepSeek收费调用未开始；真实模型、完整Agent质量、生产留存以及历史W4失败和AT-25跳过继续分别披露。
+
+## S1-C 契约准备
+
+[PRD v0.10](product/JobForge_PRD_v0.10.md)与[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)细化云端profile、正式执行器、独立异常计量、固定流程与可核对开发评分。当前为待审提案；未运行DeepSeek推理，不把40案离线标签核对当作业务验收。
