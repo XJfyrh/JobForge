@@ -29,6 +29,7 @@ type lifecycleClient struct {
 	acks        int
 	registerFn  func(context.Context, *agentv1.RegisterRequest) (*agentv1.RegisterResponse, error)
 	heartbeatFn func(context.Context, *agentv1.HeartbeatRequest) (*agentv1.HeartbeatResponse, error)
+	claimFn     func(context.Context, *agentv1.ClaimRequest) (*agentv1.ClaimResponse, error)
 }
 
 func (c *lifecycleClient) GetCheckpoint(ctx context.Context, _ *agentv1.GetCheckpointRequest, _ ...grpc.CallOption) (*agentv1.GetCheckpointResponse, error) {
@@ -58,6 +59,10 @@ func (c *lifecycleClient) AcknowledgeStopped(ctx context.Context, _ *agentv1.Ack
 
 func (c *lifecycleClient) Register(ctx context.Context, req *agentv1.RegisterRequest, _ ...grpc.CallOption) (*agentv1.RegisterResponse, error) {
 	return c.registerFn(ctx, req)
+}
+
+func (c *lifecycleClient) Claim(ctx context.Context, req *agentv1.ClaimRequest, _ ...grpc.CallOption) (*agentv1.ClaimResponse, error) {
+	return c.claimFn(ctx, req)
 }
 
 func (c *lifecycleClient) Heartbeat(ctx context.Context, req *agentv1.HeartbeatRequest, _ ...grpc.CallOption) (*agentv1.HeartbeatResponse, error) {
@@ -256,5 +261,57 @@ func TestBlockedHeartbeatDoesNotDelayAuthorityWatchdog(t *testing.T) {
 	}
 	if client.acks != 0 || len(client.failures) != 0 {
 		t.Fatal("local expiry invented a cancellation or failure write")
+	}
+}
+
+// Short attempts must not continuously postpone the session heartbeat. Each
+// attempt finishes before its own five-second heartbeat ticker can fire.
+func TestShortClaimsDoNotStarveSessionHeartbeat(t *testing.T) {
+	clock := &atomic.Int64{}
+	clock.Store(1000)
+	lease := lifecycleLease()
+	var idleHeartbeats atomic.Int64
+	client := &lifecycleClient{}
+	for range 20 {
+		client.checkpoints = append(client.checkpoints, lease.Checkpoint)
+	}
+	client.registerFn = func(context.Context, *agentv1.RegisterRequest) (*agentv1.RegisterResponse, error) {
+		return &agentv1.RegisterResponse{Session: lease.Execution.Session, Capacity: 1, ProfileIds: []string{"test-profile"},
+			HeartbeatInterval: durationpb.New(5 * time.Second), AuthorityObservedAt: timestamppb.New(testDatabaseTime), ExpiresAt: timestamppb.New(testDatabaseTime.Add(time.Minute))}, nil
+	}
+	client.claimFn = func(context.Context, *agentv1.ClaimRequest) (*agentv1.ClaimResponse, error) {
+		return &agentv1.ClaimResponse{Lease: lease}, nil
+	}
+	client.heartbeatFn = func(_ context.Context, req *agentv1.HeartbeatRequest) (*agentv1.HeartbeatResponse, error) {
+		if req.Execution != nil {
+			t.Error("short attempt unexpectedly reached active heartbeat")
+		}
+		idleHeartbeats.Add(1)
+		response := continuingHeartbeat()
+		response.LeaseUntil = nil
+		return response, nil
+	}
+	w := &Worker{client: client, profiles: map[string]run.Profile{"test-profile": {}},
+		manifest:     Manifest{Profiles: []ManifestProfile{{ProfileID: "test-profile", ProfileHash: strings.Repeat("a", 64)}}},
+		environments: map[string]runexecutor.Environment{"runtime-test": {}}}
+	done := errors.New("twenty short attempts complete")
+	attempts := 0
+	execute := func(_ context.Context, _ *agentv1.RunLease, cp *agentv1.Checkpoint, authority executionAuthority) stepOutcome {
+		if authority.Check() != nil {
+			t.Fatal("short attempt lost its existing authority")
+		}
+		clock.Add(4000)
+		attempts++
+		if attempts == 20 {
+			return stepOutcome{Fatal: done}
+		}
+		return stepOutcome{Commit: &agentv1.CommitStepResponse{AcceptedStep: &agentv1.AcceptedStep{Step: cp.NextStep},
+			CursorVersion: cp.CursorVersion + 1, AttemptClosed: true, State: agentv1.RunState_RUN_STATE_AWAITING_APPROVAL}}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err := w.runLoop(ctx, func() (int64, error) { return clock.Load(), nil }, execute)
+	if !errors.Is(err, done) || attempts != 20 || idleHeartbeats.Load() < 9 {
+		t.Fatalf("continuous short claims starved heartbeat: attempts=%d idle_heartbeats=%d err=%v", attempts, idleHeartbeats.Load(), err)
 	}
 }

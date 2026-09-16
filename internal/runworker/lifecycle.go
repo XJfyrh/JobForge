@@ -80,11 +80,8 @@ func (w *Worker) runLoop(ctx context.Context, now clockSample, execute stepRunne
 			if err != nil {
 				return err
 			}
-			nextHeartbeat, clockErr = now()
-			if clockErr != nil {
-				return clockErr
-			}
-			nextHeartbeat += 5000
+			// Keep the existing session heartbeat schedule across short Runs.
+			// Completing work does not renew session authority.
 		}
 		if err = waitClaimPoll(ctx); err != nil {
 			return err
