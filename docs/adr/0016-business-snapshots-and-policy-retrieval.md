@@ -1,6 +1,6 @@
 # ADR-0016：独立业务快照与版本化政策检索
 
-- 状态：Proposed。
+- 状态：Accepted；随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 于2026-09-16合并接受；S1-A实现验证见[证据](../evidence/agent-v3-s1-business-2026-09-16.md)。
 - 日期：2026-09-16。
 - 关联：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[ADR-0014](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015](0015-approved-business-actions-and-receipts.md)。
 - 范围：细化S1业务读路径、资源准备及新依赖；不改变已接受Run状态、审批或费用预留语义。
@@ -67,4 +67,11 @@ Python的模型可见工具参数为get_order/get_delivery的关联order_id或�
 
 替代方案：继续JSON内向量可减少依赖，但无法兑现本轮pgvector契约；远程向量库增加凭据/运行服务；Python直接访问全部业务表减少HTTP却模糊权限与工具边界。选择独立Go业务HTTP＋PG/pgvector、Python薄适配，不引入完整客服框架或通用工具发现。
 
-本ADR接受后才作为S1-A实现依据。它不宣布云端chat、固定流程、调用账本或整个S1已经完成。
+本ADR已接受，作为S1-A实现依据。它不宣布云端chat、固定流程、调用账本或整个S1已经完成。
+
+## 2026-09-16实现澄清（PR #38）
+
+以下为S1-A实现期的明确增补，保留PR #37接受的原有决策正文；具体复现和修复见[实施证据](../evidence/agent-v3-s1-business-2026-09-16.md)。
+
+- `as_of` 取版本化工单的受信 `observed_at`（业务观察时点），开发语料固定该值，配送判断不能随验收机器当前时间漂移；`created_at` 单独记录快照事务的实际捕获时间。在线调用者不能覆盖两者。
+- 向量转换到float32后，显式按float32乘法和累加计算平方范数，还须位于float32最小正值至最大值的一半之间。实际PG验证表明仅检查分量有限或float64总范数不能排除下溢/溢出误导距离，包括384个1e-23分量。无法安全表示的范数返回INVALID_ARGUMENT，固定模型正常输出在范围内。

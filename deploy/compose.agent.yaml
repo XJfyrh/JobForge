@@ -1,0 +1,58 @@
+# S1-A business dependency only. No Run scheduler or paid model invocation.
+name: jobforge-agent-v3
+
+services:
+  ollama:
+    profiles: [models]
+    image: ollama/ollama:0.32.5@sha256:4dea9fb511947e24a84237bb636b0203abcb2ff0d3fbc7b4ff865deb91362131
+    ports:
+      - "127.0.0.1:11436:11434"
+    volumes:
+      - business-models:/root/.ollama
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+
+  business-postgres:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    environment:
+      POSTGRES_USER: jobforge_business_bootstrap
+      POSTGRES_PASSWORD: jobforge_business_bootstrap
+      POSTGRES_DB: jobforge_business
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - business-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobforge_business_bootstrap -d jobforge_business"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  business:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.business
+    environment:
+      JOBFORGE_BUSINESS_DSN: postgres://jobforge_business_reader:jobforge_business_reader@business-postgres:5432/jobforge_business?sslmode=disable
+      JOBFORGE_BUSINESS_ADDR: "0.0.0.0:8092"
+      # Synthetic local development identities only. Never use these in production.
+      JOBFORGE_BUSINESS_KEYS: >-
+        {"dev-north-operator-key":{"tenant_id":"tenant-north","role":"operator"},
+         "dev-north-reader-key":{"tenant_id":"tenant-north","role":"reader"},
+         "dev-south-operator-key":{"tenant_id":"tenant-south","role":"operator"},
+         "dev-south-reader-key":{"tenant_id":"tenant-south","role":"reader"}}
+    ports:
+      - "127.0.0.1:8092:8092"
+    depends_on:
+      business-postgres:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 32
+    mem_limit: 128m
+
+volumes:
+  business-pgdata:
+  business-models:

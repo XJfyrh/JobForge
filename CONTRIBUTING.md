@@ -85,6 +85,8 @@ Agent v3 的 S0 探针另运行 `python -m pytest tools/agent_probe_data tools/e
 
 Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
 
+Agent v3 S1-A另运行`python -m pytest python/tests`、`mypy python/jobforge_agent`；独立业务库启动、`JOBFORGE_BUSINESS_TEST_DSN`和跨语言解释器配置见[业务开发指南](docs/agent-v3-business.md)。CI专门使用固定pgvector镜像运行真实HTTP/PG/race，不以普通Go测试中的依赖skip代替。真实模型层保留20条查询的全部结果和未命中，不能用合成向量证明检索质量。
+
 ## 安全问题
 
 不要在公开 Issue 或 Pull Request 中提交未公开漏洞、凭据或敏感数据。请遵循 [SECURITY.md](SECURITY.md) 的私密报告流程。

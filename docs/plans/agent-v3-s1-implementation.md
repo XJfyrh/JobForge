@@ -1,12 +1,12 @@
 # S1 实施计划与证据索引
 
 - 起点：`8708308`，S0已完成；2026-09-16开始S1。
-- 规范：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016草案](../adr/0016-business-snapshots-and-policy-retrieval.md)。保持路线v3全范围，切片合并不等于阶段完成。
+- 规范：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)。保持路线v3全范围，切片合并不等于阶段完成。
 
 | 顺序 | 产物 | 验收/合并条件 | 当前状态 |
 |---|---|---|---|
-| 契约 | 业务快照、工具HTTP、pgvector与准备身份 | 独立上下文审查；ADR按PR流程接受 | 评审准备 |
-| S1-A | 独立业务服务、迁移/角色、40例开发数据、Python工具适配、索引准备与搜索 | 真PG/HTTP、tenant/版本/大小边界、固定真实embedding与20查询、重启持久性；适用CI | 未实现 |
+| 契约 | 业务快照、工具HTTP、pgvector与准备身份 | 独立上下文审查；ADR按PR流程接受 | PR #37已接受 |
+| S1-A | 独立业务服务、迁移/角色、40例开发数据、Python工具适配、索引准备与搜索 | 真PG/HTTP、tenant/版本/大小边界、固定真实embedding与20查询、重启持久性；适用CI | 已实现，门禁与PR审查中；[证据](../evidence/agent-v3-s1-business-2026-09-16.md) |
 | S1-B | 最小Run/lease/内部协议、API/SDK、持久调用账本 | 有效执行权、并发预留、重发身份、unknown占额、取消/超时；不新增调度语义 | 未实现 |
 | S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | 未实现 |
 

@@ -1,5 +1,7 @@
 # 三分钟 Agent/RAG 演示
 
+Agent v3的S1-A业务快照/真实检索另见[三分钟业务演示](agent-v3-business.md#三分钟演示依赖已准备)。它尚未包含DeepSeek固定流程、Agent动态决策或审批写入；下文保留v0.6两个真实任务的既有演示。
+
 当前验收由 [PRD v0.6](product/JobForge_PRD_v0.6.md) 定义。提前按[真实任务指南](real-tasks.md)下载固定模型、安装 SDK/检查工具；按[观测指南](observability.md#agentrag-本地观测闭环)启用 obs，并追加 `compose.models-test.yaml` 以便主机 Go 测试使用 `localhost:11435`。下载、编译和首次加载不计入三分钟。演示库使用独立项目与 55433，故障测试库使用 5433。
 
 ## 0:00—1:00 提交两个任务并检查实际产物
