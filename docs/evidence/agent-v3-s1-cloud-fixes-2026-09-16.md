@@ -20,6 +20,10 @@
 
 完整强制门禁由同一PR CI执行，不在本地重复无关套件。基线 `2991138` 的[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35115836473)已全部通过；不以基线结果代替本补丁或业务验收。
 
+实现提交 `2b5b5b7` 已经独立上下文审查，无P1/P2；[CI 35117180332](https://github.com/XJfyrh/JobForge/actions/runs/35117180332)实际结果为**7项通过、1项失败**。失败是既有 `TestRunExecutorObserveUnconfirmedHasNoFollowingHTTP/before-commit-lock`：真实PG阻塞窗口已建立，但第二次Claim进入信号20秒未到，取消Worker后5秒仍未Join。该次launcher正式联合故障测试通过。不能将此失败归为已证明的环境波动，也不能与首批实际中断直接视为同一根因。
+
+为这个实际失败在原20秒超时点补充最多128KiB goroutine栈，不改变超时、故障锁或执行语义。用当前固定Linux/race镜像、真实测试PG、与CI相同2CPU/512MiB/96PID限制定向执行该失败子例10次，全部通过；Windows Docker到宿主PG网络与CI的host网络不同。**未复现不等于已修复**；没有因10次通过删除CI失败记录，也没有追加无关全仓重跑。
+
 ## 仍未解决
 
 DEV-016原退出触发来源及根因仍缺直接证据。最后embedding Reserve后约1.12秒launcher开始停止，早于该调用10秒截止；没有chat预留或FailAttempt。driver记录操作停止只能证明收到信号，不能证明谁最先退出。未据猜测修改超时、租约或清理逻辑。

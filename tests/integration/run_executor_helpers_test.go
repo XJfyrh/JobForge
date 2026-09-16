@@ -380,6 +380,8 @@ func waitExecutorSignal(t *testing.T, running *executorWorkerRun, signal <-chan 
 	case <-running.done:
 		t.Fatalf("worker exited before required fact: %v", running.err)
 	case <-time.After(20 * time.Second):
-		t.Fatal("executor signal not observed")
+		stacks := make([]byte, 128<<10)
+		stacks = stacks[:runtime.Stack(stacks, true)]
+		t.Fatalf("executor signal not observed; goroutine stacks (no payload):\n%s", stacks)
 	}
 }
