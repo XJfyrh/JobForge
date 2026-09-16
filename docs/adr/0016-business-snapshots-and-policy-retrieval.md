@@ -53,7 +53,7 @@ Python的模型可见工具参数为get_order/get_delivery的关联order_id或�
 
 真实免费embedding复用已验收的 `all-minilm:22m`，digest `1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef`，Ollama0.32.5，镜像digest `sha256:4dea9fb511947e24a84237bb636b0203abcb2ff0d3fbc7b4ff865deb91362131`。MiniLM模型许可Apache-2.0，初版验收语料为英文；模型上下文256token，字节限制不作为token上界，超限必须由truncate=false明确拒绝，并在真实语料验收中验证全部分块可嵌入。Python适配器每次发请求前核对digest；禁止截断、重定向和隐式重试，校验向量数量/维度/有限值/非零范数。模型不可用或不匹配即明确失败，不能以手工向量验收。[Ollama API](https://docs.ollama.com/api/embed)、[模型](https://ollama.com/library/all-minilm:22m)
 
-资源初始化是独立、受信操作者执行的固定命令，不是Run、队列或后台调度器；只接受仓库登记语料与固定免费本地模型。最多4个embedding批次、每批最多16chunks、每请求60秒，总期限300秒；开始前持久记录prepare_id/profile，重复发布依靠tenant+profile唯一约束复用首次已发布索引。调用/失败计数与版本进入准备报告。重复未完成准备允许重算免费embedding，已发布索引不被覆盖。
+资源初始化是独立、受信操作者执行的固定命令，不是Run、队列或后台调度器；只接受仓库登记语料与固定免费本地模型。最多4个embedding批次、每批最多16chunks、每请求60秒，总期限300秒；开始前在操作者指定的输出目录原子落盘prepare_id/profile准备报告，随后输出有界的向量装载文件，由仅操作者可用的固定Go装载命令校验后提交业务库；报告不是Run事实源，权威已发布索引只在PG中。重复发布依靠tenant+profile唯一约束复用首次已发布索引。实际调用/失败计数与版本进入准备报告；未能结算的准备保留unknown，不能把本地文件当成已发布索引。重复未完成准备允许重算免费embedding，已发布索引不被覆盖。
 
 此准备身份仅用于免费、本地、固定资源初始化；不允许云端embedding或chat凭据，不授予在线业务执行权。将来若加入付费资源准备，必须先扩展已接受Run/批次预算协议并复审，不能沿用本入口绕过费用预留。在线query embedding仍由Run控制流程约束次数/时间，属于三个只读工具的内部动作。离线检索验收仅允许固定20条免费本地查询、每条一次embedding和一次检索、总期限1200秒；报告真实调用/失败数，不接受动态云端endpoint或凭据。这是资源验收命令，不接收用户任务或后台恢复。
 
