@@ -15,3 +15,14 @@
 关键依赖顺序：业务snapshot先于Run绑定；有效Run lease和持久账本先于任何收费调用；方案进入awaiting_approval需要原子保存最小审批绑定并释放lease，即便批准/写入实现留在S4。S1不能将有写建议的proposal误标为succeeded/applied。
 
 真实模型与确定性检查分开记录。历史W4失败、AT-25跳过、远程模型和生产留存未验收保持原结论。技术选择与执行证据另存于仓库外 `E:\JobForge-notes\2026-09-16-agent-v3-s1`；不归档凭据、完整模型输入输出或秘密。
+
+## 正式执行器的后续切片
+
+[PRD v0.11](../product/JobForge_PRD_v0.11.md)/[ADR-0019提案](../adr/0019-executor-confirmation-and-exit-contract.md)先解决C2到真实IPC的观察确认、关闭后失败和计量收尾接缝。提案审查通过前不据此修改实现。其后按以下顺序推进，保留正式机制与真实模型验收的区分：
+
+1. 同步内部v2源schema/两端codec/fixture/C2 hooks，验证明确ACK及唯一顺序；不新增兼容双模式。
+2. 固定Linux guardian/step supervisor与Go单并发Worker可在接口冻结后并行，实现唯一lease/RPC所有权、取消、Kill/Wait、结果屏障。
+3. 用真实PG/gRPC/正式进程和合成HTTP故障服务验证许可、失联、计量及Commit窗口，补固定镜像/Windows运行入口。
+4. 再接`support_fixed_v1`真实业务、方案schema/来源/模板、版本化数据/索引、provider审计持久桥和冻结评分，运行DeepSeek的40例有界批次。
+
+前三项只验执行机制，不能替代第四项的真实模型/业务结果。Claim的跨队列trace来源、provider身份持久审计、S2动态Agent、S3恢复对比及S4/S5仍按各自范围实现，不借模块通过提前完成。

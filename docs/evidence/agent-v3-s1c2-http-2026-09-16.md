@@ -1,6 +1,6 @@
 # Agent v3 S1-C2：授权 HTTP 与 DeepSeek 模块验证
 
-日期：2026-09-16。基线为已合并 C1 `b9ba908cc8434e3b3fc6aaddbbb5e1f4684a8826`。依据 [PRD v0.10](../product/JobForge_PRD_v0.10.md) / [ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)，本切片交付 Python 网络模块，不激活收费 profile。[PR #43](https://github.com/XJfyrh/JobForge/pull/43)已发起；最终 head 与独立复审结果在完成后补记，此时尚未合并。
+日期：2026-09-16。基线为已合并 C1 `b9ba908cc8434e3b3fc6aaddbbb5e1f4684a8826`。依据 [PRD v0.10](../product/JobForge_PRD_v0.10.md) / [ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)，本切片交付 Python 网络模块，不激活收费 profile。[PR #43](https://github.com/XJfyrh/JobForge/pull/43)已于2026-09-16合并为`5647d7cc991ad994b827fc3c1dcaa4e5989cc145`；最终审查head为`4eed461c110e84e8b4f91621c9c1d9ffef891600`，与合并树一致。
 
 ## 需求与实际证据
 
@@ -27,7 +27,7 @@
 | SQL/Proto | SQLFluff历史3项基线校验、migration lint、Buf lint通过；本切片未改SQL、migration、Proto或生成代码 |
 | 可观测配置回归 | 仪表盘重生成无内容diff；promtool配置和5条规则测试通过；未改观测配置 |
 | Windows全仓race | 29包、901个测试及子测试通过事件，0失败；真实控制PG、业务pgvector、Redis AOF及已安装SDK的Python。5个测试skip及11个无测试包单独记录，见下文 |
-| 最终PR CI和独立审查 | 初版`bf9ea706`七项CI通过；两个独立上下文中传输审查找到一项P2超时分类，已修复并本地复验；模型/业务审查无问题。修复后的最终CI和复审待完成，不以初版通过代替 |
+| 最终PR CI和独立审查 | 初版`bf9ea706`七项CI通过；独立传输审查找到一项P2超时分类并修复；两个作者之外的新上下文均复核最终`4eed461c`无剩余问题，[最终CI](https://github.com/XJfyrh/JobForge/actions/runs/35082022829)七项通过。[审查汇总](https://github.com/XJfyrh/JobForge/pull/43#issuecomment-5695621651)保留初版发现与最终结论 |
 | 真实DeepSeek/40案/正式进程 | 未运行，不能由以上确定性结果代替 |
 
 本切片Linux镜像基础digest为`sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254`；使用现有requirements，未新增第三方依赖，也未新增全传递依赖lockfile。精确复现命令见[模块指南](../agent-v3-authorized-http.md)。Go/真实依赖命令按[开发指南](../development.md)执行，Windows先启动5433 PostgreSQL并设置DSN，且同一DSN不并发运行多个集成进程。
