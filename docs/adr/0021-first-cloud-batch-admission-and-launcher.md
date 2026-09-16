@@ -1,7 +1,7 @@
 # ADR-0021：首批收费 profile 的可信登记、快照约束与串行启动器
 
-- 状态：**Proposed**；日期：2026-09-16。
-- 决策者：待独立审查与维护者合并决定；关联 Issue/PR：待创建。
+- 状态：**Accepted（PR #49 合并时生效）**；日期：2026-09-16。
+- 决策者：用户授权自主技术决策，独立 Agent 审查后按 PR 流程合并；关联：[PR #49](https://github.com/XJfyrh/JobForge/pull/49)。
 - 关联：[PRD v0.13](../product/JobForge_PRD_v0.13.md)、[ADR-0017](0017-run-admission-and-call-ledger.md)、[0018](0018-deepseek-fixed-flow-and-executor.md)、[0019](0019-executor-confirmation-and-exit-contract.md)、[0020](0020-provider-audit-and-batch-stop.md)。
 - 取代：无。细化 ADR-0018 的正式 profile/版本冻结，以及 ADR-0020 §8 的首批启动器；不修改旧 ADR 历史正文或既有费用授权。
 - 仓库基线：support PR #48 合并提交 `bffe566`；provider 审计合同已接受，实现为独立待交付依赖。本文不是实现、部署或收费验收记录。

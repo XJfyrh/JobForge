@@ -1,6 +1,6 @@
 # JobForge PRD v0.13：S1 首批收费 profile 与 40 案启动边界
 
-- 日期：2026-09-16；状态：**Proposed，待独立审查与 PR 合并；未实现、未启用收费、未运行云端验收**。
+- 日期：2026-09-16；状态：**Accepted，随 [PR #49](https://github.com/XJfyrh/JobForge/pull/49) 独立审查通过并合并时生效；未实现、未启用收费、未运行云端验收**。
 - 基线：[PRD v0.10](JobForge_PRD_v0.10.md)、[v0.11](JobForge_PRD_v0.11.md)、[v0.12](JobForge_PRD_v0.12.md)；对应 [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md)。
 - 仓库核对基线为 support 实现 PR #48 的 `bffe566`。ADR-0020 已接受；provider 审计实现仍为独立工作，本文不声称其已合并或验收。
 - 本增量细化 C-01/C-07/C-08 与 A-06/A-08 的正式部署、资源接纳和外部评估驱动，不改变固定 support 流程、方案 schema、计量合同或既有费用授权。

@@ -1,6 +1,6 @@
 # S1 首批收费合同的实施与验收映射
 
-2026-09-16；**Proposed，随 [PRD v0.13](../product/JobForge_PRD_v0.13.md) / [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 待审查**。本文只拆分增量工作，未启用 profile、未运行服务或收费请求。support PR #48 为代码基线；ADR-0020 合同已接受，审计实现仍是独立待交付依赖。
+2026-09-16；**随 [PRD v0.13](../product/JobForge_PRD_v0.13.md) / [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 经 PR #49 独立审查通过并合并时接受**。本文只拆分增量工作，未启用 profile、未运行服务或收费请求。support PR #48 为代码基线；ADR-0020 合同已接受，审计实现仍是独立待交付依赖。
 
 ## 切片与最小落点
 
@@ -32,4 +32,4 @@
 
 每行区分：未尝试、Submit 已尝试但接纳未知、已接纳、方案完成/业务失败及停批；这些只是外部评估分类，不增加 Run 状态。先写全部40行，再一次尝试一行；不自动 Retry。awaiting_approval 是 S1 方案完成，批准/业务写入仍属于 S4。一次模型业务失败是否解除收费屏障由 ADR-0020 的 PG 原事实判断，驱动不复制内部执行权。
 
-任何 stop/未知时保存完整40行和取得的事实，不伪造回执、Commit、退款或DB冻结，不更换 batch/意图键继续。只读 export 可以追加晚到报告的新抓取时间/hash，不能覆盖先前证据。实际调用/费用/质量结果单独追加 evidence 文档；本 Proposed 合同不填任何通过成绩。
+任何 stop/未知时保存完整40行和取得的事实，不伪造回执、Commit、退款或DB冻结，不更换 batch/意图键继续。只读 export 可以追加晚到报告的新抓取时间/hash，不能覆盖先前证据。实际调用/费用/质量结果单独追加 evidence 文档；本合同不填任何通过成绩。

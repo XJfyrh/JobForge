@@ -37,6 +37,6 @@
 
 PR #47已合并接受ADR-0020（d449bc7，两份独立复审及八项CI通过）。support固定流程、开发数据v2独立审查与真实索引/检索已执行，分层结果见[新证据](../evidence/agent-v3-s1-support-2026-09-16.md)；完整评分冻结和40案云端仍未完成。
 
-## 首批启动接缝提案
+## 首批启动接缝合同
 
-[PRD v0.13](../product/JobForge_PRD_v0.13.md)/[ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md)为 **Proposed**，提出可信 profile 生成/登记、Capture 后的资源接纳校验，以及单 Worker/40行 SDK 驱动的[精简实施映射](agent-v3-first-cloud-batch.md)。接纳后原版本/hash 不变，新 Retry 仍受同一冻结资源约束，已接受回执优先返回；awaiting_approval 是S1方案完成而非业务写入。该提案不改变已接受的5 CNY/6h/停批合同，不表示audit实现合并或收费前置已完成。
+[PRD v0.13](../product/JobForge_PRD_v0.13.md)/[ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md)随 **PR #49 独立审查通过并合并时接受**，定义可信 profile 生成/登记、Capture 后的资源接纳校验，以及单 Worker/40行 SDK 驱动的[精简实施映射](agent-v3-first-cloud-batch.md)。接纳后原版本/hash 不变，新 Retry 仍受同一冻结资源约束，已接受回执优先返回；awaiting_approval 是S1方案完成而非业务写入。该合同不改变已接受的5 CNY/6h/停批合同，不表示audit实现合并或收费前置已完成。
