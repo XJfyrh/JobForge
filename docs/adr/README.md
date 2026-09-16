@@ -73,3 +73,7 @@ ADR-0018 与 [PRD v0.10](../product/JobForge_PRD_v0.10.md) 随 [PR #41](https://
 [ADR-0020](0020-provider-audit-and-batch-stop.md)和[PRD v0.12](../product/JobForge_PRD_v0.12.md)随[PR #47](https://github.com/XJfyrh/JobForge/pull/47)独立审查通过并合并时接受。仅对新审计profile取代ADR-0018 §3的报告/确认形状及ADR-0019 §1的observation hash/汇合字段，并增补首批持久停发；旧ADR正文保留。support业务策略仍沿用ADR-0018，实现及真实模型验收另行报告。
 
 ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://github.com/XJfyrh/JobForge/pull/49) 独立审查通过并合并时接受，增补正式收费前的最小接缝，沿用既有5 CNY/6h/40案及停发边界；[实施映射](../plans/agent-v3-first-cloud-batch.md)不表示audit实现已合并或真实云端已通过。
+
+## 待审查增量
+
+[ADR-0022](0022-s1-closeout-cumulative-authorization.md) / [PRD v0.14](../product/JobForge_PRD_v0.14.md) 为 **Proposed**：记录维护者在原批停止后的 S1 收尾新批次及新增累计 5 CNY 授权。接受前不取代 ADR-0021；拟取代范围仅限首批授权范围与新 batch 费用上限，原批停止、历史事实、持久屏障和其余合同保留。

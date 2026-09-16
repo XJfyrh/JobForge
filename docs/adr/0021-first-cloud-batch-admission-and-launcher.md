@@ -5,6 +5,7 @@
 - 关联：[PRD v0.13](../product/JobForge_PRD_v0.13.md)、[ADR-0017](0017-run-admission-and-call-ledger.md)、[0018](0018-deepseek-fixed-flow-and-executor.md)、[0019](0019-executor-confirmation-and-exit-contract.md)、[0020](0020-provider-audit-and-batch-stop.md)。
 - 取代：无。细化 ADR-0018 的正式 profile/版本冻结，以及 ADR-0020 §8 的首批启动器；不修改旧 ADR 历史正文或既有费用授权。
 - 仓库基线：support PR #48 合并提交 `bffe566`；provider 审计合同已接受，实现为独立待交付依赖。本文不是实现、部署或收费验收记录。
+- 后续提案：[ADR-0022](0022-s1-closeout-cumulative-authorization.md) 尚为 Proposed；接受后仅对本次 S1 收尾部分取代 §2.2/§4/§5.2/§6 的首批授权范围及 §4 每批固定费用值，允许累计受限的新批次。原首批仍不可恢复，其余决定和以下历史正文保留；提案未接受前本 ADR 状态不变。
 
 ## 1. 上下文与决策范围
 

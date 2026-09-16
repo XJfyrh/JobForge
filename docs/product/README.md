@@ -14,3 +14,4 @@ Agent v3 使用独立增量合同；接受设计、完成实现和真实验收�
 | [v0.10](JobForge_PRD_v0.10.md) / [v0.11](JobForge_PRD_v0.11.md) | DeepSeek 固定流程、执行器确认与退出 | 已接受；support 切片已合并，真实40案未验收 |
 | [v0.12](JobForge_PRD_v0.12.md) | provider 持久审计与批次停发 | 合同已接受；实现与验收另行交付 |
 | [v0.13](JobForge_PRD_v0.13.md) | 首批可信 profile、快照约束与40行串行驱动 | **Accepted（PR #49 合并生效）；未实现/未启用** |
+| [v0.14](JobForge_PRD_v0.14.md) | S1 收尾新批次与新增累计 5 CNY 授权 | **Proposed；不恢复原批，实施与真实验收另行记录** |
