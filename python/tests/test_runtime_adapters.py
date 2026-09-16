@@ -49,7 +49,7 @@ def test_production_registry_refuses_mechanism_adapter(
             "profiles": [PROFILE],
         },
     )
-    assert runtime_registry.REGISTRY == {}
+    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1"}
     with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
         resolve()
 
@@ -103,3 +103,32 @@ def test_matching_build_registry_and_manifest_resolve(
         runtime_registry, "REGISTRY", {PROFILE["adapter_id"]: MechanismAdapter()}
     )
     assert resolve().adapter_id == PROFILE["adapter_id"]
+
+
+def test_production_support_requires_matching_manifest_identity(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The sole production adapter remains bound to trusted profile/hash/version."""
+    profile = dict(
+        PROFILE, adapter_id="support-fixed-v1", profile_id="support-test-profile-v1"
+    )
+    manifest(
+        monkeypatch,
+        tmp_path,
+        {
+            "schema_version": 1,
+            "executor_version": EXECUTOR_VERSION,
+            "profiles": [profile],
+        },
+    )
+    adapter = runtime_adapters.resolve_adapter(
+        profile["adapter_id"],
+        profile["profile_id"],
+        profile["profile_hash"],
+        EXECUTOR_VERSION,
+    )
+    assert adapter.strategy == "support_fixed_v1"
+    with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
+        runtime_adapters.resolve_adapter(
+            profile["adapter_id"], profile["profile_id"], "b" * 64, EXECUTOR_VERSION
+        )

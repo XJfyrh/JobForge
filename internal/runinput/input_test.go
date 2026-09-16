@@ -42,7 +42,11 @@ type fixtureFile struct {
 func TestSharedRuntimeFixtures(t *testing.T) {
 	path := filepath.Join("..", "..", "api", "executor", "v2", "fixtures", "runtime-input.json")
 	if *updateFixtures {
-		encoded, err := json.MarshalIndent(makeFixtures(t), "", "  ")
+		generated := makeFixtures(t)
+		support := supportRuntimeFixtures(t)
+		generated.Valid = append(generated.Valid, support.Valid...)
+		generated.Invalid = append(generated.Invalid, support.Invalid...)
+		encoded, err := json.MarshalIndent(generated, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -301,6 +305,163 @@ func exampleFrame(t *testing.T, kind string) runprotocol.Frame {
 }
 
 func uuidAt(value int) string { return fmt.Sprintf("00000000-0000-4000-8000-%012d", value) }
+
+// supportRuntimeFrame turns the shared synthetic source vectors into a complete
+// accepted checkpoint with authoritative Go hashes. It is not a cloud run or a
+// new runtime registration; the production server still grants the next step.
+func supportRuntimeFrame(t *testing.T, vectorName string) runprotocol.Frame {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "api", "support", "v1", "fixtures.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source struct {
+		Valid []struct {
+			Name     string   `json:"name"`
+			Snapshot snapshot `json:"snapshot"`
+			Steps    []struct {
+				Kind       string          `json:"kind"`
+				ResultJSON json.RawMessage `json:"result_json"`
+			} `json:"steps"`
+			Expected *run.Proposal `json:"expected"`
+		} `json:"valid"`
+	}
+	if json.Unmarshal(raw, &source) != nil {
+		t.Fatal("invalid support source fixtures")
+	}
+	for _, vector := range source.Valid {
+		if vector.Name != vectorName {
+			continue
+		}
+		f := exampleFrame(t, "read_ticket")
+		p := checkpoint{Steps: []accepted{}, Snapshot: vector.Snapshot}
+		profileID, profileHash := "support-fixed-synthetic-profile-v1", run.Fingerprint("support-runtime-synthetic-profile-v1")
+		previous := ""
+		appendResult := func(kind string, result run.StepResult) {
+			index := len(p.Steps)
+			s := identity{StepID: uuidAt(1000 + index), Sequence: int64(index + 1), Kind: kind, CursorVersion: int64(index),
+				InputHash: run.NextInputHash(profileHash, p.Snapshot.SnapshotHash, int64(index), previous),
+				ProfileID: profileID, ProfileHash: profileHash, SnapshotID: p.Snapshot.SnapshotID, SnapshotHash: p.Snapshot.SnapshotHash}
+			if len(run.ToolSequence(kind)) != 0 {
+				result.ToolInvocationID = uuidAt(2000 + index)
+			}
+			if kind != "read_ticket" {
+				result.PhysicalCallID = uuidAt(3000 + index)
+			}
+			_, canonical, err := run.CanonicalStepResultForStrategy(marshal(t, result), kind, run.SupportFixedStrategy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous = run.CommitHash(s.domain(), canonical)
+			p.Steps = append(p.Steps, accepted{Step: s, CommitHash: previous, ResultJSON: canonical, ResultRef: run.StepReference(f.Binding.RunID, s.Sequence)})
+		}
+		appendResult("read_ticket", run.StepResult{SchemaVersion: 1, Content: p.Snapshot.TicketBindingJSON,
+			EvidenceRefs: []string{"business-evidence:" + p.Snapshot.SnapshotID + ":ticket"}})
+		for _, step := range vector.Steps {
+			var result run.StepResult
+			if json.Unmarshal(step.ResultJSON, &result) != nil {
+				t.Fatal("invalid support tool fixture")
+			}
+			appendResult(step.Kind, result)
+		}
+		appendResult("model_proposal", run.StepResult{SchemaVersion: 1, Content: json.RawMessage("null"), EvidenceRefs: []string{}, Proposal: vector.Expected})
+		p.CursorVersion = int64(len(p.Steps))
+		p.NextStep = identity{StepID: uuidAt(1000 + len(p.Steps)), Sequence: p.CursorVersion + 1, Kind: "submit_proposal", CursorVersion: p.CursorVersion,
+			InputHash: run.NextInputHash(profileHash, p.Snapshot.SnapshotHash, p.CursorVersion, previous), ProfileID: profileID, ProfileHash: profileHash,
+			SnapshotID: p.Snapshot.SnapshotID, SnapshotHash: p.Snapshot.SnapshotHash}
+		n := p.NextStep
+		f.Binding.TenantID, f.Binding.StepID, f.Binding.StepSequence, f.Binding.StepKind = p.Snapshot.TenantID, n.StepID, n.Sequence, n.Kind
+		f.Binding.CursorVersion, f.Binding.InputHash, f.Binding.ProfileID, f.Binding.ProfileHash = n.CursorVersion, n.InputHash, profileID, profileHash
+		f.Binding.SnapshotID, f.Binding.SnapshotHash = p.Snapshot.SnapshotID, p.Snapshot.SnapshotHash
+		f.Input = marshal(t, input{SchemaVersion: 1, ExecutorVersion: ExecutorVersion, AdapterID: "support-fixed-v1"})
+		f.Checkpoint = marshal(t, p)
+		if err := ValidateExecute(f); err != nil {
+			t.Fatal(err)
+		}
+		return f
+	}
+	t.Fatalf("missing shared support source %s", vectorName)
+	return runprotocol.Frame{}
+}
+
+func supportRuntimeFixtures(t *testing.T) fixtureFile {
+	t.Helper()
+	result := fixtureFile{}
+	for _, source := range []struct{ name, vector string }{
+		{"support_with_delivery_submit_proposal", "timing"},
+		{"support_missing_order_submit_proposal", "missing_order"},
+	} {
+		frame := supportRuntimeFrame(t, source.vector)
+		line, err := runprotocol.Encode(frame)
+		if err != nil {
+			t.Fatal(err)
+		}
+		result.Valid = append(result.Valid, fixture{Name: source.name, Frame: bytes.TrimSuffix(line, []byte("\n"))})
+	}
+	for _, name := range []string{"support_stored_proposal_unknown_field", "support_stored_proposal_null_claims"} {
+		frame := supportRuntimeFrame(t, "timing")
+		var p checkpoint
+		if json.Unmarshal(frame.Checkpoint, &p) != nil {
+			t.Fatal("decode support checkpoint")
+		}
+		last := &p.Steps[len(p.Steps)-1]
+		var envelope map[string]json.RawMessage
+		var proposal map[string]json.RawMessage
+		if json.Unmarshal(last.ResultJSON, &envelope) != nil || json.Unmarshal(envelope["proposal"], &proposal) != nil {
+			t.Fatal("decode stored support proposal")
+		}
+		if name == "support_stored_proposal_unknown_field" {
+			proposal["free_reason"] = json.RawMessage(`"unregistered"`)
+		} else {
+			proposal["claims"] = json.RawMessage("null")
+		}
+		envelope["proposal"] = marshal(t, proposal)
+		// Repair hashes so these negatives exercise the proposal schema instead
+		// of merely failing the already covered generic hash-chain condition.
+		canonical, err := run.CanonicalCheckpointJSON(marshal(t, envelope))
+		if err != nil {
+			t.Fatal(err)
+		}
+		last.ResultJSON, last.CommitHash = canonical, run.CommitHash(last.Step.domain(), canonical)
+		p.NextStep.InputHash = run.NextInputHash(p.NextStep.ProfileHash, p.NextStep.SnapshotHash, p.CursorVersion, last.CommitHash)
+		frame.Binding.InputHash = p.NextStep.InputHash
+		frame.Checkpoint = marshal(t, p)
+		line, err := runprotocol.Encode(frame)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resultVector := fixture{Name: name, Frame: bytes.TrimSuffix(line, []byte("\n"))}
+		result.Invalid = append(result.Invalid, resultVector)
+	}
+	return result
+}
+
+func TestSupportRuntimeProjectionPreservesEightFieldProposal(t *testing.T) {
+	for _, vector := range []string{"timing", "missing_order"} {
+		t.Run(vector, func(t *testing.T) {
+			frame := supportRuntimeFrame(t, vector)
+			lease, cp, selected := reverseProjection(t, frame)
+			built, err := BuildExecute(lease, cp, selected, frame.RequestID, frame.EmittedMonoMS, frame.EmittedMonoMS+frame.RemainingMS)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var projected checkpoint
+			if json.Unmarshal(built.Checkpoint, &projected) != nil {
+				t.Fatal("decode projected checkpoint")
+			}
+			last := projected.Steps[len(projected.Steps)-1]
+			result, canonical, err := run.CanonicalStepResultForStrategy(last.ResultJSON, last.Step.Kind, run.SupportFixedStrategy)
+			if err != nil || result.Proposal == nil || result.Proposal.SupportProposalFields == nil ||
+				len(result.Proposal.Claims) == 0 || last.CommitHash != run.CommitHash(last.Step.domain(), canonical) ||
+				!bytes.Equal(canonical, cp.Steps[len(cp.Steps)-1].ResultJson) {
+				t.Fatalf("projection changed eight-field support proposal: %v", err)
+			}
+			if _, _, err := run.CanonicalStepResult(last.ResultJSON, last.Step.Kind); err == nil {
+				t.Fatal("projection test silently widened legacy proposal parsing")
+			}
+		})
+	}
+}
 
 func marshal(t *testing.T, value any) []byte {
 	t.Helper()

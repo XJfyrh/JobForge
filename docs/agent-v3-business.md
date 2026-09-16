@@ -52,7 +52,7 @@ $retrieval=(.venv\Scripts\python -m jobforge_agent retrieval --output-dir $out -
 
 再次提交相同body得到相同snapshot；相同request_key改ticket返回409。将读取key换成`dev-south-reader-key`访问北租户snapshot得到404。引用不是访问凭据；`business-evidence:<snapshot>:order`和`business-policy:<index>:<chunk>`都必须在授权快照路径内查询。政策查询接口接受固定profile和384维向量，Python工具仅向模型开放有界query文字。
 
-检索报告保留全部20条及原始top-3，评分器独立读取evaluation标签，失败/未尝试仍计入20条分母。评测按政策ID计算Hit@3/MRR@3，而非宣称每个具体段落都准确。真实运行结果见[验收证据](evidence/agent-v3-s1-business-2026-09-16.md)。准备及检索的requests计数是发送前持久化的发送意图；取消、超期或进程退出可能发生在实际发送前，不能据此推断未知调用未发生。
+检索报告保留全部20条及原始top-3，评分器独立读取evaluation标签，失败/未尝试仍计入20条分母。评测按政策ID计算Hit@3/MRR@3，而非宣称每个具体段落都准确。当前v2的真实运行见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)，原v1的[验收证据](evidence/agent-v3-s1-business-2026-09-16.md)保留。准备及检索的requests计数是发送前持久化的发送意图；取消、超期或进程退出可能发生在实际发送前，不能据此推断未知调用未发生。
 
 ## 契约与边界
 

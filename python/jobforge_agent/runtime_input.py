@@ -113,7 +113,7 @@ def input_hash(
 
 
 def validate_step_result(result: Any, kind: str) -> None:
-    """Check the existing seven-field protected result and its kind constraints."""
+    """Check the protected envelope and closed registered proposal formats."""
     _require(kind in KINDS)
     _object(result, RESULT_FIELDS, frozenset({"content", "proposal"}))
     _size(result, 8192 if kind in TOOLS | {"read_ticket"} else 16384)
@@ -129,7 +129,16 @@ def validate_step_result(result: Any, kind: str) -> None:
         _require(result[key] == "" or _match(UUID, result[key]))
     proposal = result["proposal"]
     if proposal is not None:
-        _object(proposal, {"decision", "summary", "evidence_refs", "action"})
+        if isinstance(proposal, dict) and "conclusion" in proposal:
+            from jobforge_agent.dispatch import DispatchError
+            from jobforge_agent.support_contract import validate_persisted_shape
+
+            try:
+                validate_persisted_shape(proposal)
+            except DispatchError as error:
+                raise RuntimeInputError(size_limit=error.fact == "size_limit") from None
+        else:
+            _object(proposal, {"decision", "summary", "evidence_refs", "action"})
         _require(
             all(
                 isinstance(proposal[key], str)

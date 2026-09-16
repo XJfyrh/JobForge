@@ -1,0 +1,155 @@
+{
+  "baseline": "d449bc709b99ad78d3563b2924802e535541a08a",
+  "runs_per_trial": 64,
+  "rounds": 5,
+  "variants": {
+    "base": {
+      "trials": [
+        {
+          "runs_per_second": 5.112,
+          "p95_ms": {
+            "claim": 32.9187,
+            "claim-empty": 2.3718,
+            "commit-step": 18.7729,
+            "get-checkpoint": 10.7804,
+            "observe-chat-with-usage": 14.3475,
+            "reserve-chat": 18.5245,
+            "submit": 76.5137
+          }
+        },
+        {
+          "runs_per_second": 5.21,
+          "p95_ms": {
+            "claim": 40.4223,
+            "claim-empty": 2.6797,
+            "commit-step": 18.9646,
+            "get-checkpoint": 10.4262,
+            "observe-chat-with-usage": 15.6693,
+            "reserve-chat": 20.1115,
+            "submit": 28.856
+          }
+        },
+        {
+          "runs_per_second": 5.252,
+          "p95_ms": {
+            "claim": 31.5389,
+            "claim-empty": 3.5084,
+            "commit-step": 18.9081,
+            "get-checkpoint": 10.0487,
+            "observe-chat-with-usage": 14.6317,
+            "reserve-chat": 17.0685,
+            "submit": 32.0152
+          }
+        },
+        {
+          "runs_per_second": 5.159,
+          "p95_ms": {
+            "claim": 38.5732,
+            "claim-empty": 3.2773,
+            "commit-step": 18.2328,
+            "get-checkpoint": 9.7908,
+            "observe-chat-with-usage": 14.3908,
+            "reserve-chat": 19.0677,
+            "submit": 25.0831
+          }
+        },
+        {
+          "runs_per_second": 5.129,
+          "p95_ms": {
+            "claim": 32.5139,
+            "claim-empty": 2.8732,
+            "commit-step": 18.5109,
+            "get-checkpoint": 9.882,
+            "observe-chat-with-usage": 12.7421,
+            "reserve-chat": 16.6375,
+            "submit": 31.5769
+          }
+        }
+      ],
+      "median_runs_per_second": 5.159,
+      "median_p95_ms": {
+        "claim": 32.9187,
+        "claim-empty": 2.8732,
+        "commit-step": 18.7729,
+        "get-checkpoint": 10.0487,
+        "observe-chat-with-usage": 14.3908,
+        "reserve-chat": 18.5245,
+        "submit": 31.5769
+      }
+    },
+    "candidate": {
+      "trials": [
+        {
+          "runs_per_second": 4.861,
+          "p95_ms": {
+            "claim": 33.979,
+            "claim-empty": 3.2499,
+            "commit-step": 20.4026,
+            "get-checkpoint": 10.982,
+            "observe-chat-with-usage": 15.8838,
+            "reserve-chat": 21.0359,
+            "submit": 25.371
+          }
+        },
+        {
+          "runs_per_second": 5.21,
+          "p95_ms": {
+            "claim": 32.9704,
+            "claim-empty": 2.6865,
+            "commit-step": 18.2539,
+            "get-checkpoint": 9.797,
+            "observe-chat-with-usage": 13.1257,
+            "reserve-chat": 16.8122,
+            "submit": 26.2644
+          }
+        },
+        {
+          "runs_per_second": 5.061,
+          "p95_ms": {
+            "claim": 37.0181,
+            "claim-empty": 2.6561,
+            "commit-step": 20.4752,
+            "get-checkpoint": 10.7711,
+            "observe-chat-with-usage": 14.3619,
+            "reserve-chat": 21.931,
+            "submit": 31.019
+          }
+        },
+        {
+          "runs_per_second": 5.192,
+          "p95_ms": {
+            "claim": 30.928,
+            "claim-empty": 3.1471,
+            "commit-step": 18.7106,
+            "get-checkpoint": 9.6978,
+            "observe-chat-with-usage": 14.5227,
+            "reserve-chat": 22.0886,
+            "submit": 25.0931
+          }
+        },
+        {
+          "runs_per_second": 5.217,
+          "p95_ms": {
+            "claim": 32.4624,
+            "claim-empty": 3.5659,
+            "commit-step": 18.0271,
+            "get-checkpoint": 9.7478,
+            "observe-chat-with-usage": 13.7789,
+            "reserve-chat": 16.1886,
+            "submit": 29.5908
+          }
+        }
+      ],
+      "median_runs_per_second": 5.192,
+      "median_p95_ms": {
+        "claim": 32.9704,
+        "claim-empty": 3.1471,
+        "commit-step": 18.7106,
+        "get-checkpoint": 9.797,
+        "observe-chat-with-usage": 14.3619,
+        "reserve-chat": 21.0359,
+        "submit": 26.2644
+      }
+    }
+  }
+}

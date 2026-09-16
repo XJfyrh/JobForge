@@ -70,10 +70,7 @@ func TestRunExecutorWorkerProcessHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = connection.Close() }()
-	manifest, err := runworker.LoadManifest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	manifest := executorManifest(t, input.Profile)
 	worker, err := runworker.New(agentv1.NewAgentServiceClient(connection), manifest, runworker.Config{Profiles: []agentrun.Profile{input.Profile}, Environments: map[string]runexecutor.Environment{"tenant-a": {BusinessOrigin: input.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}})
 	if err != nil {
 		t.Fatal(err)

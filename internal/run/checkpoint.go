@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// BoundedReadonlyStrategy names the single registered sequential graph.
+	// BoundedReadonlyStrategy names the original strict sequential graph.
 	BoundedReadonlyStrategy = "bounded_readonly_v1"
 	// MaxCheckpointBytes bounds all accepted protected outputs together.
 	MaxCheckpointBytes = 256 * 1024
@@ -60,6 +60,7 @@ type Proposal struct {
 	Summary      string   `json:"summary"`
 	EvidenceRefs []string `json:"evidence_refs"`
 	Action       string   `json:"action"`
+	*SupportProposalFields
 }
 
 // StepResult is the registered protected envelope. Content contains the actual
@@ -103,6 +104,15 @@ func CommitHash(step StepIdentity, canonicalJSON []byte) string {
 // CanonicalStepResult validates a complete envelope and normalizes JSON object
 // order/whitespace without coercing numeric values or removing evidence.
 func CanonicalStepResult(data []byte, kind string) (StepResult, json.RawMessage, error) {
+	return CanonicalStepResultForStrategy(data, kind, BoundedReadonlyStrategy)
+}
+
+// CanonicalStepResultForStrategy keeps each registered proposal format closed.
+// Selecting support does not loosen the historical four-field proposal schema.
+func CanonicalStepResultForStrategy(data []byte, kind, strategy string) (StepResult, json.RawMessage, error) {
+	if strategy != BoundedReadonlyStrategy && strategy != SupportFixedStrategy {
+		return StepResult{}, nil, ErrProfileUnavailable
+	}
 	limit := 16384
 	if kind == "read_ticket" || len(ToolSequence(kind)) != 0 {
 		limit = 8192
@@ -131,7 +141,11 @@ func CanonicalStepResult(data []byte, kind string) (StepResult, json.RawMessage,
 	}
 	if result.Proposal != nil {
 		var proposal map[string]json.RawMessage
-		if json.Unmarshal(object["proposal"], &proposal) != nil || len(proposal) != 4 {
+		count := 4
+		if strategy == SupportFixedStrategy {
+			count = 8
+		}
+		if json.Unmarshal(object["proposal"], &proposal) != nil || len(proposal) != count {
 			return result, nil, ErrInvalidArgument
 		}
 		for _, key := range []string{"decision", "summary", "evidence_refs", "action"} {
@@ -141,6 +155,9 @@ func CanonicalStepResult(data []byte, kind string) (StepResult, json.RawMessage,
 			}
 		}
 		if !validStringArray(proposal["evidence_refs"]) {
+			return result, nil, ErrInvalidArgument
+		}
+		if strategy == SupportFixedStrategy && validateSupportProposalShape(object["proposal"], result.Proposal) != nil {
 			return result, nil, ErrInvalidArgument
 		}
 	}
@@ -257,10 +274,10 @@ func normalizeCheckpointNumbers(value any) (any, error) {
 // Physical observation binding is checked by the transactional store separately.
 func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req CommitStepRequest) (CommitDecision, error) {
 	var decision CommitDecision
-	if profile.Strategy != BoundedReadonlyStrategy || profile.ID != req.Step.ProfileID || profile.Hash != req.Step.ProfileHash {
+	if (profile.Strategy != BoundedReadonlyStrategy && profile.Strategy != SupportFixedStrategy) || profile.ID != req.Step.ProfileID || profile.Hash != req.Step.ProfileHash {
 		return decision, ErrProfileUnavailable
 	}
-	result, canonical, err := CanonicalStepResult(req.ResultJSON, req.Step.Kind)
+	result, canonical, err := CanonicalStepResultForStrategy(req.ResultJSON, req.Step.Kind, profile.Strategy)
 	if err != nil {
 		return decision, err
 	}
@@ -270,7 +287,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 	decision.Result, decision.CanonicalJSON = result, canonical
 	allowed := map[string]bool{"business-evidence:" + snapshot.ID + ":ticket": true}
 	for _, step := range prior {
-		previous, _, err := CanonicalStepResult(step.Output, step.Kind)
+		previous, _, err := CanonicalStepResultForStrategy(step.Output, step.Kind, profile.Strategy)
 		if err != nil {
 			return decision, ErrInternal
 		}
@@ -295,6 +312,15 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 			return decision, ErrStepConflict
 		}
 		decision.NextKind = map[string]string{"get_order": "get_delivery", "get_delivery": "search_policy", "search_policy": "model_proposal"}[req.Step.Kind]
+		if profile.Strategy == SupportFixedStrategy {
+			missing, err := validateSupportTool(snapshot, req.Step.Kind, result)
+			if err != nil {
+				return decision, err
+			}
+			if req.Step.Kind == "get_order" && missing {
+				decision.NextKind = "search_policy"
+			}
+		}
 		return decision, nil
 	}
 	if req.Step.Kind != "model_proposal" && req.Step.Kind != "protocol_correction" && req.Step.Kind != "submit_proposal" {
@@ -308,7 +334,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 			return decision, ErrStepConflict
 		}
 		last := prior[len(prior)-1]
-		previous, _, err := CanonicalStepResult(last.Output, last.Kind)
+		previous, _, err := CanonicalStepResultForStrategy(last.Output, last.Kind, profile.Strategy)
 		if err != nil || (last.Kind != "model_proposal" && last.Kind != "protocol_correction") || previous.Proposal == nil ||
 			!sameProposal(previous.Proposal, result.Proposal) {
 			return decision, ErrStepConflict
@@ -325,6 +351,9 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		return decision, nil
 	}
 	if !validProposal(result.Proposal, allowed) {
+		return decision, ErrModelProtocol
+	}
+	if profile.Strategy == SupportFixedStrategy && validateSupportProposal(snapshot, prior, result.Proposal) != nil {
 		return decision, ErrModelProtocol
 	}
 	decision.Proposal = result.Proposal

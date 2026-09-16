@@ -289,10 +289,7 @@ type executorWorkerRun struct {
 
 func startExecutorWorker(t *testing.T, h *runHarness, f *executorHTTPFixture, client agentv1.AgentServiceClient, expectedErrors ...error) *executorWorkerRun {
 	t.Helper()
-	manifest, err := runworker.LoadManifest()
-	if err != nil {
-		t.Fatal(err)
-	}
+	manifest := executorManifest(t, h.Profile)
 	w, err := runworker.New(client, manifest, runworker.Config{Profiles: []agentrun.Profile{h.Profile}, Environments: map[string]runexecutor.Environment{"tenant-a": {BusinessOrigin: f.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}})
 	if err != nil {
 		t.Fatal(err)
@@ -317,6 +314,25 @@ func startExecutorWorker(t *testing.T, h *runHarness, f *executorHTTPFixture, cl
 		}
 	})
 	return running
+}
+
+// executorManifest selects one immutable entry from the test image's fixed
+// manifest. Python independently checks that same installed entry; this cannot
+// register an adapter, change its mapping or introduce a runtime module path.
+func executorManifest(t *testing.T, profile agentrun.Profile) runworker.Manifest {
+	t.Helper()
+	manifest, err := runworker.LoadManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, selected := range manifest.Profiles {
+		if selected.ProfileID == profile.ID && selected.ProfileHash == profile.Hash {
+			manifest.Profiles = []runworker.ManifestProfile{selected}
+			return manifest
+		}
+	}
+	t.Fatal("profile missing from installed synthetic manifest")
+	return runworker.Manifest{}
 }
 
 func waitExecutorSignal(t *testing.T, running *executorWorkerRun, signal <-chan struct{}) {

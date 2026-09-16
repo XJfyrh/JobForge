@@ -227,7 +227,7 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 			!run.ValidHash(step.CommitHash) || step.ResultRef != run.StepReference(b.RunID, s.Sequence) {
 			return run.ErrStepConflict
 		}
-		_, canonical, err := run.CanonicalStepResult(step.ResultJSON, s.Kind)
+		_, canonical, err := run.CanonicalRegisteredStepResult(step.ResultJSON, s.Kind)
 		if err != nil {
 			return err
 		}

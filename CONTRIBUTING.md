@@ -95,7 +95,7 @@ S1-C2受控HTTP/DeepSeek适配随`pytest python/tests`和Python类型检查执�
 
 S1-C3b按[固定运行时指南](docs/agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`：`process-check`验证真实进程/race/FD清理，`integration-check`验证真实PostgreSQL/TCP gRPC/正式Worker与合成业务HTTP，`python-check`复现Python全套。CI的`agent-runtime-contract`运行进程/联合检查并构建生产镜像核对registry边界；`python-lint`继续运行Python测试。Windows同样使用Linux容器和`--init`；先`docker compose -f deploy/compose.yaml up -d postgres`并设置`JOBFORGE_TEST_DSN`，容器使用可达的宿主5433地址。同一DSN不能并行运行会清理数据库的测试进程。普通Go测试中的平台/专用环境skip不计正式进程通过。
 
-运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry目前为空；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
+运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
 
 ## 安全问题
 

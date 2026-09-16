@@ -1088,6 +1088,590 @@
         "trace_context": "",
         "version": 2
       }
+    },
+    {
+      "name": "support_with_delivery_submit_proposal",
+      "frame": {
+        "binding": {
+          "tenant_id": "tenant-synthetic",
+          "worker_id": "runtime-test-worker",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "step_id": "00000000-0000-4000-8000-000000001005",
+          "session_id": "00000000-0000-4000-8000-000000000005",
+          "profile_id": "support-fixed-synthetic-profile-v1",
+          "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+          "snapshot_id": "22222222-2222-4222-8222-222222222222",
+          "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "input_hash": "270ef921e2fd29f3acb8327976e6063de415ddeece8a596f5d5e9e2724641e98",
+          "attempt_no": 1,
+          "fencing_token": 1,
+          "cursor_version": 5,
+          "step_sequence": 6,
+          "step_kind": "submit_proposal"
+        },
+        "checkpoint": {
+          "cursor_version": 5,
+          "next_step": {
+            "step_id": "00000000-0000-4000-8000-000000001005",
+            "sequence": 6,
+            "kind": "submit_proposal",
+            "cursor_version": 5,
+            "input_hash": "270ef921e2fd29f3acb8327976e6063de415ddeece8a596f5d5e9e2724641e98",
+            "profile_id": "support-fixed-synthetic-profile-v1",
+            "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "steps": [
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001000",
+                "sequence": 1,
+                "kind": "read_ticket",
+                "cursor_version": 0,
+                "input_hash": "c0be95515d74f166c03e2514c3d613ae6f9a77dc710fd1cb6026c6b489929940",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "57f579aeb65ab8c487c3f641212d7128136d00de8ea4d01faf5bc1e4a8da9ed9",
+              "result_json": {
+                "content": {
+                  "description": "Synthetic protected statement",
+                  "observed_at": "2026-09-16T08:00:00Z",
+                  "order_id": "order-synthetic",
+                  "policy_version": "policy-synthetic",
+                  "revision": 1,
+                  "status": "open",
+                  "subject": "Synthetic source fixture",
+                  "tenant_id": "tenant-synthetic",
+                  "ticket_id": "ticket-synthetic"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:ticket"
+                ],
+                "physical_call_id": "",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:1"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001001",
+                "sequence": 2,
+                "kind": "get_order",
+                "cursor_version": 1,
+                "input_hash": "7fe0a4ebbd604bc64a47ba07aa8eb5a05d095f4ab0e9cad45b0acc96db8e7d59",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "52cbcbcf43e282b724e6e767e038c6fa62e7fdcbbdb1f309c263aa5bde2aeb0a",
+              "result_json": {
+                "content": {
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                  "kind": "order",
+                  "missing": false,
+                  "order": {
+                    "delivery_id": "delivery-synthetic",
+                    "order_id": "order-synthetic",
+                    "ordered_at": "2026-09-14T08:00:00Z",
+                    "promised_delivery_at": "2026-09-16T07:00:00Z",
+                    "revision": 1,
+                    "status": "shipped",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:order"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003001",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002001"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:2"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001002",
+                "sequence": 3,
+                "kind": "get_delivery",
+                "cursor_version": 2,
+                "input_hash": "7db7266aafb2642cd02f5e57318711ea81fbbc97d9275a419e8691fa6dbaa582",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "f2ea588d341b93c40233cd63888fd41131841fa0e7ff7a5cfd69d59a79812982",
+              "result_json": {
+                "content": {
+                  "delivery": {
+                    "aggregate_revision": 1,
+                    "delivery_id": "delivery-synthetic",
+                    "events": [
+                      {
+                        "event_id": "evt-first",
+                        "note": "Carrier fixture statement",
+                        "occurred_at": "2026-09-16T07:00:00Z",
+                        "status": "in_transit"
+                      },
+                      {
+                        "event_id": "evt-second",
+                        "note": "Carrier fixture correction statement",
+                        "occurred_at": "2026-09-16T08:00:00Z",
+                        "status": "delivered"
+                      }
+                    ],
+                    "order_id": "order-synthetic",
+                    "status": "delivered",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:delivery",
+                  "kind": "delivery",
+                  "missing": false,
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003002",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002002"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:3"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001003",
+                "sequence": 4,
+                "kind": "search_policy",
+                "cursor_version": 3,
+                "input_hash": "fb6a4e87ea2d037b0b4b6d837b5abdd9f1ef05fa52a1e0b055f69d3e5c43448d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "6876951b29a0cc530464848d35a83656dd836467c8982a0f0c62b971ecbffe07",
+              "result_json": {
+                "content": {
+                  "matches": [
+                    {
+                      "chunk_id": "P01.1",
+                      "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                      "index_id": "11111111-1111-4111-8111-111111111111",
+                      "policy_version": "policy-synthetic",
+                      "source": "synthetic-policy.md#P01.1",
+                      "text": "Synthetic paragraph; not evaluation gold."
+                    }
+                  ],
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-policy:11111111-1111-4111-8111-111111111111:P01.1"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003003",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002003"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:4"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001004",
+                "sequence": 5,
+                "kind": "model_proposal",
+                "cursor_version": 4,
+                "input_hash": "38ece0ad47a70608902b3083d984ee4c6f3e0bd0724dff775aa58f8778c8917d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "4a09afeffd3e93c3b88c565188968968deb02705f0e15ca7dbe4c6e69ac787f0",
+              "result_json": {
+                "content": null,
+                "correction_required": false,
+                "evidence_refs": [],
+                "physical_call_id": "00000000-0000-4000-8000-000000003004",
+                "proposal": {
+                  "action": "escalate",
+                  "claims": [
+                    {
+                      "event_id": "evt-second",
+                      "kind": "timing",
+                      "refs": [
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                          "source_pointer": "/observed_at"
+                        },
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                          "source_pointer": "/order/promised_delivery_at"
+                        },
+                        {
+                          "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                          "source_pointer": "/text"
+                        },
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:delivery",
+                          "source_pointer": "/delivery/events/1"
+                        }
+                      ],
+                      "test": "delivered_not_late"
+                    }
+                  ],
+                  "conclusion": "insufficient",
+                  "decision": "proposal",
+                  "evidence_refs": [
+                    "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                    "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                  ],
+                  "requested_fields": [],
+                  "summary": "Recommendation: escalate. Conclusion asserted: insufficient. Suggested ticket status: escalated. Requested fields: none.\nClaim asserted: timing delivered_not_late; event evt-second.",
+                  "target_ticket_status": "escalated"
+                },
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:5"
+            }
+          ],
+          "snapshot": {
+            "tenant_id": "tenant-synthetic",
+            "ticket_id": "ticket-synthetic",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "version_vector_json": {
+              "schema_version": 1,
+              "ticket": {
+                "id": "ticket-synthetic",
+                "revision": 1
+              },
+              "order": {
+                "id": "order-synthetic",
+                "exists": true,
+                "revision": 1
+              },
+              "delivery": {
+                "id": "delivery-synthetic",
+                "exists": true,
+                "aggregate_revision": 1
+              },
+              "policy": {
+                "version": "policy-synthetic",
+                "revision": 1,
+                "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "index": {
+                "id": "11111111-1111-4111-8111-111111111111",
+                "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            },
+            "ticket_binding_json": {
+              "tenant_id": "tenant-synthetic",
+              "ticket_id": "ticket-synthetic",
+              "revision": 1,
+              "observed_at": "2026-09-16T08:00:00Z",
+              "order_id": "order-synthetic",
+              "policy_version": "policy-synthetic",
+              "subject": "Synthetic source fixture",
+              "description": "Synthetic protected statement",
+              "status": "open"
+            },
+            "index_id": "11111111-1111-4111-8111-111111111111",
+            "index_profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "emitted_mono_ms": 1000,
+        "input": {
+          "schema_version": 1,
+          "executor_version": "linux-v2-ack-runtime-1",
+          "adapter_id": "support-fixed-v1",
+          "tool_invocation_id": ""
+        },
+        "kind": "execute_step",
+        "remaining_ms": 60000,
+        "request_id": "00000000-0000-4000-8000-000000000004",
+        "trace_context": "",
+        "version": 2
+      }
+    },
+    {
+      "name": "support_missing_order_submit_proposal",
+      "frame": {
+        "binding": {
+          "tenant_id": "tenant-synthetic",
+          "worker_id": "runtime-test-worker",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "step_id": "00000000-0000-4000-8000-000000001004",
+          "session_id": "00000000-0000-4000-8000-000000000005",
+          "profile_id": "support-fixed-synthetic-profile-v1",
+          "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+          "snapshot_id": "22222222-2222-4222-8222-222222222222",
+          "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "input_hash": "f229d3e8fbbb011c7fc98bf27a0b1006fa38738848b6f9099ed315cc2a21551f",
+          "attempt_no": 1,
+          "fencing_token": 1,
+          "cursor_version": 4,
+          "step_sequence": 5,
+          "step_kind": "submit_proposal"
+        },
+        "checkpoint": {
+          "cursor_version": 4,
+          "next_step": {
+            "step_id": "00000000-0000-4000-8000-000000001004",
+            "sequence": 5,
+            "kind": "submit_proposal",
+            "cursor_version": 4,
+            "input_hash": "f229d3e8fbbb011c7fc98bf27a0b1006fa38738848b6f9099ed315cc2a21551f",
+            "profile_id": "support-fixed-synthetic-profile-v1",
+            "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "steps": [
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001000",
+                "sequence": 1,
+                "kind": "read_ticket",
+                "cursor_version": 0,
+                "input_hash": "c0be95515d74f166c03e2514c3d613ae6f9a77dc710fd1cb6026c6b489929940",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "88358a518a6c2416add28656320755cbb05d0baf98f6bf2e574a6378c2e6e212",
+              "result_json": {
+                "content": {
+                  "description": "Synthetic protected statement",
+                  "observed_at": "2026-09-16T08:00:00Z",
+                  "order_id": null,
+                  "policy_version": "policy-synthetic",
+                  "revision": 1,
+                  "status": "open",
+                  "subject": "Synthetic source fixture",
+                  "tenant_id": "tenant-synthetic",
+                  "ticket_id": "ticket-synthetic"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:ticket"
+                ],
+                "physical_call_id": "",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:1"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001001",
+                "sequence": 2,
+                "kind": "get_order",
+                "cursor_version": 1,
+                "input_hash": "720c238b3cde23436c29362f5325e66a62d80ce3c486d8eac8badebb531745e3",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "efb99057fac84f33e0316432258f53c93805ecde60d58523fe9afb56d6d0540f",
+              "result_json": {
+                "content": {
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                  "kind": "order",
+                  "missing": true,
+                  "missing_reason": "not_associated",
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:order"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003001",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002001"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:2"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001002",
+                "sequence": 3,
+                "kind": "search_policy",
+                "cursor_version": 2,
+                "input_hash": "068839c4a6bb788ec0f399a9090ac51a5c099cb632c63a4fd51e75d4da00750e",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "a10084ecbe754e0b89e77cfe60dcfd3b95cecd6a3bcd97a24038bb33a0a2233c",
+              "result_json": {
+                "content": {
+                  "matches": [
+                    {
+                      "chunk_id": "P01.1",
+                      "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                      "index_id": "11111111-1111-4111-8111-111111111111",
+                      "policy_version": "policy-synthetic",
+                      "source": "synthetic-policy.md#P01.1",
+                      "text": "Synthetic paragraph; not evaluation gold."
+                    }
+                  ],
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-policy:11111111-1111-4111-8111-111111111111:P01.1"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003002",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002002"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:3"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001003",
+                "sequence": 4,
+                "kind": "model_proposal",
+                "cursor_version": 3,
+                "input_hash": "21b208c0172e93794447dbdfaf6d4a2611a27ffa780532df5a005a11fee41cd7",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "1040ca6a5106408a136158324f4538d8927830b7f9a64b797d5dd8ca9df5ae27",
+              "result_json": {
+                "content": null,
+                "correction_required": false,
+                "evidence_refs": [],
+                "physical_call_id": "00000000-0000-4000-8000-000000003003",
+                "proposal": {
+                  "action": "request_information",
+                  "claims": [
+                    {
+                      "field": "ticket.order_id",
+                      "kind": "missing",
+                      "refs": [
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                          "source_pointer": "/order_id"
+                        },
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                          "source_pointer": "/missing_reason"
+                        },
+                        {
+                          "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                          "source_pointer": "/text"
+                        }
+                      ]
+                    }
+                  ],
+                  "conclusion": "insufficient",
+                  "decision": "proposal",
+                  "evidence_refs": [
+                    "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                    "business-policy:11111111-1111-4111-8111-111111111111:P01.1"
+                  ],
+                  "requested_fields": [
+                    "ticket.order_id"
+                  ],
+                  "summary": "Recommendation: request_information. Conclusion asserted: insufficient. Suggested ticket status: awaiting_information. Requested fields: ticket.order_id.\nClaim asserted: missing ticket.order_id.",
+                  "target_ticket_status": "awaiting_information"
+                },
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:4"
+            }
+          ],
+          "snapshot": {
+            "tenant_id": "tenant-synthetic",
+            "ticket_id": "ticket-synthetic",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "version_vector_json": {
+              "schema_version": 1,
+              "ticket": {
+                "id": "ticket-synthetic",
+                "revision": 1
+              },
+              "order": {
+                "id": null,
+                "exists": false,
+                "revision": null
+              },
+              "delivery": {
+                "id": null,
+                "exists": false,
+                "aggregate_revision": null
+              },
+              "policy": {
+                "version": "policy-synthetic",
+                "revision": 1,
+                "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "index": {
+                "id": "11111111-1111-4111-8111-111111111111",
+                "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            },
+            "ticket_binding_json": {
+              "tenant_id": "tenant-synthetic",
+              "ticket_id": "ticket-synthetic",
+              "revision": 1,
+              "observed_at": "2026-09-16T08:00:00Z",
+              "order_id": null,
+              "policy_version": "policy-synthetic",
+              "subject": "Synthetic source fixture",
+              "description": "Synthetic protected statement",
+              "status": "open"
+            },
+            "index_id": "11111111-1111-4111-8111-111111111111",
+            "index_profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "emitted_mono_ms": 1000,
+        "input": {
+          "schema_version": 1,
+          "executor_version": "linux-v2-ack-runtime-1",
+          "adapter_id": "support-fixed-v1",
+          "tool_invocation_id": ""
+        },
+        "kind": "execute_step",
+        "remaining_ms": 60000,
+        "request_id": "00000000-0000-4000-8000-000000000004",
+        "trace_context": "",
+        "version": 2
+      }
     }
   ],
   "invalid": [
@@ -5641,6 +6225,631 @@
           "adapter_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
           "executor_version": "linux-v2-ack-runtime-1",
           "schema_version": 1,
+          "tool_invocation_id": ""
+        },
+        "kind": "execute_step",
+        "remaining_ms": 60000,
+        "request_id": "00000000-0000-4000-8000-000000000004",
+        "trace_context": "",
+        "version": 2
+      }
+    },
+    {
+      "name": "support_stored_proposal_unknown_field",
+      "frame": {
+        "binding": {
+          "tenant_id": "tenant-synthetic",
+          "worker_id": "runtime-test-worker",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "step_id": "00000000-0000-4000-8000-000000001005",
+          "session_id": "00000000-0000-4000-8000-000000000005",
+          "profile_id": "support-fixed-synthetic-profile-v1",
+          "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+          "snapshot_id": "22222222-2222-4222-8222-222222222222",
+          "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "input_hash": "3b4aff0101c764706da351bc09ba500a53f4c055e26c233fb144cb93a27cc7bd",
+          "attempt_no": 1,
+          "fencing_token": 1,
+          "cursor_version": 5,
+          "step_sequence": 6,
+          "step_kind": "submit_proposal"
+        },
+        "checkpoint": {
+          "cursor_version": 5,
+          "next_step": {
+            "step_id": "00000000-0000-4000-8000-000000001005",
+            "sequence": 6,
+            "kind": "submit_proposal",
+            "cursor_version": 5,
+            "input_hash": "3b4aff0101c764706da351bc09ba500a53f4c055e26c233fb144cb93a27cc7bd",
+            "profile_id": "support-fixed-synthetic-profile-v1",
+            "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "steps": [
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001000",
+                "sequence": 1,
+                "kind": "read_ticket",
+                "cursor_version": 0,
+                "input_hash": "c0be95515d74f166c03e2514c3d613ae6f9a77dc710fd1cb6026c6b489929940",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "57f579aeb65ab8c487c3f641212d7128136d00de8ea4d01faf5bc1e4a8da9ed9",
+              "result_json": {
+                "content": {
+                  "description": "Synthetic protected statement",
+                  "observed_at": "2026-09-16T08:00:00Z",
+                  "order_id": "order-synthetic",
+                  "policy_version": "policy-synthetic",
+                  "revision": 1,
+                  "status": "open",
+                  "subject": "Synthetic source fixture",
+                  "tenant_id": "tenant-synthetic",
+                  "ticket_id": "ticket-synthetic"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:ticket"
+                ],
+                "physical_call_id": "",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:1"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001001",
+                "sequence": 2,
+                "kind": "get_order",
+                "cursor_version": 1,
+                "input_hash": "7fe0a4ebbd604bc64a47ba07aa8eb5a05d095f4ab0e9cad45b0acc96db8e7d59",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "52cbcbcf43e282b724e6e767e038c6fa62e7fdcbbdb1f309c263aa5bde2aeb0a",
+              "result_json": {
+                "content": {
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                  "kind": "order",
+                  "missing": false,
+                  "order": {
+                    "delivery_id": "delivery-synthetic",
+                    "order_id": "order-synthetic",
+                    "ordered_at": "2026-09-14T08:00:00Z",
+                    "promised_delivery_at": "2026-09-16T07:00:00Z",
+                    "revision": 1,
+                    "status": "shipped",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:order"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003001",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002001"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:2"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001002",
+                "sequence": 3,
+                "kind": "get_delivery",
+                "cursor_version": 2,
+                "input_hash": "7db7266aafb2642cd02f5e57318711ea81fbbc97d9275a419e8691fa6dbaa582",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "f2ea588d341b93c40233cd63888fd41131841fa0e7ff7a5cfd69d59a79812982",
+              "result_json": {
+                "content": {
+                  "delivery": {
+                    "aggregate_revision": 1,
+                    "delivery_id": "delivery-synthetic",
+                    "events": [
+                      {
+                        "event_id": "evt-first",
+                        "note": "Carrier fixture statement",
+                        "occurred_at": "2026-09-16T07:00:00Z",
+                        "status": "in_transit"
+                      },
+                      {
+                        "event_id": "evt-second",
+                        "note": "Carrier fixture correction statement",
+                        "occurred_at": "2026-09-16T08:00:00Z",
+                        "status": "delivered"
+                      }
+                    ],
+                    "order_id": "order-synthetic",
+                    "status": "delivered",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:delivery",
+                  "kind": "delivery",
+                  "missing": false,
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003002",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002002"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:3"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001003",
+                "sequence": 4,
+                "kind": "search_policy",
+                "cursor_version": 3,
+                "input_hash": "fb6a4e87ea2d037b0b4b6d837b5abdd9f1ef05fa52a1e0b055f69d3e5c43448d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "6876951b29a0cc530464848d35a83656dd836467c8982a0f0c62b971ecbffe07",
+              "result_json": {
+                "content": {
+                  "matches": [
+                    {
+                      "chunk_id": "P01.1",
+                      "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                      "index_id": "11111111-1111-4111-8111-111111111111",
+                      "policy_version": "policy-synthetic",
+                      "source": "synthetic-policy.md#P01.1",
+                      "text": "Synthetic paragraph; not evaluation gold."
+                    }
+                  ],
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-policy:11111111-1111-4111-8111-111111111111:P01.1"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003003",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002003"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:4"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001004",
+                "sequence": 5,
+                "kind": "model_proposal",
+                "cursor_version": 4,
+                "input_hash": "38ece0ad47a70608902b3083d984ee4c6f3e0bd0724dff775aa58f8778c8917d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "6da0cdcef789e2518318c644be8f6805ead8e39b13a33777bfff52681c7b0097",
+              "result_json": {
+                "content": null,
+                "correction_required": false,
+                "evidence_refs": [],
+                "physical_call_id": "00000000-0000-4000-8000-000000003004",
+                "proposal": {
+                  "action": "escalate",
+                  "claims": [
+                    {
+                      "event_id": "evt-second",
+                      "kind": "timing",
+                      "refs": [
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                          "source_pointer": "/observed_at"
+                        },
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                          "source_pointer": "/order/promised_delivery_at"
+                        },
+                        {
+                          "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                          "source_pointer": "/text"
+                        },
+                        {
+                          "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:delivery",
+                          "source_pointer": "/delivery/events/1"
+                        }
+                      ],
+                      "test": "delivered_not_late"
+                    }
+                  ],
+                  "conclusion": "insufficient",
+                  "decision": "proposal",
+                  "evidence_refs": [
+                    "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                    "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                  ],
+                  "free_reason": "unregistered",
+                  "requested_fields": [],
+                  "summary": "Recommendation: escalate. Conclusion asserted: insufficient. Suggested ticket status: escalated. Requested fields: none.\nClaim asserted: timing delivered_not_late; event evt-second.",
+                  "target_ticket_status": "escalated"
+                },
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:5"
+            }
+          ],
+          "snapshot": {
+            "tenant_id": "tenant-synthetic",
+            "ticket_id": "ticket-synthetic",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "version_vector_json": {
+              "schema_version": 1,
+              "ticket": {
+                "id": "ticket-synthetic",
+                "revision": 1
+              },
+              "order": {
+                "id": "order-synthetic",
+                "exists": true,
+                "revision": 1
+              },
+              "delivery": {
+                "id": "delivery-synthetic",
+                "exists": true,
+                "aggregate_revision": 1
+              },
+              "policy": {
+                "version": "policy-synthetic",
+                "revision": 1,
+                "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "index": {
+                "id": "11111111-1111-4111-8111-111111111111",
+                "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            },
+            "ticket_binding_json": {
+              "tenant_id": "tenant-synthetic",
+              "ticket_id": "ticket-synthetic",
+              "revision": 1,
+              "observed_at": "2026-09-16T08:00:00Z",
+              "order_id": "order-synthetic",
+              "policy_version": "policy-synthetic",
+              "subject": "Synthetic source fixture",
+              "description": "Synthetic protected statement",
+              "status": "open"
+            },
+            "index_id": "11111111-1111-4111-8111-111111111111",
+            "index_profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "emitted_mono_ms": 1000,
+        "input": {
+          "schema_version": 1,
+          "executor_version": "linux-v2-ack-runtime-1",
+          "adapter_id": "support-fixed-v1",
+          "tool_invocation_id": ""
+        },
+        "kind": "execute_step",
+        "remaining_ms": 60000,
+        "request_id": "00000000-0000-4000-8000-000000000004",
+        "trace_context": "",
+        "version": 2
+      }
+    },
+    {
+      "name": "support_stored_proposal_null_claims",
+      "frame": {
+        "binding": {
+          "tenant_id": "tenant-synthetic",
+          "worker_id": "runtime-test-worker",
+          "run_id": "00000000-0000-4000-8000-000000000001",
+          "step_id": "00000000-0000-4000-8000-000000001005",
+          "session_id": "00000000-0000-4000-8000-000000000005",
+          "profile_id": "support-fixed-synthetic-profile-v1",
+          "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+          "snapshot_id": "22222222-2222-4222-8222-222222222222",
+          "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "input_hash": "fcbc0fb8e44c9c919a2e05a4d73185f5958475e3893fb7dd64b70ec6612fa6c5",
+          "attempt_no": 1,
+          "fencing_token": 1,
+          "cursor_version": 5,
+          "step_sequence": 6,
+          "step_kind": "submit_proposal"
+        },
+        "checkpoint": {
+          "cursor_version": 5,
+          "next_step": {
+            "step_id": "00000000-0000-4000-8000-000000001005",
+            "sequence": 6,
+            "kind": "submit_proposal",
+            "cursor_version": 5,
+            "input_hash": "fcbc0fb8e44c9c919a2e05a4d73185f5958475e3893fb7dd64b70ec6612fa6c5",
+            "profile_id": "support-fixed-synthetic-profile-v1",
+            "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "steps": [
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001000",
+                "sequence": 1,
+                "kind": "read_ticket",
+                "cursor_version": 0,
+                "input_hash": "c0be95515d74f166c03e2514c3d613ae6f9a77dc710fd1cb6026c6b489929940",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "57f579aeb65ab8c487c3f641212d7128136d00de8ea4d01faf5bc1e4a8da9ed9",
+              "result_json": {
+                "content": {
+                  "description": "Synthetic protected statement",
+                  "observed_at": "2026-09-16T08:00:00Z",
+                  "order_id": "order-synthetic",
+                  "policy_version": "policy-synthetic",
+                  "revision": 1,
+                  "status": "open",
+                  "subject": "Synthetic source fixture",
+                  "tenant_id": "tenant-synthetic",
+                  "ticket_id": "ticket-synthetic"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:ticket"
+                ],
+                "physical_call_id": "",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:1"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001001",
+                "sequence": 2,
+                "kind": "get_order",
+                "cursor_version": 1,
+                "input_hash": "7fe0a4ebbd604bc64a47ba07aa8eb5a05d095f4ab0e9cad45b0acc96db8e7d59",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "52cbcbcf43e282b724e6e767e038c6fa62e7fdcbbdb1f309c263aa5bde2aeb0a",
+              "result_json": {
+                "content": {
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                  "kind": "order",
+                  "missing": false,
+                  "order": {
+                    "delivery_id": "delivery-synthetic",
+                    "order_id": "order-synthetic",
+                    "ordered_at": "2026-09-14T08:00:00Z",
+                    "promised_delivery_at": "2026-09-16T07:00:00Z",
+                    "revision": 1,
+                    "status": "shipped",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:order"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003001",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002001"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:2"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001002",
+                "sequence": 3,
+                "kind": "get_delivery",
+                "cursor_version": 2,
+                "input_hash": "7db7266aafb2642cd02f5e57318711ea81fbbc97d9275a419e8691fa6dbaa582",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "f2ea588d341b93c40233cd63888fd41131841fa0e7ff7a5cfd69d59a79812982",
+              "result_json": {
+                "content": {
+                  "delivery": {
+                    "aggregate_revision": 1,
+                    "delivery_id": "delivery-synthetic",
+                    "events": [
+                      {
+                        "event_id": "evt-first",
+                        "note": "Carrier fixture statement",
+                        "occurred_at": "2026-09-16T07:00:00Z",
+                        "status": "in_transit"
+                      },
+                      {
+                        "event_id": "evt-second",
+                        "note": "Carrier fixture correction statement",
+                        "occurred_at": "2026-09-16T08:00:00Z",
+                        "status": "delivered"
+                      }
+                    ],
+                    "order_id": "order-synthetic",
+                    "status": "delivered",
+                    "tenant_id": "tenant-synthetic"
+                  },
+                  "evidence_ref": "business-evidence:22222222-2222-4222-8222-222222222222:delivery",
+                  "kind": "delivery",
+                  "missing": false,
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003002",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002002"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:3"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001003",
+                "sequence": 4,
+                "kind": "search_policy",
+                "cursor_version": 3,
+                "input_hash": "fb6a4e87ea2d037b0b4b6d837b5abdd9f1ef05fa52a1e0b055f69d3e5c43448d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "6876951b29a0cc530464848d35a83656dd836467c8982a0f0c62b971ecbffe07",
+              "result_json": {
+                "content": {
+                  "matches": [
+                    {
+                      "chunk_id": "P01.1",
+                      "evidence_ref": "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                      "index_id": "11111111-1111-4111-8111-111111111111",
+                      "policy_version": "policy-synthetic",
+                      "source": "synthetic-policy.md#P01.1",
+                      "text": "Synthetic paragraph; not evaluation gold."
+                    }
+                  ],
+                  "snapshot_id": "22222222-2222-4222-8222-222222222222"
+                },
+                "correction_required": false,
+                "evidence_refs": [
+                  "business-policy:11111111-1111-4111-8111-111111111111:P01.1"
+                ],
+                "physical_call_id": "00000000-0000-4000-8000-000000003003",
+                "proposal": null,
+                "schema_version": 1,
+                "tool_invocation_id": "00000000-0000-4000-8000-000000002003"
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:4"
+            },
+            {
+              "step": {
+                "step_id": "00000000-0000-4000-8000-000000001004",
+                "sequence": 5,
+                "kind": "model_proposal",
+                "cursor_version": 4,
+                "input_hash": "38ece0ad47a70608902b3083d984ee4c6f3e0bd0724dff775aa58f8778c8917d",
+                "profile_id": "support-fixed-synthetic-profile-v1",
+                "profile_hash": "b6edb3c6e140dd3dcbf9d4a783220613db5fd879cb5175628ab6770419e28c48",
+                "snapshot_id": "22222222-2222-4222-8222-222222222222",
+                "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "commit_hash": "98be3f77e2c1f9468e1052f3dfac44ce182569d7ec897ae63b26d07f478aac9c",
+              "result_json": {
+                "content": null,
+                "correction_required": false,
+                "evidence_refs": [],
+                "physical_call_id": "00000000-0000-4000-8000-000000003004",
+                "proposal": {
+                  "action": "escalate",
+                  "claims": null,
+                  "conclusion": "insufficient",
+                  "decision": "proposal",
+                  "evidence_refs": [
+                    "business-evidence:22222222-2222-4222-8222-222222222222:ticket",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:order",
+                    "business-policy:11111111-1111-4111-8111-111111111111:P01.1",
+                    "business-evidence:22222222-2222-4222-8222-222222222222:delivery"
+                  ],
+                  "requested_fields": [],
+                  "summary": "Recommendation: escalate. Conclusion asserted: insufficient. Suggested ticket status: escalated. Requested fields: none.\nClaim asserted: timing delivered_not_late; event evt-second.",
+                  "target_ticket_status": "escalated"
+                },
+                "schema_version": 1,
+                "tool_invocation_id": ""
+              },
+              "result_ref": "run-step:00000000-0000-4000-8000-000000000001:5"
+            }
+          ],
+          "snapshot": {
+            "tenant_id": "tenant-synthetic",
+            "ticket_id": "ticket-synthetic",
+            "snapshot_id": "22222222-2222-4222-8222-222222222222",
+            "snapshot_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "version_vector_json": {
+              "schema_version": 1,
+              "ticket": {
+                "id": "ticket-synthetic",
+                "revision": 1
+              },
+              "order": {
+                "id": "order-synthetic",
+                "exists": true,
+                "revision": 1
+              },
+              "delivery": {
+                "id": "delivery-synthetic",
+                "exists": true,
+                "aggregate_revision": 1
+              },
+              "policy": {
+                "version": "policy-synthetic",
+                "revision": 1,
+                "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "index": {
+                "id": "11111111-1111-4111-8111-111111111111",
+                "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "content_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              }
+            },
+            "ticket_binding_json": {
+              "tenant_id": "tenant-synthetic",
+              "ticket_id": "ticket-synthetic",
+              "revision": 1,
+              "observed_at": "2026-09-16T08:00:00Z",
+              "order_id": "order-synthetic",
+              "policy_version": "policy-synthetic",
+              "subject": "Synthetic source fixture",
+              "description": "Synthetic protected statement",
+              "status": "open"
+            },
+            "index_id": "11111111-1111-4111-8111-111111111111",
+            "index_profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        "emitted_mono_ms": 1000,
+        "input": {
+          "schema_version": 1,
+          "executor_version": "linux-v2-ack-runtime-1",
+          "adapter_id": "support-fixed-v1",
           "tool_invocation_id": ""
         },
         "kind": "execute_step",

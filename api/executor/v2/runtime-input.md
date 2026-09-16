@@ -27,7 +27,7 @@
 - BuildExecute 要求原 Claim checkpoint 存在，并将最新 checkpoint 的不可变 profile、snapshot/ticket/index 身份及两个资源 JSON 对象与原 Claim 比较。对象使用既有规范化器比较，允许等价空白和字段顺序；原 Claim 的旧游标不妨碍读取后继步骤。
 - Go 使用现有 `run.CanonicalStepResult` 和 `run.CommitHash` 验证每个完整结果；使用 `run.NextInputHash` 验证初始和每一后继输入链。Python验证字符串哈希链，不另写任意 decimal canonicalizer；新结果仍由 Go 规范化/hash并交控制面验证。
 - `snapshot` 恰有 RPC 的八个字段。`ticket_binding_json` 是现有 `business.Ticket`（没有另加 schema_version）；`version_vector_json` 是现有 `business.VersionVector`，其索引字段是 `index.id/profile_hash/content_hash`。工单 tenant/id/revision/policy、可空 order 关联、缺失事实与索引身份必须一致。缺失事实保留明确的 null；不可把 null revision 改成 0。
-- 七字段 StepResult 保持原合同，`content/proposal` 的合法 null 保留；本实现不增加 support 专属方案字段。快照投影不包含完整订单、物流及索引正文，因此不会声称重新计算完整 snapshot_hash。
+- 七字段 StepResult 保持原合同，`content/proposal` 的合法 null 保留。已提交 proposal 仅接受两个注册格式：原严格四字段，以及 ADR-0018 的 support 严格八字段；后者引用 [support 源 schema](../../support/v1/schema.json) 的 persistedProposal，验证时离线注册其 URN，不从网络加载 schema。格式识别不授予新策略，提交仍由 profile.strategy 决定。快照投影不包含完整订单、物流及索引正文，因此不会声称重新计算完整 snapshot_hash。
 
 ## 大小与所有权
 

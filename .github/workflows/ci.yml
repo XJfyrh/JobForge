@@ -130,6 +130,8 @@ jobs:
         run: python -m pytest tools/agent_probe_data tools/executorprobe
       - name: Agent S1 adapters and authorized HTTP (real Linux clock, no model calls)
         run: python -m pytest python/tests
+      - name: Support development data and semantic anchors (offline, no holdout)
+        run: python -m pytest tools/support_evaluation
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations
@@ -144,6 +146,8 @@ jobs:
         run: mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py
       - name: Agent S1 business adapter types
         run: mypy python/jobforge_agent
+      - name: Offline support evaluation types
+        run: mypy --explicit-package-bases tools/support_evaluation
 
   business-contract:
     name: Agent S1 business (real pgvector, HTTP, race)
@@ -239,7 +243,7 @@ jobs:
       - name: Build production image and reject fixture registration
         run: |
           docker build -f deploy/Dockerfile.agent-worker -t jobforge-agent-worker:production .
-          docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; assert REGISTRY == {}; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists()'
+          docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; assert set(REGISTRY) == {"support-fixed-v1"}; assert REGISTRY["support-fixed-v1"].__class__.__module__ == "jobforge_agent.support_adapter"; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists(); assert not Path("/checks").exists(); assert not Path("/src/examples/support-agent/evaluation").exists()'
 
   observability-config:
     name: Prometheus rules & generated dashboard
