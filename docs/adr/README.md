@@ -38,6 +38,8 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
+S1实现契约评审：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 业务快照与政策检索](0016-business-snapshots-and-policy-retrieval.md)。ADR-0016仍为Proposed，不提前作为实现依据。
+
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | [ADR-0001](0001-implementation-parameters.md) | 实现参数与通道模式 | Accepted | 2026-07-29 |

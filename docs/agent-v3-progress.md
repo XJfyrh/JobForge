@@ -57,3 +57,7 @@
 DeepSeek账号/凭据只读检查已通过，推理费用上限及调用账本尚未落地，没有推理调用。S0的模型工具fixture只检查模型协议，不作为真实业务验收。详细ADR在PR #35合并后标为Accepted；这只表示设计接受，S2及整体目标仍需真实云端业务验收。此调整不把既有失败改成通过。
 
 原有远程模型与生产长期留存未验收、W4性能门禁失败、AT-25跳过继续保留在[旧审查记录](agent-rag-review.md)与历史报告。本轮没有重新验收或改写它们，亦不作为v3通过证据。仓库外决策档案位于 `E:\JobForge-notes\2026-09-16-agent-v3-s0`。
+
+## S1启动
+
+2026-09-16从 `8708308` 开始，当前只提交[PRD v0.8](product/JobForge_PRD_v0.8.md)、[ADR-0016草案](adr/0016-business-snapshots-and-policy-retrieval.md)及[切片计划](plans/agent-v3-s1-implementation.md)，尚无S1实现。先落真实业务HTTP/快照与固定本地embedding的pgvector检索，再以有效Run租约和持久账本接入DeepSeek及固定流程；不建立绕过账本的收费探针。后续决定与验证另存 `E:\JobForge-notes\2026-09-16-agent-v3-s1`。
