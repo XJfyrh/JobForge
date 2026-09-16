@@ -33,6 +33,7 @@
 | Windows Python 执行器 | 通过与明确跳过 | 1307 passed、8 skipped；这 8 项属于 Linux FD 条件，不记为通过 |
 | Linux Python 全套 | 通过 | 1315 passed，零 skip |
 | Linux 实际进程 / Worker / PG 集成 | 通过 | 分别 43 / 124 / 32 个测试及子测试通过事件，零 fail/skip；Go race 编译 |
+| Commit 优化后最终 Linux/生产复验 | 通过 | 重建后的默认实际进程/PG 集成32项、新 Commit 族6项均零 fail/skip；正式生产镜像隔离检查通过 |
 | Go build/vet/lint | 通过 | Windows build/vet；Windows 与 Linux 目标 golangci 均 0 issues |
 | Python lint/types | 通过 | 相关 62 文件 Ruff/format；SDK 与执行器 Linux mypy 37 源文件 |
 | SQL 与 Proto | 通过 | SQLFluff 历史基线及全部 migrations；Buf lint 和相对基线 breaking 均通过 |
@@ -42,7 +43,9 @@
 
 Linux 确认窗口测试覆盖 Reserve、report、Observe、Commit 四处各两种故障。提交前以实际行锁和 `pg_blocking_pids` 证明 RPC 已进入数据库并阻塞；提交后取得服务端成功再丢弃 ACK。Worker 全部停止新 Claim；无 reservation 的 Reserve 前失败，以及事务已完成的 Commit 后失败，允许新 session 依据数据库事实继续。其它未完成收费窗口拒绝新 session，且不伪称 batch 已冻结。provider 身份错、无 usage、正数 reasoning 停批各实跑；合法 reasoning 计入已有 output，不重复收费。第二次结构化输出无效保存合法计量与两份 rejected observation，符合窄终态例外后允许下一案例。
 
-优化前 Linux 集成镜像：`sha256:3b0309b547f32872e9a7a418da3f50cd1669cf3234ae6d7d7c139b4685fa96a9`；进程镜像：`sha256:02c7b281f43f6e746e0cccb0e049918b2415fd5024aa6c6bdef977a0c13e4ade`；Python 镜像：`sha256:33b8d245f31fbf124e277817774f294ba03de4dc393cafacccce37dd92dd2241`；生产镜像：`sha256:1eb8f7ba65fe367b1c14a7770e8ebf4398e9f472baac091a783d1fedf9f49b2b`。之后修复了性能测试的 SQL 提取辅助，并优化 Commit 的 profile 查询和账户锁；最终集成/生产镜像重建与复验另行记录。
+优化前 Linux 集成镜像：`sha256:3b0309b547f32872e9a7a418da3f50cd1669cf3234ae6d7d7c139b4685fa96a9`；进程镜像：`sha256:02c7b281f43f6e746e0cccb0e049918b2415fd5024aa6c6bdef977a0c13e4ade`；Python 镜像：`sha256:33b8d245f31fbf124e277817774f294ba03de4dc393cafacccce37dd92dd2241`；生产镜像：`sha256:1eb8f7ba65fe367b1c14a7770e8ebf4398e9f472baac091a783d1fedf9f49b2b`。
+
+优化后最终集成镜像 `sha256:61f21a5deaeec4100051ca3df54369aee50623951ce8ed6220dadf91078074b7`、生产镜像 `sha256:cab909b72f222dc5e0b62dec6e2bbda427079e1415aae0683c14b4aee296239f` 已实际重建和复验，源码对应实现提交 `b5f5056`。Commit 族首次 Docker 启动因 PowerShell 参数传递错误退出2、未执行测试；保留日志，改用显式参数数组后6项通过。没有将启动失败算成测试通过。
 
 性能场景覆盖原有注册 Run 的公共控制热路径，每次 64 Run、448 次调用、192 工具及384步骤，业务结果为合成数据，无模型 HTTP。最初新 Commit 无条件锁三层账户并重复读取 profile，给无需审计的旧路径增加了五次 SQL；改为复用不可变 profile、仅审计 profile 锁账户，保留原账户锁顺序及锁后数据库时钟/执行权/冻结检查。新增真实 PG 锁竞争回归防止以移除约束换取速度。优化后其它 p95 中位数：Claim 31.6007→35.0037ms、Reserve 17.2421→20.0013ms、Observe 14.4046→14.9452ms。账本新增持久字段/校验仍有开销，共享 Windows/Docker 主机也有噪声；没有删除慢样本、重复挑选最佳轮次或推断新的容量承诺。
 
