@@ -1,6 +1,6 @@
 # Agent v3 Run 接入与调用账本
 
-本指南对应 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B。当前分支已实现控制服务、Worker RPC、SDK、步骤持久化与三层调用预算，正在完成验证和独立评审。S1-C 的正式受监管执行器、DeepSeek 真实推理与40例固定流程尚未交付；默认配置没有可执行模型，不能把确定性测试结果称作云端业务验收。
+本指南对应 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B。控制服务、Worker RPC、SDK、步骤持久化与三层调用预算已通过本切片验证和三份独立审查，随[PR #40](https://github.com/XJfyrh/JobForge/pull/40)合并。S1-C 的正式受监管执行器、DeepSeek 真实推理与40例固定流程尚未交付；默认配置没有可执行模型，不能把确定性测试结果称作云端业务验收。
 
 ## 服务与数据边界
 

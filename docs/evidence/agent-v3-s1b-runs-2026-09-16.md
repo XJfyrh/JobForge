@@ -59,3 +59,5 @@ S1-C正式Go监督/Python执行器、DeepSeek真实调用、40例固定流程与
 修复保留两类永久结果错误的ErrorInfo，RPC类别为InvalidArgument；未知内部异常继续脱敏。真实TCP+PG追加测试通过3.981s，验证未推进Run游标，随后同名FailAttempt永久结束且不消耗恢复次数。审查者独立overlay复现也在修复工作树通过。全仓lint再次0 issues。最终修复head仍须CI与审查确认后才合并；外部报告为 `pr40-reliability-review.md`、`pr40-budget-review.md`、`pr40-contract-review.md`。
 
 部署验证使用UTC PostgreSQL会话。非UTC/DST配置未验收；当前migration的7日约束使用PostgreSQL日历interval，不能把所测UTC下的168小时行为推广到跨DST会话。该限制与生产运维留存验收一并保留。
+
+最终复核：head `43241c9281d8c428a01b3b262a56fb332b4ed5cf` 经三位独立审查者确认无剩余阻断，[最终七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35072274898)全部通过；PR #40 已于2026-09-16合并，squash提交 `f63300c734cbf29fd10dc927e81fc41b7ea179a2` 与审查head代码树相同。B-10最终合并条件满足，S1-B完成；本报告前面的等待记录保留历史顺序，S1-C及完整S1不因此完成。

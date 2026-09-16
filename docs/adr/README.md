@@ -59,5 +59,6 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 | [ADR-0015](0015-approved-business-actions-and-receipts.md) | 审批、受控写入与业务回执 | Accepted | 2026-09-16 |
 | [ADR-0016](0016-business-snapshots-and-policy-retrieval.md) | 独立业务快照与版本化政策检索 | Accepted | 2026-09-16 |
 | [ADR-0017](0017-run-admission-and-call-ledger.md) | Run接纳、执行权与物理调用账本 | Accepted | 2026-09-16 |
+| [ADR-0018](0018-deepseek-fixed-flow-and-executor.md) | DeepSeek固定流程与正式受监管执行器 | Proposed | 2026-09-16 |
 
 ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受，细化 S1-B；实现与验收状态单独记录。
