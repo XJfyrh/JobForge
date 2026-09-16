@@ -48,6 +48,9 @@ type Session struct {
 	CreatedAt time.Time
 	SeenAt    time.Time
 	ExpiresAt time.Time
+	// AuthorityObservedAt is the fresh database clock used for this response;
+	// it is not persisted and does not itself grant or renew session authority.
+	AuthorityObservedAt time.Time
 }
 
 // Checkpoint is the protected, persisted input to a current or recovered worker.
@@ -62,6 +65,9 @@ type Checkpoint struct {
 type ClaimedRun struct {
 	Lease      Lease
 	Checkpoint Checkpoint
+	// AuthorityObservedAt is the database clock used to grant this lease after
+	// acquiring its Run, budget and capacity locks.
+	AuthorityObservedAt time.Time
 }
 
 // BudgetSpec is accepted only by the administrator setup path.

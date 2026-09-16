@@ -50,5 +50,6 @@ Agent 在执行任何修改任务前，必须先读取以下关键文件以获�
 - Python SDK 单测与真实 HTTP 跨语言契约也属于 CI 门禁；安装 SDK 后设置 `JOBFORGE_TEST_PYTHON`，否则 Go 契约测试的 skip 不计通过。
 - 可观测配置变更还需通过 promtool 配置/告警规则测试，以及 Grafana 仪表盘生成一致性检查；这些检查在 PR CI 中执行。依赖真实模型的验收在独立工作流与本地真实模型层运行，不用替身替代。
 - Agent v3 S0 探针的确定性 Python guardrails、Linux 类型检查和独立容器内 Go race/真实进程故障均由 CI 执行；常规 Go 测试因未启用专用进程环境产生的 skip 不计验收通过。模型协议探针使用的工具 fixture 不代表真实业务工具已验收。
+- S1-C1 v2共同fixture随Go/Python测试执行；Go/Python共享CLOCK_BOOTTIME由同一固定Linux镜像内的`clock.test`实际验证。Windows非Linux分支或协议fixture不能替代正式Worker进程/真实云端验收。
 - 不得把缺少代码、服务或依赖误报为检查通过；明确区分已运行、未适用和无法运行。
 - 提交前检查 staged diff、敏感信息、迁移安全和文档链接。

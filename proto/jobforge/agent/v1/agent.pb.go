@@ -734,9 +734,12 @@ type RegisterResponse struct {
 	// Server-authorized immutable profile identifiers.
 	ProfileIds []string `protobuf:"bytes,4,rep,name=profile_ids,json=profileIds,proto3" json:"profile_ids,omitempty"`
 	// Server-configured simultaneous Run limit; initial maximum is one.
-	Capacity      int32 `protobuf:"varint,5,opt,name=capacity,proto3" json:"capacity,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Capacity int32 `protobuf:"varint,5,opt,name=capacity,proto3" json:"capacity,omitempty"`
+	// Fresh DB time after registration serialization, including startup replays.
+	// Anchor expires_at to the RPC start monotonic clock; this never extends it.
+	AuthorityObservedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=authority_observed_at,json=authorityObservedAt,proto3" json:"authority_observed_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RegisterResponse) Reset() {
@@ -802,6 +805,13 @@ func (x *RegisterResponse) GetCapacity() int32 {
 		return x.Capacity
 	}
 	return 0
+}
+
+func (x *RegisterResponse) GetAuthorityObservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AuthorityObservedAt
+	}
+	return nil
 }
 
 // ClaimRequest asks for one Run from the configured session allowlist.
@@ -910,9 +920,13 @@ type RunLease struct {
 	// Current accepted checkpoint and next registered step.
 	Checkpoint *Checkpoint `protobuf:"bytes,5,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
 	// Validated W3C traceparent; empty when no parent was supplied.
-	TraceContext  string `protobuf:"bytes,6,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TraceContext string `protobuf:"bytes,6,opt,name=trace_context,json=traceContext,proto3" json:"trace_context,omitempty"`
+	// Fresh DB time used to grant this lease after all authority locks.
+	// Map remaining deadlines from the RPC start monotonic clock, not wall time.
+	// Absent leases do not carry an observation or renew session liveness.
+	AuthorityObservedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=authority_observed_at,json=authorityObservedAt,proto3" json:"authority_observed_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RunLease) Reset() {
@@ -985,6 +999,13 @@ func (x *RunLease) GetTraceContext() string {
 		return x.TraceContext
 	}
 	return ""
+}
+
+func (x *RunLease) GetAuthorityObservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AuthorityObservedAt
+	}
+	return nil
 }
 
 // Checkpoint is protected state, bounded to 256 KiB including all results.
@@ -1311,8 +1332,11 @@ type HeartbeatResponse struct {
 	StopReason string `protobuf:"bytes,3,opt,name=stop_reason,json=stopReason,proto3" json:"stop_reason,omitempty"`
 	// New live-session expiry; idle heartbeat returns no Run lease_until.
 	SessionExpiresAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=session_expires_at,json=sessionExpiresAt,proto3" json:"session_expires_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Fresh DB time after authority locks, present for idle, continue and stop.
+	// It anchors returned expiries but never changes the meaning of stop.
+	AuthorityObservedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=authority_observed_at,json=authorityObservedAt,proto3" json:"authority_observed_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *HeartbeatResponse) Reset() {
@@ -1369,6 +1393,13 @@ func (x *HeartbeatResponse) GetStopReason() string {
 func (x *HeartbeatResponse) GetSessionExpiresAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.SessionExpiresAt
+	}
+	return nil
+}
+
+func (x *HeartbeatResponse) GetAuthorityObservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AuthorityObservedAt
 	}
 	return nil
 }
@@ -1779,9 +1810,12 @@ type CallReservation struct {
 	// Conservative token/cost hold applied atomically to all three accounts.
 	Budget *CallBudget `protobuf:"bytes,9,opt,name=budget,proto3" json:"budget,omitempty"`
 	// Whether complete validated usage has settled this record.
-	UsageKnown    bool `protobuf:"varint,10,opt,name=usage_known,json=usageKnown,proto3" json:"usage_known,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UsageKnown bool `protobuf:"varint,10,opt,name=usage_known,json=usageKnown,proto3" json:"usage_known,omitempty"`
+	// Trusted out-of-bound metering was retained and all three accounts frozen.
+	// The full hold remains; usage_known=false is not permission to send again.
+	MeasurementAnomaly bool `protobuf:"varint,11,opt,name=measurement_anomaly,json=measurementAnomaly,proto3" json:"measurement_anomaly,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CallReservation) Reset() {
@@ -1884,6 +1918,13 @@ func (x *CallReservation) GetUsageKnown() bool {
 	return false
 }
 
+func (x *CallReservation) GetMeasurementAnomaly() bool {
+	if x != nil {
+		return x.MeasurementAnomaly
+	}
+	return false
+}
+
 // ReserveCallResponse authorizes sending only on the first successful response.
 type ReserveCallResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1939,12 +1980,14 @@ func (x *ReserveCallResponse) GetNewlyReserved() bool {
 	return false
 }
 
-// UsageReport contains bounded trusted metering, never a caller-selected price.
+// UsageReport contains trusted safe-integer metering, never a selected price.
+// Above-reservation usage is retained as an anomaly with the full hold and
+// frozen accounts; it must not be truncated or rejected by the wire codec.
 type UsageReport struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Complete nonnegative provider input tokens, at most the reserved bound.
+	// Complete nonnegative provider input tokens, at most 2^53-1.
 	InputTokens int64 `protobuf:"varint,1,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	// Complete nonnegative provider output tokens, at most the reserved bound.
+	// Complete nonnegative provider output tokens, at most 2^53-1.
 	OutputTokens int64 `protobuf:"varint,2,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
 	// Cache-hit subset of input tokens, as defined by the registered profile.
 	CachedInputTokens int64 `protobuf:"varint,3,opt,name=cached_input_tokens,json=cachedInputTokens,proto3" json:"cached_input_tokens,omitempty"`
@@ -2848,7 +2891,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x0fRegisterRequest\x12\x1d\n" +
 	"\n" +
 	"startup_id\x18\x01 \x01(\tR\tstartupId\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\"\x92\x02\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\"\xe2\x02\n" +
 	"\x10RegisterResponse\x12<\n" +
 	"\asession\x18\x01 \x01(\v2\".jobforge.agent.v1.SessionIdentityR\asession\x129\n" +
 	"\n" +
@@ -2856,11 +2899,12 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x12heartbeat_interval\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x11heartbeatInterval\x12\x1f\n" +
 	"\vprofile_ids\x18\x04 \x03(\tR\n" +
 	"profileIds\x12\x1a\n" +
-	"\bcapacity\x18\x05 \x01(\x05R\bcapacity\"L\n" +
+	"\bcapacity\x18\x05 \x01(\x05R\bcapacity\x12N\n" +
+	"\x15authority_observed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x13authorityObservedAt\"L\n" +
 	"\fClaimRequest\x12<\n" +
 	"\asession\x18\x01 \x01(\v2\".jobforge.agent.v1.SessionIdentityR\asession\"B\n" +
 	"\rClaimResponse\x121\n" +
-	"\x05lease\x18\x01 \x01(\v2\x1b.jobforge.agent.v1.RunLeaseR\x05lease\"\xf5\x02\n" +
+	"\x05lease\x18\x01 \x01(\v2\x1b.jobforge.agent.v1.RunLeaseR\x05lease\"\xc5\x03\n" +
 	"\bRunLease\x12B\n" +
 	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x12;\n" +
 	"\vlease_until\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -2870,7 +2914,8 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"checkpoint\x18\x05 \x01(\v2\x1d.jobforge.agent.v1.CheckpointR\n" +
 	"checkpoint\x12#\n" +
-	"\rtrace_context\x18\x06 \x01(\tR\ftraceContext\"\xe8\x01\n" +
+	"\rtrace_context\x18\x06 \x01(\tR\ftraceContext\x12N\n" +
+	"\x15authority_observed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\x13authorityObservedAt\"\xe8\x01\n" +
 	"\n" +
 	"Checkpoint\x12%\n" +
 	"\x0ecursor_version\x18\x01 \x01(\x03R\rcursorVersion\x12<\n" +
@@ -2897,14 +2942,15 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"result_ref\x18\x04 \x01(\tR\tresultRef\"\x94\x01\n" +
 	"\x10HeartbeatRequest\x12B\n" +
 	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x12<\n" +
-	"\asession\x18\x02 \x01(\v2\".jobforge.agent.v1.SessionIdentityR\asession\"\xf5\x01\n" +
+	"\asession\x18\x02 \x01(\v2\".jobforge.agent.v1.SessionIdentityR\asession\"\xc5\x02\n" +
 	"\x11HeartbeatResponse\x128\n" +
 	"\x06signal\x18\x01 \x01(\x0e2 .jobforge.agent.v1.ControlSignalR\x06signal\x12;\n" +
 	"\vlease_until\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"leaseUntil\x12\x1f\n" +
 	"\vstop_reason\x18\x03 \x01(\tR\n" +
 	"stopReason\x12H\n" +
-	"\x12session_expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x10sessionExpiresAt\"Z\n" +
+	"\x12session_expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x10sessionExpiresAt\x12N\n" +
+	"\x15authority_observed_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x13authorityObservedAt\"Z\n" +
 	"\x14GetCheckpointRequest\x12B\n" +
 	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\"V\n" +
 	"\x15GetCheckpointResponse\x12=\n" +
@@ -2932,7 +2978,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\finput_tokens\x18\x01 \x01(\x03R\vinputTokens\x12#\n" +
 	"\routput_tokens\x18\x02 \x01(\x03R\foutputTokens\x12!\n" +
 	"\ftotal_tokens\x18\x03 \x01(\x03R\vtotalTokens\x12%\n" +
-	"\x0ecost_microyuan\x18\x04 \x01(\x03R\rcostMicroyuan\"\x87\x04\n" +
+	"\x0ecost_microyuan\x18\x04 \x01(\x03R\rcostMicroyuan\"\xb8\x04\n" +
 	"\x0fCallReservation\x12(\n" +
 	"\x10physical_call_id\x18\x01 \x01(\tR\x0ephysicalCallId\x12,\n" +
 	"\x12tool_invocation_id\x18\x02 \x01(\tR\x10toolInvocationId\x124\n" +
@@ -2947,7 +2993,8 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x06budget\x18\t \x01(\v2\x1d.jobforge.agent.v1.CallBudgetR\x06budget\x12\x1f\n" +
 	"\vusage_known\x18\n" +
 	" \x01(\bR\n" +
-	"usageKnown\"\x82\x01\n" +
+	"usageKnown\x12/\n" +
+	"\x13measurement_anomaly\x18\v \x01(\bR\x12measurementAnomaly\"\x82\x01\n" +
 	"\x13ReserveCallResponse\x12D\n" +
 	"\vreservation\x18\x01 \x01(\v2\".jobforge.agent.v1.CallReservationR\vreservation\x12%\n" +
 	"\x0enewly_reserved\x18\x02 \x01(\bR\rnewlyReserved\"\xc7\x01\n" +
@@ -3135,87 +3182,90 @@ var file_jobforge_agent_v1_agent_proto_depIdxs = []int32{
 	6,  // 2: jobforge.agent.v1.RegisterResponse.session:type_name -> jobforge.agent.v1.SessionIdentity
 	40, // 3: jobforge.agent.v1.RegisterResponse.expires_at:type_name -> google.protobuf.Timestamp
 	41, // 4: jobforge.agent.v1.RegisterResponse.heartbeat_interval:type_name -> google.protobuf.Duration
-	6,  // 5: jobforge.agent.v1.ClaimRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
-	13, // 6: jobforge.agent.v1.ClaimResponse.lease:type_name -> jobforge.agent.v1.RunLease
-	7,  // 7: jobforge.agent.v1.RunLease.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	40, // 8: jobforge.agent.v1.RunLease.lease_until:type_name -> google.protobuf.Timestamp
-	40, // 9: jobforge.agent.v1.RunLease.attempt_deadline:type_name -> google.protobuf.Timestamp
-	40, // 10: jobforge.agent.v1.RunLease.run_deadline:type_name -> google.protobuf.Timestamp
-	14, // 11: jobforge.agent.v1.RunLease.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
-	8,  // 12: jobforge.agent.v1.Checkpoint.next_step:type_name -> jobforge.agent.v1.StepIdentity
-	16, // 13: jobforge.agent.v1.Checkpoint.steps:type_name -> jobforge.agent.v1.AcceptedStep
-	15, // 14: jobforge.agent.v1.Checkpoint.snapshot:type_name -> jobforge.agent.v1.SnapshotBinding
-	8,  // 15: jobforge.agent.v1.AcceptedStep.step:type_name -> jobforge.agent.v1.StepIdentity
-	7,  // 16: jobforge.agent.v1.HeartbeatRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	6,  // 17: jobforge.agent.v1.HeartbeatRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
-	2,  // 18: jobforge.agent.v1.HeartbeatResponse.signal:type_name -> jobforge.agent.v1.ControlSignal
-	40, // 19: jobforge.agent.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
-	40, // 20: jobforge.agent.v1.HeartbeatResponse.session_expires_at:type_name -> google.protobuf.Timestamp
-	7,  // 21: jobforge.agent.v1.GetCheckpointRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	14, // 22: jobforge.agent.v1.GetCheckpointResponse.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
-	7,  // 23: jobforge.agent.v1.BeginToolRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	8,  // 24: jobforge.agent.v1.BeginToolRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	7,  // 25: jobforge.agent.v1.ReserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	8,  // 26: jobforge.agent.v1.ReserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	3,  // 27: jobforge.agent.v1.ReserveCallRequest.subcall:type_name -> jobforge.agent.v1.Subcall
-	3,  // 28: jobforge.agent.v1.CallReservation.subcall:type_name -> jobforge.agent.v1.Subcall
-	40, // 29: jobforge.agent.v1.CallReservation.reserved_at:type_name -> google.protobuf.Timestamp
-	40, // 30: jobforge.agent.v1.CallReservation.dispatch_expires_at:type_name -> google.protobuf.Timestamp
-	40, // 31: jobforge.agent.v1.CallReservation.call_deadline:type_name -> google.protobuf.Timestamp
-	24, // 32: jobforge.agent.v1.CallReservation.budget:type_name -> jobforge.agent.v1.CallBudget
-	25, // 33: jobforge.agent.v1.ReserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	7,  // 34: jobforge.agent.v1.ObserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	8,  // 35: jobforge.agent.v1.ObserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	4,  // 36: jobforge.agent.v1.ObserveCallRequest.transport_outcome:type_name -> jobforge.agent.v1.TransportOutcome
-	27, // 37: jobforge.agent.v1.ObserveCallRequest.usage:type_name -> jobforge.agent.v1.UsageReport
-	5,  // 38: jobforge.agent.v1.ObserveCallRequest.business_outcome:type_name -> jobforge.agent.v1.BusinessOutcome
-	25, // 39: jobforge.agent.v1.ObserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	7,  // 40: jobforge.agent.v1.SettleUsageRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	27, // 41: jobforge.agent.v1.SettleUsageRequest.usage:type_name -> jobforge.agent.v1.UsageReport
-	25, // 42: jobforge.agent.v1.SettleUsageResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	7,  // 43: jobforge.agent.v1.CommitStepRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	8,  // 44: jobforge.agent.v1.CommitStepRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	16, // 45: jobforge.agent.v1.CommitStepResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
-	1,  // 46: jobforge.agent.v1.CommitStepResponse.state:type_name -> jobforge.agent.v1.RunState
-	8,  // 47: jobforge.agent.v1.CommitStepResponse.next_step:type_name -> jobforge.agent.v1.StepIdentity
-	7,  // 48: jobforge.agent.v1.FailAttemptRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	8,  // 49: jobforge.agent.v1.FailAttemptRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	1,  // 50: jobforge.agent.v1.FailAttemptResponse.state:type_name -> jobforge.agent.v1.RunState
-	40, // 51: jobforge.agent.v1.FailAttemptResponse.retry_at:type_name -> google.protobuf.Timestamp
-	7,  // 52: jobforge.agent.v1.AcknowledgeStoppedRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	1,  // 53: jobforge.agent.v1.AcknowledgeStoppedResponse.state:type_name -> jobforge.agent.v1.RunState
-	7,  // 54: jobforge.agent.v1.GetAcceptedCommitRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	16, // 55: jobforge.agent.v1.GetAcceptedCommitResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
-	1,  // 56: jobforge.agent.v1.GetAcceptedCommitResponse.state:type_name -> jobforge.agent.v1.RunState
-	9,  // 57: jobforge.agent.v1.AgentService.Register:input_type -> jobforge.agent.v1.RegisterRequest
-	11, // 58: jobforge.agent.v1.AgentService.Claim:input_type -> jobforge.agent.v1.ClaimRequest
-	17, // 59: jobforge.agent.v1.AgentService.Heartbeat:input_type -> jobforge.agent.v1.HeartbeatRequest
-	19, // 60: jobforge.agent.v1.AgentService.GetCheckpoint:input_type -> jobforge.agent.v1.GetCheckpointRequest
-	21, // 61: jobforge.agent.v1.AgentService.BeginTool:input_type -> jobforge.agent.v1.BeginToolRequest
-	23, // 62: jobforge.agent.v1.AgentService.ReserveCall:input_type -> jobforge.agent.v1.ReserveCallRequest
-	28, // 63: jobforge.agent.v1.AgentService.ObserveCall:input_type -> jobforge.agent.v1.ObserveCallRequest
-	30, // 64: jobforge.agent.v1.AgentService.SettleUsage:input_type -> jobforge.agent.v1.SettleUsageRequest
-	32, // 65: jobforge.agent.v1.AgentService.CommitStep:input_type -> jobforge.agent.v1.CommitStepRequest
-	34, // 66: jobforge.agent.v1.AgentService.FailAttempt:input_type -> jobforge.agent.v1.FailAttemptRequest
-	36, // 67: jobforge.agent.v1.AgentService.AcknowledgeStopped:input_type -> jobforge.agent.v1.AcknowledgeStoppedRequest
-	38, // 68: jobforge.agent.v1.AgentService.GetAcceptedCommit:input_type -> jobforge.agent.v1.GetAcceptedCommitRequest
-	10, // 69: jobforge.agent.v1.AgentService.Register:output_type -> jobforge.agent.v1.RegisterResponse
-	12, // 70: jobforge.agent.v1.AgentService.Claim:output_type -> jobforge.agent.v1.ClaimResponse
-	18, // 71: jobforge.agent.v1.AgentService.Heartbeat:output_type -> jobforge.agent.v1.HeartbeatResponse
-	20, // 72: jobforge.agent.v1.AgentService.GetCheckpoint:output_type -> jobforge.agent.v1.GetCheckpointResponse
-	22, // 73: jobforge.agent.v1.AgentService.BeginTool:output_type -> jobforge.agent.v1.BeginToolResponse
-	26, // 74: jobforge.agent.v1.AgentService.ReserveCall:output_type -> jobforge.agent.v1.ReserveCallResponse
-	29, // 75: jobforge.agent.v1.AgentService.ObserveCall:output_type -> jobforge.agent.v1.ObserveCallResponse
-	31, // 76: jobforge.agent.v1.AgentService.SettleUsage:output_type -> jobforge.agent.v1.SettleUsageResponse
-	33, // 77: jobforge.agent.v1.AgentService.CommitStep:output_type -> jobforge.agent.v1.CommitStepResponse
-	35, // 78: jobforge.agent.v1.AgentService.FailAttempt:output_type -> jobforge.agent.v1.FailAttemptResponse
-	37, // 79: jobforge.agent.v1.AgentService.AcknowledgeStopped:output_type -> jobforge.agent.v1.AcknowledgeStoppedResponse
-	39, // 80: jobforge.agent.v1.AgentService.GetAcceptedCommit:output_type -> jobforge.agent.v1.GetAcceptedCommitResponse
-	69, // [69:81] is the sub-list for method output_type
-	57, // [57:69] is the sub-list for method input_type
-	57, // [57:57] is the sub-list for extension type_name
-	57, // [57:57] is the sub-list for extension extendee
-	0,  // [0:57] is the sub-list for field type_name
+	40, // 5: jobforge.agent.v1.RegisterResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
+	6,  // 6: jobforge.agent.v1.ClaimRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
+	13, // 7: jobforge.agent.v1.ClaimResponse.lease:type_name -> jobforge.agent.v1.RunLease
+	7,  // 8: jobforge.agent.v1.RunLease.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	40, // 9: jobforge.agent.v1.RunLease.lease_until:type_name -> google.protobuf.Timestamp
+	40, // 10: jobforge.agent.v1.RunLease.attempt_deadline:type_name -> google.protobuf.Timestamp
+	40, // 11: jobforge.agent.v1.RunLease.run_deadline:type_name -> google.protobuf.Timestamp
+	14, // 12: jobforge.agent.v1.RunLease.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
+	40, // 13: jobforge.agent.v1.RunLease.authority_observed_at:type_name -> google.protobuf.Timestamp
+	8,  // 14: jobforge.agent.v1.Checkpoint.next_step:type_name -> jobforge.agent.v1.StepIdentity
+	16, // 15: jobforge.agent.v1.Checkpoint.steps:type_name -> jobforge.agent.v1.AcceptedStep
+	15, // 16: jobforge.agent.v1.Checkpoint.snapshot:type_name -> jobforge.agent.v1.SnapshotBinding
+	8,  // 17: jobforge.agent.v1.AcceptedStep.step:type_name -> jobforge.agent.v1.StepIdentity
+	7,  // 18: jobforge.agent.v1.HeartbeatRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	6,  // 19: jobforge.agent.v1.HeartbeatRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
+	2,  // 20: jobforge.agent.v1.HeartbeatResponse.signal:type_name -> jobforge.agent.v1.ControlSignal
+	40, // 21: jobforge.agent.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
+	40, // 22: jobforge.agent.v1.HeartbeatResponse.session_expires_at:type_name -> google.protobuf.Timestamp
+	40, // 23: jobforge.agent.v1.HeartbeatResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
+	7,  // 24: jobforge.agent.v1.GetCheckpointRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	14, // 25: jobforge.agent.v1.GetCheckpointResponse.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
+	7,  // 26: jobforge.agent.v1.BeginToolRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	8,  // 27: jobforge.agent.v1.BeginToolRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	7,  // 28: jobforge.agent.v1.ReserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	8,  // 29: jobforge.agent.v1.ReserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	3,  // 30: jobforge.agent.v1.ReserveCallRequest.subcall:type_name -> jobforge.agent.v1.Subcall
+	3,  // 31: jobforge.agent.v1.CallReservation.subcall:type_name -> jobforge.agent.v1.Subcall
+	40, // 32: jobforge.agent.v1.CallReservation.reserved_at:type_name -> google.protobuf.Timestamp
+	40, // 33: jobforge.agent.v1.CallReservation.dispatch_expires_at:type_name -> google.protobuf.Timestamp
+	40, // 34: jobforge.agent.v1.CallReservation.call_deadline:type_name -> google.protobuf.Timestamp
+	24, // 35: jobforge.agent.v1.CallReservation.budget:type_name -> jobforge.agent.v1.CallBudget
+	25, // 36: jobforge.agent.v1.ReserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	7,  // 37: jobforge.agent.v1.ObserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	8,  // 38: jobforge.agent.v1.ObserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	4,  // 39: jobforge.agent.v1.ObserveCallRequest.transport_outcome:type_name -> jobforge.agent.v1.TransportOutcome
+	27, // 40: jobforge.agent.v1.ObserveCallRequest.usage:type_name -> jobforge.agent.v1.UsageReport
+	5,  // 41: jobforge.agent.v1.ObserveCallRequest.business_outcome:type_name -> jobforge.agent.v1.BusinessOutcome
+	25, // 42: jobforge.agent.v1.ObserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	7,  // 43: jobforge.agent.v1.SettleUsageRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	27, // 44: jobforge.agent.v1.SettleUsageRequest.usage:type_name -> jobforge.agent.v1.UsageReport
+	25, // 45: jobforge.agent.v1.SettleUsageResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	7,  // 46: jobforge.agent.v1.CommitStepRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	8,  // 47: jobforge.agent.v1.CommitStepRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	16, // 48: jobforge.agent.v1.CommitStepResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
+	1,  // 49: jobforge.agent.v1.CommitStepResponse.state:type_name -> jobforge.agent.v1.RunState
+	8,  // 50: jobforge.agent.v1.CommitStepResponse.next_step:type_name -> jobforge.agent.v1.StepIdentity
+	7,  // 51: jobforge.agent.v1.FailAttemptRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	8,  // 52: jobforge.agent.v1.FailAttemptRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	1,  // 53: jobforge.agent.v1.FailAttemptResponse.state:type_name -> jobforge.agent.v1.RunState
+	40, // 54: jobforge.agent.v1.FailAttemptResponse.retry_at:type_name -> google.protobuf.Timestamp
+	7,  // 55: jobforge.agent.v1.AcknowledgeStoppedRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	1,  // 56: jobforge.agent.v1.AcknowledgeStoppedResponse.state:type_name -> jobforge.agent.v1.RunState
+	7,  // 57: jobforge.agent.v1.GetAcceptedCommitRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	16, // 58: jobforge.agent.v1.GetAcceptedCommitResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
+	1,  // 59: jobforge.agent.v1.GetAcceptedCommitResponse.state:type_name -> jobforge.agent.v1.RunState
+	9,  // 60: jobforge.agent.v1.AgentService.Register:input_type -> jobforge.agent.v1.RegisterRequest
+	11, // 61: jobforge.agent.v1.AgentService.Claim:input_type -> jobforge.agent.v1.ClaimRequest
+	17, // 62: jobforge.agent.v1.AgentService.Heartbeat:input_type -> jobforge.agent.v1.HeartbeatRequest
+	19, // 63: jobforge.agent.v1.AgentService.GetCheckpoint:input_type -> jobforge.agent.v1.GetCheckpointRequest
+	21, // 64: jobforge.agent.v1.AgentService.BeginTool:input_type -> jobforge.agent.v1.BeginToolRequest
+	23, // 65: jobforge.agent.v1.AgentService.ReserveCall:input_type -> jobforge.agent.v1.ReserveCallRequest
+	28, // 66: jobforge.agent.v1.AgentService.ObserveCall:input_type -> jobforge.agent.v1.ObserveCallRequest
+	30, // 67: jobforge.agent.v1.AgentService.SettleUsage:input_type -> jobforge.agent.v1.SettleUsageRequest
+	32, // 68: jobforge.agent.v1.AgentService.CommitStep:input_type -> jobforge.agent.v1.CommitStepRequest
+	34, // 69: jobforge.agent.v1.AgentService.FailAttempt:input_type -> jobforge.agent.v1.FailAttemptRequest
+	36, // 70: jobforge.agent.v1.AgentService.AcknowledgeStopped:input_type -> jobforge.agent.v1.AcknowledgeStoppedRequest
+	38, // 71: jobforge.agent.v1.AgentService.GetAcceptedCommit:input_type -> jobforge.agent.v1.GetAcceptedCommitRequest
+	10, // 72: jobforge.agent.v1.AgentService.Register:output_type -> jobforge.agent.v1.RegisterResponse
+	12, // 73: jobforge.agent.v1.AgentService.Claim:output_type -> jobforge.agent.v1.ClaimResponse
+	18, // 74: jobforge.agent.v1.AgentService.Heartbeat:output_type -> jobforge.agent.v1.HeartbeatResponse
+	20, // 75: jobforge.agent.v1.AgentService.GetCheckpoint:output_type -> jobforge.agent.v1.GetCheckpointResponse
+	22, // 76: jobforge.agent.v1.AgentService.BeginTool:output_type -> jobforge.agent.v1.BeginToolResponse
+	26, // 77: jobforge.agent.v1.AgentService.ReserveCall:output_type -> jobforge.agent.v1.ReserveCallResponse
+	29, // 78: jobforge.agent.v1.AgentService.ObserveCall:output_type -> jobforge.agent.v1.ObserveCallResponse
+	31, // 79: jobforge.agent.v1.AgentService.SettleUsage:output_type -> jobforge.agent.v1.SettleUsageResponse
+	33, // 80: jobforge.agent.v1.AgentService.CommitStep:output_type -> jobforge.agent.v1.CommitStepResponse
+	35, // 81: jobforge.agent.v1.AgentService.FailAttempt:output_type -> jobforge.agent.v1.FailAttemptResponse
+	37, // 82: jobforge.agent.v1.AgentService.AcknowledgeStopped:output_type -> jobforge.agent.v1.AcknowledgeStoppedResponse
+	39, // 83: jobforge.agent.v1.AgentService.GetAcceptedCommit:output_type -> jobforge.agent.v1.GetAcceptedCommitResponse
+	72, // [72:84] is the sub-list for method output_type
+	60, // [60:72] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_jobforge_agent_v1_agent_proto_init() }

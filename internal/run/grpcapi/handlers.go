@@ -25,10 +25,14 @@ func (h *service) Register(ctx context.Context, request *agentv1.RegisterRequest
 	if session.WorkerID != principal || !run.ValidUUID(session.ID) {
 		return nil, run.ErrInternal
 	}
+	observedAt, err := authorityTimeToWire(session.AuthorityObservedAt)
+	if err != nil {
+		return nil, err
+	}
 	worker := h.workers[principal]
 	return &agentv1.RegisterResponse{Session: &agentv1.SessionIdentity{WorkerId: principal, SessionId: session.ID},
 		ExpiresAt: timestamppb.New(session.ExpiresAt), HeartbeatInterval: durationpb.New(5 * time.Second),
-		ProfileIds: slices.Clone(worker.ProfileIDs), Capacity: int32(worker.Capacity)}, nil
+		ProfileIds: slices.Clone(worker.ProfileIDs), Capacity: int32(worker.Capacity), AuthorityObservedAt: observedAt}, nil
 }
 
 func (h *service) Claim(ctx context.Context, request *agentv1.ClaimRequest) (*agentv1.ClaimResponse, error) {
@@ -56,9 +60,13 @@ func (h *service) Claim(ctx context.Context, request *agentv1.ClaimRequest) (*ag
 		claimed.Checkpoint.Run.LeaseUntil == nil || claimed.Checkpoint.Run.AttemptDeadline == nil {
 		return nil, run.ErrInternal
 	}
+	observedAt, err := authorityTimeToWire(claimed.AuthorityObservedAt)
+	if err != nil {
+		return nil, err
+	}
 	return &agentv1.ClaimResponse{Lease: &agentv1.RunLease{Execution: execution,
 		LeaseUntil: optionalTime(claimed.Checkpoint.Run.LeaseUntil), AttemptDeadline: optionalTime(claimed.Checkpoint.Run.AttemptDeadline),
-		RunDeadline: timestamppb.New(claimed.Checkpoint.Run.RunDeadline), Checkpoint: checkpoint}}, nil
+		RunDeadline: timestamppb.New(claimed.Checkpoint.Run.RunDeadline), Checkpoint: checkpoint, AuthorityObservedAt: observedAt}}, nil
 }
 
 func (h *service) Heartbeat(ctx context.Context, request *agentv1.HeartbeatRequest) (*agentv1.HeartbeatResponse, error) {
@@ -78,8 +86,12 @@ func (h *service) Heartbeat(ctx context.Context, request *agentv1.HeartbeatReque
 		if session.ID != sessionID || session.WorkerID != principal {
 			return nil, run.ErrInternal
 		}
+		observedAt, err := authorityTimeToWire(session.AuthorityObservedAt)
+		if err != nil {
+			return nil, err
+		}
 		return &agentv1.HeartbeatResponse{Signal: agentv1.ControlSignal_CONTROL_SIGNAL_CONTINUE,
-			SessionExpiresAt: timestamppb.New(session.ExpiresAt)}, nil
+			SessionExpiresAt: timestamppb.New(session.ExpiresAt), AuthorityObservedAt: observedAt}, nil
 	}
 	lease, err := h.lease(principal, request.Execution)
 	if err != nil {
@@ -96,8 +108,12 @@ func (h *service) Heartbeat(ctx context.Context, request *agentv1.HeartbeatReque
 	if result.StopReason != "" && result.StopReason != run.StopCancel && result.StopReason != run.StopRunDeadline && result.StopReason != run.StopAttemptTimeout {
 		return nil, run.ErrInternal
 	}
+	observedAt, err := authorityTimeToWire(result.AuthorityObservedAt)
+	if err != nil {
+		return nil, err
+	}
 	return &agentv1.HeartbeatResponse{Signal: signal, LeaseUntil: timestamppb.New(result.LeaseUntil),
-		StopReason: result.StopReason, SessionExpiresAt: timestamppb.New(result.SessionExpiresAt)}, nil
+		StopReason: result.StopReason, SessionExpiresAt: timestamppb.New(result.SessionExpiresAt), AuthorityObservedAt: observedAt}, nil
 }
 
 func (h *service) GetCheckpoint(ctx context.Context, request *agentv1.GetCheckpointRequest) (*agentv1.GetCheckpointResponse, error) {

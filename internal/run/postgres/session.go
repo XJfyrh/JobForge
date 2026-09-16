@@ -50,6 +50,7 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 				return agentrun.ErrStaleLease
 			}
 			session = previous
+			session.AuthorityObservedAt = now
 			return nil
 		}
 		if err != pgx.ErrNoRows {
@@ -63,7 +64,7 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 			return agentrun.ErrConflict
 		}
 		session = agentrun.Session{ID: uuid.NewString(), WorkerID: principal, StartupID: startupID, Version: version,
-			CreatedAt: now, SeenAt: now, ExpiresAt: now.Add(sessionTTL)}
+			CreatedAt: now, SeenAt: now, ExpiresAt: now.Add(sessionTTL), AuthorityObservedAt: now}
 		_, err = tx.Exec(ctx, `insert into worker_sessions(session_id,worker_id,startup_id,version,created_at,seen_at,expires_at)
 			values($1,$2,$3,$4,$5,$5,$6)`, session.ID, principal, startupID, version, now, session.ExpiresAt)
 		return err
@@ -125,6 +126,7 @@ func (s *Store) HeartbeatSession(ctx context.Context, principal, workerID, sessi
 			return agentrun.ErrStaleLease
 		}
 		session.SeenAt, session.ExpiresAt = now, now.Add(sessionTTL)
+		session.AuthorityObservedAt = now
 		_, err = tx.Exec(ctx, "update worker_sessions set seen_at=$3,expires_at=$4 where worker_id=$1 and session_id=$2", workerID, sessionID, now, session.ExpiresAt)
 		return err
 	})

@@ -145,6 +145,9 @@ message RegisterResponse {
   repeated string profile_ids = 4;
   // Server-configured simultaneous Run limit; initial maximum is one.
   int32 capacity = 5;
+  // Fresh DB time after registration serialization, including startup replays.
+  // Anchor expires_at to the RPC start monotonic clock; this never extends it.
+  google.protobuf.Timestamp authority_observed_at = 6;
 }
 
 // ClaimRequest asks for one Run from the configured session allowlist.
@@ -173,6 +176,10 @@ message RunLease {
   Checkpoint checkpoint = 5;
   // Validated W3C traceparent; empty when no parent was supplied.
   string trace_context = 6;
+  // Fresh DB time used to grant this lease after all authority locks.
+  // Map remaining deadlines from the RPC start monotonic clock, not wall time.
+  // Absent leases do not carry an observation or renew session liveness.
+  google.protobuf.Timestamp authority_observed_at = 7;
 }
 
 // Checkpoint is protected state, bounded to 256 KiB including all results.
@@ -240,6 +247,9 @@ message HeartbeatResponse {
   string stop_reason = 3;
   // New live-session expiry; idle heartbeat returns no Run lease_until.
   google.protobuf.Timestamp session_expires_at = 4;
+  // Fresh DB time after authority locks, present for idle, continue and stop.
+  // It anchors returned expiries but never changes the meaning of stop.
+  google.protobuf.Timestamp authority_observed_at = 5;
 }
 
 // ControlSignal controls local execution, not provider-side cancellation.
@@ -354,6 +364,9 @@ message CallReservation {
   CallBudget budget = 9;
   // Whether complete validated usage has settled this record.
   bool usage_known = 10;
+  // Trusted out-of-bound metering was retained and all three accounts frozen.
+  // The full hold remains; usage_known=false is not permission to send again.
+  bool measurement_anomaly = 11;
 }
 
 // ReserveCallResponse authorizes sending only on the first successful response.
@@ -386,11 +399,13 @@ enum BusinessOutcome {
   BUSINESS_OUTCOME_UNKNOWN = 3;
 }
 
-// UsageReport contains bounded trusted metering, never a caller-selected price.
+// UsageReport contains trusted safe-integer metering, never a selected price.
+// Above-reservation usage is retained as an anomaly with the full hold and
+// frozen accounts; it must not be truncated or rejected by the wire codec.
 message UsageReport {
-  // Complete nonnegative provider input tokens, at most the reserved bound.
+  // Complete nonnegative provider input tokens, at most 2^53-1.
   int64 input_tokens = 1;
-  // Complete nonnegative provider output tokens, at most the reserved bound.
+  // Complete nonnegative provider output tokens, at most 2^53-1.
   int64 output_tokens = 2;
   // Cache-hit subset of input tokens, as defined by the registered profile.
   int64 cached_input_tokens = 3;

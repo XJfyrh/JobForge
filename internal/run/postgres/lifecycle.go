@@ -219,7 +219,7 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		if err != nil {
 			return err
 		}
-		result = &agentrun.ClaimedRun{Lease: lease, Checkpoint: checkpoint}
+		result = &agentrun.ClaimedRun{Lease: lease, Checkpoint: checkpoint, AuthorityObservedAt: now}
 		return nil
 	})
 	return result, err
@@ -308,6 +308,7 @@ func (s *Store) HeartbeatExecution(ctx context.Context, principal string, lease 
 			result = agentrun.HeartbeatResult{Continue: true, LeaseUntil: *r.LeaseUntil}
 		}
 		// Expired stopping sessions may receive stop control but are never revived.
+		result.AuthorityObservedAt = now
 		result.SessionExpiresAt = session.ExpiresAt
 		if session.ExpiresAt.After(now) {
 			_, err = tx.Exec(ctx, "update worker_sessions set seen_at=$3,expires_at=$4 where worker_id=$1 and session_id=$2", principal, lease.SessionID, now, now.Add(sessionTTL))

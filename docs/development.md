@@ -310,7 +310,7 @@ go test -tags scale -count=1 ./tests/scale/
 | `python-lint` | SQLFluff 历史基线校验、`sqlfluff lint migrations`、`ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/python tools/check_sqlfluff_baseline.py`、`.venv/bin/sqlfluff lint migrations`、`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
 | `observability-config` | 固定 Prometheus 镜像运行 promtool config/rule tests；重建仪表盘无 diff | `python tools/generate_task_dashboard.py`；Docker promtool 命令见 CONTRIBUTING.md |
-| `executor-process-probe` | S0 固定 Go/Python 镜像内真实进程故障与 Linux race | 构建 `tools/executorprobe/Dockerfile`，按 CI 用 `--init --network none` 运行 |
+| `executor-process-probe` | S0 固定 Go/Python 镜像内真实进程故障与 Linux race；S1-C1真实跨进程BOOTTIME域 | 构建 `tools/executorprobe/Dockerfile`，按 CI 用 `--init --network none` 分别运行默认进程套件与`./clock.test` |
 
 `python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
 
