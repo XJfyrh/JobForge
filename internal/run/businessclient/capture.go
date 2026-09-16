@@ -147,7 +147,7 @@ func validSnapshot(s snapshotMetadata, tenant, ticketID string) bool {
 	v, p, index := s.VersionVector, s.Policy, s.Index
 	if s.SchemaVersion != 1 || v.SchemaVersion != 1 || !canonicalUUID(s.ID) || !hash(s.ContentHash) ||
 		s.TenantID != tenant || s.Ticket.TenantID != tenant || s.Ticket.TicketID != ticketID ||
-		!revision(s.Ticket.Revision) || s.AsOf.IsZero() || s.CreatedAt.IsZero() || s.Ticket.ObservedAt.IsZero() ||
+		!revision(s.Ticket.Revision) || s.AsOf.IsZero() || s.CreatedAt.IsZero() || !s.AsOf.Equal(s.Ticket.ObservedAt) ||
 		v.Ticket.ID != ticketID || v.Ticket.Revision != s.Ticket.Revision ||
 		p.TenantID != tenant || p.PolicyVersion != s.Ticket.PolicyVersion || !agentrun.ValidIdentifier(p.PolicyVersion) ||
 		!revision(p.Revision) || !hash(p.CorpusSHA256) || v.Policy.Version != p.PolicyVersion ||

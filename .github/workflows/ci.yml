@@ -147,7 +147,7 @@ jobs:
       - name: Agent S1 business adapter types
         run: mypy python/jobforge_agent
       - name: Offline support evaluation types
-        run: mypy --explicit-package-bases tools/support_evaluation
+        run: MYPYPATH=python:sdk/python mypy --explicit-package-bases tools/support_evaluation
 
   business-contract:
     name: Agent S1 business (real pgvector, HTTP, race)
@@ -237,7 +237,7 @@ jobs:
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
       - name: Real PostgreSQL, gRPC, provider report confirmation and process faults
         run: >-
-          docker run --rm --init --network host --cpus 2 --memory 512m --pids-limit 96
+          docker run --rm --init --network host --add-host control:127.0.0.1 --cpus 2 --memory 512m --pids-limit 96
           -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable
           jobforge-agent-runtime:integration
       - name: Build production image and reject fixture registration

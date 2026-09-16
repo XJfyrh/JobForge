@@ -14,6 +14,9 @@ import (
 // definition. Availability is deployment state, excluded from that definition.
 func (s *Store) EnsureProfiles(ctx context.Context) error {
 	for _, p := range s.profiles {
+		if err := agentrun.ValidateSupportProfile(p); err != nil {
+			return err
+		}
 		definition, err := json.Marshal(p)
 		if err != nil {
 			return agentrun.ErrInvalidArgument
@@ -45,6 +48,9 @@ func (s *Store) Profile(_ context.Context, id string) (agentrun.Profile, error) 
 	p, ok := s.profiles[id]
 	if !ok || !p.Executable {
 		return agentrun.Profile{}, agentrun.ErrProfileUnavailable
+	}
+	if err := agentrun.ValidateSupportProfile(p); err != nil {
+		return agentrun.Profile{}, err
 	}
 	p.Definition = slices.Clone(p.Definition)
 	return p, nil

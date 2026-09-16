@@ -16,50 +16,17 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/business"
 	agentrun "github.com/xjfyrh/jobforge/internal/run"
-	runpostgres "github.com/xjfyrh/jobforge/internal/run/postgres"
 )
 
 const supportExecutorProfileID = "support-executor-synthetic-audit-v1"
 
 func supportExecutorHarness(t *testing.T, key string, withOrder bool) *runHarness {
 	t.Helper()
-	h := setupExecutorHarness(t)
-	h.Profile.ID, h.Profile.Hash = supportExecutorProfileID, agentrun.Fingerprint(supportExecutorProfileID)
-	h.Profile.Strategy = agentrun.SupportFixedStrategy
-	h.Profile.Definition = json.RawMessage(`{"fixture":true,"proposal_schema":"support-proposal-v1"}`)
-	h.Options.Profiles = []agentrun.Profile{h.Profile}
-	h.Options.Workers[0].ProfileIDs = []string{h.Profile.ID}
-	var err error
-	h.Store, err = runpostgres.New(h.Pool, h.Options)
-	if err != nil {
-		t.Fatal(err)
+	if os.Getenv("JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS") != "1" {
+		t.Skip("requires fixed Linux integration image, init and real PostgreSQL; skip is not acceptance")
 	}
-	if err = h.Store.EnsureProfiles(h.Ctx); err != nil {
-		t.Fatal(err)
-	}
-	h.Service, err = agentrun.NewService(h.Store, h.Capture, []string{"tenant-a"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !withOrder {
-		captureKey := agentrun.SnapshotKey("tenant-a", "submit", "submit-"+key, "")
-		snapshot, err := h.Capture.Capture(h.Ctx, "tenant-a", "ticket-1", captureKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var ticket business.Ticket
-		var vector business.VersionVector
-		if json.Unmarshal(snapshot.Ticket, &ticket) != nil || json.Unmarshal(snapshot.VersionVector, &vector) != nil {
-			t.Fatal("invalid synthetic captured source")
-		}
-		ticket.OrderID = nil
-		vector.Order, vector.Delivery = business.OrderVersion{}, business.DeliveryVersion{}
-		snapshot.Ticket, snapshot.VersionVector = supportStorageJSON(t, ticket), supportStorageJSON(t, vector)
-		snapshot.ContentHash = agentrun.Fingerprint("support-executor-missing-order", string(snapshot.Ticket), string(snapshot.VersionVector))
-		h.Capture.mu.Lock()
-		h.Capture.snapshots["tenant-a:"+captureKey] = snapshot
-		h.Capture.mu.Unlock()
-	}
+	h := setupSupportProfileHarness(t, supportExecutorProfileID)
+	supportProfileCapture(t, h, "submit", "submit-"+key, "", withOrder)
 	return h
 }
 
@@ -165,7 +132,7 @@ func (f *supportExecutorHTTPFixture) serveSupport(w http.ResponseWriter, r *http
 		}
 		if r.Method != http.MethodPost || json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body) != nil || body.Model != "all-minilm:22m" ||
 			len(body.Input) != 1 || body.Truncate || len(body.Input[0]) > 512 || !strings.Contains(body.Input[0], "order_missing="+missing) ||
-			!strings.Contains(body.Input[0], "policy=fixture-policy-v1") || !strings.Contains(body.Input[0], "Synthetic contract ticket") {
+			!strings.Contains(body.Input[0], "policy="+agentrun.SupportPolicyVersion) || !strings.Contains(body.Input[0], "Synthetic contract ticket") {
 			f.reject(w)
 			return
 		}
@@ -240,7 +207,7 @@ func TestRunSupportExecutor(t *testing.T) {
 	}{{"with_order_proposal", true, false}, {"missing_order_one_correction", false, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := supportExecutorHarness(t, tc.name, tc.withOrder)
-			r := h.submit(t, "tenant-a", tc.name)
+			r := h.submit(t, "tenant-north", tc.name)
 			fixture := supportExecutorHTTP(t, h, r, tc.withOrder, tc.correction)
 			client := executorGateway(t, h)
 			beforeChildren := executorChildren(os.Getpid())

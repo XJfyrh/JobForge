@@ -13,6 +13,7 @@ COPY tests ./tests
 COPY cmd ./cmd
 RUN CGO_ENABLED=1 go test -race -c -o /out/integration.test ./tests/integration
 RUN CGO_ENABLED=1 go test -race -c -o /out/worker.test ./internal/runworker
+RUN CGO_ENABLED=1 go build -race -o /out/agent-worker ./cmd/agent-worker && CGO_ENABLED=1 go build -race -o /out/agent-control ./cmd/agent-control
 
 FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS runtime
 WORKDIR /app
@@ -45,13 +46,19 @@ CMD ["python", "-m", "pytest", "-p", "no:cacheprovider", "python/tests", "-q"]
 # It installs a static fixture adapter and static loopback provider binding.
 FROM runtime AS integration-check
 COPY --from=integration-build /out/integration.test /out/worker.test /app/
+COPY --from=integration-build /out/agent-worker /out/agent-control /usr/local/bin/
+COPY sdk/python /tmp/sdk
+RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/sdk
+COPY tools/support_evaluation/launcher.py tools/support_evaluation/driver.py tools/support_evaluation/export.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY migrations /src/migrations
 COPY api/executor /src/api/executor
+COPY api/support /src/api/support
 COPY python/tests/runtime_fixture_registry.py /tmp/runtime_fixture_registry.py
 COPY tools/agentruntimecheck/test-manifest.json /tmp/test-manifest.json
 COPY tools/agentruntimecheck/test_install.py /tmp/test_install.py
 RUN python /tmp/test_install.py
+RUN mkdir -p /etc/jobforge/cloud /run/secrets /var/lib/jobforge/batches /var/lib/jobforge/exports && chown -R 65532:65532 /etc/jobforge/cloud /run/secrets /var/lib/jobforge && chown 65532:65532 /etc/jobforge/executor.json
 WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|ProviderAuditExecutor)", "-test.timeout=420s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportLauncher|ProviderAuditExecutor)", "-test.timeout=420s"]

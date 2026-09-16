@@ -1,0 +1,26 @@
+# Build the existing fixed worker first as jobforge-agent-worker:cloud.
+FROM golang:1.26.5-bookworm@sha256:53eeac89074db483fdf0ab3be1df32bf6e47562263d2d0d6baa7f26acb4957dd AS control-build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/agent-control ./cmd/agent-control
+COPY internal ./internal
+COPY proto ./proto
+COPY migrations ./migrations
+RUN CGO_ENABLED=0 go build -trimpath -o /out/agent-control ./cmd/agent-control
+
+FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS sdk-build
+COPY sdk/python /sdk
+RUN python -m pip wheel --no-deps -w /wheels /sdk
+
+FROM jobforge-agent-worker:cloud
+USER root
+COPY --from=sdk-build /wheels /sdk-wheels
+RUN python -m pip install --no-cache-dir --no-deps /sdk-wheels/*.whl
+COPY --from=control-build /out/agent-control /usr/local/bin/agent-control
+WORKDIR /app
+# Only runtime bookkeeping enters this image. Scoring, gold and fixtures stay
+# outside the Worker container and read the protected exports afterwards.
+COPY tools/support_evaluation/driver.py tools/support_evaluation/export.py tools/support_evaluation/launcher.py /app/tools/support_evaluation/
+USER 65532:65532
+ENTRYPOINT ["python", "-m", "tools.support_evaluation.launcher"]

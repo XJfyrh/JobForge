@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "definition": {
+    "model": {
+      "max_tokens": 1024,
+      "message_content_bytes": 16384,
+      "model_content_bytes": 16384,
+      "observed_on": "2026-09-16",
+      "observed_version": "DeepSeek-V4.1-Flash",
+      "origin": "https://api.deepseek.com",
+      "path": "/chat/completions",
+      "provider": "deepseek",
+      "request_body_bytes": 65536,
+      "request_model": "deepseek-flash",
+      "response_body_bytes": 65536,
+      "response_format": "json_object",
+      "stream": false,
+      "temperature": 0,
+      "thinking": "disabled"
+    },
+    "price": {
+      "currency": "CNY",
+      "denominator": 1000000,
+      "input_hit_microyuan": 40000,
+      "input_miss_microyuan": 2000000,
+      "observed_on": "2026-09-16",
+      "output_microyuan": 8000000,
+      "source_sha256": "a1602748f50a9baacd416f4b831438896ba1351160f1f9afe89a9423c4b76cf3"
+    },
+    "program": {
+      "adapter": "support-fixed-v1",
+      "adapter_source_sha256": "ab01c0ae9dc856cffd0f5a332a323bcc4c3fe94db0a512550625ce75010a6fb4",
+      "prompt_sha256": "f2fe1f96036633c0a3f49e504274e79711977d2faec66263c46c31c1426abc6e",
+      "prompt_version": "support-fixed-prompt-v1",
+      "proposal_schema": "support-proposal-v1",
+      "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",
+      "strategy": "support_fixed_v1"
+    },
+    "resources": {
+      "corpus_sha256": "c23799485a532eda42d09b6bf6fbfaad96ce5152bc74a59dacf1e8d165f89198",
+      "dataset_id": "support-dev-2026-09-16-v2",
+      "index_profile": {
+        "chunker_version": "paragraph-v1",
+        "corpus_sha256": "c23799485a532eda42d09b6bf6fbfaad96ce5152bc74a59dacf1e8d165f89198",
+        "dimensions": 384,
+        "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+        "embedding_model": "all-minilm:22m",
+        "policy_version": "delivery-policy-dev-v2"
+      },
+      "index_profile_hash": "6c2409708d68e3a628fa04f0d0c8b138972de638be652e2e3782efca523e165e",
+      "observed_at": "2026-09-16T12:00:00Z",
+      "policy_version": "delivery-policy-dev-v2",
+      "runtime_manifest_sha256": "963f975f40c541f2a29e73c5ee631ac25279122eb22c34783f45efe03ea950a5",
+      "seed_sha256": "361877830231ee8d6b9db5ae9d518d26dde1abb4757bb84c605f42e04f48620c",
+      "tenants": [
+        {
+          "index_content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+          "index_id": "ca7a1ab0-119e-476b-99f8-e4bde0d5cbf3",
+          "policy_revision": 2,
+          "tenant_id": "tenant-north"
+        },
+        {
+          "index_content_hash": "a3a9eab29b1e7bd740c66c58084bf7b42a78ddf00049da2cbb087a5e06190267",
+          "index_id": "b6582d29-15c1-4456-861f-f8e0946d564b",
+          "policy_revision": 2,
+          "tenant_id": "tenant-south"
+        }
+      ]
+    },
+    "schema_version": 1
+  },
+  "build_receipt": {
+    "path": "REPLACE_WITH_REVIEWED_BUILD_RECEIPT",
+    "sha256": ""
+  },
+  "data_review": {
+    "path": "REPLACE_WITH_DATA_REVIEW",
+    "sha256": ""
+  },
+  "scoring_review": {
+    "path": "REPLACE_WITH_SCORING_REVIEW",
+    "sha256": ""
+  },
+  "price_snapshot": {
+    "path": "REPLACE_WITH_PRICE_SNAPSHOT",
+    "sha256": "a1602748f50a9baacd416f4b831438896ba1351160f1f9afe89a9423c4b76cf3"
+  }
+}

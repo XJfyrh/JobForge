@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b及support固定流程已合并，云端验收待交付 | PR #47已接受provider审计合同，PR #48合并support；真实PG/正式进程、v2数据独立审查及真实索引检索见[新证据](evidence/agent-v3-s1-support-2026-09-16.md)。完整评分、审计持久桥及40案云端推理仍未验收 |
+| S1 业务与基线 | support 与供应商持久审计已合并，云端运行入口正在交付 | PR #48 合并 support，PR #49 接受首批合同，PR #50 合并审计实现。登记、启动器、评分器及其验证见[本轮证据](evidence/agent-v3-s1-cloud-launch-2026-09-16.md)；40案真实云端推理仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -110,4 +110,4 @@ C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、�
 
 ## S1 provider 持久审计实现
 
-按已接受 ADR-0020 完成有界 typed report、原调用绑定、首报告原子持久/定价、冲突与晚到权限、跨 FD ACK、持久批次 guard 和租户隔离的 Calls HTTP/SDK。实际 Windows/固定 Linux/PG/安装 SDK 与进程故障检查、性能退化和修复后的结果见[分层证据](evidence/agent-v3-s1-provider-audit-2026-09-16.md)。实现仍须最终 head 独立复核与 CI，完整评分器、收费登记/启动器、40案真实云端及整个S1未完成；历史W4失败、AT-25跳过与生产留存未验收不变。
+按已接受 ADR-0020 完成有界 typed report、原调用绑定、首报告原子持久/定价、冲突与晚到权限、跨 FD ACK、持久批次 guard 和租户隔离的 Calls HTTP/SDK。实际 Windows/固定 Linux/PG/安装 SDK 与进程故障检查、性能退化和修复后的结果见[分层证据](evidence/agent-v3-s1-provider-audit-2026-09-16.md)。[PR #50](https://github.com/XJfyrh/JobForge/pull/50) 的最终提交 `577d79f` 经独立完整审查和诊断差量复核，[八项 CI](https://github.com/XJfyrh/JobForge/actions/runs/35110868145) 全部通过，合并为 `1d50170`。40案真实云端及整个S1仍未完成；历史W4失败、AT-25跳过与生产留存未验收不变。

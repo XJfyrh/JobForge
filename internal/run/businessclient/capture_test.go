@@ -50,6 +50,7 @@ func TestCaptureValidatesCompleteFrozenBindings(t *testing.T) {
 		{"foreign tenant", func(s *snapshotMetadata) { s.TenantID = "tenant-b" }, false},
 		{"wrong ticket", func(s *snapshotMetadata) { s.Ticket.TicketID = "ticket-2" }, false},
 		{"changed revision", func(s *snapshotMetadata) { s.VersionVector.Ticket.Revision++ }, false},
+		{"as_of differs from ticket", func(s *snapshotMetadata) { s.AsOf = s.AsOf.Add(time.Second) }, false},
 		{"missing fact has revision", func(s *snapshotMetadata) { r := int64(1); s.VersionVector.Order.Revision = &r }, false},
 		{"inaccessible order cannot supply delivery", func(s *snapshotMetadata) { id := "delivery-1"; s.VersionVector.Delivery.ID = &id }, false},
 		{"unregistered embedding", func(s *snapshotMetadata) { s.Index.Profile.EmbeddingModel = "other-model" }, false},

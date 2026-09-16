@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -30,6 +31,36 @@ func (s *Store) Admit(ctx context.Context, input agentrun.Admission) (agentrun.S
 			response = *reused
 			return nil
 		}
+		// Validate the current immutable capability before creating provisional
+		// family rows. Replay above deliberately avoids all new-admission gates.
+		profile, err := s.Profile(ctx, input.Profile.ID)
+		if err != nil {
+			return err
+		}
+		if profile.Hash != input.Profile.Hash || agentrun.ValidateSupportProfile(input.Profile) != nil {
+			return agentrun.ErrProfileUnavailable
+		}
+		if profile.Strategy == agentrun.SupportFixedStrategy && profile.AuditEnabled() {
+			definition, err := json.Marshal(profile)
+			if err != nil {
+				return agentrun.ErrProfileUnavailable
+			}
+			var registered bool
+			if err := tx.QueryRow(ctx, `select profile_hash=$2 and definition=$3::jsonb
+				from agent_profiles where profile_id=$1`, profile.ID, profile.Hash, definition).Scan(&registered); err != nil {
+				return err
+			}
+			if !registered {
+				return agentrun.ErrProfileUnavailable
+			}
+		}
+		if input.Snapshot.TenantID != input.TenantID || input.Snapshot.TicketID != input.Submit.TicketID {
+			return agentrun.ErrDependencyUnavailable
+		}
+		if err := agentrun.ValidateSupportSnapshot(profile, input.Snapshot); err != nil {
+			return err
+		}
+		input.Profile = profile
 		business, source, err := s.prepareBusiness(ctx, tx, input)
 		if err != nil {
 			return err
@@ -44,11 +75,7 @@ func (s *Store) Admit(ctx context.Context, input agentrun.Admission) (agentrun.S
 		if err != nil {
 			return err
 		}
-		profile, err := s.Profile(ctx, input.Profile.ID)
-		if err != nil {
-			return err
-		}
-		if profile.Hash != input.Profile.Hash || (input.SourceRunID != "" && source.ProfileHash != profile.Hash) {
+		if input.SourceRunID != "" && source.ProfileHash != profile.Hash {
 			return agentrun.ErrProfileUnavailable
 		}
 		for _, account := range accounts {

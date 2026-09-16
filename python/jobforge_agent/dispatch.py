@@ -16,6 +16,7 @@ import httpx
 from opentelemetry.trace import get_current_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from jobforge_agent import outbound_audit
 from jobforge_agent.embedding import LOCAL_ORIGINS
 from jobforge_agent.errors import ToolError
 from jobforge_agent.http import origin, strict_json
@@ -620,11 +621,22 @@ class AuthorizedDispatcher:
             content=request.body,
             headers=headers,
         )
+        response: httpx.Response | None = None
+        complete_body = False
+        audit = outbound_audit.begin(
+            request,
+            permit["physical_call_id"],
+            self._start,
+            self._endpoints[request.endpoint].base_origin,
+        )
+        # Optional metadata I/O may consume the remaining dispatch window.
+        # Recheck and consume permission immediately before entering HTTP send.
         now = self._guard(deadline)
         self._conversation.can_dispatch(permit["physical_call_id"], now)
-        response: httpx.Response | None = None
         try:
             response = await client.send(outbound, stream=True)
+            if audit is not None:
+                audit.record("http_response", http_status=response.status_code)
             if response.headers.get("content-encoding", "identity") != "identity":
                 raise DispatchError("PROTOCOL_ERROR")
             length = response.headers.get("content-length")
@@ -648,6 +660,7 @@ class AuthorizedDispatcher:
                 request.parameter_hash,
             )
             received.append(complete)
+            complete_body = True
             if request.subcall == "chat":
                 captured.append(self._capture_chat(complete, permit, request))
             elif extract_usage is not None:
@@ -656,6 +669,12 @@ class AuthorizedDispatcher:
                     captured.append(self._capture(evidence, permit, request))
             return complete
         finally:
+            if audit is not None:
+                audit.record(
+                    "finish",
+                    http_status=response.status_code if response is not None else None,
+                    response_complete=complete_body,
+                )
             # A consumed chat permit always retains one immutable fact, including
             # cancellation before a complete body. Never replace it with a later
             # response or wait for more provider data during shutdown.
