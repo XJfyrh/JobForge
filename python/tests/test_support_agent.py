@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime, timedelta
 
 import httpx
 import pytest
@@ -36,6 +37,28 @@ VALIDATOR = Draft202012Validator(
     SCHEMA,
     registry=REGISTRY.with_resource(SCHEMA["$id"], Resource.from_contents(SCHEMA)),
 )
+
+
+@pytest.mark.parametrize("seconds", [-1, 0, 172799, 172800])
+def test_prompt_time_arithmetic_uses_captured_instants(seconds: int) -> None:
+    """Exact boundary arithmetic supplies facts without choosing a resolution."""
+    protected = agent_checkpoint()
+    observed = datetime.fromisoformat(
+        protected["snapshot"]["ticket_binding_json"]["observed_at"]
+    )
+    for step in protected["steps"]:
+        if step["step"]["kind"] == "get_order":
+            step["result_json"]["content"]["order"]["promised_delivery_at"] = (
+                observed - timedelta(seconds=seconds)
+            ).isoformat()
+    body = json.loads(
+        SupportAgentAdapter().proposal_messages(protected, correction=False)[1][
+            "content"
+        ]
+    )
+    assert body["time_differences"]["observed_minus_promise_seconds"] == seconds
+    assert body["allowed_ticket_status_modes"] == []
+    assert not {"action", "conclusion", "expected", "gold"} & body.keys()
 
 
 def decision_step(value: dict | None, kind: str = "model_decision") -> dict:

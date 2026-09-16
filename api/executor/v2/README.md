@@ -38,3 +38,7 @@ fixture 保留原向量索引与会话名称，并同步新报告及观察 hash�
 | 错误和 hash | 三个固定映射、其余允许码、reported/unknown、三个控制码和非法 wire shape 拒绝 |
 
 Go 与 Python 测试实际消费相同 JSON。通过这些确定性检查只说明 codec/会话/hash 合同一致，不能证明 PostgreSQL 持久确认、真实双向 FD/进程清理或真实云端验收。持久化、批次 guard 与读取边界见[供应商审计指南](../../../docs/agent-v3-provider-audit.md)，进程复现见[运行时指南](../../../docs/agent-v3-runtime.md)。
+
+## S2动态决定扩展
+
+[ADR-0024](../../../docs/adr/0024-bounded-support-agent.md)追加`model_decision`步骤。v2帧及现有报告/确认字段保持不变；新策略的manifest、Register、profile和Python输入统一为`linux-v2-agent-runtime-1`，旧S1继续`linux-v2-audit-runtime-1`，不能混用。模型决定的闭合union及共同向量见[support-agent-decision-v1](../../support/agent-v1/README.md)。

@@ -49,3 +49,7 @@ with RunClient("http://localhost:8093", api_key=reader_key) as client:
 Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲突/冻结/晚到测试、安装 SDK 的真实 HTTP 查询，以及固定 Linux 进程/FD/PG/gRPC 故障分别验证不同层。Windows 必须先按 [开发指南](development.md)启动测试 PG 并设置 DSN；同一数据库不能并行运行会清理数据的测试进程。容器命令见 [运行时指南](agent-v3-runtime.md)。跳过不能记为通过，合成响应不能代替真实 DeepSeek。
 
 报告至少覆盖原 30 日晚到窗口；没有自动清理、归档服务或生产长期留存验收。日志/Trace 不承载完整报告正文或模型输入输出。首批启动器、完整评分器和实际 40 案仍需分别验收。历史 W4 性能失败、AT-25 跳过、远程推理与生产留存未验收继续保留。
+
+## S2兼容扩展
+
+[ADR-0024](adr/0024-bounded-support-agent.md)的新`support_agent_v1`使用`linux-v2-agent-runtime-1`与`model_decision`，仍使用相同provider audit和Calls合同。全部已提交工具决定的chat可通过原commit/report/observation屏障；全Run纠错用尽后的新模型失败，仅在相同attempt/fence/当前步骤和持久failed_terminal、完整known审计匹配时允许下一案。重复工具决定本身已提交，拒绝发生在后续BeginTool且不扣工具额度。unknown、异常、身份/模式不兼容、确认丢失仍停止当前批次。
