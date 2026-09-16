@@ -51,6 +51,8 @@ const (
 	ErrBudgetExhausted       ErrorCode = "BUDGET_EXHAUSTED"
 	ErrProfileUnavailable    ErrorCode = "PROFILE_UNAVAILABLE"
 	ErrCallSettlementExpired ErrorCode = "CALL_SETTLEMENT_EXPIRED"
+	ErrCheckpointTooLarge    ErrorCode = "CHECKPOINT_TOO_LARGE"
+	ErrModelProtocol         ErrorCode = "MODEL_PROTOCOL_ERROR"
 	ErrQueueOverloaded       ErrorCode = "QUEUE_OVERLOADED"
 	ErrDependencyUnavailable ErrorCode = "DEPENDENCY_UNAVAILABLE"
 	ErrInternal              ErrorCode = "INTERNAL"

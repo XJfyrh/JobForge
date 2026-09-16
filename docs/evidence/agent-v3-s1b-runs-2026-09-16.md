@@ -51,3 +51,11 @@ S1-C正式Go监督/Python执行器、DeepSeek真实调用、40例固定流程与
 历史**远程模型未验收、生产长期留存未验收、W4性能门禁失败、AT-25跳过**继续保留。本切片没有自动清理/unknown退款，也未宣称长期保留、真实云端成本或新Run的Trace/Grafana全链路通过。
 
 仓库外档案：`E:\JobForge-notes\2026-09-16-agent-v3-s1`，记录选择、修复和原始安全测试输出，不含API key、完整模型内容或秘密。
+
+## PR独立审查
+
+实现 [PR #40](https://github.com/XJfyrh/JobForge/pull/40) 首个head `2b5fa97` 的[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35071585157)全部通过。三个全新上下文分别审查可靠性/租约/检查点、预算/usage/快照、HTTP/SDK/RPC/帧/入口；前两份无可确认阻断，合同审查发现一项P2：RPC丢失 `CHECKPOINT_TOO_LARGE` / `MODEL_PROTOCOL_ERROR` 原因而返回 `INTERNAL`。
+
+修复保留两类永久结果错误的ErrorInfo，RPC类别为InvalidArgument；未知内部异常继续脱敏。真实TCP+PG追加测试通过3.981s，验证未推进Run游标，随后同名FailAttempt永久结束且不消耗恢复次数。审查者独立overlay复现也在修复工作树通过。全仓lint再次0 issues。最终修复head仍须CI与审查确认后才合并；外部报告为 `pr40-reliability-review.md`、`pr40-budget-review.md`、`pr40-contract-review.md`。
+
+部署验证使用UTC PostgreSQL会话。非UTC/DST配置未验收；当前migration的7日约束使用PostgreSQL日历interval，不能把所测UTC下的168小时行为推广到跨DST会话。该限制与生产运维留存验收一并保留。

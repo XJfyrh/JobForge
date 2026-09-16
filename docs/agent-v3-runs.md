@@ -64,6 +64,8 @@ with RunClient("http://127.0.0.1:8093", "dev-agent-north-operator") as client:
 
 源契约位于 [OpenAPI](../api/run/v2/openapi.yaml)、[Proto](../proto/jobforge/agent/v1/agent.proto)、[执行器帧](../api/executor/v1/schema.json)及其共同 fixture。SDK API 见[SDK说明](../sdk/python/README.md)。Worker RPC 必须带 deadline 和内部 Bearer token；稳定错误使用 `google.rpc.ErrorInfo.reason`，不能解析英文消息判断重试。
 
+CommitStep拒绝过大结果或无法验证的模型方案时，RPC状态为 `INVALID_ARGUMENT`，reason分别保留 `CHECKPOINT_TOO_LARGE`、`MODEL_PROTOCOL_ERROR`。这两类结果错误不能被当作临时内部故障无限重试；Worker只可按登记策略使用一次协议纠正，或以同名永久错误结束attempt。未知服务端错误仍统一脱敏为 `INTERNAL`。
+
 步骤只按服务端注册的 `bounded_readonly_v1` 顺序推进。Worker 提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭 attempt 并释放容量；仅 `no_action` 可以直接成功。B 没有批准或业务写入接口。
 
 重复中间 CommitStep 仍须当前有效 lease；最终提交丢 ACK 后使用只读 GetAcceptedCommit，不用旧 lease 再次提交。自动恢复读取原 Run 已提交步骤，未提交步骤可能重做；人工 retry 空游标不代表断点续作。S3 仍须验收正式 Worker/执行器的实际 Kill/Wait 恢复。

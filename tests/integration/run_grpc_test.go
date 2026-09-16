@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -102,6 +103,9 @@ func TestRunWorkerRPCAuthenticationAuthorityAndCheckpoint(t *testing.T) {
 	if err != nil || checkpoint.Checkpoint.NextStep.StepId != lease.Checkpoint.NextStep.StepId {
 		t.Fatalf("real checkpoint RPC: %v", err)
 	}
+	_, err = client.CommitStep(ctx, &agentv1.CommitStepRequest{Execution: lease.Execution, Step: checkpoint.Checkpoint.NextStep,
+		CommitHash: strings.Repeat("a", 64), ResultJson: []byte(`{"oversized":"` + strings.Repeat("x", 16*1024) + `"}`)})
+	assertRunRPCError(t, err, codes.InvalidArgument, "CHECKPOINT_TOO_LARGE")
 	if _, err := h.Service.Cancel(h.Ctx, r.TenantID, r.ID, "rpc-cancel"); err != nil {
 		t.Fatal(err)
 	}
@@ -122,5 +126,42 @@ func TestRunWorkerRPCAuthenticationAuthorityAndCheckpoint(t *testing.T) {
 	registered, err := client.Register(secondCtx, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: "contract-v1"})
 	if err != nil || registered.Session.WorkerId != "contract-worker-2" || registered.Capacity != 2 || len(registered.ProfileIds) != 1 {
 		t.Fatalf("server configured registration: %v", err)
+	}
+}
+
+func TestRunWorkerRPCPreservesRejectedModelClassification(t *testing.T) {
+	h := setupRunHarness(t)
+	h.submit(t, "tenant-a", "worker-model-error")
+	claimed := h.claim(t)
+	for currentRunStep(claimed).Kind != "model_proposal" {
+		checkpointAdvance(t, h, &claimed, "proposal", false)
+	}
+	// Use the real ledger but explicitly synthetic model evidence. A structurally
+	// valid proposal citing unavailable evidence must retain its permanent reason.
+	result := checkpointFixtureResult(t, h, claimed, "proposal", false)
+	result.Proposal.EvidenceRefs = []string{"business-evidence:" + uuid.NewString() + ":ticket"}
+	request := checkpointCommitRequest(t, claimed, result)
+	client := startRunGateway(t, h)
+	deadline, cancel := context.WithTimeout(h.Ctx, 10*time.Second)
+	defer cancel()
+	ctx := metadata.AppendToOutgoingContext(deadline, "authorization", "Bearer contract-worker-token")
+	execution := &agentv1.ExecutionIdentity{TenantId: claimed.Lease.TenantID, RunId: claimed.Lease.RunID,
+		Session:   &agentv1.SessionIdentity{WorkerId: h.Principal, SessionId: h.Session.ID},
+		AttemptNo: claimed.Lease.AttemptNo, FencingToken: claimed.Lease.FencingToken}
+	checkpoint, err := client.GetCheckpoint(ctx, &agentv1.GetCheckpointRequest{Execution: execution})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.CommitStep(ctx, &agentv1.CommitStepRequest{Execution: execution, Step: checkpoint.Checkpoint.NextStep,
+		CommitHash: request.CommitHash, ResultJson: request.ResultJSON})
+	assertRunRPCError(t, err, codes.InvalidArgument, "MODEL_PROTOCOL_ERROR")
+	view, err := h.Store.Get(h.Ctx, claimed.Lease.TenantID, claimed.Lease.RunID)
+	if err != nil || view.CursorVersion != request.Step.CursorVersion || view.State != agentrun.Running {
+		t.Fatal("rejected model result changed Run state or cursor")
+	}
+	failed, err := client.FailAttempt(ctx, &agentv1.FailAttemptRequest{Execution: execution, Step: checkpoint.Checkpoint.NextStep,
+		ErrorCode: "MODEL_PROTOCOL_ERROR"})
+	if err != nil || failed.State != agentv1.RunState_RUN_STATE_FAILED || failed.RecoveryCount != 0 {
+		t.Fatalf("permanent result failure became automatic recovery: %v", err)
 	}
 }

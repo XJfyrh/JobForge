@@ -19,7 +19,7 @@ func mapError(err error) error {
 	var domain run.ErrorCode
 	if errors.As(err, &domain) {
 		switch domain {
-		case run.ErrInvalidArgument:
+		case run.ErrInvalidArgument, run.ErrCheckpointTooLarge, run.ErrModelProtocol:
 			code, reason = codes.InvalidArgument, string(domain)
 		case run.ErrUnauthorized:
 			code, reason = codes.Unauthenticated, string(domain)

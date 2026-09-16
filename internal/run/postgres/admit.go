@@ -168,7 +168,7 @@ func admissionRun(input agentrun.Admission, business agentrun.BusinessRequest, s
 		CheckpointBytes: int64(len(snapshot.Ticket) + len(snapshot.VersionVector)),
 		NextInputHash:   agentrun.InitialStepInput(input.Profile.Hash, snapshot.ContentHash)}
 	if a.CheckpointBytes > agentrun.MaxCheckpointBytes {
-		return agentrun.Run{}, agentrun.Authority{}, agentrun.ErrorCode("CHECKPOINT_TOO_LARGE")
+		return agentrun.Run{}, agentrun.Authority{}, agentrun.ErrCheckpointTooLarge
 	}
 	return r, a, nil
 }

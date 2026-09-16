@@ -153,7 +153,7 @@ func CanonicalStepResult(data []byte, kind string) (StepResult, json.RawMessage,
 		return result, nil, err
 	}
 	if len(encoded) > limit {
-		return result, nil, ErrorCode("CHECKPOINT_TOO_LARGE")
+		return result, nil, ErrCheckpointTooLarge
 	}
 	return result, encoded, nil
 }
@@ -319,13 +319,13 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 	}
 	if result.CorrectionRequired {
 		if req.Step.Kind != "model_proposal" || result.Proposal != nil {
-			return decision, ErrorCode("MODEL_PROTOCOL_ERROR")
+			return decision, ErrModelProtocol
 		}
 		decision.NextKind = "protocol_correction"
 		return decision, nil
 	}
 	if !validProposal(result.Proposal, allowed) {
-		return decision, ErrorCode("MODEL_PROTOCOL_ERROR")
+		return decision, ErrModelProtocol
 	}
 	decision.Proposal = result.Proposal
 	if !decision.CloseAttempt {
@@ -348,7 +348,7 @@ func ApplyCommit(r *Run, a *Authority, req CommitStepRequest, decision CommitDec
 	}
 	if r.CursorVersion >= 32 || a.CheckpointBytes < 0 || a.CheckpointBytes > MaxCheckpointBytes ||
 		int64(len(decision.CanonicalJSON)) > MaxCheckpointBytes-a.CheckpointBytes {
-		return ErrorCode("CHECKPOINT_TOO_LARGE")
+		return ErrCheckpointTooLarge
 	}
 	if !decision.CloseAttempt && (!validStepKind(decision.NextKind) || !ValidUUID(nextStepID)) {
 		return ErrInternal
@@ -461,7 +461,7 @@ func sameJSON(a, b []byte) bool {
 // data and excessive nesting without logging any rejected protected content.
 func ValidateStepJSON(data []byte, maxBytes int) error {
 	if len(data) > maxBytes {
-		return ErrorCode("CHECKPOINT_TOO_LARGE")
+		return ErrCheckpointTooLarge
 	}
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 || !utf8.Valid(data) || trimmed[0] != '{' || !validCheckpointEscapes(data) {
