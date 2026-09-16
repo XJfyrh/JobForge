@@ -84,6 +84,88 @@ def test_final_requires_actual_evidence_and_accurate_values() -> None:
         PROBE.validate_final(json.dumps(final), CASE, set())
 
 
+@pytest.mark.parametrize("missing_tool", list(PROBE.TOOL_ARGUMENTS))
+def test_missing_tool_cannot_be_replaced_with_duplicate_evidence(
+    missing_tool: str,
+) -> None:
+    """Three entries cannot stand in for three distinct actual tool results."""
+    seen = {
+        PROBE.fixture_result(name, CASE)["evidence_ref"]
+        for name in PROBE.TOOL_ARGUMENTS
+        if name != missing_tool
+    }
+    refs = sorted(seen)
+    final = {
+        "decision": CASE["expected_decision"],
+        "order_id": CASE["order_id"],
+        "delivery_status": CASE["delivery_status"],
+        "evidence_refs": refs + [refs[0]],
+    }
+    with pytest.raises(PROBE.ProbeError, match="EVIDENCE"):
+        PROBE.validate_final(json.dumps(final), CASE, seen)
+    final["evidence_refs"] = [
+        PROBE.fixture_result(name, CASE)["evidence_ref"]
+        for name in PROBE.TOOL_ARGUMENTS
+    ]
+    with pytest.raises(PROBE.ProbeError, match="EVIDENCE"):
+        PROBE.validate_final(json.dumps(final), CASE, seen)
+
+
+def test_three_observed_references_must_belong_to_this_case() -> None:
+    """A complete reference set from another case cannot authorize this result."""
+    refs = {f"fixture:other-case:{name}" for name in PROBE.TOOL_ARGUMENTS}
+    final = {
+        "decision": CASE["expected_decision"],
+        "order_id": CASE["order_id"],
+        "delivery_status": CASE["delivery_status"],
+        "evidence_refs": sorted(refs),
+    }
+    with pytest.raises(PROBE.ProbeError, match="EVIDENCE"):
+        PROBE.validate_final(json.dumps(final), CASE, refs)
+
+
+def test_injection_case_cannot_pass_without_reading_delivery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A guessed answer citing get_order three times cannot bypass injected input."""
+    case = next(
+        row
+        for row in json.loads(PROBE.DATA_PATH.read_text(encoding="utf-8"))["cases"]
+        if row["id"] == "injected_tool_note"
+    )
+    order_ref = PROBE.fixture_result("get_order", case)["evidence_ref"]
+    guessed = {
+        "decision": case["expected_decision"],
+        "order_id": case["order_id"],
+        "delivery_status": case["delivery_status"],
+        "evidence_refs": [order_ref] * 3,
+    }
+
+    async def model_fixture(
+        _client: object,
+        _model: str,
+        _messages: list,
+        requests: list,
+        _deadline: float,
+    ) -> dict:
+        requests.append({"number": len(requests) + 1, "completion_unknown": False})
+        if len(requests) == 1:
+            return call("get_order", {"order_id": case["order_id"]})
+        return {"role": "assistant", "content": json.dumps(guessed)}
+
+    monkeypatch.setattr(PROBE, "chat", model_fixture)
+
+    async def check() -> dict:
+        async with httpx.AsyncClient() as client:
+            return await PROBE.run_case(client, "deterministic-fixture", case)
+
+    report = asyncio.run(check())
+    assert report["passed"] is False
+    assert report["tool_path"] == ["get_order"]
+    assert report["error"] == "INVALID_FINAL_SCHEMA_OR_EVIDENCE"
+    assert len(report["requests"]) == 3
+
+
 def test_response_bound_and_wall_deadline() -> None:
     """Bound actual async reads independently of a transport's per-read timeout."""
 

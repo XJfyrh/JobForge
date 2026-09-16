@@ -71,6 +71,29 @@ func TestRealProcessContracts(t *testing.T) {
 	}
 }
 
+func TestStderrOverflowAfterProtocolEOF(t *testing.T) {
+	fixture := filepath.Join(filepath.Dir(scriptPath(t)), "testdata", "late_stderr.py")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	protocolEnded := false
+	result, err := executeObserved(ctx, fixture, request{1, "late-stderr", "echo", "synthetic"}, nil, func(r execution) {
+		protocolEnded = true
+		// The fixture cannot write stderr before this branch has consumed stdout EOF.
+		if err := syscall.Kill(r.GuardianPID, syscall.SIGUSR1); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !protocolEnded || result.Value != "synthetic" {
+		t.Fatalf("did not observe complete valid protocol before stderr: result=%+v error=%v", result, err)
+	}
+	if !errors.Is(err, errOutputLimit) {
+		t.Fatalf("late stderr overflow was accepted: error=%v want=%v", err, errOutputLimit)
+	}
+	requireReaped(t, result.GuardianPID)
+	requireReaped(t, -result.GuardianPID)
+	t.Logf("guardian=%d: valid started/result and EOF preceded stderr overflow; rejected and reaped", result.GuardianPID)
+}
+
 func TestCancelTimeoutAndGuardianDeath(t *testing.T) {
 	for _, mode := range []string{"cancel", "timeout", "guardian_kill"} {
 		t.Run(mode, func(t *testing.T) {

@@ -33,7 +33,7 @@ Go owner
 - 入口固定为 `python3 -I -u executor.py`；仅支持源代码白名单中的探针操作。请求值始终作为 JSON 数据，不拼 shell、代码、模块路径或动态可执行文件。
 - guardian 只继承部署 PATH、固定 locale 和 hash seed，不继承 Go 进程的全部环境变量。未来模型凭据必须通过明确的部署白名单传入，不能默认暴露控制面数据库或运维秘密。
 - 请求是一行 JSON，包含 `v/id/op/value`；**总帧含换行最多 4 KiB**。响应为至多一个 `started` 和一个 `result` 帧，单帧 JSON 最多 16 KiB。未知字段、错版本/请求 ID、错误帧顺序、额外响应和超大帧由 Go 拒绝。
-- stderr 内容不保留、不转发到日志；只计字节，超过 8 KiB 终止该执行器。测试诊断仅含固定合成文字。
+- stderr 内容不保留、不转发到日志；只计字节，超过 8 KiB 终止该执行器。成功判定必须等待 `cmd.Wait` 收完 stderr 后再复核限额，不能由 stdout 提前 EOF 掩盖迟到的超限。测试诊断仅含固定合成文字。
 - 探针调用者提供 10 秒总 deadline，包含解释器启动。收到 step 的实际 `READY` 屏障后再启动 1 秒活跃步骤计时；计时超出或外层取消均返回明确错误。开始执行前超时仍会清理进程，不能无限等待启动。
 - Go 正常取消/失败对整个进程组发 TERM，最多等待 100ms 后 KILL；始终 Wait 自己的直接子进程。即使 guardian 已退出也清理其仍在运行的 step。
 - Go 被 SIGKILL 后无法运行 defer。guardian 通过控制 stdin EOF 主动 KILL 整组；模型步骤阻塞不会占用 guardian 的解释器。guardian 被单独 SIGKILL 时，Go 观察响应管道关闭并清理整组。
@@ -57,9 +57,13 @@ Windows 的 Go 命令只覆盖跨平台协议；POSIX API 类型检查必须指�
 
 真进程场景：正常请求、非 JSON 响应、错请求 ID、超大 stdout、超大 stderr、合法结果后的无换行残片、步骤超时、取消、单独杀 guardian、实际杀 Go 父进程并 Wait。取消用例中的 step 忽略 SIGTERM，以验证 KILL 后备路径，而非仅证明合作退出。
 
+新增 `TestStderrOverflowAfterProtocolEOF` 使用仅测试可选的固定 `testdata/late_stderr.py`：写出合法 started/result 并关闭 stdout，阻塞等待 SIGUSR1；Go 真正选择协议 EOF 分支后才发信号，允许 helper 写出 8193 字节 stderr 并以 0 退出。由显式屏障固定 EOF 先于超限，不靠 sleep 或随机重复。生产调用的 EOF observer 始终为 nil，payload 不能选择测试脚本。
+
 ## S0 发现与限制
 
-[2026-09-16 实际验收记录](acceptance-2026-09-16.txt) 包含最终源码 SHA256、镜像身份、`-race` 构建与资源限制命令。最终 Linux race 层 10 个真进程场景全部通过、无 skip；Python 协议守卫 10 个测试通过。最后一次实测取消后整组回收约 104ms，步骤 1s 超时后总回收约 1.104s，Go 父进程 SIGKILL 后约 13ms 整组消失；均为该机器该次运行的观测，不是生产 SLO 或统计分位数。
+[2026-09-16 Docker 基线记录](acceptance-2026-09-16.txt) 保留当时源码 SHA256、镜像身份、`-race` 构建与资源限制命令：该版本 Linux race 层 10 个真进程场景全部通过、无 skip；Python 协议守卫 10 个测试通过。当次取消后整组回收约 104ms，步骤 1s 超时后总回收约 1.104s，Go 父进程 SIGKILL 后约 13ms 整组消失；均为该机器该次运行的观测，不是生产 SLO 或统计分位数。
+
+后续审查发现 stdout EOF 的成功分支可能先于 stderr 超限被选中，原实现 Wait 后没有再次检查限额。现 Wait 完成后统一复核，保留已有失败的错误优先级。[stderr/EOF 定向回归记录](stderr-eof-regression-2026-09-16.txt) 记录 WSL Ubuntu 24.04 上一次确定性失败与修复后通过、当前源码 hash。该二进制使用 `CGO_ENABLED=0`，**不计为 Linux race 通过**。本次固定 Docker 复验因 Docker Desktop 初始化失败而无法运行；旧基线没有覆盖此补丁，保留原文件及 hash，不将新版描述为容器验收通过。
 
 独立审查发现早期 guardian 会吞掉合法结果之后、EOF 之前的无换行残片，使错误输出被判成功。现只转发完整换行前缀，保留残片并在 EOF 拒绝；Python 回归覆盖同一次/不同次管道 read 的分块，真实 Linux `trailing_bytes` 用例验证 Go 最终返回协议错误并回收整组。合法 result 帧本身不足以使执行成功，还须整个协议结束和进程退出有效。
 

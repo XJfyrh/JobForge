@@ -140,7 +140,7 @@ Run profile 固定执行器版本、模型身份、工具/Schema/提示词版本
 
 首轮采用一个云端主 chat 模型，承担 Agent 工具循环、正式评测和演示。本项目的作品集重点是业务工具、状态持久化、恢复、审批、调用治理和效果评测；不把本机推理能力作为项目准入条件。此前把云端仅作为本地失败后的兜底，现按维护者反馈调整为云端主线。本地 chat 保留为可选扩展，不安排继续选型，不要求双后端验收。
 
-云端首选候选为百炼北京区 `qwen3.7-flash-2026-07-15`，使用文本、非思考模式及预注册工具；[官方文档](https://help.aliyun.com/zh/model-studio/qwen3-7-flash)列出 Function Calling 和结构化输出支持。该信息只用于候选选择，实际工具选择、参数、反馈利用、终止和业务质量仍需实测。S0 冻结候选、profile要求与费用方案；云端适配和最小持久调用账本在S1并行开发，凭据与费用明确后运行有界接入验证，S2再完成真实业务Agent验收。无需等待本地 chat 成功或完整S2系统建成后才开发适配器。
+维护者于2026-09-16指定云端优先支持DeepSeek，取代此前百炼首选候选。当前账号的[模型列表](https://api-docs.deepseek.com/api/list-models/)实际返回 `deepseek-flash` 与 `deepseek-v4-pro`；首轮拟采用Flash非思考模式及预注册工具，具体profile和额度须在适配器中落实，不能把模型别名当作不可变快照。只读接口检查不代表工具选择、参数、反馈利用、终止或业务质量通过，见[调查与阻塞记录](../evidence/agent-v3-deepseek-and-blocker-2026-09-16.md)。云端适配和最小持久调用账本计划在S1并行开发，凭据与费用明确后运行有界接入验证，S2再完成真实业务Agent验收。无需等待本地 chat 成功或完整S2系统建成后才开发适配器；本次因Docker环境阻塞，按维护者要求暂停推进。
 
 chat 与 embedding 独立选型。固定一个真实 embedding profile，按语料与检索效果选择本地或云端实现，不因采用云端 chat 强制采购云端 embedding。维度、模型/索引版本和检索效果单独验收；若 embedding 收费，则同样纳入调用预算。两个本地 chat 候选的[失败记录](../evidence/agent-v3-model-probe-2026-09-16-summary.md)保留，但不阻挡S1或契约PR。
 

@@ -73,6 +73,11 @@ func receiveFrames(out io.Reader, id string, messages chan<- received) {
 }
 
 func execute(ctx context.Context, script string, req request, onStarted func(execution)) (result execution, returnErr error) {
+	return executeObserved(ctx, script, req, onStarted, nil)
+}
+
+// executeObserved permits a test-only EOF barrier without exposing new payload operations.
+func executeObserved(ctx context.Context, script string, req request, onStarted, onProtocolEOF func(execution)) (result execution, returnErr error) {
 	encoded, err := encodeRequest(req)
 	if err != nil {
 		return result, err
@@ -115,16 +120,24 @@ func execute(ctx context.Context, script string, req request, onStarted func(exe
 		}
 		timer := time.NewTimer(terminationGrace)
 		defer timer.Stop()
+		var waitErr error
 		select {
-		case waitErr := <-waited:
+		case waitErr = <-waited:
 			_ = syscall.Kill(-result.GuardianPID, syscall.SIGKILL)
-			if returnErr == nil && waitErr != nil {
-				returnErr = errProtocol
-			}
 		case <-timer.C:
 			_ = syscall.Kill(-result.GuardianPID, syscall.SIGKILL)
-			if waitErr := <-waited; returnErr == nil && waitErr != nil {
-				returnErr = errProtocol
+			waitErr = <-waited
+		}
+		// Wait joins exec's stderr copier. A valid stdout EOF can win the select
+		// before late diagnostics arrive, so only now is success finalizable.
+		if returnErr == nil {
+			select {
+			case <-diag.overflow:
+				returnErr = errOutputLimit
+			default:
+				if waitErr != nil {
+					returnErr = errProtocol
+				}
 			}
 		}
 	}()
@@ -154,6 +167,9 @@ func execute(ctx context.Context, script string, req request, onStarted func(exe
 		case message, ok := <-messages:
 			if !ok {
 				if completed {
+					if onProtocolEOF != nil {
+						onProtocolEOF(result)
+					}
 					return result, nil
 				}
 				return result, errProtocol

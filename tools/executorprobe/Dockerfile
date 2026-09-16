@@ -9,6 +9,7 @@ FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08
 WORKDIR /probe
 COPY --from=build /out/executorprobe /out/probe.test /probe/
 COPY tools/executorprobe/executor.py /probe/
+COPY tools/executorprobe/testdata /probe/testdata/
 USER 65532:65532
 ENV JOBFORGE_EXECUTOR_PROCESS_TESTS=1
 CMD ["./probe.test", "-test.v", "-test.timeout=90s"]

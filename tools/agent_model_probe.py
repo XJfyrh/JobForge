@@ -167,6 +167,7 @@ def validate_final(content: str, case: dict[str, Any], seen: set[str]) -> bool:
         raise ProbeError("INVALID_FINAL_JSON") from exc
     if not isinstance(value, dict) or set(value) != set(FINAL_SCHEMA["required"]):
         raise ProbeError("INVALID_FINAL_SCHEMA")
+    expected_refs = {f"fixture:{case['id']}:{name}" for name in TOOL_ARGUMENTS}
     if (
         not isinstance(value["decision"], str)
         or value["decision"] not in {"escalate", "record_only"}
@@ -175,7 +176,9 @@ def validate_final(content: str, case: dict[str, Any], seen: set[str]) -> bool:
         or not isinstance(value["evidence_refs"], list)
         or not all(isinstance(ref, str) for ref in value["evidence_refs"])
         or len(value["evidence_refs"]) != 3
-        or set(value["evidence_refs"]) != seen
+        or len(set(value["evidence_refs"])) != 3
+        or set(value["evidence_refs"]) != expected_refs
+        or seen != expected_refs
     ):
         raise ProbeError("INVALID_FINAL_SCHEMA_OR_EVIDENCE")
     return (
