@@ -2,14 +2,14 @@
 
 - 起点：`8708308`，S0已完成；2026-09-16开始S1。
 - 规范：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)。保持路线v3全范围，切片合并不等于阶段完成。
-- 2026-09-17 当前状态：**S1 未完成，PR #51 保持 Draft，S2～S5 未开始**。PR #52 停止竞态修复与 PR #53 / [ADR-0022](../adr/0022-s1-closeout-cumulative-authorization.md) 新授权已合并；修复后新批次因 `CHAT_USAGE_UNKNOWN` 停止。14 案方案完成、DEV-015 中断、25 案未尝试，业务 9/40；安全证据 14 案通过、1 案不完整、25 案未执行。见[最新证据](../evidence/agent-v3-s1-closeout-2026-09-17.md)。后文切片顺序保留为阶段历史，不能读作当前尚无云端调用。
+- 2026-09-17 当前状态：**S1完整真实验收已闭合，40/40实际执行、安全40/40完整且硬失败0，业务11/40（27.5%）；PR #51交付，S2～S5未开始。** 见[完整结果](../evidence/agent-v3-s1-delivery-2026-09-17.md)。后文切片按历史保留。
 
 | 顺序 | 产物 | 验收/合并条件 | 当前状态 |
 |---|---|---|---|
 | 契约 | 业务快照、工具HTTP、pgvector与准备身份 | 独立上下文审查；ADR按PR流程接受 | PR #37已接受 |
 | S1-A | 独立业务服务、迁移/角色、40例开发数据、Python工具适配、索引准备与搜索 | 真PG/HTTP、tenant/版本/大小边界、固定真实embedding与20查询、重启持久性；适用CI | [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 已合并；两份独立审查和最终head八项CI通过；[证据](../evidence/agent-v3-s1-business-2026-09-16.md) |
 | S1-B | 最小Run/lease/内部协议、API/SDK、持久调用账本 | 有效执行权、并发预留、重发身份、unknown占额、取消/超时；不新增调度语义 | 契约经 PR #39 接受；实现[PR #40](https://github.com/XJfyrh/JobForge/pull/40)已合并；Windows全仓race、真实PG/HTTP/SDK和128Run基线、三份独立审查及最终七项CI通过；[运行指南](../agent-v3-runs.md)、[验收映射](../evidence/agent-v3-s1b-runs-2026-09-16.md) |
-| S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | C1/C2、普通 ACK、正式运行时、support 策略及 provider 持久审计已分别合并；PR #51 实现完整评分与云端启动，`dbacee7` 八项 CI 通过。首批及修复后新批次均未完成 40 案；[新批次外部计量阻塞](../evidence/agent-v3-s1-closeout-2026-09-17.md)，不能合并 PR #51 或宣称 S1 完成 |
+| S1-C | DeepSeek固定profile、正式执行器、固定流程与评分 | 40开发例全量、分层评分、安全完整、CI与独立审查 | [PR #51](https://github.com/XJfyrh/JobForge/pull/51)交付；[完整40例](../evidence/agent-v3-s1-delivery-2026-09-17.md)通过范围内验收，业务11/40（27.5%），不代表全部业务正确 |
 
 实施目录意向：`internal/business`与独立命令保存业务领域/服务/PG/HTTP；`migrations/business`维护业务迁移；Python执行器与工具适配不依赖队列存储；数据与gold分别打包。公开源schema、具体目录和生成工具在对应实现PR确定，避免复制多套同义契约。
 
@@ -42,4 +42,4 @@ PR #47已合并接受ADR-0020（d449bc7，两份独立复审及八项CI通过）
 
 [PRD v0.13](../product/JobForge_PRD_v0.13.md)/[ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md)随 **PR #49 独立审查通过并合并时接受**，定义可信 profile 生成/登记、Capture 后的资源接纳校验，以及单 Worker/40行 SDK 驱动的[精简实施映射](agent-v3-first-cloud-batch.md)。接纳后原版本/hash 不变，新 Retry 仍受同一冻结资源约束，已接受回执优先返回；awaiting_approval 是S1方案完成而非业务写入。该合同不改变已接受的5 CNY/6h/停批合同，不表示audit实现合并或收费前置已完成。
 
-当前新增批次适用 PRD v0.14 / ADR-0022 的累计授权，原批不恢复。新批次已知 48,653 microyuan、未释放 hold 2,105,344 microyuan；HTTP 200 响应头后正文不完整，无法确认 usage。即使算术上仍有额度，必要持久确认不完整也不得换批继续；保留全部失败、未知项与未尝试行，等待外部缺口解决，不追加收费探针。
+历史收尾批曾因unknown和严格跨批准入停止；后续[ADR-0023](../adr/0023-held-unknown-cross-batch-admission.md)接受全hold保留后的独立新批，维护者又明确授权合理调整预算。本次完整40案在原累计5 CNY内完成，旧hold不释放；详见[最新报告](../evidence/agent-v3-s1-delivery-2026-09-17.md)。

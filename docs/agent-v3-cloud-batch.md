@@ -4,11 +4,11 @@
 
 两个租户各 20 案共享一个有界 batch，期限 6 小时，Worker、tenant、profile 容量均为 1。每案最多一次 Submit 尝试；方案停在 `awaiting_approval` 供评估，不批准方案、不写工单。[首批实际结果](evidence/agent-v3-s1-first-cloud-2026-09-16.md)未通过：15案执行结束、第16案中断，余下24案未尝试；本页命令不能用于重启已经停止的原批次。
 
-2026-09-17 收尾授权由 [PR #53 的 PRD v0.14 / ADR-0022](https://github.com/XJfyrh/JobForge/pull/53) 已独立审查并合并，授权现已生效：本次全部新增批次累计不超过 **5 CNY**。启动前必须确认前批派发者实际退出，按当前准入合同核对原调用及上界，并从 5,000,000 microyuan 扣除本授权已启动批次的 known 与未释放 monetary hold；共享 batch 只计一次，不叠加 tenant/family 镜像。原首批费用单列，原 unknown/hold 和所有记录保留。新授权不恢复旧批，也不允许跨批挑选成功案例拼成 40 案。生成器支持 `--batch-cost-microyuan`（整数 1～5,000,000），省略时为 5 CNY。后续批次必须显式传入不超过剩余额度的值；仅共享 batch 额度降低，tenant/family/profile 不变，不手改已冻结配置。
+2026-09-17收尾授权先由[PR #53](https://github.com/XJfyrh/JobForge/pull/53)接受新增累计5 CNY，后由[ADR-0023](adr/0023-held-unknown-cross-batch-admission.md)允许保留历史unknown全hold的独立准入；维护者随后明确授权随任务合理调整预算。每次部署记录具体累计上限，并扣除已启动共享batch的known和未释放hold，不能每换批自动重获预算。本次完整验收仍在原累计5 CNY内。生成器 `--batch-cost-microyuan` 接受1～5,000,000，省略5 CNY；后续新批显式填写不超过当次已记录剩余额度的值。所有旧记录保留，不跨批拼接40案。
 
-本页的[独立干净环境复现](evidence/agent-v3-s1-reproduction-2026-09-17.md)已完成必要部署/SDK/停止检查，未调用收费模型，不代表新的 40 案已经验收。
+本页的[独立干净环境复现](evidence/agent-v3-s1-reproduction-2026-09-17.md)已完成必要部署/SDK/停止检查，未调用收费模型；这份部署检查与下方完整40案真实模型证据分别报告。
 
-**当前停止状态：** [本次新批真实报告](evidence/agent-v3-s1-closeout-2026-09-17.md)为14方案完成、DEV-015中断、25未尝试；其chat完整响应/计量不可得，`CHAT_USAGE_UNKNOWN`冻结并保留全额hold。后续 [ADR-0023](adr/0023-held-unknown-cross-batch-admission.md) 随 PR #54 合并后，允许符合条件的已停止传输失败保留全部 hold，按剩余额度准入独立新批；不要求补造旧 known/普通观察/Commit。身份失配、计量超界、报告冲突等不适用。以下命令仍须绑定最新账本、具体授权与构建，不能重启原批。
+**当前结果：** [最新完整批次](evidence/agent-v3-s1-delivery-2026-09-17.md)40/40实际执行、安全40/40完整且硬失败0、业务11/40（27.5%）。两次历史不完整批次与unknown/full hold保留。ADR-0023允许符合条件的已停止传输失败保留full hold后准入独立新批；本次修复心跳饥饿后已完成。下面命令用于新的独立批次，不能重启任何已停止身份。
 
 ## 环境、数据库与安装
 
@@ -26,7 +26,7 @@ $py = "$batch/venv/Scripts/python.exe"
 
 | 路线 | 业务数据库 | 控制数据库与清理 |
 |---|---|---|
-| 保留现有真实数据开展已授权新批 | `jobforge_support_v2_20260916`，继续使用原 `support-v2-compose.override.yaml`，不重新 seed/index | 同一 control-postgres 实例中的新库 `jobforge_s1_closeout_20260917`；旧 `jobforge_agent` 全部保留；不执行整个 project 的 `down --volumes` |
+| 保留现有真实数据开展已授权新批 | `jobforge_support_v2_20260916`，继续使用原 `support-v2-compose.override.yaml`，不重新 seed/index | 同一 control-postgres 实例中的最新完整批使用新库 `jobforge_s1_delivery_20260917`；旧 `jobforge_agent` 与 `jobforge_s1_closeout_20260917` 全部保留；不执行整个 project 的 `down --volumes` |
 | 从干净环境复现 | 独立 project/卷中的 `jobforge_business`，按下节准备 v2 seed/index | 独立 project/卷中的控制库；先导出停止事实，只清理该 project |
 
 旧控制库的 tenant budget `(scope, scope_key)` 唯一；不能通过给 `tenant-north/south` 换账户 UUID 在同库覆盖原账户。2026-09-17 首次新准备的 bootstrap 因此被拒绝，未 Submit、未收费、未创建 attempted；旧库保留已登记的 disabled profile 和零用量新 batch。后续把 **control 和 support-cloud 的 DSN 同时**指向独立新控制库，沿用该次已冻结的新身份/配置，保留失败日志，未恢复旧收费批次。跨库累计仍以原始账本及部署记录核对，不因新库而重新获得费用授权。
@@ -40,13 +40,13 @@ services:
       JOBFORGE_BUSINESS_DSN: postgres://jobforge_business_reader:jobforge_business_reader@business-postgres:5432/jobforge_support_v2_20260916?sslmode=disable
   control:
     environment:
-      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_s1_closeout_20260917?sslmode=disable
+      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_s1_next?sslmode=disable
   support-cloud:
     environment:
-      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_s1_closeout_20260917?sslmode=disable
+      JOBFORGE_AGENT_DSN: postgres://jobforge_agent:jobforge_agent@control-postgres:5432/jobforge_s1_next?sslmode=disable
 ```
 
-新库由管理员在 bootstrap 前明确创建一次，例如 `docker exec jobforge-agent-v3-control-postgres-1 createdb -U jobforge_agent jobforge_s1_closeout_20260917`；库已存在时停止核对，不 drop/recreate，不对旧库作 reset。创建新空库不等于收费授权；仍需 disabled bootstrap、实际 inspect 和完整启动前置。
+以下示例使用尚未运行的新库名 `jobforge_s1_next`，实际部署选择新的明确名称。新库由管理员在 bootstrap 前明确创建一次，例如 `docker exec jobforge-agent-v3-control-postgres-1 createdb -U jobforge_agent jobforge_s1_next`；库已存在时停止核对，不 drop/recreate，不对旧库作 reset。创建新空库不等于收费授权；仍需 disabled bootstrap、实际 inspect 和完整启动前置。
 
 干净复现则使用明确的独立 project、新 volumes 和不同宿主端口；仅改 project 名不能避免固定端口冲突。下面只启动无收费 profile 的准备环境，`!override` 用于**替换**端口而非追加端口（本次 Compose 5.3.1 支持）：
 
@@ -97,7 +97,7 @@ docker compose @reproDC up -d --wait business-postgres control-postgres ollama
 
 ## 三分钟操作路线
 
-以下从仓库根目录使用 PowerShell 7。三分钟指阅读操作路线，构建和真实推理耗时不作承诺。`$profileID`、`$workerID`、`$batchID`、`$batchKey`、`$northID`、`$southID`、`$validFrom` 使用本批已记录的明确值；三个账户 ID 为不同 UUID，起点为 UTC RFC3339。`$batchCostMicroyuan` 是启动前按各已启动共享 batch 的 known/held 核对并保存的剩余额度，必须显式填写；本次上一取样为 2,846,003，不把旧取样当作永久许可。不要在重跑时生成新 ID 或新期限。
+以下从仓库根目录使用 PowerShell 7。三分钟指阅读操作路线，构建和真实推理耗时不作承诺。`$profileID`、`$workerID`、`$batchID`、`$batchKey`、`$northID`、`$southID`、`$validFrom` 使用本批已记录的明确值；三个账户 ID 为不同 UUID，起点为 UTC RFC3339。`$batchCostMicroyuan` 是启动前按各已启动共享 batch 的 known/held 核对并保存的剩余额度，必须显式填写；完整验收批当时取样为2,846,003，已随该批消费；新的独立部署须重新核算，不把历史取样当作永久许可。不要在重跑时生成新 ID 或新期限。
 
 先准备外部 source、秘密、构建记录及目录；`prepared` 必须尚不存在。固定 state 目录属于这次部署，不能通过更换路径重启。Linux 主机上让容器 UID/GID 65532 可写 state、exports、outbound，可读秘密文件，限制其他用户读取。
 

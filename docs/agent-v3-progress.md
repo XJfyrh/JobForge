@@ -1,6 +1,6 @@
 # Agent v3 实施记录
 
-**2026-09-17 当前状态：S1 未完成，真实云端新批次因 `CHAT_USAGE_UNKNOWN` 停止；[PR #51](https://github.com/XJfyrh/JobForge/pull/51) 保持 Draft，S2～S5 未开始。** 分阶段记录保留当时事实；其中“尚无推理”等历史描述不代表当前状态。最新结果见[收尾验收与阻塞证据](evidence/agent-v3-s1-closeout-2026-09-17.md)，不得以工程 CI 或部分方案完成代替完整 40 案验收。
+**2026-09-17 当前状态：S1完整真实验收已闭合，40/40执行、安全40/40完整且硬失败0，业务11/40（27.5%）；由[PR #51](https://github.com/XJfyrh/JobForge/pull/51)交付，S2～S5未开始。** 见[最新完整报告](evidence/agent-v3-s1-delivery-2026-09-17.md)。后文按时间保留历史失败、停止及当时判断。
 
 ## 起点记录（历史）
 
@@ -18,7 +18,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | 未完成；新批次外部计量阻塞，PR #51 保持 Draft | PR #50 审计、#52 停止竞态修复、#53 新批次累计授权已合并。新批次 14 个 awaiting_approval 方案、DEV-015 中断、25 案未尝试；业务 9/40，安全证据 14 案通过、1 案不完整、25 案未执行。见[新证据](evidence/agent-v3-s1-closeout-2026-09-17.md)；[首批失败](evidence/agent-v3-s1-first-cloud-2026-09-16.md)与[提示修复](evidence/agent-v3-s1-cloud-fixes-2026-09-16.md)保留 |
+| S1 业务与基线 | 已完成真实验收；PR #51交付 | 40/40完整执行、安全硬失败0、业务11/40（27.5%）；[完整报告](evidence/agent-v3-s1-delivery-2026-09-17.md)、[运行指南](agent-v3-cloud-batch.md)。历史两批失败及hold保留 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
