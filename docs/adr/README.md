@@ -58,3 +58,11 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 | [ADR-0014](0014-supervised-python-executor-and-call-budget.md) | 受监管 Python 执行器与调用额度 | Accepted | 2026-09-16 |
 | [ADR-0015](0015-approved-business-actions-and-receipts.md) | 审批、受控写入与业务回执 | Accepted | 2026-09-16 |
 | [ADR-0016](0016-business-snapshots-and-policy-retrieval.md) | 独立业务快照与版本化政策检索 | Accepted | 2026-09-16 |
+
+## 待审提案
+
+| 编号 | 标题 | 状态 | 日期 |
+|------|------|------|------|
+| [ADR-0017](0017-run-admission-and-call-ledger.md) | Run接纳、执行权与物理调用账本 | Proposed | 2026-09-16 |
+
+ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 细化 S1-B；合并接受前不作为实现依据。
