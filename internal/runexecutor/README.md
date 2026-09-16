@@ -29,6 +29,9 @@ input, size, other pipe, or cleanup failures.
 `Stop` is irreversible and nonblocking. Its independent lifecycle owner sends
 TERM, allows 100 ms, then kills the whole group. After KILL, actual Wait, group
 disappearance, event delivery and I/O Join share a two-second local deadline.
+Cancellation tests the published atomic stop state, not just the wakeup channel:
+another caller may have set that state before it closes the channel. Cleanup
+must start in this interval rather than wait forever without either timer.
 Natural guardian exit also begins bounded cleanup. A surviving child is recorded
 as a pipe/supervision failure even if subsequent cleanup removes it. Zombies
 still count as a remaining group; only `kill(-pgid, 0) == ESRCH` proves it gone.
