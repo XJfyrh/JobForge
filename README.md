@@ -6,7 +6,7 @@
 
 **一句话定位：JobForge 是一个面向 Agent、RAG 与通用后台任务的分布式任务编排平台——以 PostgreSQL 为唯一事实源，提供可恢复、可观测、可隔离的 at-least-once 可靠执行底座。**
 
-下一阶段[Agent v3路线](docs/plans/agent-execution-roadmap-v3.md)以云端主chat构建可恢复业务Agent，本地chat为可选扩展。S0、S1-A及[Run控制与调用账本](docs/agent-v3-runs.md)均已合并；本轮新增[固定Linux Worker与执行器](docs/agent-v3-runtime.md)及分层机制检查。生产业务registry仍为空，DeepSeek固定业务流程、云端40案及整体S1尚未验收。下面的架构和快速开始对应现有v0.6服务。
+[Agent v3路线](docs/plans/agent-execution-roadmap-v3.md)已完成S1固定业务基线与[S2有界售后Agent](docs/agent-v3-support-agent.md)：真实40案业务正确37/40（92.5%）、安全硬失败0，响应截断后的未知费用与停止已有隔离证据，详见[验收报告](docs/evidence/agent-v3-s2-delivery-2026-09-17.md)。生产registry包含support-fixed-v1和support-agent-v1，默认配置不启用收费profile；S3～S5另行推进。下面的架构和快速开始对应现有v0.6服务。
 
 ## 系统架构
 
@@ -107,9 +107,10 @@ docker compose -f deploy/compose.yaml --profile durable-events up -d --build
 | [系统架构](docs/architecture.md) | 组件职责、数据流、状态机、部署拓扑 |
 | [故障语义](docs/failure-semantics.md) | 故障模型、故障矩阵与恢复路径 |
 | [可观测性](docs/observability.md) | Trace、Metrics、pprof 使用指南 |
-| [下一阶段路线 v3](docs/plans/agent-execution-roadmap-v3.md) | 可恢复业务 Agent；C3b实现固定运行时接缝，真实业务/云端及S2～S5仍分别推进 |
+| [下一阶段路线 v3](docs/plans/agent-execution-roadmap-v3.md) | 可恢复业务 Agent；S1、S2已完成开发验收，S3～S5另行推进 |
 | [Agent v3 Run开发](docs/agent-v3-runs.md) | Run API/SDK、内部Worker协议、调用预算、分层测试与启动 |
-| [Agent v3 固定运行时](docs/agent-v3-runtime.md) | Go执行权、guardian/step、ACK/Commit屏障、生产空registry与固定Linux容器复现 |
+| [Agent v3 固定运行时](docs/agent-v3-runtime.md) | Go执行权、guardian/step、ACK/Commit屏障、固定生产registry与Linux容器复现 |
+| [Agent v3 S2](docs/agent-v3-support-agent.md) | 动态取证、SDK使用、37/40真实开发验收与有界费用 |
 | [Agent v3 实施记录](docs/agent-v3-progress.md) | 新 PRD/ADR、试验证据与分阶段验收状态 |
 | [路线 v2 对照](docs/plans/agent-execution-roadmap-v2.md) | 有界工具调用与公平评测；保留此前候选方案 |
 | [性能基线](docs/benchmark.md) | 冻结基线、发布数据与复现命令 |

@@ -17,3 +17,32 @@ S2最初新增累计操作预算20 CNY，已获合理调整授权；启动记录
 正式质量验收是冻结版本的完整40个开发案例，至少32个业务正确、安全硬失败0；不读取保留集、不拼接不同版本结果。另以隔离批次对真实云端响应注入一次截断，验证未知费用查询与停止；它不是供应商原生故障。源码能力、机制通过、真实验收分别记录，不互相代替。
 
 可选 outbound 挂载还保存 `.model-rejection.json`：只有 physical call ID、固定校验模块及源码行号，按本批冻结源码摘要定位；不保存异常文字、模型内容或引用值。该诊断不参与成功判定、授权或费用结算。
+
+## 使用结果
+
+准备时仍按云端指南登记新 profile、有限 batch 与专用 Worker；S2 的 source 选择 `deploy/support-agent.source.example.json`，镜像可标记为 `jobforge-support-cloud:s2`，Compose 覆盖该 image。`prepare-support --batch-cost-microyuan <本次剩余上限>` 冻结费用上限；启动后不改 profile，也不重新启动 attempted 批次。准备不发模型请求，`support-cloud` 启动才执行已登记任务。
+
+SDK 接口不变。下面在部署已启用、凭据和实际身份通过环境提供后提交一案，再查询持久结果；查询本身不触发推理：
+
+```python
+import os
+from jobforge import RunClient
+
+with RunClient(os.environ["JOBFORGE_RUN_URL"], os.environ["JOBFORGE_RUN_TOKEN"]) as client:
+    submitted = client.submit(
+        ticket_id=os.environ["JOBFORGE_TICKET_ID"],
+        business_request_key=os.environ["JOBFORGE_BUSINESS_REQUEST_KEY"],
+        profile_id=os.environ["JOBFORGE_PROFILE_ID"],
+        budget_batch_id=os.environ["JOBFORGE_BUDGET_BATCH_ID"],
+        idempotency_key=os.environ["JOBFORGE_SUBMIT_KEY"],
+    )
+    run = client.get(submitted.run.run_id)
+    result = client.result(run.run_id)
+    steps = client.steps(run.run_id)
+    calls = client.calls(run.run_id)
+    print(run.run_id, run.state, result.available, len(steps.items), len(calls.items))
+```
+
+`steps` 按分页读取完整历史；模型决定在 `model_decision` 的已提交结果中，随后才有对应真实工具步骤。`awaiting_approval` 表示可审阅的方案，不表示工单解决或业务写入。Run 达到原 deadline 后可能转成失败；原完成时的 SDK 导出是本次评分依据，后续查询只追加状态，不覆盖历史。
+
+提示中的 `policy_retrieval` 只列出公开业务政策主题、建议搜索词和实际已取得的段落别名。某主题非空不代表每个主张已有充分依据；模型仍须选择工具、解释政策、提出主张，Go/Python 仍拒绝未取得来源。时间辅助只计算已接受时间戳之间的秒差，不给出业务答案。
