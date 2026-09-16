@@ -4,7 +4,7 @@
 - 状态：本详细契约随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 于2026-09-16通过S0评审；[路线 v3](../plans/agent-execution-roadmap-v3.md)的S1～S5功能尚未实现或验收。
 - 决策记录：[ADR-0013](../adr/0013-durable-agent-run-and-step-commit.md)、[ADR-0014](../adr/0014-supervised-python-executor-and-call-budget.md)、[ADR-0015](../adr/0015-approved-business-actions-and-receipts.md)。
 - 实施与验证：[S0 记录](../agent-v3-progress.md)。旧版本验收保持历史事实，不构成本版通过证据。
-- 2026-09-16 模型主线修订：按维护者反馈采用云端主chat，本地chat为可选扩展；修改当前评审稿，不改写已接受ADR或本地试验历史。
+- 2026-09-16 模型主线修订：按维护者反馈采用云端主chat，本地chat为可选扩展；该调整发生于S0评审期间，不改写此前已接受ADR或本地试验历史。
 
 ## 1. 产品范围
 

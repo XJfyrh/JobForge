@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-最新增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
+现有v0.6实现的增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
 
 ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义的决策。PRD 已明确的边界不需要重复创建 ADR；对其补充、取舍或偏离必须记录。
 

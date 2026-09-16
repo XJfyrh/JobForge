@@ -63,7 +63,7 @@ Windows 的 Go 命令只覆盖跨平台协议；POSIX API 类型检查必须指�
 
 [2026-09-16 Docker 基线记录](acceptance-2026-09-16.txt) 保留当时源码 SHA256、镜像身份、`-race` 构建与资源限制命令：该版本 Linux race 层 10 个真进程场景全部通过、无 skip；Python 协议守卫 10 个测试通过。当次取消后整组回收约 104ms，步骤 1s 超时后总回收约 1.104s，Go 父进程 SIGKILL 后约 13ms 整组消失；均为该机器该次运行的观测，不是生产 SLO 或统计分位数。
 
-后续审查发现 stdout EOF 的成功分支可能先于 stderr 超限被选中，原实现 Wait 后没有再次检查限额。现 Wait 完成后统一复核，保留已有失败的错误优先级。[stderr/EOF 定向回归记录](stderr-eof-regression-2026-09-16.txt) 记录 WSL Ubuntu 24.04 上一次确定性失败与修复后通过、当前源码 hash。该二进制使用 `CGO_ENABLED=0`，**不计为 Linux race 通过**。本次固定 Docker 复验因 Docker Desktop 初始化失败而无法运行；旧基线没有覆盖此补丁，保留原文件及 hash，不将新版描述为容器验收通过。
+后续审查发现 stdout EOF 的成功分支可能先于 stderr 超限被选中，原实现 Wait 后没有再次检查限额。现 Wait 完成后统一复核，保留已有失败的错误优先级。[stderr/EOF 定向回归记录](stderr-eof-regression-2026-09-16.txt) 记录 WSL Ubuntu 24.04 上一次确定性失败与修复后通过、当前源码 hash。该二进制使用 `CGO_ENABLED=0`，**不计为 Linux race 通过**。当时固定 Docker 复验因 Docker Desktop 初始化失败而未能运行；旧基线没有覆盖此补丁，因此当时不能将新版描述为容器验收通过。原文件及 hash 仍保留。
 
 维护者同日重启Docker后，[新增固定容器复验记录](docker-recovery-2026-09-16.txt)覆盖 `ace6b745` 的全部最终探针源码：11类真实进程场景及1个纯协议测试通过，0 skip、0 fail、0 race warning。运行使用固定镜像与相同资源约束；新记录追加成功事实，不改写此前阻塞、非race回归或旧容器基线。
 
