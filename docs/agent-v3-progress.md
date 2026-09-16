@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2/C3a已合并；C3b正式运行时验证中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B的真实PG/HTTP/SDK、128Run基线和C1/C2均已审查合并；PR #45合并普通ACK。C3b固定Worker/进程与真实PG机制证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；云端推理/固定业务流程仍未验收 |
+| S1 业务与基线 | S1-A/B/C1/C2/C3a/C3b已合并；真实业务固定流程与云端验收待交付 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B的真实PG/HTTP/SDK、128Run基线和C1/C2均已审查合并；PR #45合并普通ACK，PR #46合并正式运行时。C3b真实PG/进程恢复证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；云端推理/固定业务流程仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
@@ -97,3 +97,5 @@ C3实施调查发现：现有v2缺普通observation持久ACK，已关闭会话�
 [PR #45](https://github.com/XJfyrh/JobForge/pull/45)的最终head `118ca82dd4874786f262412ed75166ee5559ea9c`经两份独立上下文最终复审无剩余问题，[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35087095197)通过，已合并为`193623659de8fe41bfc4f5f0cabc048a167148e4`。第三次Windows全仓race通过1049个测试/子测试事件，5个skip保留；此前真实发现并修复的测试隔离和延迟采样竞态、失败原始日志继续留存。
 
 C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、严格输入投影、Python单步/guardian、固定FD与有限清理、持久确认和Commit屏障、executor_version门禁。Linux实际进程race和Python、首轮真实PG/gRPC联合机制检查已运行，最终检查与恢复证据见[C3b记录](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)。新增专门CI覆盖正式进程层，普通平台skip不能代替。当前生产registry为空，测试注册器/固定loopback模型只进入测试镜像；无收费调用，support策略/provider审计/跨队列trace/真实40案及整体S1仍未完成。
+
+[PR #46](https://github.com/XJfyrh/JobForge/pull/46)最终head `512f0fc56ca3d1e87e12d3b99bf3328e396d1ca2`经两份独立上下文正式复审无剩余P1/P2，[八项CI](https://github.com/XJfyrh/JobForge/actions/runs/35093384805)全部成功，合并为`0829a4c04a3a123a6ffe6c374e326859b79df1a8`；审查与合并代码树一致。Windows全仓race通过1231个测试/子测试事件，20个具名skip明确保留，15个已由固定Linux进程/协调器/真实PG层覆盖；Python Windows945/Linux775通过。真实Worker SIGKILL重新Claim、已提交步骤复用、unknown预留及可信usage超界冻结/永久失败均实跑。合成供应商不是DeepSeek验收；下一步仍是support固定业务策略、provider持久审计与共享5元批次的40案真实运行。

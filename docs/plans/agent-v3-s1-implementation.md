@@ -8,7 +8,7 @@
 | 契约 | 业务快照、工具HTTP、pgvector与准备身份 | 独立上下文审查；ADR按PR流程接受 | PR #37已接受 |
 | S1-A | 独立业务服务、迁移/角色、40例开发数据、Python工具适配、索引准备与搜索 | 真PG/HTTP、tenant/版本/大小边界、固定真实embedding与20查询、重启持久性；适用CI | [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 已合并；两份独立审查和最终head八项CI通过；[证据](../evidence/agent-v3-s1-business-2026-09-16.md) |
 | S1-B | 最小Run/lease/内部协议、API/SDK、持久调用账本 | 有效执行权、并发预留、重发身份、unknown占额、取消/超时；不新增调度语义 | 契约经 PR #39 接受；实现[PR #40](https://github.com/XJfyrh/JobForge/pull/40)已合并；Windows全仓race、真实PG/HTTP/SDK和128Run基线、三份独立审查及最终七项CI通过；[运行指南](../agent-v3-runs.md)、[验收映射](../evidence/agent-v3-s1b-runs-2026-09-16.md) |
-| S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)经PR #41接受；C1/C2分别经PR #42/#43合并，C3确认/退出契约经PR #44接受；C3a实现普通ACK，正式Worker和真实云端尚未验收 |
+| S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)经PR #41接受；C1/C2分别经PR #42/#43合并，C3确认/退出契约经PR #44接受；C3a/C3b经PR #45/#46合并普通ACK和正式运行时；support策略/provider持久审计/真实40案尚未验收 |
 
 实施目录意向：`internal/business`与独立命令保存业务领域/服务/PG/HTTP；`migrations/business`维护业务迁移；Python执行器与工具适配不依赖队列存储；数据与gold分别打包。公开源schema、具体目录和生成工具在对应实现PR确定，避免复制多套同义契约。
 
@@ -26,3 +26,11 @@
 4. 再接`support_fixed_v1`真实业务、方案schema/来源/模板、版本化数据/索引、provider审计持久桥和冻结评分，运行DeepSeek的40例有界批次。
 
 前三项只验执行机制，不能替代第四项的真实模型/业务结果。Claim的跨队列trace来源、provider身份持久审计、S2动态Agent、S3恢复对比及S4/S5仍按各自范围实现，不借模块通过提前完成。
+
+## C3b 之后的最小切片
+
+1. [PRD v0.12](../product/JobForge_PRD_v0.12.md)/[ADR-0020](../adr/0020-provider-audit-and-batch-stop.md)先审查 provider 持久报告、定价资格、普通确认汇合、原 session 晚到权限、只读查询及基于已有调用事实的批次停发合同。没有独立审计调度器或新增收费额度。
+2. 按已接受 ADR-0018 实现 support_fixed_v1 条件图、六字段模型输入输出、八字段持久方案与来源/模板；独立 Agent 审查开发标签，发布消除注释歧义的新政策/索引版本，并冻结评分器。另一条实现线在 ADR-0020 接受后补齐审计桥、正式 profile/manifest 和 SDK 串行驱动。
+3. 先完成确定性 PG/HTTP/实际进程故障及生产隔离，再核对当时官方价格/账号事实，在既有唯一共享 5 CNY、6h、容量 1 的批次中执行全部 40 案。未知费用、未确认报告或外部阻塞时保留所有未尝试行并停止收费；不另建额度绕过，也不以替身完成 C-07。
+
+完整 Trace、生产长期留存与 S2～S5 仍单列。C3b 的合成供应商、真实步骤恢复和八项 CI 不替代真实云端业务基线。

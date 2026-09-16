@@ -2,6 +2,8 @@
 
 日期：2026-09-16。实现基线为 PR #45 合并提交 `193623659de8fe41bfc4f5f0cabc048a167148e4`；对应 [PRD v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)。操作与部署说明见 [运行时指南](../agent-v3-runtime.md)。本记录在验收中持续更新；尚未完成的检查明确列出，不以计划代替通过。
 
+实现 [PR #46](https://github.com/XJfyrh/JobForge/pull/46) 已于 `2026-09-16T12:07:36Z` 合并为 `0829a4c04a3a123a6ffe6c374e326859b79df1a8`。最终审查 head `512f0fc56ca3d1e87e12d3b99bf3328e396d1ca2` 与合并代码树一致；两份独立上下文 Agent 正式复审无剩余 P1/P2，[八项 CI](https://github.com/XJfyrh/JobForge/actions/runs/35093384805) 全部成功。该结论只完成 C3b，S1 整体仍未完成。
+
 ## 交付范围与要求映射
 
 | 要求 | 本轮实现及证据层次 |
@@ -67,9 +69,9 @@ Worker 恢复定向命令首次遗漏 test binary，第二次未引用 PowerShel
 | 生产镜像 | 固定 Dockerfile 重建 exit 0；实际检查空 registry、官方 origin、无测试安装器和测试 manifest 通过 |
 | 静态与配置 | Go build/vet/lint、Ruff/format、SDK 与 Linux agent/probe mypy、SQLFluff 历史基线/migrations、Buf lint/breaking、promtool 配置/五条规则、dashboard 生成一致性已运行通过；最终提交再核对 diff/链接/秘密 |
 | Windows 全仓 race | `go test -race -count=1 -json ./...` exit 0，1231 个测试/子测试通过事件、33 个通过包；20 个具名 skip、另 11 个无测试包，未把 skip 计为通过 |
-| PR 最终独立审查与 CI | 提交后执行，尚未计为通过 |
+| PR 最终独立审查与 CI | 两份独立上下文 Agent 正式复审无剩余 P1/P2；上述最终 head 八项 CI 全部成功后 squash 合并 |
 
-最终容器记录为 `s1c3b-final-{process-race,worker-race,integration-race,python,production-isolation}.txt` 及相应 exit 0；四个镜像构建日志分别记录。两个独立上下文预审中已确认 P2 均修复并复核，正式 PR 仍需针对最终提交审查及完整 CI。
+最终容器记录为 `s1c3b-final-{process-race,worker-race,integration-race,python,production-isolation}.txt` 及相应 exit 0；四个镜像构建日志分别记录。预审发现的两个 P2 均已修复并经最终提交复核；报告及文件指纹为 `s1c3b-pr46-{core,boundary}-review.md` 与对应 SHA256 清单，公开结果见 [PR 最终记录](https://github.com/XJfyrh/JobForge/pull/46#issuecomment-5697143304)。
 
 Windows 使用按规范启动的 5433 测试 PG、独立 5434 业务 PG、6379 Redis 与已安装 SDK 的 `JOBFORGE_TEST_PYTHON`；记录 `s1c3b-final-windows-race.jsonl` 和机器汇总。20 个具名 skip 为：8 个需要 Linux BOOTTIME 的协调器子用例、7 个需要专用已安装进程环境的联合子用例，以及历史 AT-25、`TestRealTasksLifecycle`、`TestRealTasksSDK` 和两个专用 Worker helper。前 15 个已由上述固定 Linux 镜像实际覆盖；历史真实模型层与 AT-25 不因本轮通过而改变结论。
 
