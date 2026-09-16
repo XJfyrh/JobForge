@@ -1,6 +1,6 @@
 # JobForge PRD v0.14：S1 收尾新批次的累计费用授权
 
-- 日期：2026-09-17；状态：**Proposed，独立审查并按 PR 流程接受前不作为新批次实施依据**。
+- 日期：2026-09-17；状态：**Accepted（随 [PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并合并时生效）；实施与真实验收另行记录**。
 - 基线：[PRD v0.10](JobForge_PRD_v0.10.md)、[v0.13](JobForge_PRD_v0.13.md)；对应 [ADR-0022](../adr/0022-s1-closeout-cumulative-authorization.md)。
 - 本增量仅落实维护者在原首批停止后明确给出的 S1 收尾授权；不恢复原批次，不改变旧报告、Run、账本、hold、attempted 标记或验收成绩。
 

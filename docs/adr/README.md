@@ -62,7 +62,7 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 | [ADR-0018](0018-deepseek-fixed-flow-and-executor.md) | DeepSeek固定流程与正式受监管执行器 | 部分Superseded by ADR-0019/0020；其余有效 | 2026-09-16 |
 | [ADR-0019](0019-executor-confirmation-and-exit-contract.md) | 执行器观察确认与固定退出合同 | 新审计profile的hash/汇合部分Superseded by ADR-0020；其余有效 | 2026-09-16 |
 | [ADR-0020](0020-provider-audit-and-batch-stop.md) | provider 审计报告、跨 FD 确认与首批停发 | Accepted（PR #47合并生效） | 2026-09-16 |
-| [ADR-0021](0021-first-cloud-batch-admission-and-launcher.md) | 首批收费 profile 的可信登记、快照约束与串行启动器 | Accepted（PR #49合并生效） | 2026-09-16 |
+| [ADR-0021](0021-first-cloud-batch-admission-and-launcher.md) | 首批收费 profile 的可信登记、快照约束与串行启动器 | 部分 Superseded by ADR-0022（PR #53 合并生效）；其余有效 | 2026-09-16 |
 
 ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受，细化 S1-B；实现与验收状态单独记录。
 
@@ -74,6 +74,6 @@ ADR-0018 与 [PRD v0.10](../product/JobForge_PRD_v0.10.md) 随 [PR #41](https://
 
 ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://github.com/XJfyrh/JobForge/pull/49) 独立审查通过并合并时接受，增补正式收费前的最小接缝，沿用既有5 CNY/6h/40案及停发边界；[实施映射](../plans/agent-v3-first-cloud-batch.md)不表示audit实现已合并或真实云端已通过。
 
-## 待审查增量
+## S1 收尾授权增量
 
-[ADR-0022](0022-s1-closeout-cumulative-authorization.md) / [PRD v0.14](../product/JobForge_PRD_v0.14.md) 为 **Proposed**：记录维护者在原批停止后的 S1 收尾新批次及新增累计 5 CNY 授权。接受前不取代 ADR-0021；拟取代范围仅限首批授权范围与新 batch 费用上限，原批停止、历史事实、持久屏障和其余合同保留。
+[ADR-0022](0022-s1-closeout-cumulative-authorization.md) / [PRD v0.14](../product/JobForge_PRD_v0.14.md) 随 [PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并合并时 **Accepted**：记录维护者在原批停止后的 S1 收尾新批次及新增累计 5 CNY 授权。仅部分取代 ADR-0021 的首批授权范围与新 batch 费用上限，原批停止、历史事实、持久屏障和其余合同保留。
