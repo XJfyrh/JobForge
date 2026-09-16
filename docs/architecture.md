@@ -8,6 +8,8 @@ Agent v3按[PRD v0.7](product/JobForge_PRD_v0.7.md)与[v0.8](product/JobForge_PR
 
 S1-B 在 [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 接受后新增 `agent-control`，独立提供 Run API/Worker RPC/有界恢复扫描，只在控制 PostgreSQL 中调度 runs。步骤、审批方案和逐物理调用账本不是第二队列；业务服务依然独立。当前分支的生产存储及确定性真实 PG/HTTP 验证不能代替 S1-C 的正式 DeepSeek 执行器或 S4 的业务写入。启动、结果权限及 unknown 预算说明见 [Run 指南](agent-v3-runs.md)。
 
+S1-C1经PR #42提供[版本化执行器协议与共享时钟](agent-v3-executor-protocol.md)：RPC返回锁后PG观测时间，执行期限保守映射到同Linux容器的CLOCK_BOOTTIME；普通步骤权限与原调用计量分离。C2正在实现[受控HTTP适配](agent-v3-authorized-http.md)，使用固定Python请求、异步单次许可和完整响应校验，保留既有v2权限状态机。正式Go进程监管、持久许可联调、云端批次和审批写入仍分别验收，模块及替身测试不能代表全链路交付。
+
 ```mermaid
 flowchart LR
     Client[应用 / Python SDK] -->|HTTP| API[API Server]

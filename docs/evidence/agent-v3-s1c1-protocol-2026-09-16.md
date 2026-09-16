@@ -2,6 +2,8 @@
 
 日期：2026-09-16。基线`01177e9726b601e7210df0c9a758f4cfdb356916`；[PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)已随PR #41接受。当前切片仅实现C-02/C-03/C-08的协议/RPC前置部分，不把它们标成完整C验收。
 
+[PR #42](https://github.com/XJfyrh/JobForge/pull/42)于2026-09-16合并为`b9ba908cc8434e3b3fc6aaddbbb5e1f4684a8826`。两份独立上下文审查均复核最终head `6ecba884bc67f01ee664a474107681d110c216da`，两项P2已修复，无剩余actionable finding；[最终七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35078269258)全部通过。合并树与审查树完全相同。
+
 ## 已运行与未交付
 
 | 范围 | 实际证据 | 边界 |
@@ -11,7 +13,7 @@
 | 异常/晚到计量 | 真实PG/RPC测试验证终态/过期session后1025输出token报告、三层冻结/full hold、重复/冲突，Run不回退 | 没有向供应商发送请求；不代表云端usage已观察 |
 | 共享时钟 | 固定Linux镜像中Go/Python实际CLOCK_BOOTTIME相互核对；3个顶层测试、12子测试通过，0跳过 | Windows非Linux分支明确不支持live clock；真实运行要求同容器/time namespace |
 | S0生命周期回归 | 同一镜像重新执行5顶层、9子测试事件，0失败/跳过；含Go SIGKILL、guardian死亡、EOF/尾随输出、取消/超时与回收 | 这是已有探针，正式Worker/guardian尚未交付 |
-| 机械门禁 | Go build/vet/golangci-lint通过（0 issues）；首轮全仓race 29包、896个测试及子测试通过，0失败；审查修复后全部Python合计432 passed；Ruff check/format、mypy 22文件及Linux探针2文件通过；SQLFluff历史3项基线/迁移lint通过；Buf lint/breaking/重新生成hash一致 | 最终PR CI与修复后全仓race另归档；全仓race的5个测试跳过见下，不能把缺依赖skip当通过 |
+| 机械门禁 | Go build/vet/golangci-lint通过（0 issues）；首轮全仓race 29包、896个测试及子测试通过；最终修复后重跑29包、901个测试及子测试通过，0失败；全部Python合计432 passed；Ruff check/format、mypy 22文件及Linux探针2文件通过；SQLFluff历史3项基线/迁移lint通过；Buf lint/breaking/重新生成hash一致 | 最终PR七项CI通过；全仓race的5个测试跳过见下，不能把缺依赖skip当通过 |
 | 云端/业务验收 | 未运行DeepSeek推理，未执行40案固定业务流程 | 正式Worker、HTTP许可钩子、profile、方案/数据/评分由下一切片交付 |
 
 计量反例覆盖单字段合法、input+output合计超过safe整数范围：报告仍可归档并立即关闭普通执行，留给账本保存异常，不按1024或预留截断。普通observation错usage hash也不能让另一个通道的合法原调用报告丢失。任何settled确认均不重开已停止/过期会话。

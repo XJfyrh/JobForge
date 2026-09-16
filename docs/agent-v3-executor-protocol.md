@@ -1,6 +1,6 @@
 # Agent v3 S1-C1：执行器协议与时钟接缝
 
-[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受。本切片提供正式执行器要使用的严格codec、顺序校验和计量权限，以及Worker RPC的权威时间/异常标志；尚未交付正式Worker、IPC监管循环、DeepSeek HTTP适配或40例云端执行，不能单凭fixture通过宣称这些验收完成。
+[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受；本切片已随[PR #42](https://github.com/XJfyrh/JobForge/pull/42)合并，提供正式执行器要使用的严格codec、顺序校验和计量权限，以及Worker RPC的权威时间/异常标志，见[验证证据](evidence/agent-v3-s1c1-protocol-2026-09-16.md)。尚未交付正式Worker、IPC监管循环、DeepSeek HTTP适配或40例云端执行，不能单凭fixture通过宣称这些验收完成。
 
 ## 版本与所有权
 

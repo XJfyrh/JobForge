@@ -91,6 +91,8 @@ Agent v3 S1-B新增的 `TestRun*` 使用真实控制PostgreSQL，并通过独立
 
 S1-C1的v2执行器codec/计量顺序使用共同fixture，随`go test -race ./...`与`pytest python/tests`执行。Linux共享BOOTTIME验证还需构建上述S0镜像后运行`docker run --rm --init --network none jobforge-executor-probe:s0 ./clock.test '-test.v' '-test.timeout=30s'`；CI明确执行，不能拿Windows非Linux分支测试替代。它只验证时钟域，不代表正式执行器进程或真实DeepSeek已验收，见[协议指南](docs/agent-v3-executor-protocol.md)。
 
+S1-C2受控HTTP/DeepSeek适配随`pytest python/tests`和Python类型检查执行；CI在Linux运行真实BOOTTIME分支。本地Windows还应按[受控HTTP指南](docs/agent-v3-authorized-http.md)构建并执行`tools/agenthttpcheck/Dockerfile`，验证固定Linux时钟和实际loopback TCP。测试的模型、向量、协调者均为替身，不代表云端推理或持久授权已验收。
+
 ## 安全问题
 
 不要在公开 Issue 或 Pull Request 中提交未公开漏洞、凭据或敏感数据。请遵循 [SECURITY.md](SECURITY.md) 的私密报告流程。
