@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -72,7 +73,9 @@ func auditExecutorStopped(t *testing.T, running *executorWorkerRun) {
 			t.Fatalf("audited worker did not stop: %v", running.err)
 		}
 	case <-time.After(20 * time.Second):
-		t.Fatal("audited worker did not finish bounded cleanup")
+		stacks := make([]byte, 128<<10)
+		stacks = stacks[:runtime.Stack(stacks, true)]
+		t.Fatalf("audited worker did not finish bounded cleanup; goroutine stacks (no payload):\n%s", stacks)
 	}
 }
 

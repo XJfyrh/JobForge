@@ -41,6 +41,8 @@
 | 性能对比 | 已运行，仍有剩余开销 | 每轮五组交替基线/候选；优化前吞吐中位数 5.149→4.041 Run/s（−21.5%）；优化后 5.107→4.829（−5.4%），Commit p95 中位数 18.943→18.7824ms；保留[两轮完整汇总](agent-v3-s1-audit-performance-2026-09-16.json)，不宣称历史 W4 通过 |
 | PR CI / 确切 head 独立复核 | 待完成 | 首轮独立上下文代码审查无 P1/P2，最终 head 另行核验 |
 
+PR #50 的 `4e45817` 已通过最终独立上下文审查。CI `35109237665` 七项通过，Linux runtime 的 `report-before` 子例发生一次20s未退出、清理5s未Join；这次失败明确保留。同镜像/资源的精确子例3次及默认完整顺序32项均未复现，不能据此声称已修复。新增只在超时时打印有界 goroutine 栈的测试诊断，保持原超时与生产代码不变，再由CI采集实际卡点；没有延长等待掩盖失败。
+
 Linux 确认窗口测试覆盖 Reserve、report、Observe、Commit 四处各两种故障。提交前以实际行锁和 `pg_blocking_pids` 证明 RPC 已进入数据库并阻塞；提交后取得服务端成功再丢弃 ACK。Worker 全部停止新 Claim；无 reservation 的 Reserve 前失败，以及事务已完成的 Commit 后失败，允许新 session 依据数据库事实继续。其它未完成收费窗口拒绝新 session，且不伪称 batch 已冻结。provider 身份错、无 usage、正数 reasoning 停批各实跑；合法 reasoning 计入已有 output，不重复收费。第二次结构化输出无效保存合法计量与两份 rejected observation，符合窄终态例外后允许下一案例。
 
 优化前 Linux 集成镜像：`sha256:3b0309b547f32872e9a7a418da3f50cd1669cf3234ae6d7d7c139b4685fa96a9`；进程镜像：`sha256:02c7b281f43f6e746e0cccb0e049918b2415fd5024aa6c6bdef977a0c13e4ade`；Python 镜像：`sha256:33b8d245f31fbf124e277817774f294ba03de4dc393cafacccce37dd92dd2241`；生产镜像：`sha256:1eb8f7ba65fe367b1c14a7770e8ebf4398e9f472baac091a783d1fedf9f49b2b`。
