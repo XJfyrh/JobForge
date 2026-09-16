@@ -1,0 +1,34 @@
+S0 stderr/EOF regression: WSL targeted PASS; fixed Docker verification BLOCKED
+Date: 2026-09-16, Asia/Shanghai
+Build: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test -c -o tools/executorprobe/probe.test ./tools/executorprobe
+Run: wsl -d Ubuntu-24.04 --cd /mnt/e/JobForge/tools/executorprobe --exec env JOBFORGE_EXECUTOR_PROCESS_TESTS=1 ./probe.test -test.run=^TestStderrOverflowAfterProtocolEOF$ -test.v -test.timeout=15s
+Race status: NOT RUN for the patched Linux source. The WSL binary has CGO_ENABLED=0.
+Docker status: NOT RUN for this patch; Docker Desktop initialization failed. Existing acceptance-2026-09-16.txt and its historical source hashes remain unchanged.
+Synchronization: fixed helper writes started/result, closes stdout, waits SIGUSR1; Go EOF observer releases stderr only after selecting the EOF branch.
+Before-fix runner SHA256: 3a711c6e1d9a6782e279cb75190bd7fd6e3b1686ec90fdf006465918dd93fa62
+
+Before fix (exit 1):
+=== RUN   TestStderrOverflowAfterProtocolEOF
+    runner_linux_test.go:90: late stderr overflow was accepted: error=<nil> want=executor output limit exceeded
+--- FAIL: TestStderrOverflowAfterProtocolEOF (0.03s)
+FAIL
+
+After fix (exit 0):
+=== RUN   TestStderrOverflowAfterProtocolEOF
+    runner_linux_test.go:94: guardian=549: valid started/result and EOF preceded stderr overflow; rejected and reaped
+--- PASS: TestStderrOverflowAfterProtocolEOF (0.03s)
+PASS
+
+Other checks: Linux go vet/golangci-lint 0 issues; Ruff check/format passed; mypy --platform linux passed (3 sources); pytest passed (10 tests).
+
+Final source SHA256:
+Dockerfile 91f674ff11175546506e96473aeb099118607e07f7da9d38aa8f9cdb54461527
+executor.py d3de6905cd895473bbaa16d7c957ecd2395d4d9af769470440bd1ff7ed822986
+main_linux.go c2aa88696a94f0520b712ac57299e374508109ec5c8f4b3371a3cf71ac4bad56
+main_other.go b98b6e0dd6a0ac73fda7725d39bd84095a9fb69dc9be85bcf03c233619002b3a
+protocol_test.go e9e71b843480ac40b59c4048798bac6b569ab5f1dd3580b2981b1c152370afef
+protocol.go b50b37ab5ca04f3f57b9b773efb0e109168dc0a030b103747c16532c282e65e2
+runner_linux_test.go 0b951c4e3a1bbe694b58d6b4dd56ce9d6163faf0d3fbb9db65996b27bb7bb608
+runner_linux.go 7c90586a5fb92967a72e0448d23104c8b2872b01f09fea9ee5687250db929852
+test_executor.py 3142a8971ce4005c6a876288b912c2c96e893cd0a1a1d4ec044862fb1166ed31
+testdata/late_stderr.py 02560f434376f078db7300a99d11fd11ba43de1516a519bd30f0501e3c764089

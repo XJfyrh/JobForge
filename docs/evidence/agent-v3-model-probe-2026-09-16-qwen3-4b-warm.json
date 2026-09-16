@@ -1,0 +1,92 @@
+{
+  "timestamp_utc": "2026-09-15T17:44:13.502051+00:00",
+  "scope": "S0 model protocol probe; tools are fixtures, not real business acceptance",
+  "ollama": {
+    "version": "0.32.5"
+  },
+  "model": {
+    "name": "qwen3:4b",
+    "model": "qwen3:4b",
+    "modified_at": "2026-09-15T17:42:26.447285279Z",
+    "size": 2497293931,
+    "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameter_size": "4.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2560
+    },
+    "capabilities": [
+      "completion",
+      "tools",
+      "thinking"
+    ]
+  },
+  "profile": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 4096,
+    "num_predict": 1024,
+    "think": false,
+    "model_concurrency": 1
+  },
+  "fixture_version": "s0-protocol-fixtures-v1",
+  "fixture_sha256": "19c5732343aa1c4c6edac67a63c391d99af6c79a48d098986248ee58e095b45e",
+  "probe_sha256": "fed93f10ccf151824ea8052a551e9c8481d97b27d35eeb7cb90f4ae93af1e8c5",
+  "limits": {
+    "requests_per_case": 8,
+    "tools_per_case": 6,
+    "call_seconds": 60,
+    "case_seconds": 180
+  },
+  "cases": [
+    {
+      "case_id": "delayed",
+      "kind": "real_model_synthetic_tool_loop",
+      "passed": false,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": false,
+          "error": "TimeoutError",
+          "wall_ms": 60031.0
+        }
+      ],
+      "tool_path": [],
+      "rejections": [],
+      "error": "TimeoutError",
+      "wall_ms": 60031.0
+    }
+  ],
+  "loaded_model_sample": {
+    "models": [
+      {
+        "name": "qwen3:4b",
+        "model": "qwen3:4b",
+        "size": 3184001022,
+        "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "4.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-09-15T17:50:13.528302261Z",
+        "size_vram": 0,
+        "context_length": 4096
+      }
+    ]
+  },
+  "stopped_after_uncertain_backend_completion": true,
+  "all_passed": false
+}

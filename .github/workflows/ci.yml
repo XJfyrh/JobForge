@@ -126,6 +126,8 @@ jobs:
           python -m pip install --no-deps ./sdk/python
       - name: Python SDK tests
         run: python -m pytest sdk/python/tests
+      - name: Agent S0 probe guardrails (no model calls)
+        run: python -m pytest tools/agent_probe_data tools/executorprobe
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations
@@ -136,6 +138,21 @@ jobs:
         run: ruff format --check .
       - name: Mypy
         run: mypy sdk/python
+      - name: Agent S0 probe types
+        run: mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py
+
+  executor-process-probe:
+    name: Agent S0 executor (Linux process faults, race)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Go/Python probe image
+        run: docker build --tag jobforge-executor-probe:s0 --file tools/executorprobe/Dockerfile .
+      - name: Run real process lifecycle tests
+        run: >-
+          docker run --rm --init --network none --cpus 1 --memory 256m
+          --pids-limit 64 jobforge-executor-probe:s0
 
   proto-lint:
     name: Buf lint

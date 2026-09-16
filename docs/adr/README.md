@@ -34,6 +34,8 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 ## 已接受 ADR 索引
 
+维护者已确认路线 v3，S0 详细决策正在评审：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。三者仍为 Proposed，现有实现验收不受本入口变更影响。
+
 当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
 | 编号 | 标题 | 状态 | 日期 |

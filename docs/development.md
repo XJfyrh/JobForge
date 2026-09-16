@@ -308,8 +308,11 @@ go test -tags scale -count=1 ./tests/scale/
 | `python-lint` | SQLFluff 历史基线校验、`sqlfluff lint migrations`、`ruff check .`、`ruff format --check .`、`mypy sdk/python`（工具版本由 `tools/requirements-lint.txt` 锁定） | `.venv/bin/python tools/check_sqlfluff_baseline.py`、`.venv/bin/sqlfluff lint migrations`、`.venv/bin/ruff check .`、`.venv/bin/ruff format --check .`、`.venv/bin/mypy sdk/python` |
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
 | `observability-config` | 固定 Prometheus 镜像运行 promtool config/rule tests；重建仪表盘无 diff | `python tools/generate_task_dashboard.py`；Docker promtool 命令见 CONTRIBUTING.md |
+| `executor-process-probe` | S0 固定 Go/Python 镜像内真实进程故障与 Linux race | 构建 `tools/executorprobe/Dockerfile`，按 CI 用 `--init --network none` 运行 |
 
 `python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
+
+Agent v3 S0 另运行 `python -m pytest tools/agent_probe_data tools/executorprobe` 和两个探针入口的 Linux 平台 mypy；它们是确定性边界检查，不调用真实模型。执行器 Go 进程套件要求 `JOBFORGE_EXECUTOR_PROCESS_TESTS=1` 与容器 init，由专门 job 执行；普通 Go 测试中的该项 skip 不计进程验收通过。S0 详细状态见[实施记录](agent-v3-progress.md)。
 
 独立 [real-models 工作流](../.github/workflows/real-models.yml) 使用固定 Ollama 模型与真实 PostgreSQL，实际运行 SDK/产物/进程 kill 场景；本地完整观测故障脚本另查询 Collector、Jaeger、Prometheus、Grafana。CI 和本地结果分别记在[实施记录](agent-rag-progress.md)。
 

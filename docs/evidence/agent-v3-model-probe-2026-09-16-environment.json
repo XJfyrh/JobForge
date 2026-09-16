@@ -1,0 +1,42 @@
+{
+  "collected_at_utc": "2026-09-15T17:40:24.2642387Z",
+  "scope": "Model protocol probe environment; measurements are point samples, not peak memory",
+  "cpu": {
+    "Name": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics     ",
+    "NumberOfCores": 8,
+    "NumberOfLogicalProcessors": 16
+  },
+  "host_memory_kib": {
+    "TotalVisibleMemorySize": 32798088,
+    "FreePhysicalMemory": 11288476
+  },
+  "host_free_disk_bytes": [
+    {
+      "Name": "C",
+      "Free": 59347156992
+    },
+    {
+      "Name": "E",
+      "Free": 61520035840
+    }
+  ],
+  "docker": {
+    "ServerVersion": "29.6.2",
+    "NCPU": 16,
+    "MemTotal": 16385236992,
+    "OSType": "linux"
+  },
+  "ollama_image": "ollama/ollama@sha256:4dea9fb511947e24a84237bb636b0203abcb2ff0d3fbc7b4ff865deb91362131",
+  "ollama_container_stats": {
+    "CPUPerc": "191.07%",
+    "MemUsage": "170.8MiB / 15.26GiB",
+    "MemPerc": "1.09%",
+    "PIDs": "38"
+  },
+  "container_memory_available": [
+    "MemTotal:       16001208 kB",
+    "MemFree:          292868 kB",
+    "MemAvailable:    8395796 kB"
+  ],
+  "python": "Python 3.12.10"
+}

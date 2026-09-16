@@ -81,6 +81,8 @@ Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具�
 
 SDK 安装：`python -m pip install ./sdk/python`；Go/Python 跨语言契约需设置 `JOBFORGE_TEST_PYTHON` 为安装该 SDK 的解释器路径（CI 显式安装并启用）。本地未设置时该用例 skip，不代表契约通过。
 
+Agent v3 的 S0 探针另运行 `python -m pytest tools/agent_probe_data tools/executorprobe`、`mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py`；真实执行器生命周期与 Linux race 使用 `tools/executorprobe/Dockerfile` 构建镜像，按 CI 的 `docker run --init --network none` 命令执行。常规 Go 测试跳过受平台约束的进程套件不代表通过；专门 CI job 实际执行。模型 guardrail 测试不调用模型，真实模型协议试验与业务验收分别报告。
+
 Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
 
 ## 安全问题

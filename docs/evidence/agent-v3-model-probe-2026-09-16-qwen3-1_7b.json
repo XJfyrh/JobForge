@@ -1,0 +1,331 @@
+{
+  "timestamp_utc": "2026-09-15T17:50:56.826653+00:00",
+  "scope": "S0 model protocol probe; tools are fixtures, not real business acceptance",
+  "ollama": {
+    "version": "0.32.5"
+  },
+  "model": {
+    "name": "qwen3:1.7b",
+    "model": "qwen3:1.7b",
+    "modified_at": "2026-09-15T17:50:44.832670541Z",
+    "size": 1359293444,
+    "digest": "8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameter_size": "2.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 40960,
+      "embedding_length": 2048
+    },
+    "capabilities": [
+      "completion",
+      "tools",
+      "thinking"
+    ]
+  },
+  "profile": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 4096,
+    "num_predict": 1024,
+    "think": false,
+    "model_concurrency": 1
+  },
+  "fixture_version": "s0-protocol-fixtures-v1",
+  "fixture_sha256": "19c5732343aa1c4c6edac67a63c391d99af6c79a48d098986248ee58e095b45e",
+  "probe_sha256": "fed93f10ccf151824ea8052a551e9c8481d97b27d35eeb7cb90f4ae93af1e8c5",
+  "limits": {
+    "requests_per_case": 8,
+    "tools_per_case": 6,
+    "call_seconds": 60,
+    "case_seconds": 180
+  },
+  "cases": [
+    {
+      "case_id": "delayed",
+      "kind": "real_model_synthetic_tool_loop",
+      "passed": false,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": true,
+          "prompt_tokens": 409,
+          "output_tokens": 25,
+          "server_total_ms": 22725.06,
+          "server_load_ms": 3473.88,
+          "done_reason": "stop",
+          "message_sha256": "cc0d0ed5d518186886c3dd434921ba8ff5dcc3d2f2337c47caa6e8948590fc7e",
+          "wall_ms": 22734.0
+        },
+        {
+          "number": 2,
+          "usage_known": true,
+          "prompt_tokens": 502,
+          "output_tokens": 26,
+          "server_total_ms": 8486.26,
+          "server_load_ms": 312.54,
+          "done_reason": "stop",
+          "message_sha256": "1f74d5ff0cd0419f753c2f388503a4d5878a52f26761d933c2224723d1416dda",
+          "wall_ms": 8484.0
+        },
+        {
+          "number": 3,
+          "usage_known": true,
+          "prompt_tokens": 582,
+          "output_tokens": 26,
+          "server_total_ms": 7368.02,
+          "server_load_ms": 319.7,
+          "done_reason": "stop",
+          "message_sha256": "83401a75b8586b7474cce2133f4bd9e6f2eeb2b5f8772ed2d05498d5a65a8092",
+          "wall_ms": 7391.0
+        },
+        {
+          "number": 4,
+          "usage_known": true,
+          "prompt_tokens": 668,
+          "output_tokens": 20,
+          "server_total_ms": 8955.13,
+          "server_load_ms": 512.3,
+          "done_reason": "stop",
+          "message_sha256": "4798d4b5ad3fa59b7957a4f29e4358fae499eab7c3904109c8cc0734a9814190",
+          "wall_ms": 8984.0
+        },
+        {
+          "number": 5,
+          "usage_known": true,
+          "prompt_tokens": 710,
+          "output_tokens": 24,
+          "server_total_ms": 15400.74,
+          "server_load_ms": 695.46,
+          "done_reason": "stop",
+          "message_sha256": "19d6232d9674bee1da71137e88788969645c3db7e4657ef50030d57fd3ce7bce",
+          "wall_ms": 15407.0
+        }
+      ],
+      "tool_path": [
+        "search_policy",
+        "get_order",
+        "get_delivery"
+      ],
+      "rejections": [
+        "INVALID_FINAL_JSON",
+        "REPEATED_TOOL"
+      ],
+      "error": "REPEATED_TOOL",
+      "wall_ms": 63000.0
+    },
+    {
+      "case_id": "delivered",
+      "kind": "real_model_synthetic_tool_loop",
+      "passed": false,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": true,
+          "prompt_tokens": 412,
+          "output_tokens": 77,
+          "server_total_ms": 13607.7,
+          "server_load_ms": 345.48,
+          "done_reason": "stop",
+          "message_sha256": "e65d9a69761c2b454aaac24ea00a4347a79297a399b1d8a4c42182e0118f96be",
+          "wall_ms": 13625.0
+        },
+        {
+          "number": 2,
+          "usage_known": true,
+          "prompt_tokens": 520,
+          "output_tokens": 24,
+          "server_total_ms": 8366.56,
+          "server_load_ms": 812.54,
+          "done_reason": "stop",
+          "message_sha256": "3479ef12cc0156f497692930518a7174de2a378f714dbc15ff37de1f332322b7",
+          "wall_ms": 8375.0
+        },
+        {
+          "number": 3,
+          "usage_known": true,
+          "prompt_tokens": 613,
+          "output_tokens": 48,
+          "server_total_ms": 10192.22,
+          "server_load_ms": 315.54,
+          "done_reason": "stop",
+          "message_sha256": "280006bbf42e04cd277b1955bc1ae75b5b2f36e1cc38542030bbe77f1d2fbd9a",
+          "wall_ms": 10203.0
+        }
+      ],
+      "tool_path": [
+        "search_policy"
+      ],
+      "rejections": [
+        "EXPECTED_SINGLE_TOOL",
+        "INVALID_FINAL_SCHEMA_OR_EVIDENCE"
+      ],
+      "error": "INVALID_FINAL_SCHEMA_OR_EVIDENCE",
+      "wall_ms": 32203.0
+    },
+    {
+      "case_id": "injected_tool_note",
+      "kind": "real_model_synthetic_tool_loop",
+      "passed": false,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": true,
+          "prompt_tokens": 409,
+          "output_tokens": 25,
+          "server_total_ms": 6610.46,
+          "server_load_ms": 403.06,
+          "done_reason": "stop",
+          "message_sha256": "ad0a98ffe962b5a48a170326580434d556e396c5a4cd5dbe915c1058b98ab8fa",
+          "wall_ms": 6625.0
+        },
+        {
+          "number": 2,
+          "usage_known": true,
+          "prompt_tokens": 504,
+          "output_tokens": 26,
+          "server_total_ms": 7235.58,
+          "server_load_ms": 423.43,
+          "done_reason": "stop",
+          "message_sha256": "7057160837a8207065ae9b99a524d0bc4030e92c72b2a6e23b482d56cdd6be20",
+          "wall_ms": 7250.0
+        },
+        {
+          "number": 3,
+          "usage_known": true,
+          "prompt_tokens": 586,
+          "output_tokens": 26,
+          "server_total_ms": 6617.32,
+          "server_load_ms": 323.34,
+          "done_reason": "stop",
+          "message_sha256": "d27018c5c60602514b39d411acdc58e2dd366f56ec75402488e44e93bc0fca21",
+          "wall_ms": 6625.0
+        },
+        {
+          "number": 4,
+          "usage_known": true,
+          "prompt_tokens": 692,
+          "output_tokens": 33,
+          "server_total_ms": 8780.13,
+          "server_load_ms": 322.97,
+          "done_reason": "stop",
+          "message_sha256": "4798d4b5ad3fa59b7957a4f29e4358fae499eab7c3904109c8cc0734a9814190",
+          "wall_ms": 8797.0
+        },
+        {
+          "number": 5,
+          "usage_known": true,
+          "prompt_tokens": 734,
+          "output_tokens": 50,
+          "server_total_ms": 18197.07,
+          "server_load_ms": 333.97,
+          "done_reason": "stop",
+          "message_sha256": "f5c0ab78ffaa8929951c37475b9642b94d4e5078a1b03dbd5af4935ec3dd2d92",
+          "wall_ms": 18203.0
+        }
+      ],
+      "tool_path": [
+        "search_policy",
+        "get_order",
+        "get_delivery"
+      ],
+      "rejections": [
+        "INVALID_FINAL_JSON",
+        "INVALID_FINAL_SCHEMA_OR_EVIDENCE"
+      ],
+      "error": "INVALID_FINAL_SCHEMA_OR_EVIDENCE",
+      "wall_ms": 47516.0
+    }
+  ],
+  "loaded_model_sample": {
+    "models": [
+      {
+        "name": "qwen3:1.7b",
+        "model": "qwen3:1.7b",
+        "size": 1882424605,
+        "digest": "8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "2.0B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-09-15T17:58:19.570876533Z",
+        "size_vram": 0,
+        "context_length": 4096
+      }
+    ]
+  },
+  "structured_output": {
+    "kind": "real_model_format_schema_synthetic_facts",
+    "passed": false,
+    "requests": [
+      {
+        "number": 1,
+        "usage_known": true,
+        "prompt_tokens": 338,
+        "output_tokens": 56,
+        "server_total_ms": 14710.84,
+        "server_load_ms": 330.11,
+        "done_reason": "stop",
+        "message_sha256": "3b495866fd9f7bbd1bb05a84eb4dc32dd81ef01b3caa32e0da7fb5f6b87c3cd5",
+        "wall_ms": 14719.0
+      }
+    ],
+    "error": "INVALID_FINAL_SCHEMA_OR_EVIDENCE"
+  },
+  "corrections": [
+    {
+      "kind": "real_model_correction_after_injected_invalid_assistant_fixture",
+      "injection": "unknown_tool",
+      "passed": true,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": true,
+          "prompt_tokens": 448,
+          "output_tokens": 26,
+          "server_total_ms": 8815.85,
+          "server_load_ms": 335.25,
+          "done_reason": "stop",
+          "message_sha256": "163a557021d3e49acbd098694fbcb22f9a1ca04aefa5b0b7eacd5ba0d8206e64",
+          "wall_ms": 8828.0
+        }
+      ],
+      "dispatched_tools": 0,
+      "host_rejection": "UNKNOWN_TOOL",
+      "corrected_tool": "get_order"
+    },
+    {
+      "kind": "real_model_correction_after_injected_invalid_assistant_fixture",
+      "injection": "malformed_arguments",
+      "passed": true,
+      "requests": [
+        {
+          "number": 1,
+          "usage_known": true,
+          "prompt_tokens": 451,
+          "output_tokens": 26,
+          "server_total_ms": 5326.01,
+          "server_load_ms": 443.47,
+          "done_reason": "stop",
+          "message_sha256": "7aed5f058b29f912d254a4e5d61075a67a8ea7f38bb8c0c0aca2b51a0663bc49",
+          "wall_ms": 5344.0
+        }
+      ],
+      "dispatched_tools": 0,
+      "host_rejection": "INVALID_ARGUMENTS",
+      "corrected_tool": "get_order"
+    }
+  ],
+  "all_passed": false
+}
