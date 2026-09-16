@@ -143,7 +143,9 @@ def test_absent_mount_disables_output_and_records_stay_bounded(
 
 
 @run_async
-@pytest.mark.parametrize("failure", ["none", "http_error", "truncated"])
+@pytest.mark.parametrize(
+    "failure", ["none", "http_error", "truncated", "encoding", "oversized"]
+)
 async def test_real_send_boundary_preserves_response_completeness(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failure: str
 ) -> None:
@@ -163,7 +165,11 @@ async def test_real_send_boundary_preserves_response_completeness(
             writer,
             status=503 if failure == "http_error" else 200,
             body=chat_body(),
-            headers={"Content-Length": "65536"} if failure == "truncated" else None,
+            headers={
+                "truncated": {"Content-Length": "65536"},
+                "encoding": {"Content-Encoding": "gzip"},
+                "oversized": {"Content-Length": "65537"},
+            }.get(failure),
         )
 
     clock = Clock()
@@ -190,9 +196,101 @@ async def test_real_send_boundary_preserves_response_completeness(
         "finish",
     ]
     assert observed[1]["response_complete"] is False
-    assert observed[-1]["response_complete"] == (failure != "truncated")
+    incomplete = failure in {"truncated", "encoding", "oversized"}
+    assert observed[-1]["response_complete"] == (not incomplete)
     assert observed[-1]["http_status"] == (503 if failure == "http_error" else 200)
     assert observed[0]["origin"] == server.origin
+    diagnostic = tmp_path / (CALL + ".failure.json")
+    if incomplete:
+        raw = diagnostic.read_bytes()
+        assert b"PRIVATE-CUSTOMER-BODY" not in raw and b"dummy-credential" not in raw
+        value = json.loads(raw)
+        assert value["physical_call_id"] == CALL
+        assert (
+            value["reason"]
+            == {
+                "truncated": "http_error",
+                "encoding": "content_encoding",
+                "oversized": "size_limit",
+            }[failure]
+        )
+        assert value["stage"] == ("body" if failure == "truncated" else "headers")
+        assert value["buffered_bytes"] == (
+            len(chat_body()) if failure == "truncated" else 0
+        )
+    else:
+        assert not diagnostic.exists()
+
+
+def test_failure_diagnostic_excludes_unbounded_text_and_preserves_first_fact(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Diagnostic failures never expose raw errors or replace the first fact."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    audit = outbound_audit.begin(
+        request(), CALL, start_frame(), "https://api.deepseek.com"
+    )
+    assert audit is not None
+    path = tmp_path / (CALL + ".failure.json")
+    audit.failure(stage="body", reason="PRIVATE-CUSTOMER-BODY", buffered_bytes=4)
+    assert not path.exists()
+    audit.failure(stage="body", reason="cancelled", buffered_bytes=4)
+    first = path.read_bytes()
+    audit.failure(stage="headers", reason="size_limit", buffered_bytes=0)
+    assert path.read_bytes() == first
+
+
+@run_async
+async def test_cancel_during_real_body_read_records_only_safe_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Cancellation retains unknown usage and joins the actual TCP request."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    headers_seen, disconnected = asyncio.Event(), asyncio.Event()
+    original = outbound_audit.OutboundAudit.record
+
+    def record(self: outbound_audit.OutboundAudit, event: Any, **kwargs: Any) -> None:
+        original(self, event, **kwargs)
+        if event == "http_response":
+            headers_seen.set()
+
+    monkeypatch.setattr(outbound_audit.OutboundAudit, "record", record)
+    partial = b"PRIVATE-PROVIDER-PARTIAL"
+
+    async def handler(
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        incoming: ReceivedRequest,
+    ) -> None:
+        writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 65536\r\n\r\n" + partial)
+        await writer.drain()
+        await reader.read()
+        disconnected.set()
+
+    clock = Clock()
+    hooks = Hooks(clock)
+    async with HTTPFaultServer(handler) as server:
+        dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
+        task = asyncio.create_task(
+            dispatcher.execute(request(), context=context(), validate=valid)
+        )
+        try:
+            await asyncio.wait_for(headers_seen.wait(), 1)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, 1)
+            await asyncio.wait_for(disconnected.wait(), 1)
+            assert len(server.requests) == 1 and hooks.observations == []
+            reports = dispatcher.recorded_usage()
+            assert len(reports) == 1 and reports[0]["usage"] is None
+            assert reports[0]["provider_audit"]["response_complete"] is False
+        finally:
+            await dispatcher.aclose()
+    raw = (tmp_path / (CALL + ".failure.json")).read_bytes()
+    assert partial not in raw and b"dummy-credential" not in raw
+    value = json.loads(raw)
+    assert value["reason"] == "cancelled" and value["stage"] == "body"
+    assert 0 <= value["buffered_bytes"] <= len(partial)
 
 
 @run_async

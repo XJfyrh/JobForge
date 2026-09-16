@@ -59,7 +59,7 @@ func supportPrepareFixture(t *testing.T) (supportPrepareOptions, supportSource) 
 	source := supportSource{SchemaVersion: 1, Definition: d, BuildReceipt: r, DataReview: r, ScoringReview: r, PriceSnapshot: r}
 	o := supportPrepareOptions{Repo: repo, Source: filepath.Join(tmp, "source.json"), ProfileID: "support-prepare-test-v1", WorkerID: "support-prepare-test-worker",
 		BatchID: "00000000-0000-4000-8000-000000000001", BatchKey: "support-prepare-test-batch", NorthID: "00000000-0000-4000-8000-000000000002",
-		SouthID: "00000000-0000-4000-8000-000000000003", ValidFrom: "2026-09-16T12:00:00Z", Out: filepath.Join(tmp, "prepared")}
+		SouthID: "00000000-0000-4000-8000-000000000003", ValidFrom: "2026-09-16T12:00:00Z", Out: filepath.Join(tmp, "prepared"), BatchCostMicroyuan: 5000000}
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -193,6 +193,59 @@ func TestPrepareSupportRejectsUnreviewedSourcesAndInvalidBatch(t *testing.T) {
 				t.Fatal("invalid preparation accepted")
 			}
 		})
+	}
+}
+
+func TestPrepareSupportReducedBatchCapPreservesOtherLimits(t *testing.T) {
+	o, _ := supportPrepareFixture(t)
+	o.BatchCostMicroyuan = 2846003
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"control.disabled.json", "control.enabled.json"} {
+		config, err := readDeployment(deploymentFile(t, string(files[name])))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := supportBudget(40)
+		want.CostMicroyuan = o.BatchCostMicroyuan
+		if config.Budgets[0].Limits != want || config.Budgets[1].Limits != supportBudget(20) ||
+			config.Budgets[2].Limits != supportBudget(20) || config.Profiles[0].FamilyCostMicroyuan != 5000000 {
+			t.Fatal("reduced batch cap changed another budget boundary")
+		}
+		var launch supportLaunch
+		if json.Unmarshal(files["launch.json"], &launch) != nil || launch.ConfigSHA256[name] != supportSHA256(files[name]) {
+			t.Fatal("reduced cap is not bound by the launch configuration digest")
+		}
+	}
+}
+
+func TestPrepareSupportRejectsInvalidCostCap(t *testing.T) {
+	for _, cap := range []int64{-1, 0, 5000001} {
+		o, _ := supportPrepareFixture(t)
+		o.BatchCostMicroyuan = cap
+		if _, err := prepareSupportFiles(o); err == nil {
+			t.Fatalf("invalid cap accepted: %d", cap)
+		}
+		o.BatchCostMicroyuan = 5000000
+		files, err := prepareSupportFiles(o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var config deployment
+		if err := json.Unmarshal(files["control.disabled.json"], &config); err != nil {
+			t.Fatal(err)
+		}
+		config.Budgets[0].Limits.CostMicroyuan = cap
+		if _, err := readDeployment(deploymentFile(t, string(supportJSON(config)))); err == nil {
+			t.Fatalf("invalid deployment cap accepted: %d", cap)
+		}
+	}
+	for _, value := range []string{"bad", "1.5", "9223372036854775808"} {
+		if err := prepareSupport([]string{"--batch-cost-microyuan", value}); err == nil {
+			t.Fatal("invalid integer cap accepted")
+		}
 	}
 }
 

@@ -4,11 +4,11 @@
 
 两个租户各 20 案共享一个有界 batch，期限 6 小时，Worker、tenant、profile 容量均为 1。每案最多一次 Submit 尝试；方案停在 `awaiting_approval` 供评估，不批准方案、不写工单。[首批实际结果](evidence/agent-v3-s1-first-cloud-2026-09-16.md)未通过：15案执行结束、第16案中断，余下24案未尝试；本页命令不能用于重启已经停止的原批次。
 
-2026-09-17 收尾授权由 [PR #53 的 PRD v0.14 / ADR-0022](https://github.com/XJfyrh/JobForge/pull/53) 已独立审查并合并，授权现已生效：本次全部新增批次累计不超过 **5 CNY**。启动前必须确认前批派发者实际退出、原 chat 的报告/known/普通观察及 Commit 或窄二次纠正失败屏障完整，并从 5,000,000 microyuan 扣除本授权已启动批次的 known 与未释放 monetary hold；共享 batch 只计一次，不叠加 tenant/family 镜像。原首批费用单列，原 unknown/hold 和所有记录保留。新授权不恢复旧批，也不允许跨批挑选成功案例拼成 40 案。当前生成器固定首个新批次的 5 CNY；若后续需较小 batch cap，须先完成相应最小实现和验证，不能手改已冻结配置扩额。
+2026-09-17 收尾授权由 [PR #53 的 PRD v0.14 / ADR-0022](https://github.com/XJfyrh/JobForge/pull/53) 已独立审查并合并，授权现已生效：本次全部新增批次累计不超过 **5 CNY**。启动前必须确认前批派发者实际退出，按当前准入合同核对原调用及上界，并从 5,000,000 microyuan 扣除本授权已启动批次的 known 与未释放 monetary hold；共享 batch 只计一次，不叠加 tenant/family 镜像。原首批费用单列，原 unknown/hold 和所有记录保留。新授权不恢复旧批，也不允许跨批挑选成功案例拼成 40 案。生成器支持 `--batch-cost-microyuan`（整数 1～5,000,000），省略时为 5 CNY。后续批次必须显式传入不超过剩余额度的值；仅共享 batch 额度降低，tenant/family/profile 不变，不手改已冻结配置。
 
 本页的[独立干净环境复现](evidence/agent-v3-s1-reproduction-2026-09-17.md)已完成必要部署/SDK/停止检查，未调用收费模型，不代表新的 40 案已经验收。
 
-**当前停止状态：** [本次新批真实报告](evidence/agent-v3-s1-closeout-2026-09-17.md)为14方案完成、DEV-015中断、25未尝试；其chat完整响应/计量不可得，`CHAT_USAGE_UNKNOWN`冻结并保留全额hold。当前授权下不得启动新批绕过未完成的持久确认。以下launch命令是复现说明，不是继续执行许可。
+**当前停止状态：** [本次新批真实报告](evidence/agent-v3-s1-closeout-2026-09-17.md)为14方案完成、DEV-015中断、25未尝试；其chat完整响应/计量不可得，`CHAT_USAGE_UNKNOWN`冻结并保留全额hold。后续 [ADR-0023](adr/0023-held-unknown-cross-batch-admission.md) 随 PR #54 合并后，允许符合条件的已停止传输失败保留全部 hold，按剩余额度准入独立新批；不要求补造旧 known/普通观察/Commit。身份失配、计量超界、报告冲突等不适用。以下命令仍须绑定最新账本、具体授权与构建，不能重启原批。
 
 ## 环境、数据库与安装
 
@@ -97,7 +97,7 @@ docker compose @reproDC up -d --wait business-postgres control-postgres ollama
 
 ## 三分钟操作路线
 
-以下从仓库根目录使用 PowerShell 7。三分钟指阅读操作路线，构建和真实推理耗时不作承诺。`$profileID`、`$workerID`、`$batchID`、`$batchKey`、`$northID`、`$southID`、`$validFrom` 使用本批已记录的明确值；三个账户 ID 为不同 UUID，起点为 UTC RFC3339。不要在重跑时生成新 ID 或新期限。
+以下从仓库根目录使用 PowerShell 7。三分钟指阅读操作路线，构建和真实推理耗时不作承诺。`$profileID`、`$workerID`、`$batchID`、`$batchKey`、`$northID`、`$southID`、`$validFrom` 使用本批已记录的明确值；三个账户 ID 为不同 UUID，起点为 UTC RFC3339。`$batchCostMicroyuan` 是启动前按各已启动共享 batch 的 known/held 核对并保存的剩余额度，必须显式填写；本次上一取样为 2,846,003，不把旧取样当作永久许可。不要在重跑时生成新 ID 或新期限。
 
 先准备外部 source、秘密、构建记录及目录；`prepared` 必须尚不存在。固定 state 目录属于这次部署，不能通过更换路径重启。Linux 主机上让容器 UID/GID 65532 可写 state、exports、outbound，可读秘密文件，限制其他用户读取。
 
@@ -122,7 +122,8 @@ $dc = @('-f', 'deploy/compose.agent.yaml', '-f', 'deploy/compose.support-cloud.y
 go run ./cmd/agent-control prepare-support --repo $repo --source "$batch/source.json" `
   --profile-id $profileID --worker-id $workerID --batch-id $batchID --batch-key $batchKey `
   --north-account-id $northID --south-account-id $southID `
-  --valid-from $validFrom --out $env:JOBFORGE_CLOUD_CONFIG_DIR
+  --valid-from $validFrom --batch-cost-microyuan $batchCostMicroyuan `
+  --out $env:JOBFORGE_CLOUD_CONFIG_DIR
 & $py -m tools.support_evaluation.assemble register `
   --config $env:JOBFORGE_CLOUD_CONFIG_DIR --out "$batch/registration.json"
 ```
@@ -176,7 +177,7 @@ Get-Content -Raw tools/support_evaluation/business_audit.sql | `
 
 原始导出位于 `$batch/exports/<UTC目录>`，包含全部 40 行 `rows.json`、逐案 SDK 原始响应及抓取摘要、`evidence.json`、`events.json` 和完成记录。`state/<batch UUID>` 保留 setup/attempted/stopped；`outbound` 保留实际 HTTP 边界的有界元数据。不要删除状态目录、重启收费容器、重置账户或换 batch 续跑；独立后续新批只能按已接受的累计授权重新准入。
 
-`stopped.json` 的 `stop_reason` 区分 `worker_exited`、`driver_exited`、`signal`、`batch_deadline` 和 `launcher_error`，并保存两个子进程实际 `returncode`（未创建为 null，信号退出为负数）。Worker 的固定错误分类和清理 receipt 字段写入上述 stderr 文件；不记录原始子进程输出、RPC 错误文本或模型正文。`graceful` 只表示在宽限内完成 Wait，不代表内部执行或清理成功。首批旧记录缺少这些字段，不能据此反推当时的触发来源；见[后续最小修复](evidence/agent-v3-s1-cloud-fixes-2026-09-16.md)。
+`stopped.json` 的 `stop_reason` 区分 `worker_exited`、`driver_exited`、`signal`、`batch_deadline` 和 `launcher_error`，并保存两个子进程实际 `returncode`（未创建为 null，信号退出为负数）。`outbound/<physical_call_id>.failure.json` 在响应读取不完整时追加固定 `stage`（send/headers/body）、`reason` 与 `buffered_bytes`（出错前已缓冲字节数，非完整响应长度）；可区分 header 拒绝、大小限制、HTTP错误/超时与取消，不包含原始异常或正文。文件只用于诊断，不参与许可、计量或评分完整性。Worker 的固定错误分类和清理 receipt 字段写入上述 stderr 文件；不记录原始子进程输出、RPC 错误文本或模型正文。`graceful` 只表示在宽限内完成 Wait，不代表内部执行或清理成功。首批旧记录缺少这些字段，不能据此反推当时的触发来源；见[后续最小修复](evidence/agent-v3-s1-cloud-fixes-2026-09-16.md)。
 
 已知 Run 的晚到报告或中断导出只能追加到新目录；下面的 export 模式只做 SDK 读取，不启动 Worker、不 Submit。将 `<原UTC目录>` 替换为实际目录名，保留原始导出。接纳未知且没有 Run ID 的行仍为提交未知，不能推断为零费用。
 

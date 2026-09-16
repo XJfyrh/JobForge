@@ -36,6 +36,7 @@ type supportSource struct {
 
 type supportPrepareOptions struct {
 	Source, Repo, ProfileID, WorkerID, BatchID, BatchKey, NorthID, SouthID, ValidFrom, Out string
+	BatchCostMicroyuan                                                                     int64
 }
 
 type supportCase struct {
@@ -69,6 +70,7 @@ func prepareSupport(args []string) error {
 	var o supportPrepareOptions
 	flags := flag.NewFlagSet("prepare-support", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
+	flags.Int64Var(&o.BatchCostMicroyuan, "batch-cost-microyuan", 5000000, "shared batch cost limit within the remaining authorization")
 	for name, target := range map[string]*string{"source": &o.Source, "repo": &o.Repo, "profile-id": &o.ProfileID,
 		"worker-id": &o.WorkerID, "batch-id": &o.BatchID, "batch-key": &o.BatchKey,
 		"north-account-id": &o.NorthID, "south-account-id": &o.SouthID, "valid-from": &o.ValidFrom, "out": &o.Out} {
@@ -95,6 +97,9 @@ func prepareSupport(args []string) error {
 }
 
 func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
+	if o.BatchCostMicroyuan <= 0 || o.BatchCostMicroyuan > 5000000 {
+		return nil, errors.New("batch cost limit must be between 1 and 5000000 microyuan")
+	}
 	from, err := time.Parse(time.RFC3339, o.ValidFrom)
 	if err != nil || from.Format(time.RFC3339) != o.ValidFrom || !strings.HasSuffix(o.ValidFrom, "Z") ||
 		!run.ValidIdentifier(o.ProfileID) || !run.ValidIdentifier(o.WorkerID) || !run.ValidIdentifier(o.BatchKey) ||
@@ -143,6 +148,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			{ID: o.NorthID, Scope: "tenant", Key: tenants[0], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)},
 			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)}},
 		Bindings: []budgetBinding{{TenantID: tenants[0], BatchAccountID: o.BatchID, TenantAccountID: o.NorthID}, {TenantID: tenants[1], BatchAccountID: o.BatchID, TenantAccountID: o.SouthID}}}
+	config.Budgets[0].Limits.CostMicroyuan = o.BatchCostMicroyuan
 	files := map[string][]byte{}
 	files["control.disabled.json"] = supportJSON(config)
 	config.EnabledProfiles = []string{o.ProfileID}

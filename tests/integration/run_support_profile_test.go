@@ -18,6 +18,11 @@ import (
 // capture contents and artifact digests are explicitly synthetic mechanism evidence.
 func setupSupportProfileHarness(t *testing.T, profileID string) *runHarness {
 	t.Helper()
+	return setupSupportProfileBudgetHarness(t, profileID, 5000000)
+}
+
+func setupSupportProfileBudgetHarness(t *testing.T, profileID string, batchCap int64) *runHarness {
+	t.Helper()
 	ctx, pool := setupRunDB(t)
 	raw, err := os.ReadFile("../../api/support/profile-v1/fixtures.json")
 	if err != nil {
@@ -50,10 +55,12 @@ func setupSupportProfileHarness(t *testing.T, profileID string) *runHarness {
 	limits := agentrun.Usage{Chat: 480, LogicalTools: 320, QueryEmbedding: 320, ProfileMetadataHTTP: 640,
 		BusinessToolHTTP: 320, PhysicalHTTP: 1760, ProtocolCorrections: 40, Tokens: 503808000, CostMicroyuan: 5000000}
 	batchID := uuid.NewString()
+	limits.CostMicroyuan = batchCap
 	if err := store.CreateBudget(ctx, agentrun.BudgetSpec{ID: batchID, Scope: "batch", Key: "contract-batch",
 		ValidFrom: now.Add(-time.Minute), ValidUntil: now.Add(6*time.Hour - time.Minute), Limits: limits}); err != nil {
 		t.Fatal(err)
 	}
+	limits.CostMicroyuan = 5000000
 	for _, tenant := range []string{"tenant-north", "tenant-south"} {
 		tenantID := uuid.NewString()
 		if err := store.CreateBudget(ctx, agentrun.BudgetSpec{ID: tenantID, Scope: "tenant", Key: tenant,

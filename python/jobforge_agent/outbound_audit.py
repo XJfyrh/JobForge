@@ -31,6 +31,35 @@ class OutboundAudit:
 
     metadata: dict[str, Any] = field(repr=False)
 
+    def failure(self, *, stage: str, reason: str, buffered_bytes: int) -> None:
+        """Retain bounded failure facts separately from immutable send records."""
+        if stage not in {"send", "headers", "body"} or reason not in {
+            "content_encoding",
+            "content_length",
+            "size_limit",
+            "cancelled",
+            "http_timeout",
+            "http_error",
+            "incomplete",
+        }:
+            return
+        if type(buffered_bytes) is not int or not 0 <= buffered_bytes <= 262144:
+            return
+        try:
+            value = {
+                "schema_version": 1,
+                "physical_call_id": self.metadata["physical_call_id"],
+                "stage": stage,
+                "reason": reason,
+                "buffered_bytes": buffered_bytes,
+            }
+            path = _DIRECTORY / (self.metadata["physical_call_id"] + ".failure.json")
+            with path.open("x", encoding="ascii") as target:
+                os.chmod(path, 0o600)
+                target.write(json.dumps(value, separators=(",", ":")) + "\n")
+        except (OSError, ValueError, TypeError):
+            return
+
     def record(
         self,
         event: Literal["dispatch_attempt", "http_response", "finish"],

@@ -200,6 +200,13 @@ func readDeployment(path string) (deployment, error) {
 			}
 		}
 	}
+	if slices.ContainsFunc(config.Profiles, func(p agentrun.Profile) bool { return p.Strategy == agentrun.SupportFixedStrategy }) {
+		for _, budget := range config.Budgets {
+			if budget.Scope == "batch" && (budget.Limits.CostMicroyuan <= 0 || budget.Limits.CostMicroyuan > 5000000) {
+				return config, errors.New("support batch cost limit must be between 1 and 5000000 microyuan")
+			}
+		}
+	}
 	return config, nil
 }
 
