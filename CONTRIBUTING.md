@@ -87,6 +87,8 @@ Pull Request 至少应包含正常路径和一个相关失败路径的测试；�
 
 Agent v3 S1-A另运行`python -m pytest python/tests`、`mypy python/jobforge_agent`；独立业务库启动、`JOBFORGE_BUSINESS_TEST_DSN`和跨语言解释器配置见[业务开发指南](docs/agent-v3-business.md)。CI专门使用固定pgvector镜像运行真实HTTP/PG/race，不以普通Go测试中的依赖skip代替。真实模型层保留20条查询的全部结果和未命中，不能用合成向量证明检索质量。
 
+Agent v3 S1-B新增的 `TestRun*` 使用真实控制PostgreSQL，并通过独立数据库隔离各用例；实际HTTP故障服务与模型替身的边界见 [Run指南](docs/agent-v3-runs.md)。生产 `agent-control` 只启动Run扫描，不并行运行旧jobs调度器。新Proto生成仍使用 `buf generate`，执行器Go/Python共同fixture与已安装SDK真实HTTP均为门禁。Run定向性能只记录新基线，不改变历史W4失败或AT-25跳过结论。
+
 ## 安全问题
 
 不要在公开 Issue 或 Pull Request 中提交未公开漏洞、凭据或敏感数据。请遵循 [SECURITY.md](SECURITY.md) 的私密报告流程。

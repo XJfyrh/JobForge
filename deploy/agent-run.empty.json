@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "tenants": ["tenant-north", "tenant-south"],
+  "profiles": [],
+  "enabled_profiles": [],
+  "workers": [
+    {
+      "worker_id": "agent-worker-1",
+      "tenants": ["tenant-north", "tenant-south"],
+      "profile_ids": [],
+      "capacity": 1
+    }
+  ],
+  "tenant_capacity": 1,
+  "profile_capacity": 2,
+  "budgets": [],
+  "bindings": []
+}

@@ -13,21 +13,43 @@ Usage:
 from jobforge.client import JobForgeClient
 from jobforge.errors import (
     AlreadyTerminalError,
+    BudgetExhaustedError,
     CancelRequestedError,
     ConflictError,
+    DependencyUnavailableError,
     ForbiddenError,
     InternalError,
     InvalidArgumentError,
     InvalidTransitionError,
     JobForgeError,
     NotFoundError,
+    ProfileUnavailableError,
     QueueOverloadedError,
+    RateLimitedError,
     RequestTimeoutError,
     StaleLeaseError,
     TransportError,
     UnauthorizedError,
 )
 from jobforge.models import Job, JobState
+from jobforge.run_client import RunClient
+from jobforge.run_models import (
+    BudgetAccount,
+    Run,
+    RunBudget,
+    RunCancellation,
+    RunError,
+    RunEvent,
+    RunEventPage,
+    RunPage,
+    RunResult,
+    RunState,
+    RunStep,
+    RunStepPage,
+    RunSubmission,
+    RunUsage,
+    VersionVector,
+)
 
 __all__ = [
     "JobForgeClient",
@@ -47,6 +69,26 @@ __all__ = [
     "StaleLeaseError",
     "TransportError",
     "UnauthorizedError",
+    "RunClient",
+    "Run",
+    "RunState",
+    "RunError",
+    "RunSubmission",
+    "RunCancellation",
+    "RunPage",
+    "RunStep",
+    "RunStepPage",
+    "RunEvent",
+    "RunEventPage",
+    "RunResult",
+    "RunBudget",
+    "RunUsage",
+    "BudgetAccount",
+    "VersionVector",
+    "RateLimitedError",
+    "DependencyUnavailableError",
+    "ProfileUnavailableError",
+    "BudgetExhaustedError",
 ]
 
 __version__ = "0.1.0"

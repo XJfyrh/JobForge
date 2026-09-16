@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -320,6 +321,21 @@ func testHTTP(t *testing.T, store *business.Store, snapshotID string) {
 			}
 			if tc.status >= 400 && !bytes.Contains(body, []byte(`"error":{"code":`)) {
 				t.Fatal("missing stable error envelope")
+			}
+			if tc.name == "authorized" || tc.name == "first snapshot" || tc.name == "repeated snapshot" {
+				var metadata struct {
+					ID            string                 `json:"snapshot_id"`
+					ContentHash   string                 `json:"content_hash"`
+					VersionVector business.VersionVector `json:"version_vector"`
+				}
+				if err := json.Unmarshal(body, &metadata); err != nil {
+					t.Fatal(err)
+				}
+				stored, err := store.GetSnapshot(t.Context(), "tenant-north", metadata.ID)
+				if err != nil || metadata.ContentHash != stored.ContentHash ||
+					!reflect.DeepEqual(metadata.VersionVector, stored.VersionVector()) {
+					t.Fatalf("HTTP metadata changed the stored content identity or version vector: %v", err)
+				}
 			}
 		})
 	}

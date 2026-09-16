@@ -1,0 +1,1337 @@
+openapi: 3.1.0
+info:
+  title: JobForge Run API
+  version: 2.0.0
+  description: ADR-0017 S1-B source contract. At-least-once execution; external effects require business
+    idempotency. Public operator can submit/cancel/retry; reader can only query. Cross-tenant resources
+    return 404; missing role in own tenant returns 403. No model endpoint, fees, tenant, lease or arbitrary
+    code can be supplied. SDK performs no hidden retry, redirect, polling or protected-reference fetch.
+    No approval/write endpoints exist in this slice.
+security:
+- BearerAuth: []
+paths:
+  /v2/runs:
+    post:
+      operationId: submitRun
+      summary: Create or reuse the first Run for a stable business intent
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunSubmission'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '201':
+          description: New Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunSubmission'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRun'
+        description: At most 4096 bytes. Strict UTF-8 JSON with no duplicate fields or trailing values.
+    get:
+      operationId: listRuns
+      summary: List tenant Runs by descending creation time and ID
+      parameters:
+      - $ref: '#/components/parameters/State'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunPage'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}:
+    get:
+      operationId: getRun
+      summary: Read current Run state and conservative budget exposure
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/steps:
+    get:
+      operationId: listRunSteps
+      summary: Read protected accepted steps
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunStepPage'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/events:
+    get:
+      operationId: listRunEvents
+      summary: Read metadata-only events
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/After'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunEventPage'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/result:
+    get:
+      operationId: getRunResult
+      summary: Read explicit result availability
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/cancel:
+    post:
+      operationId: cancelRun
+      summary: Accept an idempotent cancellation; running enters stopping
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunCancellation'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRun'
+        description: At most 4096 bytes. Strict UTF-8 JSON with no duplicate fields or trailing values.
+  /v2/runs/{run_id}/retry:
+    post:
+      operationId: retryRun
+      summary: Create or reuse the sole successor of failed/cancelled Run
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunSubmission'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / ALREADY_TERMINAL / INVALID_TRANSITION / PROFILE_UNAVAILABLE / BUDGET_EXHAUSTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '201':
+          description: New Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunSubmission'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryRun'
+        description: At most 4096 bytes. Strict UTF-8 JSON with no duplicate fields or trailing values.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    RunID:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+        pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+      description: Submit scope is tenant+submit+key; cancel/retry scope is tenant+target Run+operation+key.
+        Same canonical content returns the accepted object; changed content conflicts. A new operation
+        key cannot fork an existing business root/successor.
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    After:
+      name: after
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 9007199254740991
+        default: 0
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 4096
+    State:
+      name: state
+      in: query
+      schema:
+        $ref: '#/components/schemas/RunState'
+    Traceparent:
+      name: traceparent
+      in: header
+      schema:
+        type: string
+      description: Optional W3C TraceContext. Not part of request identity.
+    Tracestate:
+      name: tracestate
+      in: header
+      schema:
+        type: string
+  schemas:
+    RunState:
+      type: string
+      enum:
+      - ready
+      - running
+      - stopping
+      - retry_wait
+      - awaiting_approval
+      - succeeded
+      - failed
+      - cancelled
+    SubmitRun:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - ticket_id
+      - business_request_key
+      - profile_id
+      - budget_batch_id
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        ticket_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        business_request_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        profile_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        budget_batch_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        run_timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+          default: 3600
+      description: Strict UTF-8 JSON, at most 4096 bytes. Reject unknown/duplicate/case-alias fields,
+        explicit null, trailing input and non-integer numeric forms. Normalize only the omitted timeout.
+        Tenant and roles come solely from authentication.
+    RetryRun:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        run_timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+          default: 3600
+      description: A successor inherits ticket, business intent, immutable profile and shared family/tenant/batch
+        accounts. Retry never replenishes budget. The original business retry window is seven days.
+    CancelRun:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+    RunError:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 128
+        message:
+          type: string
+          maxLength: 2048
+      description: Execution errors remain data on HTTP 200 GET responses.
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/RunError'
+      description: Sanitized nested error; no SQL, stack, credentials or full request content.
+    TicketVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - revision
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        revision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+    OrderVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - exists
+      - revision
+      properties:
+        id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        exists:
+          type: boolean
+        revision:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+      description: Missing rows retain the expected relationship ID; revision is null exactly when exists
+        is false.
+    DeliveryVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - exists
+      - aggregate_revision
+      properties:
+        id:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 128
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        exists:
+          type: boolean
+        aggregate_revision:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+      description: Missing rows retain the expected relationship ID. No order implies null delivery ID.
+        Aggregate revision is null exactly when exists is false.
+    PolicyVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - revision
+      - corpus_sha256
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        revision:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        corpus_sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+    IndexVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - profile_hash
+      - content_hash
+      properties:
+        id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        profile_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        content_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+    VersionVector:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - ticket
+      - order
+      - delivery
+      - policy
+      - index
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        ticket:
+          $ref: '#/components/schemas/TicketVersion'
+        order:
+          $ref: '#/components/schemas/OrderVersion'
+        delivery:
+          $ref: '#/components/schemas/DeliveryVersion'
+        policy:
+          $ref: '#/components/schemas/PolicyVersion'
+        index:
+          $ref: '#/components/schemas/IndexVersion'
+      description: Trusted metadata derived from the persisted immutable snapshot, not from a model or
+        current source rows.
+    RunUsage:
+      type: object
+      additionalProperties: false
+      required:
+      - chat
+      - logical_tools
+      - query_embedding
+      - profile_metadata_http
+      - business_tool_http
+      - physical_http
+      - protocol_corrections
+      - tokens
+      - cost_microyuan
+      properties:
+        chat:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        logical_tools:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        query_embedding:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        profile_metadata_http:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        business_tool_http:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        physical_http:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        protocol_corrections:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      description: 'Authorization counts never decrease. Tokens and CNY microyuan are conservative exposure:
+        known upper estimate plus reserved/unknown holds, not a provider invoice. All values are JSON-safe
+        integers.'
+    BudgetAccount:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      - id
+      - limits
+      - used
+      - frozen
+      - known_tokens
+      - known_cost_microyuan
+      - held_tokens
+      - held_cost_microyuan
+      properties:
+        scope:
+          type: string
+          enum:
+          - family
+          - tenant
+          - batch
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        limits:
+          $ref: '#/components/schemas/RunUsage'
+        used:
+          $ref: '#/components/schemas/RunUsage'
+        frozen:
+          type: boolean
+        known_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        known_cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        held_tokens:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        held_cost_microyuan:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      description: used.tokens = known_tokens + held_tokens; used.cost_microyuan = known_cost_microyuan
+        + held_cost_microyuan. Confirmed estimates use an immutable price profile. Anomalous trusted usage
+        freezes authorization without erasing accepted results.
+    RunBudget:
+      type: object
+      additionalProperties: false
+      required:
+      - family
+      - tenant
+      - batch
+      - run_usage
+      properties:
+        family:
+          $ref: '#/components/schemas/BudgetAccount'
+        tenant:
+          $ref: '#/components/schemas/BudgetAccount'
+        batch:
+          $ref: '#/components/schemas/BudgetAccount'
+        run_usage:
+          $ref: '#/components/schemas/RunUsage'
+    Run:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - tenant_id
+      - business_request_id
+      - business_request_key
+      - ticket_id
+      - retry_of_run_id
+      - profile_id
+      - profile_hash
+      - budget_batch_id
+      - snapshot_id
+      - snapshot_hash
+      - version_vector
+      - state
+      - outcome
+      - error
+      - attempt_no
+      - recovery_count
+      - cursor_version
+      - run_timeout_seconds
+      - run_deadline
+      - attempt_deadline
+      - lease_until
+      - next_attempt_at
+      - permission_expires_at
+      - proposal_ref
+      - stop_reason
+      - cancel_requested_at
+      - created_at
+      - updated_at
+      - budget
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        tenant_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        business_request_id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        business_request_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        ticket_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        retry_of_run_id:
+          anyOf:
+          - type: string
+            format: uuid
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+          - type: 'null'
+        profile_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        profile_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        budget_batch_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        snapshot_id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        snapshot_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        version_vector:
+          $ref: '#/components/schemas/VersionVector'
+        state:
+          $ref: '#/components/schemas/RunState'
+        outcome:
+          anyOf:
+          - type: string
+            enum:
+            - no_action
+            - applied
+            - rejected
+          - type: 'null'
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/RunError'
+          - type: 'null'
+        attempt_no:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        recovery_count:
+          type: integer
+          minimum: 0
+          maximum: 3
+        cursor_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        run_timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 86400
+          default: 3600
+        run_deadline:
+          type: string
+          format: date-time
+        attempt_deadline:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        lease_until:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        next_attempt_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        permission_expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        proposal_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+        stop_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+        cancel_requested_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        budget:
+          $ref: '#/components/schemas/RunBudget'
+      description: Only Run is schedulable. S1-B can produce no_action; applied/rejected remain reserved
+        for later approved actions. Nullable fields are always present. No Worker credentials, execution
+        token or raw business inputs are exposed.
+    RunSubmission:
+      type: object
+      additionalProperties: false
+      required:
+      - run
+      - reused
+      properties:
+        run:
+          $ref: '#/components/schemas/Run'
+        reused:
+          type: boolean
+    RunCancellation:
+      type: object
+      additionalProperties: false
+      required:
+      - operation_id
+      - run
+      - reused
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        run:
+          $ref: '#/components/schemas/Run'
+        reused:
+          type: boolean
+    RunPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - next_cursor
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Run'
+        next_cursor:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 4096
+          - type: 'null'
+      description: Descending (created_at, run_id). The opaque versioned cursor binds tenant and filter
+        but grants no authorization. Null next_cursor means no further page.
+    RunStep:
+      type: object
+      additionalProperties: false
+      required:
+      - step_id
+      - sequence
+      - kind
+      - input_hash
+      - profile_hash
+      - snapshot_hash
+      - commit_hash
+      - output_ref
+      - output
+      - cursor_version
+      - created_at
+      properties:
+        step_id:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        sequence:
+          type: integer
+          minimum: 1
+          maximum: 32
+        kind:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        input_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        profile_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        snapshot_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        commit_hash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        output_ref:
+          type: string
+        output: {}
+        cursor_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        created_at:
+          type: string
+          format: date-time
+      description: Protected accepted output; all checkpoints together are at most 256 KiB and 32 steps.
+        Individual tool output <=8 KiB and chat/proposal <=16 KiB. output_ref is run-step:<run_uuid>:<sequence>;
+        it is not a public URL. Kind is a registered server-side step.
+    RunStepPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - next_after
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/RunStep'
+        next_after:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+      description: Ascending sequence. next_after is the last returned sequence only if another page exists;
+        otherwise null.
+    RunEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - sequence
+      - event_type
+      - state
+      - attempt_no
+      - cursor_version
+      - created_at
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        event_type:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        state:
+          $ref: '#/components/schemas/RunState'
+        attempt_no:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        cursor_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        created_at:
+          type: string
+          format: date-time
+      description: Metadata only; no model/tool content, protected output or internal reasoning.
+    RunEventPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - next_after
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/RunEvent'
+        next_after:
+          anyOf:
+          - type: integer
+            minimum: 0
+            maximum: 9007199254740991
+          - type: 'null'
+      description: Ascending sequence. next_after is the last returned sequence only if another page exists;
+        otherwise null.
+    RunResult:
+      type: object
+      additionalProperties: false
+      required:
+      - available
+      - kind
+      - ref
+      properties:
+        available:
+          type: boolean
+        kind:
+          anyOf:
+          - type: string
+            enum:
+            - proposal
+            - no_action
+            - final
+          - type: 'null'
+        ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+      description: Unavailable means available=false and kind/ref=null. Available means kind and ref are
+        non-null. awaiting_approval exposes a proposal, never an applied action. References require current
+        tenant authorization and are not fetched automatically.

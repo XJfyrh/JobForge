@@ -416,4 +416,6 @@ go tool pprof http://127.0.0.1:6060/debug/pprof/goroutine
 
 ## 通用 Agent/RAG 业务开发
 
+Agent v3 的新控制服务、API/SDK 与逐物理调用账本按 [Run 开发指南](agent-v3-runs.md) 启动。S1-B 确定性验收使用真实 PostgreSQL/HTTP；测试 profile 与正式 DeepSeek 执行器分层，默认 Compose 不登记收费模型。Windows 必须先启动端口5433的可重建 PostgreSQL，并设置 `JOBFORGE_TEST_DSN` 和已安装 SDK 的 `JOBFORGE_TEST_PYTHON`；不要并发运行多个会清理同一 DSN 的集成测试进程。
+
 真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。

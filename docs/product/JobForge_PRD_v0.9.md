@@ -1,6 +1,6 @@
 # JobForge PRD v0.9：S1-B Run 执行身份与调用账本
 
-- 日期：2026-09-16；状态：提案，待独立审查和合并；本文件不代表实现通过。
+- 日期：2026-09-16；状态：契约随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受；本文件不代表实现通过。
 - 基线：[PRD v0.7](JobForge_PRD_v0.7.md)、[v0.8](JobForge_PRD_v0.8.md)。本增量细化 S1-B，不改变 S2～S5 的退出条件。
 - 决策：[ADR-0017](../adr/0017-run-admission-and-call-ledger.md)。S1-A 已经 [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 合并，不能代替本切片验收。
 

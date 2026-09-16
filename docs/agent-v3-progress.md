@@ -14,9 +14,9 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A已合并；S1-B契约评审中，B/C尚未实现 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。云端推理/Run账本/固定流程仍未验收 |
-| S2 Agent 与预算 | 未开始 | 无生产 Agent Run/额度表验收 |
-| S3 步骤恢复 | 未开始 | 无新 Run checkpoint 验收 |
+| S1 业务与基线 | S1-A已合并；S1-B契约PR #39已接受，实现分支验证中；C未实现 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run性能基线，尚待PR CI和独立实现审查；云端推理/固定流程仍未验收 |
+| S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
+| S3 步骤恢复 | 未开始 | S1-B提供checkpoint事务；正式Worker/执行器真实进程恢复仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
 | S5 评测与展示 | 未开始 | 无新保留集、页面或观测验收 |
 
@@ -58,14 +58,20 @@ DeepSeek账号/凭据只读检查已通过，推理费用上限及调用账本�
 
 原有远程模型与生产长期留存未验收、W4性能门禁失败、AT-25跳过继续保留在[旧审查记录](agent-rag-review.md)与历史报告。本轮没有重新验收或改写它们，亦不作为v3通过证据。仓库外决策档案位于 `E:\JobForge-notes\2026-09-16-agent-v3-s0`。
 
-## S1启动
+## S1启动（历史记录）
 
 2026-09-16从 `8708308` 开始，当前只提交[PRD v0.8](product/JobForge_PRD_v0.8.md)、[ADR-0016草案](adr/0016-business-snapshots-and-policy-retrieval.md)及[切片计划](plans/agent-v3-s1-implementation.md)，尚无S1实现。先落真实业务HTTP/快照与固定本地embedding的pgvector检索，再以有效Run租约和持久账本接入DeepSeek及固定流程；不建立绕过账本的收费探针。后续决定与验证另存 `E:\JobForge-notes\2026-09-16-agent-v3-s1`。
 
-## S1-A 合并与 S1-B 契约
+## S1-A 合并与 S1-B 契约（历史记录）
 
 2026-09-16，[PR #38](https://github.com/XJfyrh/JobForge/pull/38) 已合并，提交 `6924b71`。最终审查 head 为 `db8206cb563707a9d26036c3f66e75fc38c1134e`，两份独立上下文审查无剩余阻断；[机械CI](https://github.com/XJfyrh/JobForge/actions/runs/35059776718)七项和[原有真实模型工作流](https://github.com/XJfyrh/JobForge/actions/runs/35059776725)一项通过。后者不证明新 DeepSeek Agent 通过。
 
 Windows全仓race有405个测试通过事件、5个明确skip；新增业务真实PG/HTTP/Python契约实际通过。独立新模型卷真实生成20段向量并完成20查询，Hit@3=19/20、MRR@3=0.808333；RQ06未命中保留。最终补丁修复float32极小/极大向量边界，定向race和最终容器HTTP 400检查通过；详见S1-A证据及仓库外归档。当前Docker恢复正常，业务服务和两个PostgreSQL实例可用。
 
 接下来按 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017提案](adr/0017-run-admission-and-call-ledger.md) 审查 S1-B 的接纳、Run租约、共享家族额度及逐物理调用合同。尚无生产Run/账本、正式执行器或收费chat请求，S1整体仍未完成。历史W4失败、AT-25跳过、远程模型和生产留存未验收不变。
+
+## S1-B 实现验证
+
+2026-09-16，契约 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 已合并（`696404e`）。实现分支交付独立 `agent-control`、Run HTTP/SDK/Worker RPC、原子执行权、检查点和三层逐调用账本。Windows全仓race通过765个测试事件，5个测试skip明确保留；后补接纳/Claim/审批与128Run定向性能另已实际运行。新控制Compose从空库完成bootstrap和健康/鉴权查询。详见[需求映射与证据](evidence/agent-v3-s1b-runs-2026-09-16.md)。
+
+当前仍待实现PR的CI与独立上下文审查，不能将S1-B或整个S1标成已交付。正式执行器与DeepSeek收费调用未开始；真实模型、完整Agent质量、生产留存以及历史W4失败和AT-25跳过继续分别披露。

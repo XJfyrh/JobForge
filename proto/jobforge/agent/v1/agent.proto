@@ -1,0 +1,527 @@
+// Agent Run Worker protocol. PostgreSQL is the execution authority; all RPCs
+// require a deadline and a separately authenticated internal Worker principal.
+syntax = "proto3";
+
+package jobforge.agent.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1;agentv1";
+
+// AgentService authorizes sequential Run execution, never arbitrary code or URLs.
+// Errors carry google.rpc.ErrorInfo.reason with the ADR-0017 domain error code.
+service AgentService {
+  // Register binds a process startup identity to a configured Worker principal.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  // Claim atomically grants at most one Run; capacity is server configured.
+  rpc Claim(ClaimRequest) returns (ClaimResponse);
+  // Heartbeat renews a live lease or requests local executor termination.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // GetCheckpoint reads committed results without checking remaining budget.
+  rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
+  // BeginTool counts one logical tool invocation; duplicates never authorize redo.
+  rpc BeginTool(BeginToolRequest) returns (BeginToolResponse);
+  // ReserveCall grants one physical send only when newly_reserved is true.
+  rpc ReserveCall(ReserveCallRequest) returns (ReserveCallResponse);
+  // ObserveCall records a current execution observation without advancing cursor.
+  rpc ObserveCall(ObserveCallRequest) returns (ObserveCallResponse);
+  // SettleUsage settles only an existing call from its original principal/session.
+  // It requires no live lease and cannot clear active_call or change Run state.
+  rpc SettleUsage(SettleUsageRequest) returns (SettleUsageResponse);
+  // CommitStep atomically stores a bounded result and computes the next cursor.
+  rpc CommitStep(CommitStepRequest) returns (CommitStepResponse);
+  // FailAttempt closes a current attempt after its local executor has stopped.
+  rpc FailAttempt(FailAttemptRequest) returns (FailAttemptResponse);
+  // AcknowledgeStopped closes stopping with its original attempt/session/token.
+  rpc AcknowledgeStopped(AcknowledgeStoppedRequest) returns (AcknowledgeStoppedResponse);
+  // GetAcceptedCommit confirms lost ACKs read-only, including released leases.
+  rpc GetAcceptedCommit(GetAcceptedCommitRequest) returns (GetAcceptedCommitResponse);
+}
+
+// SessionIdentity is correlation, not authentication; principal comes from RPC auth.
+message SessionIdentity {
+  // Server-bound Worker ID, never a caller-selected authorization grant.
+  string worker_id = 1;
+  // Random server-issued session UUID for one registered process startup.
+  string session_id = 2;
+}
+
+// ExecutionIdentity fences every normal write; all fields must match stored state.
+message ExecutionIdentity {
+  // Tenant from the claimed Run, constrained by the authenticated allowlist.
+  string tenant_id = 1;
+  // Claimed Run UUID.
+  string run_id = 2;
+  // Original authenticated Worker session.
+  SessionIdentity session = 3;
+  // Positive attempt number, distinct from recovery_count, at most 2^53-1.
+  int64 attempt_no = 4;
+  // Positive monotonically increasing fencing token, at most 2^53-1.
+  int64 fencing_token = 5;
+}
+
+// StepIdentity binds an operation to the server-selected next step and resources.
+message StepIdentity {
+  // Unique step UUID within this Run.
+  string step_id = 1;
+  // One-based sequence, at most 32.
+  int32 sequence = 2;
+  // Registered step kind; unspecified is rejected.
+  StepKind kind = 3;
+  // Expected nonnegative cursor version, at most 2^53-1.
+  int64 cursor_version = 4;
+  // Lowercase SHA-256 of canonical step input.
+  string input_hash = 5;
+  // Immutable registered profile version identifier.
+  string profile_id = 6;
+  // Lowercase SHA-256 of that immutable profile.
+  string profile_hash = 7;
+  // Captured immutable business snapshot UUID.
+  string snapshot_id = 8;
+  // Lowercase SHA-256 of captured snapshot content.
+  string snapshot_hash = 9;
+}
+
+// StepKind is the fixed S1 sequence; no arbitrary operation is accepted.
+enum StepKind {
+  // Missing kinds are invalid.
+  STEP_KIND_UNSPECIFIED = 0;
+  // Read the admitted ticket binding and evidence.
+  STEP_KIND_READ_TICKET = 1;
+  // Read snapshot-bound order facts.
+  STEP_KIND_GET_ORDER = 2;
+  // Read snapshot-bound delivery facts.
+  STEP_KIND_GET_DELIVERY = 3;
+  // Retrieve policies from the bound index.
+  STEP_KIND_SEARCH_POLICY = 4;
+  // Generate a structured proposal using the registered chat profile.
+  STEP_KIND_MODEL_PROPOSAL = 5;
+  // Apply the one permitted model protocol correction.
+  STEP_KIND_PROTOCOL_CORRECTION = 6;
+  // Validate and atomically yield a proposal or finish explicit no_action.
+  STEP_KIND_SUBMIT_PROPOSAL = 7;
+}
+
+// RunState is the control-plane lifecycle; proposal does not mean applied.
+enum RunState {
+  // Missing state is invalid.
+  RUN_STATE_UNSPECIFIED = 0;
+  // Eligible for Claim.
+  RUN_STATE_READY = 1;
+  // Held by a current execution lease.
+  RUN_STATE_RUNNING = 2;
+  // Awaiting local stop or lease expiry; cannot acquire new authority.
+  RUN_STATE_STOPPING = 3;
+  // Waiting for bounded failure recovery.
+  RUN_STATE_RETRY_WAIT = 4;
+  // Proposal accepted, execution lease released, no business write authorized.
+  RUN_STATE_AWAITING_APPROVAL = 5;
+  // Terminal successful Run; S1-B only produces no_action.
+  RUN_STATE_SUCCEEDED = 6;
+  // Terminal failure.
+  RUN_STATE_FAILED = 7;
+  // Terminal accepted cancellation.
+  RUN_STATE_CANCELLED = 8;
+}
+
+// RegisterRequest identifies one startup; it cannot declare capacity/allowlists.
+message RegisterRequest {
+  // Process-generated startup UUID; retries of the same startup reuse it.
+  string startup_id = 1;
+  // Bounded software version label, at most 128 ASCII characters.
+  string version = 2;
+}
+
+// RegisterResponse returns deployment-bound capabilities and session timing.
+message RegisterResponse {
+  // Identity bound to the authenticated principal and startup.
+  SessionIdentity session = 1;
+  // Session expires after 60 seconds without accepted liveness updates.
+  google.protobuf.Timestamp expires_at = 2;
+  // Suggested heartbeat interval, initially five seconds.
+  google.protobuf.Duration heartbeat_interval = 3;
+  // Server-authorized immutable profile identifiers.
+  repeated string profile_ids = 4;
+  // Server-configured simultaneous Run limit; initial maximum is one.
+  int32 capacity = 5;
+}
+
+// ClaimRequest asks for one Run from the configured session allowlist.
+message ClaimRequest {
+  // Live registered Worker session.
+  SessionIdentity session = 1;
+}
+
+// ClaimResponse has an absent lease when no eligible Run exists.
+message ClaimResponse {
+  // Optional single atomically claimed Run; never a batch.
+  RunLease lease = 1;
+}
+
+// RunLease contains execution authority and server-controlled deadlines.
+message RunLease {
+  // Fenced identity for this claim.
+  ExecutionIdentity execution = 1;
+  // Current lease expiry; never more than 30 seconds from renewal.
+  google.protobuf.Timestamp lease_until = 2;
+  // Fixed attempt deadline, at most 180 seconds from Claim.
+  google.protobuf.Timestamp attempt_deadline = 3;
+  // Fixed Run deadline from admission.
+  google.protobuf.Timestamp run_deadline = 4;
+  // Current accepted checkpoint and next registered step.
+  Checkpoint checkpoint = 5;
+  // Validated W3C traceparent; empty when no parent was supplied.
+  string trace_context = 6;
+}
+
+// Checkpoint is protected state, bounded to 256 KiB including all results.
+message Checkpoint {
+  // Nonnegative current cursor version, at most 2^53-1.
+  int64 cursor_version = 1;
+  // Next server-computed step; absent after a closing commit.
+  StepIdentity next_step = 2;
+  // At most 32 immutable accepted steps in ascending sequence order.
+  repeated AcceptedStep steps = 3;
+  // Immutable admission facts needed by the first step; counted in 256 KiB.
+  SnapshotBinding snapshot = 4;
+}
+
+// SnapshotBinding carries protected admitted facts, never model-supplied identity.
+message SnapshotBinding {
+  // Authenticated tenant of the admitted snapshot.
+  string tenant_id = 1;
+  // Authorized ticket identifier frozen at admission.
+  string ticket_id = 2;
+  // Immutable snapshot UUID.
+  string snapshot_id = 3;
+  // Complete snapshot content SHA-256.
+  string snapshot_hash = 4;
+  // Strict version-vector JSON object, at most 8 KiB.
+  bytes version_vector_json = 5;
+  // Protected admitted ticket JSON object, at most 8 KiB.
+  bytes ticket_binding_json = 6;
+  // Immutable retrieval index UUID.
+  string index_id = 7;
+  // Registered index profile SHA-256.
+  string index_profile_hash = 8;
+}
+
+// AcceptedStep contains the protected first result and its complete identity.
+message AcceptedStep {
+  // Accepted step identity.
+  StepIdentity step = 1;
+  // Lowercase SHA-256 over the complete canonical commit.
+  string commit_hash = 2;
+  // Strict UTF-8 JSON; tool at most 8 KiB, model/proposal at most 16 KiB.
+  bytes result_json = 3;
+  // Protected run-step:<run_uuid>:<sequence> reference, not a public URL.
+  string result_ref = 4;
+}
+
+// HeartbeatRequest refreshes a still-live session and optionally a running lease.
+// Both paths require the original principal and unexpired session; neither can
+// resurrect an expired session. An idle heartbeat never renews any Run lease.
+message HeartbeatRequest {
+  // Optional current execution; absent for idle session liveness only.
+  // If present, its session must equal session below or INVALID_ARGUMENT results.
+  ExecutionIdentity execution = 1;
+  // Required original session binding, authenticated independently of this body.
+  SessionIdentity session = 2;
+}
+
+// HeartbeatResponse never renews stopping; stop requires local process cleanup.
+message HeartbeatResponse {
+  // Explicit control; unspecified must fail closed.
+  ControlSignal signal = 1;
+  // Updated expiry for continue; unchanged expiry for stop.
+  google.protobuf.Timestamp lease_until = 2;
+  // Stable stop reason, empty for continue; contains no sensitive payload.
+  string stop_reason = 3;
+  // New live-session expiry; idle heartbeat returns no Run lease_until.
+  google.protobuf.Timestamp session_expires_at = 4;
+}
+
+// ControlSignal controls local execution, not provider-side cancellation.
+enum ControlSignal {
+  // Missing signal is invalid, never implicit permission.
+  CONTROL_SIGNAL_UNSPECIFIED = 0;
+  // Continue within the returned lease and fixed deadlines.
+  CONTROL_SIGNAL_CONTINUE = 1;
+  // Stop local waiting and processing, then acknowledge process cleanup.
+  CONTROL_SIGNAL_STOP = 2;
+}
+
+// GetCheckpointRequest reads progress under the authenticated Run binding.
+message GetCheckpointRequest {
+  // Current claimed execution identity.
+  ExecutionIdentity execution = 1;
+}
+
+// GetCheckpointResponse does not reserve or consume budget.
+message GetCheckpointResponse {
+  // Protected committed results and server-selected next step.
+  Checkpoint checkpoint = 1;
+}
+
+// BeginToolRequest reserves one logical invocation before its physical subcalls.
+message BeginToolRequest {
+  // Current live execution identity.
+  ExecutionIdentity execution = 1;
+  // Current expected registered tool step.
+  StepIdentity step = 2;
+  // Fresh logical tool invocation UUID; redo requires a fresh UUID and count.
+  string tool_invocation_id = 3;
+}
+
+// BeginToolResponse distinguishes first authorization from duplicate lookup.
+message BeginToolResponse {
+  // Accepted logical invocation UUID.
+  string tool_invocation_id = 1;
+  // Only true for the transaction that consumes a new logical invocation.
+  bool newly_started = 2;
+}
+
+// Subcall names one registered HTTP request; endpoint/method/path are trusted.
+enum Subcall {
+  // Missing subcalls are invalid.
+  SUBCALL_UNSPECIFIED = 0;
+  // Snapshot-bound order HTTP read.
+  SUBCALL_GET_ORDER = 1;
+  // Snapshot-bound delivery HTTP read.
+  SUBCALL_GET_DELIVERY = 2;
+  // Registered embedding server version metadata HTTP read.
+  SUBCALL_PROFILE_VERSION = 3;
+  // Registered embedding model tags metadata HTTP read.
+  SUBCALL_PROFILE_TAGS = 4;
+  // One query embedding HTTP request.
+  SUBCALL_QUERY_EMBEDDING = 5;
+  // One snapshot/index-bound business policy search HTTP request.
+  SUBCALL_SEARCH_POLICY = 6;
+  // One registered chat HTTP request, including a separate correction call.
+  SUBCALL_CHAT = 7;
+}
+
+// ReserveCallRequest asks for one physical send, without caller-selected prices.
+message ReserveCallRequest {
+  // Current live execution identity.
+  ExecutionIdentity execution = 1;
+  // Expected step and cursor, including profile/snapshot/input hashes.
+  StepIdentity step = 2;
+  // Fresh physical call UUID, never a provider idempotency guarantee.
+  string physical_call_id = 3;
+  // Logical invocation UUID for tools; empty for chat.
+  string tool_invocation_id = 4;
+  // Registered subcall validated against step and previous observations.
+  Subcall subcall = 5;
+  // Lowercase SHA-256 of canonical physical request parameters.
+  string parameter_hash = 6;
+  // Immutable registered integer price-table SHA-256.
+  string price_hash = 7;
+}
+
+// CallBudget expresses server-computed integer exposure; all values are <=2^53-1.
+message CallBudget {
+  // Nonnegative upper bound on input tokens.
+  int64 input_tokens = 1;
+  // Nonnegative upper bound on output tokens; chat maximum is 1024.
+  int64 output_tokens = 2;
+  // Nonnegative combined token hold, with checked integer addition.
+  int64 total_tokens = 3;
+  // Nonnegative CNY microyuan upper bound, never a float or billed-cost claim.
+  int64 cost_microyuan = 4;
+}
+
+// CallReservation is an audit record; its existence alone never permits sending.
+message CallReservation {
+  // Accepted physical call UUID.
+  string physical_call_id = 1;
+  // Original logical invocation UUID, empty for chat.
+  string tool_invocation_id = 2;
+  // Accepted registered physical subcall.
+  Subcall subcall = 3;
+  // Bound canonical request parameter hash.
+  string parameter_hash = 4;
+  // Immutable integer price-table hash.
+  string price_hash = 5;
+  // DB-clock reservation time; usage settlement expires 30 days later.
+  google.protobuf.Timestamp reserved_at = 6;
+  // Latest dispatch time, bounded by lease/attempt/Run/batch expiry.
+  google.protobuf.Timestamp dispatch_expires_at = 7;
+  // Fixed response deadline, at most 60 seconds, or 10 for free tools.
+  google.protobuf.Timestamp call_deadline = 8;
+  // Conservative token/cost hold applied atomically to all three accounts.
+  CallBudget budget = 9;
+  // Whether complete validated usage has settled this record.
+  bool usage_known = 10;
+}
+
+// ReserveCallResponse authorizes sending only on the first successful response.
+message ReserveCallResponse {
+  // Existing or newly created reservation; duplicate content is compared.
+  CallReservation reservation = 1;
+  // False on duplicate: never replay a send after a lost reservation ACK.
+  bool newly_reserved = 2;
+}
+
+// TransportOutcome separates network facts from business/step validity.
+enum TransportOutcome {
+  // Missing transport outcome is invalid.
+  TRANSPORT_OUTCOME_UNSPECIFIED = 0;
+  // Complete bounded HTTP response was received.
+  TRANSPORT_OUTCOME_RESPONSE = 1;
+  // No complete response; keep the full unknown hold unless usage is supplied.
+  TRANSPORT_OUTCOME_UNKNOWN = 2;
+}
+
+// BusinessOutcome is output validation, independent of transport and usage.
+enum BusinessOutcome {
+  // Missing outcome is invalid.
+  BUSINESS_OUTCOME_UNSPECIFIED = 0;
+  // Complete response passed the registered business/output validator.
+  BUSINESS_OUTCOME_ACCEPTED = 1;
+  // Complete response failed the registered business/output validator.
+  BUSINESS_OUTCOME_REJECTED = 2;
+  // No complete response is available to validate.
+  BUSINESS_OUTCOME_UNKNOWN = 3;
+}
+
+// UsageReport contains bounded trusted metering, never a caller-selected price.
+message UsageReport {
+  // Complete nonnegative provider input tokens, at most the reserved bound.
+  int64 input_tokens = 1;
+  // Complete nonnegative provider output tokens, at most the reserved bound.
+  int64 output_tokens = 2;
+  // Cache-hit subset of input tokens, as defined by the registered profile.
+  int64 cached_input_tokens = 3;
+  // Lowercase SHA-256 binding the complete trusted provider receipt.
+  string receipt_hash = 4;
+  // Lowercase SHA-256 binding canonical usage and receipt identity.
+  string usage_hash = 5;
+}
+
+// ObserveCallRequest reports only the current active call and never a cursor.
+message ObserveCallRequest {
+  // Current live execution identity.
+  ExecutionIdentity execution = 1;
+  // Expected step/cursor/resource identity.
+  StepIdentity step = 2;
+  // Active physical call UUID.
+  string physical_call_id = 3;
+  // Observed transport fact, independent of output validation.
+  TransportOutcome transport_outcome = 4;
+  // HTTP status 100..599 for a complete response, zero when unknown.
+  int32 http_status = 5;
+  // Stable bounded business/output error code, empty when accepted.
+  string error_code = 6;
+  // Optional complete trusted usage; absence preserves the full hold.
+  UsageReport usage = 7;
+  // Independent business/output validation result; never advances the step.
+  BusinessOutcome business_outcome = 8;
+  // Must exactly match usage presence; free HTTP calls cannot invent paid usage.
+  bool usage_known = 9;
+}
+
+// ObserveCallResponse reports ledger state without changing step progress.
+message ObserveCallResponse {
+  // Updated reservation audit record.
+  CallReservation reservation = 1;
+}
+
+// SettleUsageRequest can only settle the original authenticated call identity.
+message SettleUsageRequest {
+  // Original execution identity; an expired session/lease is permitted here.
+  ExecutionIdentity execution = 1;
+  // Original physical call UUID; no new record can be created.
+  string physical_call_id = 2;
+  // Complete profile-validated usage, not a receipt string alone.
+  UsageReport usage = 3;
+}
+
+// SettleUsageResponse confirms idempotent settlement without Run mutation.
+message SettleUsageResponse {
+  // True only for the first valid unknown-to-known settlement.
+  bool newly_settled = 1;
+  // Updated own-call audit record; active_call is never changed by this RPC.
+  CallReservation reservation = 2;
+}
+
+// CommitStepRequest commits content, never a caller-selected next cursor.
+message CommitStepRequest {
+  // Current live execution identity; checked even for duplicate content.
+  ExecutionIdentity execution = 1;
+  // Expected current step identity.
+  StepIdentity step = 2;
+  // Strict bounded UTF-8 result JSON, validated by the registered step schema.
+  bytes result_json = 3;
+  // Complete canonical commit SHA-256, verified by the server.
+  string commit_hash = 4;
+}
+
+// CommitStepResponse includes server-computed progress and lease disposition.
+message CommitStepResponse {
+  // Original immutable accepted commit.
+  AcceptedStep accepted_step = 1;
+  // New cursor version, never supplied by the Worker.
+  int64 cursor_version = 2;
+  // Run state after committing.
+  RunState state = 3;
+  // True for yield/terminal commits; lost ACKs use GetAcceptedCommit.
+  bool attempt_closed = 4;
+  // Next registered step, absent when the attempt closes.
+  StepIdentity next_step = 5;
+}
+
+// FailAttemptRequest reports a registered failure, not a caller retry policy.
+message FailAttemptRequest {
+  // Current fenced execution identity.
+  ExecutionIdentity execution = 1;
+  // Stable registered failure code; the server determines recovery eligibility.
+  string error_code = 2;
+  // Expected current step/cursor identity.
+  StepIdentity step = 3;
+}
+
+// FailAttemptResponse reports the resulting bounded recovery decision.
+message FailAttemptResponse {
+  // Resulting Run state.
+  RunState state = 1;
+  // Actual recoveries scheduled, distinct from attempt_no, initially at most 3.
+  int32 recovery_count = 2;
+  // Next eligible time, present only for retry_wait.
+  google.protobuf.Timestamp retry_at = 3;
+}
+
+// AcknowledgeStoppedRequest asserts local executor cleanup for the old attempt.
+message AcknowledgeStoppedRequest {
+  // Original execution identity; stopping may have an expired lease, never a new owner.
+  ExecutionIdentity execution = 1;
+}
+
+// AcknowledgeStoppedResponse reports convergence after the first close.
+message AcknowledgeStoppedResponse {
+  // Resulting Run state according to cancel/Run deadline/attempt-timeout priority.
+  RunState state = 1;
+  // Stable closed-attempt outcome for later read-only confirmation.
+  string attempt_outcome = 2;
+}
+
+// GetAcceptedCommitRequest is authorized read-only confirmation after a lost ACK.
+message GetAcceptedCommitRequest {
+  // Original execution binding; no live lease or available budget is required.
+  ExecutionIdentity execution = 1;
+  // Exact step UUID whose complete commit hash is being confirmed.
+  string step_id = 2;
+}
+
+// GetAcceptedCommitResponse is evidence, never renewed execution permission.
+message GetAcceptedCommitResponse {
+  // Whether that step was committed; false is not permission to replay a call.
+  bool found = 1;
+  // Complete accepted step and commit hash, present only when found.
+  AcceptedStep accepted_step = 2;
+  // Original attempt outcome; empty while still active.
+  string attempt_outcome = 3;
+  // Current Run state; a newer attempt may already exist.
+  RunState state = 4;
+}

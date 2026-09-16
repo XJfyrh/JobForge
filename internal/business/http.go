@@ -184,17 +184,18 @@ func (h *businessHTTP) create(w http.ResponseWriter, r *http.Request) {
 
 func snapshotMetadata(snapshot *Snapshot) any {
 	return struct {
-		ID          string         `json:"snapshot_id"`
-		TenantID    string         `json:"tenant_id"`
-		Version     int            `json:"schema_version"`
-		AsOf        time.Time      `json:"as_of"`
-		CreatedAt   time.Time      `json:"created_at"`
-		ContentHash string         `json:"content_hash"`
-		Ticket      Ticket         `json:"ticket"`
-		Policy      PolicyVersion  `json:"policy"`
-		Index       PublishedIndex `json:"index"`
+		ID            string         `json:"snapshot_id"`
+		TenantID      string         `json:"tenant_id"`
+		Version       int            `json:"schema_version"`
+		AsOf          time.Time      `json:"as_of"`
+		CreatedAt     time.Time      `json:"created_at"`
+		ContentHash   string         `json:"content_hash"`
+		Ticket        Ticket         `json:"ticket"`
+		Policy        PolicyVersion  `json:"policy"`
+		Index         PublishedIndex `json:"index"`
+		VersionVector VersionVector  `json:"version_vector"`
 	}{snapshot.ID, snapshot.TenantID, snapshot.SchemaVersion, snapshot.AsOf, snapshot.CreatedAt, snapshot.ContentHash,
-		snapshot.Ticket, snapshot.Policy, snapshot.Index}
+		snapshot.Ticket, snapshot.Policy, snapshot.Index, snapshot.VersionVector()}
 }
 
 func (h *businessHTTP) snapshot(w http.ResponseWriter, r *http.Request) {

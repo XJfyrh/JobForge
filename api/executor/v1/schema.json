@@ -1,0 +1,768 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobforge.invalid/api/executor/v1/schema.json",
+  "title": "JobForge supervised executor frame v1",
+  "description": "One UTF-8 JSON Lines frame including LF, at most 393216 bytes. Duplicate or unknown fields, non-finite values, unpaired Unicode surrogates, more than 64 levels of nesting and extra stdout are rejected. Codecs additionally enforce registered subcalls, exact binding, positive grant deadlines, sums <= 2^53-1, usage presence/bounds and the serialized conversation rules below. No frame is Run authorization by itself.",
+  "x-max-frame-bytes": 393216,
+  "x-sequence": [
+    "execute_step",
+    "(call_intent -> call_permit -> call_observation)*",
+    "step_result"
+  ],
+  "x-conversation-rules": [
+    "All frames bind exactly the first request_id and binding.",
+    "One intent/physical call at a time; each granted physical_call_id is fresh and locally dispatched at most once.",
+    "Only a newly reserved control-plane call can create a granted permit; duplicate ReserveCall results must never do so.",
+    "search_policy uses profile_version, profile_tags, query_embedding, search_policy in that order under one logical invocation.",
+    "Deadlines use remaining milliseconds and a monotonic local clock; equality is expired. Dispatch expiry is separate from the call deadline.",
+    "A denied permit, unknown/rejected observation, stop or expiry forbids subsequent sends.",
+    "Free subcalls have call_ms <= 10000, zero token limits and no usage. Chat/query embedding have call_ms <= 60000. Chat output_tokens <= 1024.",
+    "Known usage may accompany rejected business output, but cannot exceed reserved token bounds; transport unknown has no usage.",
+    "Tool results are at most 8192 UTF-8 JSON bytes; other results and inputs at most 16384; checkpoint at most 262144.",
+    "Step success requires all registered subcalls to finish. A step result never selects the next cursor."
+  ],
+  "oneOf": [
+    {
+      "$ref": "#/$defs/execute_step"
+    },
+    {
+      "$ref": "#/$defs/call_intent"
+    },
+    {
+      "$ref": "#/$defs/call_permit"
+    },
+    {
+      "$ref": "#/$defs/call_observation"
+    },
+    {
+      "$ref": "#/$defs/step_result"
+    }
+  ],
+  "$defs": {
+    "key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/key"
+        },
+        "worker_id": {
+          "$ref": "#/$defs/key"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/key"
+        },
+        "run_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "step_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "session_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "profile_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "snapshot_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "attempt_no": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "fencing_token": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "cursor_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "step_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "step_kind": {
+          "enum": [
+            "read_ticket",
+            "get_order",
+            "get_delivery",
+            "search_policy",
+            "model_proposal",
+            "protocol_correction",
+            "submit_proposal"
+          ]
+        }
+      },
+      "required": [
+        "tenant_id",
+        "worker_id",
+        "profile_id",
+        "run_id",
+        "step_id",
+        "session_id",
+        "snapshot_id",
+        "profile_hash",
+        "snapshot_hash",
+        "input_hash",
+        "attempt_no",
+        "fencing_token",
+        "cursor_version",
+        "step_sequence",
+        "step_kind"
+      ],
+      "additionalProperties": false
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "cached_input_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "receipt_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "usage_hash": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "cached_input_tokens",
+        "receipt_hash",
+        "usage_hash"
+      ],
+      "additionalProperties": false
+    },
+    "execute_step": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "execute_step"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "remaining_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 180000
+        },
+        "trace_context": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^[ -~]*$"
+        },
+        "checkpoint": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 262144
+        },
+        "input": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 16384
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "remaining_ms",
+        "trace_context",
+        "checkpoint",
+        "input"
+      ],
+      "additionalProperties": false
+    },
+    "call_intent": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "call_intent"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "subcall": {
+          "enum": [
+            "get_order",
+            "get_delivery",
+            "profile_version",
+            "profile_tags",
+            "query_embedding",
+            "search_policy",
+            "chat"
+          ]
+        },
+        "parameter_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "subcall",
+        "parameter_hash",
+        "tool_invocation_id"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "const": "chat"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tool_invocation_id": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "tool_invocation_id": {
+                "$ref": "#/$defs/uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "call_permit": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "call_permit"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "subcall": {
+          "enum": [
+            "get_order",
+            "get_delivery",
+            "profile_version",
+            "profile_tags",
+            "query_embedding",
+            "search_policy",
+            "chat"
+          ]
+        },
+        "parameter_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "physical_call_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/uuid"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "granted": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "dispatch_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "call_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "input_token_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_token_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "subcall",
+        "parameter_hash",
+        "tool_invocation_id",
+        "physical_call_id",
+        "granted",
+        "error_code",
+        "dispatch_ms",
+        "call_ms",
+        "input_token_limit",
+        "output_token_limit"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "granted": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "physical_call_id": {
+                "const": ""
+              },
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              },
+              "dispatch_ms": {
+                "const": 0
+              },
+              "call_ms": {
+                "const": 0
+              },
+              "input_token_limit": {
+                "const": 0
+              },
+              "output_token_limit": {
+                "const": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "physical_call_id": {
+                "$ref": "#/$defs/uuid"
+              },
+              "error_code": {
+                "const": ""
+              },
+              "dispatch_ms": {
+                "minimum": 1
+              },
+              "call_ms": {
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "enum": [
+                  "get_order",
+                  "get_delivery",
+                  "profile_version",
+                  "profile_tags",
+                  "search_policy"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "call_ms": {
+                "maximum": 10000
+              },
+              "input_token_limit": {
+                "const": 0
+              },
+              "output_token_limit": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subcall": {
+                "const": "chat"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "tool_invocation_id": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "tool_invocation_id": {
+                "$ref": "#/$defs/uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "call_observation": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "call_observation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 44
+        },
+        "physical_call_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "transport_outcome": {
+          "enum": [
+            "response",
+            "unknown"
+          ]
+        },
+        "http_status": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 599
+        },
+        "business_outcome": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "usage_known": {
+          "type": "boolean"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/usage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "call_sequence",
+        "physical_call_id",
+        "transport_outcome",
+        "http_status",
+        "business_outcome",
+        "error_code",
+        "usage_known",
+        "usage"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "usage_known": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "usage": {
+                "$ref": "#/$defs/usage"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "usage": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport_outcome": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "http_status": {
+                "const": 0
+              },
+              "business_outcome": {
+                "const": "unknown"
+              },
+              "usage_known": {
+                "const": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "http_status": {
+                "minimum": 100
+              },
+              "business_outcome": {
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "business_outcome": {
+                "const": "accepted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "step_result": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "step_result"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "error"
+          ]
+        },
+        "error_code": {
+          "enum": [
+            "",
+            "BUDGET_EXHAUSTED",
+            "STOP_REQUESTED",
+            "STALE_LEASE",
+            "PROFILE_UNAVAILABLE",
+            "DEPENDENCY_UNAVAILABLE",
+            "PROTOCOL_ERROR",
+            "CALL_CONFLICT",
+            "OUTPUT_INVALID",
+            "INPUT_INVALID",
+            "TIMEOUT"
+          ]
+        },
+        "result": {
+          "type": "object",
+          "description": "Protected registered-step data, with duplicate keys rejected recursively. The byte limit measures the UTF-8 JSON value exactly as present in the frame.",
+          "x-max-utf8-json-bytes": 16384
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "request_id",
+        "binding",
+        "outcome",
+        "error_code",
+        "result"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "success"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "error_code": {
+                "const": ""
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "error_code": {
+                "not": {
+                  "const": ""
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

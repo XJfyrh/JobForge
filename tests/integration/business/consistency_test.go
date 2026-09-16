@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -117,6 +118,11 @@ func TestBusinessSnapshotConsistentAcrossConcurrentSourceCommit(t *testing.T) {
 			t.Fatalf("mixed database view in round %d: order=%d delivery=%d want=%d", round,
 				snapshot.Order.Revision, snapshot.Delivery.AggregateRevision, revision-1)
 		}
+		vector := snapshot.VersionVector()
+		if vector.Order.Revision == nil || vector.Delivery.AggregateRevision == nil ||
+			*vector.Order.Revision != revision-1 || *vector.Delivery.AggregateRevision != revision-1 {
+			t.Fatalf("version vector mixed concurrent source revisions in round %d", round)
+		}
 	}
 	select {
 	case err := <-writerDone:
@@ -215,6 +221,18 @@ func TestBusinessSnapshotRejectsForeignSourceRelationships(t *testing.T) {
 			if (snapshot.Order != nil) != tc.wantOrder || snapshot.Delivery != nil {
 				t.Fatal("snapshot exposed an unrelated order or delivery")
 			}
+			vector := snapshot.VersionVector()
+			if !reflect.DeepEqual(vector.Order.ID, tc.orderID) || vector.Order.Exists != tc.wantOrder ||
+				vector.Delivery.Exists || vector.Delivery.AggregateRevision != nil {
+				t.Fatal("version vector exposed inaccessible facts or lost the expected order ID")
+			}
+			if tc.wantOrder {
+				if !reflect.DeepEqual(vector.Delivery.ID, snapshot.Order.DeliveryID) || vector.Order.Revision == nil {
+					t.Fatal("version vector lost the authorized delivery relationship")
+				}
+			} else if vector.Order.Revision != nil || vector.Delivery.ID != nil {
+				t.Fatal("missing order must have a null revision and no known delivery ID")
+			}
 			order, err := store.GetOrder(ctx, "tenant-north", snapshot.ID)
 			if err != nil || order.Missing == tc.wantOrder || order.MissingReason != tc.orderCause {
 				t.Fatalf("order missing semantics: evidence=%+v err=%v", order, err)
@@ -283,6 +301,11 @@ func TestBusinessPolicyUpgradePreservesExistingSnapshotIndex(t *testing.T) {
 	repeated, reused, err := store.CreateSnapshot(ctx, "tenant-north", oldRequest)
 	if err != nil || !reused || repeated.ID != oldSnapshot.ID || repeated.ContentHash != oldSnapshot.ContentHash || repeated.Index.ID != oldIndex.ID {
 		t.Fatalf("old request changed after policy upgrade: reused=%v err=%v", reused, err)
+	}
+	if !reflect.DeepEqual(repeated.VersionVector(), oldSnapshot.VersionVector()) ||
+		newSnapshot.VersionVector().Policy == oldSnapshot.VersionVector().Policy ||
+		newSnapshot.VersionVector().Index == oldSnapshot.VersionVector().Index {
+		t.Fatal("version vector did not preserve the frozen policy and index identities")
 	}
 	search := business.SearchRequest{EmbeddingModel: business.EmbeddingModel, EmbeddingDigest: business.EmbeddingDigest, QueryVector: upload.Chunks[0].Embedding}
 	for _, tc := range []struct {
