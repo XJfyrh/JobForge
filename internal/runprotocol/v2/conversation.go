@@ -124,6 +124,10 @@ func (c *Conversation) accept(f Frame, now int64) error {
 			return ErrProtocol
 		}
 		call.observationDisposition = "reported"
+		// Retain the accepted hash by value. Reusing or mutating the caller's
+		// frame must not change the identity awaiting the other pipe's report.
+		usageHash := *f.UsageHash
+		f.UsageHash = &usageHash
 		c.pending, c.phase = f, "metering"
 		if call.settlement == "settled" {
 			c.finishObservation(f)

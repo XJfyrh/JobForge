@@ -6,15 +6,17 @@
 
 | 范围 | 实际证据 | 边界 |
 |---|---|---|
-| v2 codec/顺序与窄计量 | Go/Python共用11合法帧、19非法帧、49会话序列；独立v2 Python测试131通过，Go v1/v2 race通过 | fixture是确定性协议输入，不代表实际FD监管或云端发送 |
+| v2 codec/顺序与窄计量 | Go/Python共用11合法帧、21非法帧、49会话序列；独立v2 Python测试136通过，Go v1/v2 race通过 | fixture是确定性协议输入，不代表实际FD监管或云端发送 |
 | RPC权威时间 | 真实TCP/gRPC/PG锁屏障覆盖Register首创/重报、idle/active/stop Heartbeat、带lease及空Claim | 时间来自锁后DB，不能用transport墙钟代替；空Claim不续session |
 | 异常/晚到计量 | 真实PG/RPC测试验证终态/过期session后1025输出token报告、三层冻结/full hold、重复/冲突，Run不回退 | 没有向供应商发送请求；不代表云端usage已观察 |
 | 共享时钟 | 固定Linux镜像中Go/Python实际CLOCK_BOOTTIME相互核对；3个顶层测试、12子测试通过，0跳过 | Windows非Linux分支明确不支持live clock；真实运行要求同容器/time namespace |
 | S0生命周期回归 | 同一镜像重新执行5顶层、9子测试事件，0失败/跳过；含Go SIGKILL、guardian死亡、EOF/尾随输出、取消/超时与回收 | 这是已有探针，正式Worker/guardian尚未交付 |
-| 机械门禁 | Go build/vet/golangci-lint通过（0 issues）；全仓race 29包、896个测试及子测试通过，0失败；全部Python合计427 passed；Ruff check/format、mypy 22文件及Linux探针2文件通过；SQLFluff历史3项基线/迁移lint通过；Buf lint/breaking/重新生成hash一致 | PR CI待执行；全仓race的5个测试跳过见下，不能把缺依赖skip当通过 |
+| 机械门禁 | Go build/vet/golangci-lint通过（0 issues）；首轮全仓race 29包、896个测试及子测试通过，0失败；审查修复后全部Python合计432 passed；Ruff check/format、mypy 22文件及Linux探针2文件通过；SQLFluff历史3项基线/迁移lint通过；Buf lint/breaking/重新生成hash一致 | 最终PR CI与修复后全仓race另归档；全仓race的5个测试跳过见下，不能把缺依赖skip当通过 |
 | 云端/业务验收 | 未运行DeepSeek推理，未执行40案固定业务流程 | 正式Worker、HTTP许可钩子、profile、方案/数据/评分由下一切片交付 |
 
 计量反例覆盖单字段合法、input+output合计超过safe整数范围：报告仍可归档并立即关闭普通执行，留给账本保存异常，不按1024或预留截断。普通observation错usage hash也不能让另一个通道的合法原调用报告丢失。任何settled确认均不重开已停止/过期会话。
+
+独立审查在首个head发现并修复两项P2：Go保存待汇合observation时复制usage hash的值，调用方再修改原帧不能改变已接受身份；Python拒绝嵌套对象中超过有限binary64范围的整数，与Go一致，校验仍保留范围内整数的精确值。共同非法帧补入正/负超大整数，Go新增修改外部hash前后两向反例。
 
 第一轮两项新PG/RPC race为PASS，3.976s；最终全仓race覆盖追加的过期STOP断言。源码测试分别为`tests/integration/run_authority_rpc_test.go`、`internal/runclock`、`internal/runprotocol/v2`、`python/tests/test_protocol_v2.py`。没有改写migration，Proto只兼容新增并通过Buf生成。
 

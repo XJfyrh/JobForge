@@ -239,3 +239,55 @@ func TestAnchoredDeadlineSafeIntegerAndQueueDelay(t *testing.T) {
 		}
 	}
 }
+
+func TestObservationHashIsSnapshotAcrossMeteringJoin(t *testing.T) {
+	for _, matching := range []bool{false, true} {
+		name := "mismatch_cannot_be_repaired_by_caller"
+		if matching {
+			name = "match_cannot_be_corrupted_by_caller"
+		}
+		t.Run(name, func(t *testing.T) {
+			frames := map[string]Frame{}
+			for _, raw := range loadFixtures(t).ValidFrames {
+				frame := decodeFixture(t, raw)
+				frame.EmittedMonoMS = 1000
+				if _, exists := frames[frame.Kind]; !exists {
+					frames[frame.Kind] = frame
+				}
+			}
+			var c Conversation
+			for _, kind := range []string{"execute_step", "call_intent", "call_permit"} {
+				if err := c.Accept(frames[kind], 1000); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := c.CanDispatch(frames["call_permit"].PhysicalCallID, 1000); err != nil {
+				t.Fatal(err)
+			}
+			observation := frames["call_observation"]
+			correctHash := frames["metering_report"].Usage.UsageHash
+			if !matching {
+				*observation.UsageHash = strings.Repeat("f", 64)
+			}
+			if err := c.Accept(observation, 1000); err != nil {
+				t.Fatal(err)
+			}
+			// Change the original pointer after acceptance, before the other FD.
+			*observation.UsageHash = correctHash
+			if matching {
+				*observation.UsageHash = strings.Repeat("f", 64)
+			}
+			for _, kind := range []string{"metering_report", "metering_ack"} {
+				if err := c.AcceptMetering(frames[kind], 1000); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if c.Closed() == matching {
+				t.Fatal("caller mutation changed accepted observation identity")
+			}
+			if err := c.Accept(frames["step_result"], 1000); (err == nil) != matching {
+				t.Fatalf("original matching=%t result error=%v", matching, err)
+			}
+		})
+	}
+}

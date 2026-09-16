@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jobforge.invalid/api/executor/v2/schema.json",
   "title": "JobForge supervised executor frame v2",
-  "description": "Strict UTF-8 JSON Lines. Duplicate/unknown keys, null required fields, unpaired surrogates, nonfinite numbers, depth >64 and trailing content are rejected. All times are safe integer CLOCK_BOOTTIME milliseconds within one Linux time namespace. Ordinary and dedicated metering pipes are distinct; metering never grants execution authority.",
+  "description": "Strict UTF-8 JSON Lines. Duplicate/unknown keys, null required fields, unpaired surrogates, numbers outside finite binary64 range (including nested integers), depth >64 and trailing content are rejected. Range validation does not round or coerce decoded integers. All times are safe integer CLOCK_BOOTTIME milliseconds within one Linux time namespace. Ordinary and dedicated metering pipes are distinct; metering never grants execution authority.",
   "x-max-frame-bytes": 393216,
   "x-sequence": [
     "execute_step",

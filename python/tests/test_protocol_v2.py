@@ -130,6 +130,15 @@ def test_bounded_readers_and_wrong_pipe(metering: bool) -> None:
         reader(io.BytesIO(b" " * (maximum + 1 - len(wire)) + wire))
 
 
+@pytest.mark.parametrize("value", [2**53 + 1, 10**300, -(10**300)])
+def test_protected_integer_range_check_preserves_exact_value(value: int) -> None:
+    """The finite-range check must not coerce protected integers to floats."""
+    frame = _frames()["execute_step"]
+    frame["input"] = {"value": value}
+    parsed = decode(encode(frame))["input"]["value"]
+    assert type(parsed) is int and parsed == value
+
+
 def test_protected_raw_bytes_and_depth() -> None:
     """Checkpoint limits include source whitespace and escaped UTF-8 bytes."""
     frame = _frames()["execute_step"]

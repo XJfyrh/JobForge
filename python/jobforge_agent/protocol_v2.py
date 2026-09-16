@@ -137,8 +137,9 @@ def _json_tree(value: Any, depth: int = 0) -> None:
             _json_tree(item, depth + 1)
     elif isinstance(value, str):
         value.encode("utf-8", errors="strict")
-    elif isinstance(value, float):
-        _require(math.isfinite(value))
+    elif isinstance(value, (int, float)):
+        # Match Go's finite binary64 range check without rounding decoded ints.
+        _require(math.isfinite(float(value)))
 
 
 def _object(value: Any, fields: set[str], nullable: str = "") -> None:
@@ -349,7 +350,14 @@ def _decode(line: bytes, metering: bool) -> Frame:
         _require((value["kind"] in _METERING_KINDS) == metering)
         _raw_sizes(line.decode("utf-8"), value)
         return value
-    except (UnicodeError, ValueError, TypeError, KeyError, RecursionError) as error:
+    except (
+        UnicodeError,
+        ValueError,
+        TypeError,
+        KeyError,
+        RecursionError,
+        OverflowError,
+    ) as error:
         if isinstance(error, ProtocolError):
             raise
         raise ProtocolError() from None
