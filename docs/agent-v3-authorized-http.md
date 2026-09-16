@@ -33,7 +33,7 @@ usage 的原始整数必须精确且内部一致；缺失、矛盾、断连或�
 | 工程 | Python 全测试、Ruff、mypy、Linux 实际时钟路径及仓库适用 CI；SDK/离线检索回归 | 正式 Worker 的 Kill/Wait/崩溃恢复 |
 | 后续完整 C | 真 PG 许可→正式进程→真实业务/embedding/DeepSeek→SDK 查询→40 案评分 | 当前尚未验收 |
 
-测试中的 provider、向量和协调者均为替身；真实 TCP 不等于真实模型。2026-09-16，本地 Windows 全 Python 套件655项通过，固定 Linux 镜像内477项通过，无 skip。完整验证及 PR 状态见[切片证据](evidence/agent-v3-s1c2-http-2026-09-16.md)。历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+测试中的 provider、向量和协调者均为替身；真实 TCP 不等于真实模型。2026-09-16，审查修复后本地 Windows 全 Python 套件663项通过，固定 Linux 镜像内485项通过，无 skip。完整验证及 PR 状态见[切片证据](evidence/agent-v3-s1c2-http-2026-09-16.md)。历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
 
 ## 本地复现
 

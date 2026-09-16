@@ -14,7 +14,7 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1已合并；C2受控HTTP适配实现中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run基线与最终CI/独立审查；C1协议、权威时间、独立计量和Linux共享时钟经PR #42交付；云端推理/固定流程仍未验收 |
+| S1 业务与基线 | S1-A/B/C1已合并；C2已本地验证、PR #43审查中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B已通过Windows全仓race、真实PG/HTTP/SDK、128Run基线与最终CI/独立审查；C1协议、权威时间、独立计量和Linux共享时钟经PR #42交付；C2修复审查超时分类后663项Python/485项Linux通过；云端推理/固定流程仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
 | S3 步骤恢复 | 未开始 | S1-B提供checkpoint事务；正式Worker/执行器真实进程恢复仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |

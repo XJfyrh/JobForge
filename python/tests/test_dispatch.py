@@ -848,7 +848,7 @@ async def test_complete_usage_captured_before_bounded_response_close(
         dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
         monkeypatch.setattr(httpx.Response, "aclose", slow_close)
         try:
-            with pytest.raises(DispatchError):
+            with pytest.raises(DispatchError, match="^TIMEOUT$") as error:
                 await asyncio.wait_for(
                     dispatcher.execute(
                         prepared(),
@@ -860,5 +860,165 @@ async def test_complete_usage_captured_before_bounded_response_close(
                 )
             assert len(dispatcher.recorded_usage()) == len(hooks.reports) == 1
             assert hooks.observations[0]["business_outcome"] == "rejected"
+            assert hooks.observations[0]["error_code"] == "TIMEOUT"
+            assert error.value.__context__ is error.value.__cause__ is None
+            # Complete usage remains settled, but this is TIMEOUT rather than a
+            # correctable OUTPUT_INVALID. C1 only retains its error-result path.
+            assert error.value.code == "TIMEOUT" and not dispatcher.closed
+            with pytest.raises(DispatchError):
+                await dispatcher.execute(prepared(), context=context(), validate=valid)
+            assert len(server.requests) == len(hooks.intents) == 1
+            assert len(dispatcher.recorded_usage()) == 1
+        finally:
+            await dispatcher.aclose()
+
+
+@run_async
+async def test_real_tcp_read_timeout_is_timeout_and_cannot_resend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HTTPX's read timer expires before the longer original BOOTTIME deadline."""
+    disconnected = asyncio.Event()
+
+    async def blackhole(
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        request: ReceivedRequest,
+    ) -> None:
+        await reader.read()
+        disconnected.set()
+
+    clock = Clock()
+    hooks = Hooks(clock)
+    async with HTTPFaultServer(blackhole) as server:
+        dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
+        # Change only this real client's test timeout, never its TCP transport.
+        dispatcher._client("deepseek").timeout = httpx.Timeout(0.05)
+        try:
+            with pytest.raises(DispatchError, match="^TIMEOUT$") as error:
+                await asyncio.wait_for(
+                    dispatcher.execute(
+                        prepared(),
+                        context=context(),
+                        validate=valid,
+                        extract_usage=usage,
+                    ),
+                    2,
+                )
+            await asyncio.wait_for(disconnected.wait(), 1)
+            assert error.value.__context__ is error.value.__cause__ is None
+            observation = hooks.observations[0]
+            assert observation["error_code"] == "TIMEOUT"
+            assert observation["transport_outcome"] == "unknown"
+            assert observation["http_status"] == 0
+            assert dispatcher.recorded_usage() == () and dispatcher.closed
+            assert clock.now == 1000
+            with pytest.raises(DispatchError):
+                await dispatcher.execute(prepared(), context=context(), validate=valid)
+            assert len(server.requests) == len(hooks.intents) == 1
+        finally:
+            await dispatcher.aclose()
+
+
+@run_async
+async def test_real_tcp_tls_connect_timeout_is_timeout_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A TCP peer swallowing ClientHello reproduces a real HTTPX ConnectTimeout."""
+    connections: list[asyncio.Task[None]] = []
+    received_hello = asyncio.Event()
+
+    async def swallow_tls(
+        reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
+        try:
+            header = await reader.readexactly(5)
+            assert header[0] == 22  # TLS handshake record, not an HTTP request.
+            await reader.readexactly(int.from_bytes(header[3:5], "big"))
+            received_hello.set()
+            await reader.read()
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    def connected(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        connections.append(asyncio.create_task(swallow_tls(reader, writer)))
+
+    server = await asyncio.start_server(connected, "127.0.0.1", 0)
+    endpoint = f"https://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+    monkeypatch.setattr(dispatch, "DEEPSEEK_ORIGIN", endpoint)
+    clock = Clock()
+    hooks = Hooks(clock)
+    dispatcher = AuthorizedDispatcher(
+        start_frame(),
+        hooks=hooks,
+        endpoints={"deepseek": Endpoint(endpoint, "dummy-credential")},
+        clock=clock,
+    )
+    dispatcher._client("deepseek").timeout = httpx.Timeout(0.1)
+    try:
+        with pytest.raises(DispatchError, match="^TIMEOUT$") as error:
+            await asyncio.wait_for(
+                dispatcher.execute(prepared(), context=context(), validate=valid), 2
+            )
+        assert received_hello.is_set() and len(connections) == 1
+        assert error.value.__context__ is error.value.__cause__ is None
+        assert hooks.observations[0]["error_code"] == "TIMEOUT"
+        assert hooks.observations[0]["transport_outcome"] == "unknown"
+        assert dispatcher.closed and dispatcher.recorded_usage() == ()
+        with pytest.raises(DispatchError):
+            await dispatcher.execute(prepared(), context=context(), validate=valid)
+        assert len(hooks.intents) == len(connections) == 1
+    finally:
+        await dispatcher.aclose()
+        server.close()
+        await server.wait_closed()
+        for task in connections:
+            if not task.done():
+                task.cancel()
+        results = await asyncio.gather(*connections, return_exceptions=True)
+        for result in results:
+            assert result is None or isinstance(result, asyncio.CancelledError)
+
+
+@run_async
+@pytest.mark.parametrize("hook", ["authorize", "observe", "settle"])
+@pytest.mark.parametrize("httpx_timeout", [False, True])
+async def test_control_hook_timeouts_are_terminal_sanitized_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+    hook: str,
+    httpx_timeout: bool,
+) -> None:
+    """Control-hook timeout uncertainty preserves usage and cannot resume execution."""
+    clock = Clock()
+    hooks = Hooks(clock)
+
+    async def timeout(frame: Frame) -> Any:
+        if httpx_timeout:
+            raise httpx.ReadTimeout(
+                "dummy-sensitive-control-timeout",
+                request=httpx.Request(
+                    "GET",
+                    "https://invalid.example",
+                    headers={"Authorization": "Bearer dummy-sensitive-credential"},
+                ),
+            )
+        raise TimeoutError("dummy-sensitive-control-timeout")
+
+    monkeypatch.setattr(hooks, hook, timeout)
+    async with HTTPFaultServer(good_response) as server:
+        dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
+        try:
+            with pytest.raises(DispatchError, match="^TIMEOUT$") as error:
+                await dispatcher.execute(
+                    prepared(), context=context(), validate=valid, extract_usage=usage
+                )
+            assert error.value.__context__ is error.value.__cause__ is None
+            assert dispatcher.closed
+            count = 0 if hook == "authorize" else 1
+            assert len(dispatcher.recorded_usage()) == count
+            with pytest.raises(DispatchError):
+                await dispatcher.execute(prepared(), context=context(), validate=valid)
+            assert len(server.requests) == count
         finally:
             await dispatcher.aclose()

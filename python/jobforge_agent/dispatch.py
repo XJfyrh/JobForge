@@ -553,7 +553,10 @@ class AuthorizedDispatcher:
         except DispatchError as error:
             self.stop()
             failure = DispatchError(error.code, fact=error.fact, stop=error.stop)
-        except (httpx.HTTPError, OSError, TimeoutError):
+        except (httpx.TimeoutException, TimeoutError):
+            self.stop()
+            failure = DispatchError("TIMEOUT")
+        except (httpx.HTTPError, OSError):
             self.stop()
             failure = DispatchError("DEPENDENCY_UNAVAILABLE")
         except Exception:
@@ -627,7 +630,9 @@ class AuthorizedDispatcher:
                 raise DispatchError("DEPENDENCY_UNAVAILABLE")
         except DispatchError as error:
             failure = error
-        except (httpx.HTTPError, OSError, TimeoutError):
+        except (httpx.TimeoutException, TimeoutError):
+            failure = DispatchError("TIMEOUT")
+        except (httpx.HTTPError, OSError):
             failure = DispatchError("DEPENDENCY_UNAVAILABLE")
         if complete is None and received:
             complete = received[0]
