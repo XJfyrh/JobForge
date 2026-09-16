@@ -8,7 +8,7 @@
 | 契约 | 业务快照、工具HTTP、pgvector与准备身份 | 独立上下文审查；ADR按PR流程接受 | PR #37已接受 |
 | S1-A | 独立业务服务、迁移/角色、40例开发数据、Python工具适配、索引准备与搜索 | 真PG/HTTP、tenant/版本/大小边界、固定真实embedding与20查询、重启持久性；适用CI | [PR #38](https://github.com/XJfyrh/JobForge/pull/38) 已合并；两份独立审查和最终head八项CI通过；[证据](../evidence/agent-v3-s1-business-2026-09-16.md) |
 | S1-B | 最小Run/lease/内部协议、API/SDK、持久调用账本 | 有效执行权、并发预留、重发身份、unknown占额、取消/超时；不新增调度语义 | 契约经 PR #39 接受；实现[PR #40](https://github.com/XJfyrh/JobForge/pull/40)已合并；Windows全仓race、真实PG/HTTP/SDK和128Run基线、三份独立审查及最终七项CI通过；[运行指南](../agent-v3-runs.md)、[验收映射](../evidence/agent-v3-s1b-runs-2026-09-16.md) |
-| S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)经PR #41接受；C1/C2分别经PR #42/#43合并，C3确认/退出契约经PR #44接受；C3a/C3b经PR #45/#46合并普通ACK和正式运行时；support策略已实现待PR；provider持久审计/完整评分/真实40案尚未验收 |
+| S1-C | DeepSeek固定profile、受监管执行器、合理固定流程、评分器 | 实际云端与工具链；40开发例全量报告；方案与写入分开；费用硬上限 | [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)经PR #41接受；C1/C2分别经PR #42/#43合并，C3确认/退出契约经PR #44接受；C3a/C3b经PR #45/#46合并普通ACK和正式运行时；support策略经PR #48合并；provider持久审计/完整评分/真实40案尚未验收 |
 
 实施目录意向：`internal/business`与独立命令保存业务领域/服务/PG/HTTP；`migrations/business`维护业务迁移；Python执行器与工具适配不依赖队列存储；数据与gold分别打包。公开源schema、具体目录和生成工具在对应实现PR确定，避免复制多套同义契约。
 
@@ -36,3 +36,7 @@
 完整 Trace、生产长期留存与 S2～S5 仍单列。C3b 的合成供应商、真实步骤恢复和八项 CI 不替代真实云端业务基线。
 
 PR #47已合并接受ADR-0020（d449bc7，两份独立复审及八项CI通过）。support固定流程、开发数据v2独立审查与真实索引/检索已执行，分层结果见[新证据](../evidence/agent-v3-s1-support-2026-09-16.md)；完整评分冻结和40案云端仍未完成。
+
+## 首批启动接缝提案
+
+[PRD v0.13](../product/JobForge_PRD_v0.13.md)/[ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md)为 **Proposed**，提出可信 profile 生成/登记、Capture 后的资源接纳校验，以及单 Worker/40行 SDK 驱动的[精简实施映射](agent-v3-first-cloud-batch.md)。接纳后原版本/hash 不变，新 Retry 仍受同一冻结资源约束，已接受回执优先返回；awaiting_approval 是S1方案完成而非业务写入。该提案不改变已接受的5 CNY/6h/停批合同，不表示audit实现合并或收费前置已完成。
