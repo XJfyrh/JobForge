@@ -97,8 +97,8 @@ func prepareSupport(args []string) error {
 }
 
 func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
-	if o.BatchCostMicroyuan <= 0 || o.BatchCostMicroyuan > 5000000 {
-		return nil, errors.New("batch cost limit must be between 1 and 5000000 microyuan")
+	if o.BatchCostMicroyuan <= 0 || o.BatchCostMicroyuan > run.MaxSafeInteger {
+		return nil, errors.New("batch cost limit must be a positive JSON-safe integer")
 	}
 	from, err := time.Parse(time.RFC3339, o.ValidFrom)
 	if err != nil || from.Format(time.RFC3339) != o.ValidFrom || !strings.HasSuffix(o.ValidFrom, "Z") ||
@@ -116,8 +116,8 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	var fields map[string]json.RawMessage
 	_ = json.Unmarshal(raw, &fields)
 	d, err := run.DecodeSupportDefinition(fields["definition"])
-	if err != nil {
-		return nil, errors.New("invalid fixed support definition")
+	if err != nil || d.SchemaVersion == 1 && o.BatchCostMicroyuan > 5000000 {
+		return nil, errors.New("invalid fixed support definition or S1 cost limit")
 	}
 	for _, receipt := range []supportReceipt{source.BuildReceipt, source.DataReview, source.ScoringReview, source.PriceSnapshot} {
 		path := receipt.Path
@@ -149,6 +149,11 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)}},
 		Bindings: []budgetBinding{{TenantID: tenants[0], BatchAccountID: o.BatchID, TenantAccountID: o.NorthID}, {TenantID: tenants[1], BatchAccountID: o.BatchID, TenantAccountID: o.SouthID}}}
 	config.Budgets[0].Limits.CostMicroyuan = o.BatchCostMicroyuan
+	if d.SchemaVersion == 2 {
+		for i := range config.Budgets {
+			config.Budgets[i].Limits.CostMicroyuan = o.BatchCostMicroyuan
+		}
+	}
 	files := map[string][]byte{}
 	files["control.disabled.json"] = supportJSON(config)
 	config.EnabledProfiles = []string{o.ProfileID}
@@ -165,7 +170,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 		1, []run.Profile{profile}, map[string]endpoints{tenants[0]: {"http://business:8092", "http://ollama:11434"}, tenants[1]: {"http://business:8092", "http://ollama:11434"}}}
 	files["worker.json"] = supportJSON(worker)
 	files["executor.json"] = supportJSON(runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
-		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: "support-fixed-v1"}}})
+		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}})
 	launch := supportLaunch{SchemaVersion: 1, BatchAccountID: o.BatchID, BatchKey: o.BatchKey, WorkerID: o.WorkerID, ProfileID: profile.ID,
 		ProfileHash: profile.Hash, PriceHash: profile.Pricing.Hash, ValidFrom: from, ValidUntil: until, SourceManifestSHA256: supportSHA256(raw),
 		BuildReceiptSHA256: source.BuildReceipt.SHA256, DataReviewSHA256: source.DataReview.SHA256, ScoringReviewSHA256: source.ScoringReview.SHA256,
@@ -226,12 +231,20 @@ func supportJSON(value any) []byte {
 }
 
 func verifySupportSources(repo string, d run.SupportDefinition) error {
-	for name, want := range map[string]string{
-		"api/support/v1/schema.json":                           d.Program.ProposalSchemaSHA256,
-		"python/jobforge_agent/support_adapter.py":             d.Program.PromptSHA256,
+	promptPath := "python/jobforge_agent/support_adapter.py"
+	if d.SchemaVersion == 2 {
+		promptPath = "python/jobforge_agent/support_agent.py"
+	}
+	sources := map[string]string{
+		"api/support/v1/schema.json": d.Program.ProposalSchemaSHA256,
+		promptPath:                   d.Program.PromptSHA256,
 		"examples/support-agent/runtime/dataset-manifest.json": d.Resources.RuntimeManifestSHA256,
 		"examples/support-agent/runtime/seed.json":             d.Resources.SeedSHA256,
-	} {
+	}
+	if d.SchemaVersion == 2 {
+		sources["api/support/agent-v1/schema.json"] = d.Program.DecisionSchemaSHA256
+	}
+	for name, want := range sources {
 		data, err := readSupportFile(filepath.Join(repo, filepath.FromSlash(name)))
 		if err != nil || supportSHA256(data) != want {
 			return errors.New("source mismatch")

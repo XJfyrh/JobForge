@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jobforge:support-agent-decision-v1",
+  "title": "One bounded support tool decision or final proposal",
+  "description": "Shape only. Runtime additionally checks UTF-8 byte bounds, captured object identity, provenance and duplicate JSON keys. Go authorizes dispatch after committing the decision.",
+  "oneOf": [
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "name", "arguments"],
+      "properties": {
+        "type": {"const": "tool"},
+        "name": {"enum": ["get_order", "get_delivery"]},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["order_id"],
+          "properties": {"order_id": {"type": ["string", "null"]}}
+        }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "name", "arguments"],
+      "properties": {
+        "type": {"const": "tool"}, "name": {"const": "search_policy"},
+        "arguments": {
+          "type": "object", "additionalProperties": false, "required": ["query"],
+          "properties": {"query": {"type": "string", "minLength": 1, "maxLength": 512}}
+        }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "proposal"],
+      "properties": {
+        "type": {"const": "final"},
+        "proposal": {"$ref": "urn:jobforge:support-proposal-v1#/$defs/modelProposal"}
+      }
+    }
+  ]
+}

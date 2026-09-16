@@ -562,9 +562,11 @@ def evaluate_case(
         if not proposal:
             result["errors"].append("RUN_NOT_COMPLETED")
             return result
-        sources = support_sources(checkpoint)
+        sources = support_sources(
+            checkpoint, repeated_search=profile["strategy"] == "support_agent_v1"
+        )
         ticket = checkpoint["snapshot"]["ticket_binding_json"]
-        order = sources.contents["get_order"].get("order")
+        order = sources.contents.get("get_order", {}).get("order")
         delivery = sources.contents.get("get_delivery", {}).get("delivery")
         facts = derive_facts(ticket, order, delivery, package.anchors)
         gold = package.gold[row["case_id"]]["expected"]

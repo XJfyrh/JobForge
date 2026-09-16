@@ -3,14 +3,14 @@
   "definition": {
     "model": {
       "max_tokens": 1024,
-      "message_content_bytes": 16384,
+      "message_content_bytes": 65536,
       "model_content_bytes": 16384,
-      "observed_on": "2026-09-16",
+      "observed_on": "2026-09-17",
       "observed_version": "DeepSeek-V4.1-Flash",
       "origin": "https://api.deepseek.com",
       "path": "/chat/completions",
       "provider": "deepseek",
-      "request_body_bytes": 65536,
+      "request_body_bytes": 131072,
       "request_model": "deepseek-flash",
       "response_body_bytes": 65536,
       "response_format": "json_object",
@@ -23,18 +23,20 @@
       "denominator": 1000000,
       "input_hit_microyuan": 40000,
       "input_miss_microyuan": 2000000,
-      "observed_on": "2026-09-16",
+      "observed_on": "2026-09-17",
       "output_microyuan": 8000000,
       "source_sha256": "a1602748f50a9baacd416f4b831438896ba1351160f1f9afe89a9423c4b76cf3"
     },
     "program": {
-      "adapter": "support-fixed-v1",
+      "adapter": "support-agent-v1",
       "adapter_source_sha256": "b96bba84fc67bbfbfbde16c8068921d63084dc1b57bf17b9ac3aeb79b67de36d",
-      "prompt_sha256": "05de0b7f358aae53dc23b6c39f006b5179bf96f31b7619e56f02c9c1a6aed346",
-      "prompt_version": "support-fixed-prompt-v1",
+      "prompt_sha256": "45663ae5523f20a1a7601e836cf1d6cad745783dd34f59c2f363f32a514c0f8e",
+      "prompt_version": "support-agent-prompt-v1",
       "proposal_schema": "support-proposal-v1",
       "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",
-      "strategy": "support_fixed_v1"
+      "strategy": "support_agent_v1",
+      "decision_schema": "support-agent-decision-v1",
+      "decision_schema_sha256": "f8261604a6302a2ca57dd8710d6664dbe214b9204860e487b77a2fc47e85e9ee"
     },
     "resources": {
       "corpus_sha256": "c23799485a532eda42d09b6bf6fbfaad96ce5152bc74a59dacf1e8d165f89198",
@@ -67,7 +69,7 @@
         }
       ]
     },
-    "schema_version": 1
+    "schema_version": 2
   },
   "build_receipt": {
     "path": "REPLACE_WITH_REVIEWED_BUILD_RECEIPT",

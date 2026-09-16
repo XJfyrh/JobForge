@@ -177,6 +177,7 @@ class RunCall(RunModel):
             "get_delivery",
             "search_policy",
             "model_proposal",
+            "model_decision",
             "protocol_correction",
         ) or self.subcall not in (
             "get_order",

@@ -10,7 +10,7 @@ import (
 // ValidateSupportSnapshot runs after one trusted capture and again before new
 // admission commits. It does not claim to prove seed or executable source bytes.
 func ValidateSupportSnapshot(p Profile, s SnapshotBinding) error {
-	if p.Strategy != SupportFixedStrategy || !p.AuditEnabled() {
+	if !IsSupportStrategy(p.Strategy) || !p.AuditEnabled() {
 		return nil
 	}
 	if ValidateSupportProfile(p) != nil {

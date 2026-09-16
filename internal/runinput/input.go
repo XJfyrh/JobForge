@@ -76,6 +76,7 @@ var stepNames = map[agentv1.StepKind]string{
 	agentv1.StepKind_STEP_KIND_GET_ORDER:           "get_order",
 	agentv1.StepKind_STEP_KIND_GET_DELIVERY:        "get_delivery",
 	agentv1.StepKind_STEP_KIND_SEARCH_POLICY:       "search_policy",
+	agentv1.StepKind_STEP_KIND_MODEL_DECISION:      "model_decision",
 	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL:      "model_proposal",
 	agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
 	agentv1.StepKind_STEP_KIND_SUBMIT_PROPOSAL:     "submit_proposal",
@@ -205,7 +206,7 @@ func validStep(s identity) bool {
 }
 
 func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
-	if i.SchemaVersion != 1 || i.ExecutorVersion != ExecutorVersion || !run.ValidIdentifier(i.AdapterID) ||
+	if i.SchemaVersion != 1 || !ExecutorMatchesAdapter(i.ExecutorVersion, i.AdapterID) || !run.ValidIdentifier(i.AdapterID) ||
 		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != run.ProviderAuditPolicyDeepSeekV1 ||
 		p.CursorVersion < 0 || p.CursorVersion > 31 || p.Steps == nil || int64(len(p.Steps)) != p.CursorVersion || !validStep(p.NextStep) {
 		return run.ErrInvalidArgument
@@ -246,4 +247,12 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 		return run.ErrStepConflict
 	}
 	return nil
+}
+
+// ExecutorMatchesAdapter prevents mixed strategy/version deployments.
+func ExecutorMatchesAdapter(version, adapter string) bool {
+	if adapter == "support-agent-v1" {
+		return version == run.SupportAgentExecutorVersion
+	}
+	return version == ExecutorVersion
 }

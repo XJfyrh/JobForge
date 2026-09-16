@@ -13,6 +13,7 @@ from typing import Any
 from jobforge_agent.protocol_v2 import Frame, ProtocolError, encode
 
 EXECUTOR_VERSION = "linux-v2-audit-runtime-1"
+AGENT_EXECUTOR_VERSION = "linux-v2-agent-runtime-1"
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 HASH = re.compile(r"[0-9a-f]{64}")
@@ -21,6 +22,7 @@ TOOLS = frozenset({"get_order", "get_delivery", "search_policy"})
 KINDS = TOOLS | {
     "read_ticket",
     "model_proposal",
+    "model_decision",
     "protocol_correction",
     "submit_proposal",
 }
@@ -160,14 +162,23 @@ def validate_step_result(result: Any, kind: str) -> None:
         _require(bool(result["tool_invocation_id"]) == (kind in TOOLS))
         _require(bool(result["physical_call_id"]) == (kind in TOOLS))
     else:
-        _require(
-            result["tool_invocation_id"] == ""
-            and result["content"] is None
-            and refs == []
-        )
+        _require(result["tool_invocation_id"] == "" and refs == [])
         _require(bool(result["physical_call_id"]) == (kind != "submit_proposal"))
         if result["correction_required"]:
-            _require(kind == "model_proposal" and proposal is None)
+            _require(
+                kind in {"model_proposal", "model_decision"}
+                and proposal is None
+                and result["content"] is None
+            )
+        elif result["content"] is not None:
+            _require(
+                kind in {"model_decision", "protocol_correction"} and proposal is None
+            )
+            _object(result["content"], {"type", "name", "arguments"})
+            _require(
+                result["content"]["type"] == "tool"
+                and result["content"]["name"] in TOOLS
+            )
         else:
             _require(proposal is not None)
 
@@ -326,7 +337,7 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
     )
     _require(_integer(selection["schema_version"], 1, 1))
     _require(
-        selection["executor_version"] == EXECUTOR_VERSION
+        executor_matches_adapter(selection["executor_version"], selection["adapter_id"])
         and _match(IDENTIFIER, selection["adapter_id"])
         and selection["expected_response_model"] == "deepseek-flash"
         and selection["provider_audit_policy"] == "deepseek-audit-v1"
@@ -373,3 +384,11 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
         selection["expected_response_model"],
         selection["provider_audit_policy"],
     )
+
+
+def executor_matches_adapter(version: str, adapter: str) -> bool:
+    """Bind a manifest selection to one known implementation version."""
+    expected = (
+        AGENT_EXECUTOR_VERSION if adapter == "support-agent-v1" else EXECUTOR_VERSION
+    )
+    return version == expected

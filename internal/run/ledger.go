@@ -62,7 +62,7 @@ func CheckStep(r Run, a Authority, step StepIdentity) error {
 
 func validStepKind(kind string) bool {
 	switch kind {
-	case "read_ticket", "get_order", "get_delivery", "search_policy", "model_proposal", "protocol_correction", "submit_proposal":
+	case "read_ticket", "get_order", "get_delivery", "search_policy", "model_proposal", "model_decision", "protocol_correction", "submit_proposal":
 		return true
 	default:
 		return false

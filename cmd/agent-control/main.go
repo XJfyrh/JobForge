@@ -183,7 +183,7 @@ func readDeployment(path string) (deployment, error) {
 	}
 	for i := range config.Profiles {
 		p := &config.Profiles[i]
-		registeredStrategy := p.Strategy == agentrun.BoundedReadonlyStrategy || p.Strategy == agentrun.SupportFixedStrategy && p.AuditEnabled()
+		registeredStrategy := p.Strategy == agentrun.BoundedReadonlyStrategy || agentrun.IsSupportStrategy(p.Strategy) && p.AuditEnabled()
 		if !registeredStrategy ||
 			!agentrun.ValidIdentifier(p.ExecutorVersion) || agentrun.ValidateStepJSON(p.Definition, 16384) != nil || agentrun.ValidateSupportProfile(*p) != nil {
 			return config, errors.New("unregistered profile strategy or invalid immutable definition")

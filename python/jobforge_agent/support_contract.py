@@ -475,7 +475,9 @@ def _policy_source(snapshot: dict[str, Any], result: dict[str, Any]) -> None:
         require(hit.get("distance") is None or type(hit["distance"]) in (int, float))
 
 
-def support_sources(checkpoint: dict[str, Any]) -> SupportSources:
+def support_sources(
+    checkpoint: dict[str, Any], *, repeated_search: bool = False
+) -> SupportSources:
     """Bind snapshot, tenant, versions, evidence envelopes and unique event IDs."""
     from jobforge_agent.runtime_input import (
         RuntimeInputError,
@@ -488,6 +490,7 @@ def support_sources(checkpoint: dict[str, Any]) -> SupportSources:
         snapshot = checkpoint["snapshot"]
         _snapshot(snapshot, snapshot)
         sources = SupportSources()
+        policies: dict[str, dict[str, Any]] = {}
         _pointers(
             sources,
             "T",
@@ -498,13 +501,22 @@ def support_sources(checkpoint: dict[str, Any]) -> SupportSources:
             kind = accepted["step"]["kind"]
             if kind not in {"get_order", "get_delivery", "search_policy"}:
                 continue
-            require(kind not in sources.contents)
+            require(
+                kind not in sources.contents
+                or (repeated_search and kind == "search_policy")
+            )
             result = accepted["result_json"]
             validate_step_result(result, kind)
             content = result["content"]
             if kind == "search_policy":
                 _policy_source(snapshot, result)
                 for hit in content["matches"]:
+                    identity = {
+                        key: val for key, val in hit.items() if key != "distance"
+                    }
+                    previous = policies.get(hit["chunk_id"])
+                    require(previous is None or previous == identity)
+                    policies[hit["chunk_id"]] = identity
                     sources.aliases[hit["chunk_id"]] = {
                         "evidence_ref": hit["evidence_ref"],
                         "source_pointer": "/text",
@@ -519,7 +531,15 @@ def support_sources(checkpoint: dict[str, Any]) -> SupportSources:
                             "evidence_ref": result["evidence_refs"][0],
                             "source_pointer": f"/delivery/events/{index}",
                         }
-            sources.contents[kind] = copy.deepcopy(content)
+            if kind == "search_policy" and kind in sources.contents:
+                combined = {
+                    hit["chunk_id"]: hit for hit in sources.contents[kind]["matches"]
+                }
+                for hit in content["matches"]:
+                    combined.setdefault(hit["chunk_id"], copy.deepcopy(hit))
+                sources.contents[kind]["matches"] = list(combined.values())
+            else:
+                sources.contents[kind] = copy.deepcopy(content)
         return sources
     except RuntimeInputError as error:
         failure = DispatchError(
@@ -535,11 +555,11 @@ def support_sources(checkpoint: dict[str, Any]) -> SupportSources:
 
 
 def proposal_from_model(
-    value: dict[str, Any], checkpoint: dict[str, Any]
+    value: dict[str, Any], checkpoint: dict[str, Any], *, repeated_search: bool = False
 ) -> dict[str, Any]:
     """Expand a six-field model proposal without repairing its policy conclusions."""
     _shape(value, persisted=False)
-    sources = support_sources(checkpoint)
+    sources = support_sources(checkpoint, repeated_search=repeated_search)
     proposal = copy.deepcopy(value)
     refs: list[str] = []
     for claim in proposal["claims"]:
@@ -584,11 +604,11 @@ def parse_model_proposal(raw: bytes, checkpoint: dict[str, Any]) -> dict[str, An
 
 
 def validate_persisted_proposal(
-    value: dict[str, Any], checkpoint: dict[str, Any]
+    value: dict[str, Any], checkpoint: dict[str, Any], *, repeated_search: bool = False
 ) -> None:
     """Reconstruct model aliases to verify stored rendering and full provenance."""
     validate_persisted_shape(value)
-    sources = support_sources(checkpoint)
+    sources = support_sources(checkpoint, repeated_search=repeated_search)
     reverse = {
         (source["evidence_ref"], source["source_pointer"]): alias
         for alias, source in sources.aliases.items()
@@ -607,4 +627,6 @@ def validate_persisted_proposal(
             else:
                 require(source in event_sources)
         claim["refs"] = aliases
-    require(proposal_from_model(model, checkpoint) == value)
+    require(
+        proposal_from_model(model, checkpoint, repeated_search=repeated_search) == value
+    )

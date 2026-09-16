@@ -143,6 +143,49 @@ func TestPrepareSupportFixedArtifactsAndDisabledRegistration(t *testing.T) {
 	}
 }
 
+func TestPrepareSupportAgentVersionAndOperatorBudget(t *testing.T) {
+	o, source := supportPrepareFixture(t)
+	raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-agent.source.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var example supportSource
+	if json.Unmarshal(raw, &example) != nil {
+		t.Fatal("invalid agent source example")
+	}
+	priceReceipt := source.Definition.Price.SourceSHA256
+	source.Definition = example.Definition
+	source.Definition.Price.SourceSHA256 = priceReceipt
+	o.ValidFrom, o.BatchCostMicroyuan = "2026-09-17T12:00:00Z", 20000000
+	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(filepath.Dir(o.Out), "agent-enabled.json")
+	if err := os.WriteFile(path, files["control.enabled.json"], 0600); err != nil {
+		t.Fatal(err)
+	}
+	config, err := readDeployment(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.Profiles[0].Strategy != run.SupportAgentStrategy || config.Profiles[0].ExecutorVersion != run.SupportAgentExecutorVersion {
+		t.Fatal("S2 lost its registered version")
+	}
+	for _, budget := range config.Budgets {
+		if budget.Limits.CostMicroyuan != 20000000 {
+			t.Fatal("operator cap was not retained")
+		}
+	}
+	manifest, err := runworker.ParseManifest(files["executor.json"])
+	if err != nil || manifest.ExecutorVersion != run.SupportAgentExecutorVersion || manifest.Profiles[0].AdapterID != "support-agent-v1" {
+		t.Fatalf("S2 manifest: %v", err)
+	}
+}
+
 func TestPrepareSupportOfflineAndNeverOverwritesRows(t *testing.T) {
 	o, _ := supportPrepareFixture(t)
 	t.Setenv("JOBFORGE_AGENT_DSN", "invalid-secret-dsn")

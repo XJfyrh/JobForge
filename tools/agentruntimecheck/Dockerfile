@@ -61,4 +61,4 @@ RUN mkdir -p /etc/jobforge/cloud /run/secrets /var/lib/jobforge/batches /var/lib
 WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportLauncher|ProviderAuditExecutor)", "-test.timeout=420s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor)", "-test.timeout=420s"]

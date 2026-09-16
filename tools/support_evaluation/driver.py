@@ -75,6 +75,28 @@ def continuation(evidence: dict[str, Any]) -> bool:
             )
             and steps[-1]["kind"] == "submit_proposal"
         )
+    # S2 may terminate after any fully audited decision. Internal attempt/fence
+    # and rejected-call binding remain PostgreSQL's authority on the next Claim.
+    if any(step["kind"] == "model_decision" for step in steps):
+        return bool(
+            run["state"] == "failed"
+            and run["error"] is not None
+            and run["error"]["code"] in {"MODEL_PROTOCOL_ERROR", "BUDGET_EXHAUSTED"}
+            and all(
+                call["transport_outcome"] == "response"
+                and (
+                    (
+                        call["business_outcome"] == "accepted"
+                        and call["error_code"] == ""
+                    )
+                    or (
+                        call["business_outcome"] == "rejected"
+                        and call["error_code"] == "MODEL_PROTOCOL_ERROR"
+                    )
+                )
+                for call in chat
+            )
+        )
     return bool(
         run["state"] == "failed"
         and run["error"] is not None

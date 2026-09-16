@@ -37,6 +37,7 @@
         "get_delivery",
         "search_policy",
         "model_proposal",
+        "model_decision",
         "protocol_correction",
         "submit_proposal"
       ]
@@ -59,7 +60,7 @@
         },
         "executor_version": {
           "type": "string",
-          "const": "linux-v2-audit-runtime-1"
+          "enum": ["linux-v2-audit-runtime-1", "linux-v2-agent-runtime-1"]
         },
         "adapter_id": {
           "$ref": "#/$defs/identifier"

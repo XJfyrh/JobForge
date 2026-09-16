@@ -43,7 +43,7 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 	if f.Outcome == "error" {
 		// Only a complete, acknowledged first-model validation failure creates
 		// the existing one-correction marker. No other local failure is a step.
-		if f.Binding.StepKind != "model_proposal" || f.ErrorCode != "OUTPUT_INVALID" || last == nil ||
+		if (f.Binding.StepKind != "model_proposal" && f.Binding.StepKind != "model_decision") || f.ErrorCode != "OUTPUT_INVALID" || last == nil ||
 			last.observation.TransportOutcome != "response" || last.observation.BusinessOutcome != "rejected" ||
 			last.observation.ErrorCode != "OUTPUT_INVALID" || !parsed.CorrectionRequired || parsed.Proposal != nil ||
 			len(parsed.EvidenceRefs) != 0 || !bytes.Equal(bytes.TrimSpace(parsed.Content), []byte("null")) {

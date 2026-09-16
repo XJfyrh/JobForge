@@ -29,6 +29,7 @@ from jobforge_agent.runtime_input import (
     parse_runtime_input,
 )
 from jobforge_agent.support_adapter import validate_support_step
+from jobforge_agent.support_agent import next_tool_arguments, validate_agent_step
 
 
 def _endpoints(kind: str) -> dict[EndpointAlias, Endpoint]:
@@ -44,7 +45,7 @@ def _endpoints(kind: str) -> dict[EndpointAlias, Endpoint]:
         if not origin:
             raise DispatchError("PROFILE_UNAVAILABLE")
         values["ollama"] = Endpoint(origin)
-    if kind in {"model_proposal", "protocol_correction"}:
+    if kind in {"model_proposal", "model_decision", "protocol_correction"}:
         key = os.environ.get("DEEPSEEK_API_KEY", "")
         if not key:
             raise DispatchError("PROFILE_UNAVAILABLE")
@@ -75,11 +76,15 @@ async def execute_registered_step(
     checkpoint, result = runtime.checkpoint, _result()
     if adapter.strategy == "support_fixed_v1":
         validate_support_step(checkpoint, kind)
+    agent = adapter.strategy == "support_agent_v1"
+    if agent:
+        validate_agent_step(checkpoint, kind)
     snapshot = checkpoint["snapshot"]
     context = RunCallContext(
         frame["binding"]["profile_hash"],
         frame["binding"]["snapshot_hash"],
         runtime.tool_invocation_id,
+        agent=agent,
     )
     outcome: Literal["success", "error"] = "success"
     error_code = ""
@@ -102,6 +107,8 @@ async def execute_registered_step(
             if kind == "search_policy"
             else {"order_id": binding.order_id}
         )
+        if agent:
+            arguments = next_tool_arguments(checkpoint, kind)
         content = await RunBusinessTools(dispatcher, binding).execute(
             kind, arguments, context=context
         )
@@ -111,9 +118,9 @@ async def execute_registered_step(
             if kind == "search_policy"
             else [content["evidence_ref"]]
         )
-    elif kind in {"model_proposal", "protocol_correction"}:
+    elif kind in {"model_proposal", "model_decision", "protocol_correction"}:
         try:
-            result["proposal"] = await DeepSeekChat(dispatcher).propose(
+            output = await DeepSeekChat(dispatcher).propose(
                 adapter.proposal_messages(
                     copy.deepcopy(checkpoint), correction=kind == "protocol_correction"
                 ),
@@ -122,12 +129,23 @@ async def execute_registered_step(
                     value, copy.deepcopy(checkpoint)
                 ),
             )
+            if agent and output["type"] == "tool":
+                result["content"] = output
+            else:
+                result["proposal"] = output["proposal"] if agent else output
         except DispatchError as error:
             confirmed = dispatcher.last_confirmed_observation()
             if not (
-                kind == "model_proposal"
+                kind in {"model_proposal", "model_decision"}
+                and not (
+                    agent
+                    and any(
+                        item["result_json"]["correction_required"]
+                        for item in checkpoint["steps"]
+                    )
+                )
                 and error.code == "OUTPUT_INVALID"
-                and not error.fact
+                and (not error.fact or agent and error.fact == "model_output")
                 and not error.stop
                 and confirmed is not None
                 and confirmed.transport_outcome == "response"
@@ -142,7 +160,7 @@ async def execute_registered_step(
         if (
             not steps
             or steps[-1]["step"]["kind"]
-            not in {"model_proposal", "protocol_correction"}
+            not in {"model_proposal", "model_decision", "protocol_correction"}
             or steps[-1]["result_json"]["proposal"] is None
         ):
             raise DispatchError("INPUT_INVALID")

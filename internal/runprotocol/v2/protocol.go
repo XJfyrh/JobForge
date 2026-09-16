@@ -259,7 +259,7 @@ func validBinding(b Binding) bool {
 		uuidPattern.MatchString(b.RunID) && uuidPattern.MatchString(b.StepID) && uuidPattern.MatchString(b.SessionID) && uuidPattern.MatchString(b.SnapshotID) &&
 		hashPattern.MatchString(b.ProfileHash) && hashPattern.MatchString(b.SnapshotHash) && hashPattern.MatchString(b.InputHash) &&
 		between(b.AttemptNo, 1, MaxInteger) && between(b.FencingToken, 1, MaxInteger) && between(b.CursorVersion, 0, MaxInteger) &&
-		between(b.StepSequence, 1, 32) && oneOf(b.StepKind, "read_ticket", "get_order", "get_delivery", "search_policy", "model_proposal", "protocol_correction", "submit_proposal")
+		between(b.StepSequence, 1, 32) && oneOf(b.StepKind, "read_ticket", "get_order", "get_delivery", "search_policy", "model_proposal", "model_decision", "protocol_correction", "submit_proposal")
 }
 
 func validateFrame(f Frame) error {
@@ -327,7 +327,7 @@ func registeredSubcall(step, subcall string) bool {
 		return step == subcall
 	case "search_policy":
 		return oneOf(subcall, "profile_version", "profile_tags", "query_embedding", "search_policy")
-	case "model_proposal", "protocol_correction":
+	case "model_proposal", "model_decision", "protocol_correction":
 		return subcall == "chat"
 	default:
 		return false

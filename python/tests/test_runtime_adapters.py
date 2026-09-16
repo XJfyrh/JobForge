@@ -49,7 +49,7 @@ def test_production_registry_refuses_mechanism_adapter(
             "profiles": [PROFILE],
         },
     )
-    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1"}
+    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1", "support-agent-v1"}
     with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
         resolve()
 

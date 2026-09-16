@@ -13,7 +13,6 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runclock"
-	"github.com/xjfyrh/jobforge/internal/runinput"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
@@ -96,7 +95,7 @@ func (w *Worker) register(ctx context.Context, now clockSample) (workerSession, 
 	}
 	rpcContext, cancel := context.WithTimeout(ctx, controlTimeout)
 	defer cancel()
-	response, err := w.client.Register(rpcContext, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: runinput.ExecutorVersion})
+	response, err := w.client.Register(rpcContext, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: w.manifest.ExecutorVersion})
 	received, clockErr := now()
 	if err != nil {
 		return workerSession{}, run.ErrDependencyUnavailable

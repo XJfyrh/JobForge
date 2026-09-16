@@ -73,7 +73,9 @@ class CompleteChatUsage:
     reasoning_tokens: int | None
 
 
-def _chat_payload(messages: Sequence[Mapping[str, object]]) -> dict[str, Any]:
+def _chat_payload(
+    messages: Sequence[Mapping[str, object]], *, agent: bool = False
+) -> dict[str, Any]:
     if not isinstance(messages, (list, tuple)) or not messages:
         raise ToolError("INVALID_ARGUMENT")
     # Even the shortest empty message needs 28 serialized bytes. Bound the
@@ -95,7 +97,7 @@ def _chat_payload(messages: Sequence[Mapping[str, object]]) -> dict[str, Any]:
             ):
                 raise ToolError("INVALID_ARGUMENT")
             total += len(content.encode("utf-8"))
-            if total > MAX_MESSAGE_BYTES:
+            if total > (65536 if agent else MAX_MESSAGE_BYTES):
                 raise ToolError("SIZE_LIMIT")
             normalized.append({"role": role, "content": content})
     except (UnicodeError, ValueError, TypeError):
@@ -131,7 +133,7 @@ def prepare_chat_request(
     """Prepare one immutable fixed request with no caller-selected URL or model."""
     failure = None
     try:
-        payload = _chat_payload(messages)
+        payload = _chat_payload(messages, agent=context.agent)
     except ToolError as error:
         failure = _failure(error)
     if failure is not None:
@@ -145,7 +147,7 @@ def prepare_chat_request(
         body=payload,
         max_response_bytes=MAX_RESPONSE_BYTES,
     )
-    if len(request.body) > MAX_REQUEST_BYTES:
+    if len(request.body) > (131072 if context.agent else MAX_REQUEST_BYTES):
         raise DispatchError("OUTPUT_INVALID", fact="size_limit", stop=True)
     return request
 

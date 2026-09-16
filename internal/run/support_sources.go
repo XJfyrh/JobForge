@@ -124,6 +124,10 @@ func validSupportPolicyAlias(value string) bool {
 }
 
 func buildSupportSources(snapshot SnapshotBinding, prior []Step) (supportSources, error) {
+	return buildSupportSourcesWithSearch(snapshot, prior, false)
+}
+
+func buildSupportSourcesWithSearch(snapshot SnapshotBinding, prior []Step, repeatedSearch bool) (supportSources, error) {
 	sources := supportSources{aliases: map[string]SupportSource{}, events: map[string]SupportSource{}}
 	ticket, _, err := supportSnapshot(snapshot)
 	if err != nil {
@@ -132,11 +136,12 @@ func buildSupportSources(snapshot SnapshotBinding, prior []Step) (supportSources
 	sources.ticketStatus = ticket.Status
 	addSupportPointers(sources.aliases, "T", "business-evidence:"+snapshot.ID+":ticket", snapshot.Ticket)
 	seenKinds := map[string]bool{}
+	policies := map[string]business.PolicyHit{}
 	for _, step := range prior {
 		if len(ToolSequence(step.Kind)) == 0 {
 			continue
 		}
-		if seenKinds[step.Kind] {
+		if seenKinds[step.Kind] && (!repeatedSearch || step.Kind != "search_policy") {
 			return sources, ErrStepConflict
 		}
 		seenKinds[step.Kind] = true
@@ -170,6 +175,13 @@ func buildSupportSources(snapshot SnapshotBinding, prior []Step) (supportSources
 				return sources, ErrStepConflict
 			}
 			for _, hit := range search.Matches {
+				if previous, exists := policies[hit.ChunkID]; exists {
+					previous.Distance = hit.Distance
+					if previous != hit {
+						return sources, ErrStepConflict
+					}
+				}
+				policies[hit.ChunkID] = hit
 				sources.aliases[hit.ChunkID] = SupportSource{EvidenceRef: hit.EvidenceRef, SourcePointer: "/text"}
 			}
 		}
@@ -241,7 +253,11 @@ func validateSupportProposalShape(raw []byte, proposal *Proposal) error {
 }
 
 func validateSupportProposal(snapshot SnapshotBinding, prior []Step, proposal *Proposal) error {
-	sources, err := buildSupportSources(snapshot, prior)
+	return validateSupportProposalWithSearch(snapshot, prior, proposal, false)
+}
+
+func validateSupportProposalWithSearch(snapshot SnapshotBinding, prior []Step, proposal *Proposal, repeatedSearch bool) error {
+	sources, err := buildSupportSourcesWithSearch(snapshot, prior, repeatedSearch)
 	if err != nil || proposal == nil || proposal.SupportProposalFields == nil {
 		return ErrModelProtocol
 	}
@@ -274,7 +290,7 @@ func validateSupportProposal(snapshot SnapshotBinding, prior []Step, proposal *P
 	if err != nil {
 		return ErrModelProtocol
 	}
-	expected, err := SupportProposalFromModel(snapshot, prior, raw)
+	expected, err := supportProposalFromModel(snapshot, prior, raw, repeatedSearch)
 	if err != nil || !sameProposal(expected, proposal) {
 		return ErrModelProtocol
 	}

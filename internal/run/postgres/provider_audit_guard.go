@@ -109,7 +109,7 @@ func (b chatBarrier) complete() bool {
 	if b.StepID != nil {
 		return b.committedStep()
 	}
-	if c.StepKind != "protocol_correction" || *c.BusinessOutcome != "rejected" || *c.ErrorCode != "MODEL_PROTOCOL_ERROR" ||
+	if (c.StepKind != "protocol_correction" && (b.Profile.Strategy != agentrun.SupportAgentStrategy || c.StepKind != "model_decision")) || *c.BusinessOutcome != "rejected" || *c.ErrorCode != "MODEL_PROTOCOL_ERROR" ||
 		b.Run.State != agentrun.Failed || b.RunError == nil || *b.RunError != "MODEL_PROTOCOL_ERROR" ||
 		b.Run.AttemptNo != c.Lease.AttemptNo || b.Authority.FencingToken != c.Lease.FencingToken ||
 		b.AttemptFinished == nil || b.AttemptOutcome == nil || *b.AttemptOutcome != "failed_terminal" ||
@@ -144,6 +144,6 @@ func (b chatBarrier) committedStep() bool {
 	if *c.BusinessOutcome == "accepted" {
 		return !result.CorrectionRequired
 	}
-	return c.StepKind == "model_proposal" && *c.BusinessOutcome == "rejected" && *c.ErrorCode == "MODEL_PROTOCOL_ERROR" &&
+	return (c.StepKind == "model_proposal" || b.Profile.Strategy == agentrun.SupportAgentStrategy && c.StepKind == "model_decision") && *c.BusinessOutcome == "rejected" && *c.ErrorCode == "MODEL_PROTOCOL_ERROR" &&
 		result.CorrectionRequired && result.Proposal == nil
 }
