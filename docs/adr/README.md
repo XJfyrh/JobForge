@@ -12,7 +12,7 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 ## 状态
 
-- `Proposed`：正在评审，尚不能作为实现依据。
+- `Accepted（随本决策 PR 独立审查通过并合并时生效）`：正在评审，尚不能作为实现依据。
 - `Accepted`：已接受，是当前事实来源。
 - `Rejected`：已评审但未采用，保留决策背景。
 - `Superseded`：已由更新 ADR 取代，并必须链接新 ADR。
@@ -77,3 +77,7 @@ ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://g
 ## S1 收尾授权增量
 
 [ADR-0022](0022-s1-closeout-cumulative-authorization.md) / [PRD v0.14](../product/JobForge_PRD_v0.14.md) 随 [PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并合并时 **Accepted**：记录维护者在原批停止后的 S1 收尾新批次及新增累计 5 CNY 授权。仅部分取代 ADR-0021 的首批授权范围与新 batch 费用上限，原批停止、历史事实、持久屏障和其余合同保留。
+
+## 有界未知费用的后续准入
+
+[ADR-0023](0023-held-unknown-cross-batch-admission.md) / [PRD v0.15](../product/JobForge_PRD_v0.15.md) 为 Accepted（随本决策 PR 独立审查通过并合并时生效）：允许已停止、完整 hold 且无合同失效证据的历史传输失败按剩余额度准入独立新批；不释放 hold、不恢复旧批、不放宽成功确认。
