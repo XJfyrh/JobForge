@@ -13,8 +13,15 @@ import (
 )
 
 type fixtures struct {
-	ValidFrames   []json.RawMessage                      `json:"valid_frames"`
-	InvalidFrames []struct{ Name, Wire, Channel string } `json:"invalid_frames"`
+	ValidFrames          []json.RawMessage                      `json:"valid_frames"`
+	InvalidFrames        []struct{ Name, Wire, Channel string } `json:"invalid_frames"`
+	ObservationHashCases []struct {
+		Name        string          `json:"name"`
+		Frame       json.RawMessage `json:"frame"`
+		DomainError string          `json:"domain_error"`
+		Hash        string          `json:"hash"`
+		Accept      bool            `json:"accept"`
+	} `json:"observation_hash_cases"`
 	Conversations []struct {
 		Name   string `json:"name"`
 		Events []struct {
@@ -27,7 +34,7 @@ type fixtures struct {
 	} `json:"conversations"`
 }
 
-func loadFixtures(t *testing.T) fixtures {
+func loadFixtures(t testing.TB) fixtures {
 	t.Helper()
 	content, err := os.ReadFile("../../../api/executor/v2/fixtures/frames.json")
 	if err != nil {
@@ -40,7 +47,7 @@ func loadFixtures(t *testing.T) fixtures {
 	return f
 }
 
-func decodeFixture(t *testing.T, raw json.RawMessage) Frame {
+func decodeFixture(t testing.TB, raw json.RawMessage) Frame {
 	t.Helper()
 	var compact bytes.Buffer
 	if err := json.Compact(&compact, raw); err != nil {
@@ -272,6 +279,7 @@ func TestObservationHashIsSnapshotAcrossMeteringJoin(t *testing.T) {
 			if err := c.Accept(observation, 1000); err != nil {
 				t.Fatal(err)
 			}
+			ack := observationACK(t, observation, 1000)
 			// Change the original pointer after acceptance, before the other FD.
 			*observation.UsageHash = correctHash
 			if matching {
@@ -284,6 +292,11 @@ func TestObservationHashIsSnapshotAcrossMeteringJoin(t *testing.T) {
 			}
 			if c.Closed() == matching {
 				t.Fatal("caller mutation changed accepted observation identity")
+			}
+			if matching {
+				if err := c.Accept(ack, 1000); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if err := c.Accept(frames["step_result"], 1000); (err == nil) != matching {
 				t.Fatalf("original matching=%t result error=%v", matching, err)

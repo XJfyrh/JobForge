@@ -1,6 +1,6 @@
-# Agent v3 S1-C1：执行器协议与时钟接缝
+# Agent v3：执行器协议、观察确认与时钟
 
-[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受；本切片已随[PR #42](https://github.com/XJfyrh/JobForge/pull/42)合并，提供正式执行器要使用的严格codec、顺序校验和计量权限，以及Worker RPC的权威时间/异常标志，见[验证证据](evidence/agent-v3-s1c1-protocol-2026-09-16.md)。尚未交付正式Worker、IPC监管循环、DeepSeek HTTP适配或40例云端执行，不能单凭fixture通过宣称这些验收完成。
+[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受；[PR #42](https://github.com/XJfyrh/JobForge/pull/42)提供严格codec、顺序校验、计量权限和Worker RPC时间接缝，见[C1证据](evidence/agent-v3-s1c1-protocol-2026-09-16.md)。C2的[受控HTTP适配](agent-v3-authorized-http.md)已合并。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受，本次C3a同步内部v2的明确观察ACK和两端状态校验，见[C3a证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。正式Worker、IPC监管循环及40例云端执行仍待实现，模块通过不代表这些层次已验收。
 
 ## 版本与所有权
 
@@ -18,7 +18,15 @@ v2的`emitted_mono_ms`是剩余期限的发出锚，接收方扣除IPC排队时�
 
 ## 计量与普通结果
 
-普通observation声明`usage_disposition=unknown/reported`和可空`usage_hash`。reported必须与同调用/原参数的`metering_report`汇合并确认settled，才可继续；不能依赖不同FD的接收先后。unknown保留完整hold。已知超界报告立即停止本地派发；`metering_ack`的anomaly或unconfirmed均不恢复执行。
+普通observation声明`usage_disposition=unknown/reported`和可空`usage_hash`。每次HTTP都必须收到同身份/序号/观察hash的`call_observation_ack`，免费、unknown、rejected与最后一次调用也适用。reported还必须与同调用/原参数的`metering_report`汇合并确认settled；unknown保留完整hold，不伪造计量。已知超界报告立即停止本地派发；`metering_ack`的anomaly或unconfirmed均不恢复执行。
+
+观察hash复用控制账本的长度前缀SHA256：域、transport outcome、十进制HTTP状态、映射后的领域错误、business outcome、usage hash；unknown的usage项为空字符串。OUTPUT_INVALID→MODEL_PROTOCOL_ERROR、INPUT_INVALID→INVALID_ARGUMENT、PROTOCOL_ERROR→EXECUTOR_PROTOCOL_ERROR，控制拒绝码不得伪装业务观察。hash不含身份，因此两端仍分别严格验证完整binding、request、call和sequence。共同向量与源合同见[内部v2说明](../api/executor/v2/README.md)。
+
+两个FD可反序接收，但普通ACK发出不能早于observation和首次有效settled ACK。至多保存当前调用一份pending普通ACK，双屏障齐备前不恢复idle或发出结果。重复普通ACK属于协议错误；计量重复的既有幂等规则保留。停止后仍可接收标准完整原调用计量，废弃普通ACK不阻碍这项窄补报，也永不恢复普通执行。
+
+ACK与汇合检查原call/step截止，等号过期。确认后第一个intent或result还必须在前一call截止前被接收，发出时间不能早于ACK；及时接受新intent后，其新permit定义新call截止，不把旧call截止继承到整次新请求。首次intent与零HTTP步骤没有虚构的前一call期限。此处执行ADR-0019的保守截止约束，等待ACK不会重新获得完整timeout。
+
+`DispatchHooks.observe`返回具体ACK Frame，由原dispatcher Conversation验证后才释放业务结果。普通ACK只表示控制事实确认，不授予下一次HTTP、续期或提交步骤。当前测试hooks仍是替身；后续Go桥接必须在真实SettleUsage/ObserveCall明确成功且执行权仍有效后发送，不能把pipe write或本地codec成功当作数据库已提交。
 
 计量逐字段接受safeint，交账本判断超预留异常，不按许可或1024输出token截断。Worker RPC的`measurement_anomaly`明确表示已保存原始计量、冻结三层账户并保留hold；正常晚到usage不因此冻结。原principal/session/attempt/fence及30日窗口仍由数据库核验，补报不能修改Run终态、清除新attempt调用或推进游标。
 
@@ -26,6 +34,6 @@ v2的`emitted_mono_ms`是剩余期限的发出锚，接收方扣除IPC排队时�
 
 ## 分层验证
 
-Windows按仓库要求先启动测试PostgreSQL，再执行真实RPC/PG测试；源码协议用共同fixtures和反例验证，Python SDK与旧v1仍回归。Linux镜像另外运行Go/Python共享BOOTTIME测试及既有S0进程探针。具体命令和结果随本切片证据记录；真实Worker、网络适配和云端模型层待后续切片运行。
+Windows按仓库要求先启动测试PostgreSQL，再执行真实RPC/PG测试；源码协议用共同fixtures和反例验证，Python SDK与旧v1仍回归。Linux镜像另外运行Go/Python共享BOOTTIME测试及既有S0进程探针。C3a沿用C2固定Linux镜像检查实际BOOTTIME和TCP；还提供`go test ./internal/runprotocol/v2 -run '^$' -bench '^BenchmarkExecutorV2Session$' -benchmem -cpu=1`测完整本地codec/状态校验会话，不把它当作IPC、数据库或模型吞吐。
 
 新增直接使用的`golang.org/x/sys/unix`读取内核时钟，沿用仓库既有固定版本；`go mod tidy`同时将此前已直接使用的genproto/rpc归入直接依赖，未升级版本。无数据库migration、未更改Claim SQL或预算转换；历史W4失败、AT-25跳过、生产留存和远程模型未验收继续保留。

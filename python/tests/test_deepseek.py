@@ -39,7 +39,7 @@ from jobforge_agent.dispatch import (
     RunCallContext,
 )
 from jobforge_agent.errors import ToolError
-from jobforge_agent.protocol_v2 import MAX_INTEGER, usage_hash
+from jobforge_agent.protocol_v2 import MAX_INTEGER, observation_hash, usage_hash
 
 CALL_ID = "00000000-0000-4000-8000-000000000006"
 CONTEXT = RunCallContext("a" * 64, "b" * 64, "")
@@ -515,8 +515,18 @@ class _FakeCoordinator:
             "output_token_limit": 1024,
         }
 
-    async def observe(self, observation: dict[str, Any]) -> None:
+    async def observe(self, observation: dict[str, Any]) -> dict[str, Any]:
         self.observations.append(copy.deepcopy(observation))
+        return {
+            "version": 2,
+            "kind": "call_observation_ack",
+            "request_id": observation["request_id"],
+            "binding": copy.deepcopy(observation["binding"]),
+            "emitted_mono_ms": 1000,
+            "call_sequence": observation["call_sequence"],
+            "physical_call_id": observation["physical_call_id"],
+            "observation_hash": observation_hash(observation),
+        }
 
     async def settle(self, report: dict[str, Any]) -> dict[str, Any]:
         self.reports.append(copy.deepcopy(report))

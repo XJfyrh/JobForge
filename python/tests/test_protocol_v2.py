@@ -18,6 +18,8 @@ from jobforge_agent.protocol_v2 import (
     decode_metering,
     encode,
     encode_metering,
+    observation_error_code,
+    observation_hash,
     read_frame,
     read_metering_frame,
     usage_hash,
@@ -46,6 +48,19 @@ def _started(frames: dict[str, Frame], *, dispatch: bool = True) -> Conversation
     return conversation
 
 
+def _observation_ack(observation: Frame, emitted: int = 1000) -> Frame:
+    return {
+        "version": 2,
+        "kind": "call_observation_ack",
+        "request_id": observation["request_id"],
+        "binding": copy.deepcopy(observation["binding"]),
+        "emitted_mono_ms": emitted,
+        "call_sequence": observation["call_sequence"],
+        "physical_call_id": observation["physical_call_id"],
+        "observation_hash": observation_hash(observation),
+    }
+
+
 @pytest.mark.parametrize("frame", FIXTURES["valid_frames"], ids=lambda f: f["kind"])
 def test_shared_valid_frames(frame: Frame) -> None:
     """Both language codecs consume the same frozen valid corpus."""
@@ -61,6 +76,20 @@ def test_shared_invalid_frames(case: Frame) -> None:
     decoder = decode_metering if case.get("channel") == "metering" else decode
     with pytest.raises(ProtocolError):
         decoder(case["wire"].encode("utf-8"))
+
+
+@pytest.mark.parametrize(
+    "case", FIXTURES["observation_hash_cases"], ids=lambda case: case["name"]
+)
+def test_shared_observation_hash_uses_domain_errors(case: Frame) -> None:
+    """Go, Python and the durable ledger use identical mapped hash bytes."""
+    if not case["accept"]:
+        with pytest.raises(ProtocolError):
+            observation_hash(case["frame"])
+        return
+    observation = decode(encode(case["frame"]))
+    assert observation_error_code(observation["error_code"]) == case["domain_error"]
+    assert observation_hash(observation) == case["hash"]
 
 
 @pytest.mark.parametrize("case", FIXTURES["conversations"], ids=lambda f: f["name"])
@@ -195,7 +224,10 @@ def test_metering_internal_consistency_and_closed_shape(scenario: str) -> None:
 
 
 @pytest.mark.parametrize("first", ["ordinary", "metering"])
-def test_report_and_observation_join_across_independent_pipes(first: str) -> None:
+@pytest.mark.parametrize("first_ack", ["ordinary", "metering"])
+def test_report_and_observation_join_across_independent_pipes(
+    first: str, first_ack: str
+) -> None:
     """Older metering emissions can arrive after a later ordinary observation."""
     frames = _frames()
     conversation = _started(frames)
@@ -210,9 +242,17 @@ def test_report_and_observation_join_across_independent_pipes(first: str) -> Non
         conversation.accept_metering(report, 1000)
         conversation.accept(observation, 1010)
     ack["emitted_mono_ms"] = 1020
-    conversation.accept_metering(ack, 1020)
-    frames["step_result"]["emitted_mono_ms"] = 1020
-    conversation.accept(frames["step_result"], 1020)
+    ordinary_ack = _observation_ack(observation, 1030)
+    if first_ack == "ordinary":
+        conversation.accept(ordinary_ack, 1030)
+        assert conversation.metering_pending
+        conversation.accept_metering(ack, 1040)
+    else:
+        conversation.accept_metering(ack, 1020)
+        assert not conversation.metering_pending
+        conversation.accept(ordinary_ack, 1040)
+    frames["step_result"]["emitted_mono_ms"] = 1040
+    conversation.accept(frames["step_result"], 1040)
 
 
 @pytest.mark.parametrize("missing", ["report", "ack"])
@@ -221,6 +261,7 @@ def test_reported_observation_cannot_skip_settlement(missing: str) -> None:
     frames = _frames()
     conversation = _started(frames)
     conversation.accept(frames["call_observation"], 1000)
+    conversation.accept(_observation_ack(frames["call_observation"]), 1000)
     if missing == "ack":
         conversation.accept_metering(frames["metering_report"], 1000)
     with pytest.raises(ProtocolError):
@@ -392,6 +433,7 @@ def test_unknown_without_report_can_finish_while_hold_remains() -> None:
     frames["call_observation"]["usage_disposition"] = "unknown"
     frames["call_observation"]["usage_hash"] = None
     conversation.accept(frames["call_observation"], 1000)
+    conversation.accept(_observation_ack(frames["call_observation"]), 1000)
     conversation.accept(frames["step_result"], 1000)
 
 
@@ -453,3 +495,236 @@ def test_anchored_deadlines_do_not_reset_on_queue_or_metering(scenario: str) -> 
         conversation.accept_metering(frames["metering_ack"], expiry)
         with pytest.raises(ProtocolError):
             conversation.accept(frames["step_result"], expiry)
+
+
+@pytest.mark.parametrize("reported", [False, True])
+def test_settlement_and_pipe_write_cannot_replace_observation_ack(
+    reported: bool,
+) -> None:
+    """The last HTTP still needs its ordinary ACK even after complete settlement."""
+    frames = _frames()
+    conversation = _started(frames)
+    observation = frames["call_observation"]
+    if reported:
+        conversation.accept_metering(frames["metering_report"], 1000)
+        conversation.accept_metering(frames["metering_ack"], 1000)
+    else:
+        observation.update(usage_disposition="unknown", usage_hash=None)
+    conversation.accept(observation, 1000)
+    with pytest.raises(ProtocolError):
+        conversation.accept(frames["step_result"], 1000)
+    with pytest.raises(ProtocolError):
+        conversation.accept(_observation_ack(observation), 1000)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "request_id",
+        "physical_call_id",
+        "observation_hash",
+        "call_sequence",
+        "binding.fencing_token",
+        "binding.worker_id",
+        "binding.profile_hash",
+        "binding.snapshot_hash",
+    ],
+)
+def test_observation_ack_matches_full_original_identity_and_content(field: str) -> None:
+    """An otherwise valid ACK cannot acknowledge a different call or authority."""
+    frames = _frames()
+    conversation = _started(frames)
+    observation = frames["call_observation"]
+    observation.update(usage_disposition="unknown", usage_hash=None)
+    conversation.accept(observation, 1000)
+    ack = _observation_ack(observation)
+    target = ack
+    keys = field.split(".")
+    for key in keys[:-1]:
+        target = target[key]
+    previous = target[keys[-1]]
+    if isinstance(previous, int):
+        target[keys[-1]] += 1
+    elif keys[-1].endswith("hash"):
+        target[keys[-1]] = "e" * 64
+    elif keys[-1] == "worker_id":
+        target[keys[-1]] = "other-worker"
+    else:
+        target[keys[-1]] = "00000000-0000-4000-8000-000000000099"
+    with pytest.raises(ProtocolError):
+        conversation.accept(ack, 1000)
+    assert conversation.closed
+
+
+@pytest.mark.parametrize("pending", [False, True])
+def test_duplicate_observation_ack_is_never_reusable(pending: bool) -> None:
+    """A pending or already joined ACK is one use, unlike idempotent control RPCs."""
+    frames = _frames()
+    conversation = _started(frames)
+    observation = frames["call_observation"]
+    if not pending:
+        observation.update(usage_disposition="unknown", usage_hash=None)
+    conversation.accept(observation, 1000)
+    ack = _observation_ack(observation)
+    conversation.accept(ack, 1000)
+    with pytest.raises(ProtocolError):
+        conversation.accept(ack, 1000)
+    if pending:
+        conversation.accept_metering(frames["metering_report"], 1000)
+        conversation.accept_metering(frames["metering_ack"], 1000)
+    assert conversation.closed
+
+
+@pytest.mark.parametrize("first", ["ordinary", "metering"])
+def test_observation_ack_cannot_be_emitted_before_settlement(first: str) -> None:
+    """FD read order is free; a durable observation cannot predate its settlement."""
+    frames = _frames()
+    conversation = _started(frames)
+    conversation.accept(frames["call_observation"], 1000)
+    conversation.accept_metering(frames["metering_report"], 1000)
+    ordinary = _observation_ack(frames["call_observation"], 1010)
+    frames["metering_ack"]["emitted_mono_ms"] = 1020
+    if first == "ordinary":
+        conversation.accept(ordinary, 1010)
+        with pytest.raises(ProtocolError):
+            conversation.accept_metering(frames["metering_ack"], 1020)
+    else:
+        conversation.accept_metering(frames["metering_ack"], 1020)
+        with pytest.raises(ProtocolError):
+            conversation.accept(ordinary, 1020)
+    assert conversation.closed
+
+
+@pytest.mark.parametrize("end", ["stop", "expiry", "anomaly", "unconfirmed"])
+def test_pending_observation_ack_never_revives_after_loss_of_authority(
+    end: str,
+) -> None:
+    """A valid late settlement preserves narrow metering only, never execution."""
+    frames = _frames()
+    conversation = _started(frames)
+    conversation.accept(frames["call_observation"], 1000)
+    conversation.accept(_observation_ack(frames["call_observation"]), 1000)
+    now = 1000
+    if end == "stop":
+        conversation.stop()
+    elif end == "expiry":
+        now += frames["call_permit"]["call_ms"]
+    else:
+        frames["metering_ack"]["settlement"] = end
+    conversation.accept_metering(frames["metering_report"], now)
+    conversation.accept_metering(frames["metering_ack"], now)
+    assert conversation.closed
+    with pytest.raises(ProtocolError):
+        conversation.accept(frames["step_result"], now)
+
+
+@pytest.mark.parametrize(
+    "scenario", ["before_observation", "future", "expired", "backward"]
+)
+def test_observation_ack_clock_and_original_deadline(scenario: str) -> None:
+    """ACK receipt cannot refresh time or move the parent clock backwards."""
+    frames = _frames()
+    conversation = _started(frames)
+    observation = frames["call_observation"]
+    observation.update(
+        usage_disposition="unknown", usage_hash=None, emitted_mono_ms=1010
+    )
+    conversation.accept(observation, 1010)
+    ack = _observation_ack(observation, 1010)
+    now = 1010
+    if scenario == "before_observation":
+        ack["emitted_mono_ms"] = 1000
+    elif scenario == "future":
+        ack["emitted_mono_ms"] = 1011
+    elif scenario == "backward":
+        ack["emitted_mono_ms"] = 999
+    else:
+        now = 1000 + frames["call_permit"]["call_ms"]
+    with pytest.raises(ProtocolError):
+        conversation.accept(ack, now)
+
+
+@pytest.mark.parametrize("next_kind", ["call_intent", "step_result"])
+@pytest.mark.parametrize("invalid", ["before_ack", "call_expired"])
+def test_followup_requires_ack_causal_time_and_confirmation_deadline(
+    next_kind: str, invalid: str
+) -> None:
+    """The first follow-up observes the previous call's conservative barrier."""
+    frames = _frames()
+    for frame in frames.values():
+        frame["binding"]["step_kind"] = "search_policy"
+    for kind in ("call_intent", "call_permit"):
+        frames[kind].update(
+            subcall="profile_version",
+            tool_invocation_id="00000000-0000-4000-8000-000000000088",
+        )
+    frames["call_permit"].update(
+        input_token_limit=0, output_token_limit=0, call_ms=1000
+    )
+    frames["call_permit"]["dispatch_ms"] = 500
+    observation = frames["call_observation"]
+    observation.update(usage_disposition="unknown", usage_hash=None)
+    conversation = _started(frames)
+    conversation.accept(observation, 1000)
+    conversation.accept(_observation_ack(observation, 1010), 1010)
+    following = frames[next_kind]
+    if next_kind == "call_intent":
+        following.update(call_sequence=2, subcall="profile_tags")
+    else:
+        following.update(outcome="error", error_code="OUTPUT_INVALID")
+    following["emitted_mono_ms"] = 1005 if invalid == "before_ack" else 1010
+    with pytest.raises(ProtocolError):
+        conversation.accept(following, 1010 if invalid == "before_ack" else 2000)
+
+
+def test_observation_and_pending_ack_are_immutable_snapshots() -> None:
+    """Caller mutation cannot rewrite the expected hash or pending confirmation."""
+    frames = _frames()
+    conversation = _started(frames)
+    observation = frames["call_observation"]
+    ack = _observation_ack(observation)
+    conversation.accept(observation, 1000)
+    observation["http_status"] = 201
+    conversation.accept(ack, 1000)
+    ack["observation_hash"] = "e" * 64
+    conversation.accept_metering(frames["metering_report"], 1000)
+    conversation.accept_metering(frames["metering_ack"], 1000)
+    conversation.accept(frames["step_result"], 1000)
+
+
+def test_timely_next_intent_does_not_inherit_old_deadline_after_denied_permit() -> None:
+    """A new control decision uses the step deadline after its prior ACK barrier."""
+    frames = _frames()
+    for frame in frames.values():
+        frame["binding"]["step_kind"] = "search_policy"
+    for kind in ("call_intent", "call_permit"):
+        frames[kind].update(
+            subcall="profile_version",
+            tool_invocation_id="00000000-0000-4000-8000-000000000088",
+        )
+    permit = frames["call_permit"]
+    permit.update(
+        input_token_limit=0, output_token_limit=0, call_ms=1000, dispatch_ms=500
+    )
+    observation = frames["call_observation"]
+    observation.update(usage_disposition="unknown", usage_hash=None)
+    conversation = _started(frames)
+    conversation.accept(observation, 1000)
+    conversation.accept(_observation_ack(observation), 1000)
+    frames["call_intent"].update(call_sequence=2, subcall="profile_tags")
+    conversation.accept(frames["call_intent"], 1500)
+    permit.update(
+        call_sequence=2,
+        subcall="profile_tags",
+        granted=False,
+        physical_call_id="",
+        error_code="BUDGET_EXHAUSTED",
+        emitted_mono_ms=2000,
+        dispatch_ms=0,
+        call_ms=0,
+    )
+    conversation.accept(permit, 2000)
+    frames["step_result"].update(
+        outcome="error", error_code="BUDGET_EXHAUSTED", emitted_mono_ms=2000
+    )
+    conversation.accept(frames["step_result"], 2000)

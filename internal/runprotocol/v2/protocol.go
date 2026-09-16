@@ -92,6 +92,7 @@ type Frame struct {
 	BusinessOutcome  string          `json:"business_outcome"`
 	UsageDisposition string          `json:"usage_disposition"`
 	UsageHash        *string         `json:"usage_hash"`
+	ObservationHash  string          `json:"observation_hash"`
 	Settlement       string          `json:"settlement"`
 	Usage            *Usage          `json:"usage"`
 	Outcome          string          `json:"outcome"`
@@ -101,13 +102,14 @@ type Frame struct {
 var commonFields = []string{"version", "kind", "request_id", "binding", "emitted_mono_ms"}
 
 var kindFields = map[string][]string{
-	"execute_step":     {"remaining_ms", "trace_context", "checkpoint", "input"},
-	"call_intent":      {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id"},
-	"call_permit":      {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id", "physical_call_id", "granted", "error_code", "dispatch_ms", "call_ms", "input_token_limit", "output_token_limit"},
-	"call_observation": {"call_sequence", "physical_call_id", "transport_outcome", "http_status", "business_outcome", "error_code", "usage_disposition", "usage_hash"},
-	"step_result":      {"outcome", "error_code", "result"},
-	"metering_report":  {"call_sequence", "physical_call_id", "parameter_hash", "usage"},
-	"metering_ack":     {"call_sequence", "physical_call_id", "usage_hash", "settlement"},
+	"execute_step":         {"remaining_ms", "trace_context", "checkpoint", "input"},
+	"call_intent":          {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id"},
+	"call_permit":          {"call_sequence", "subcall", "parameter_hash", "tool_invocation_id", "physical_call_id", "granted", "error_code", "dispatch_ms", "call_ms", "input_token_limit", "output_token_limit"},
+	"call_observation":     {"call_sequence", "physical_call_id", "transport_outcome", "http_status", "business_outcome", "error_code", "usage_disposition", "usage_hash"},
+	"call_observation_ack": {"call_sequence", "physical_call_id", "observation_hash"},
+	"step_result":          {"outcome", "error_code", "result"},
+	"metering_report":      {"call_sequence", "physical_call_id", "parameter_hash", "usage"},
+	"metering_ack":         {"call_sequence", "physical_call_id", "usage_hash", "settlement"},
 }
 
 var bindingFields = []string{"tenant_id", "worker_id", "run_id", "step_id", "session_id", "profile_id", "profile_hash", "snapshot_id", "snapshot_hash", "input_hash", "attempt_no", "fencing_token", "cursor_version", "step_sequence", "step_kind"}
@@ -272,10 +274,13 @@ func validateFrame(f Frame) error {
 			valid = valid && validPermit(f)
 		}
 	case "call_observation":
-		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && validDisposition(f) && validError(f.ErrorCode) &&
+		_, errorCodeErr := ObservationErrorCode(f.ErrorCode)
+		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && validDisposition(f) && errorCodeErr == nil &&
 			((f.TransportOutcome == "response" && between(f.HTTPStatus, 100, 599) && oneOf(f.BusinessOutcome, "accepted", "rejected")) ||
 				(f.TransportOutcome == "unknown" && f.HTTPStatus == 0 && f.BusinessOutcome == "unknown" && f.UsageDisposition == "unknown")) &&
 			((f.BusinessOutcome == "accepted" && f.ErrorCode == "") || (f.BusinessOutcome != "accepted" && f.ErrorCode != ""))
+	case "call_observation_ack":
+		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ObservationHash)
 	case "metering_report":
 		valid = between(f.CallSequence, 1, 44) && uuidPattern.MatchString(f.PhysicalCallID) && hashPattern.MatchString(f.ParameterHash) && f.Usage != nil && validUsage(f.Usage)
 	case "metering_ack":

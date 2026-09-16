@@ -1,9 +1,9 @@
 # ADR-0019：执行器观察确认与固定退出合同
 
-- 状态：Proposed，等待PR审查；没有新增执行能力或验收结论。
+- 状态：Accepted；随[PR #44](https://github.com/XJfyrh/JobForge/pull/44)于2026-09-16合并接受（`d11dd2f`）。契约接受不代表新增执行能力或验收通过。
 - 日期：2026-09-16。
 - 关联：[PRD v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0018](0018-deepseek-fixed-flow-and-executor.md)。
-- 取代范围：待接受后，取代ADR-0018中普通observation后的继续执行时序；补充关闭后的失败传递和进程收尾。模型、价格、账本、固定业务策略及其它既有决策不变，旧ADR正文保留。
+- 取代范围：取代ADR-0018中普通observation后的继续执行时序；补充关闭后的失败传递和进程收尾。模型、价格、账本、固定业务策略及其它既有决策不变，旧ADR正文保留。
 
 ## 1. 上下文
 
