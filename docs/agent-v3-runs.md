@@ -1,6 +1,6 @@
 # Agent v3 Run 接入与调用账本
 
-本指南以 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B 为基础，并补充 [ADR-0020](adr/0020-provider-audit-and-batch-stop.md) 的调用审计查询。控制服务、Worker RPC、SDK、步骤与预算随PR #40合并；正式受监管执行器和support固定流程分别随PR #46/#48合并。真实DeepSeek与40案仍未验收；默认配置没有收费profile，不能把确定性测试称作云端业务验收。
+本指南以 [PRD v0.9](product/JobForge_PRD_v0.9.md) / [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 的 S1-B 为基础，并补充 [ADR-0020](adr/0020-provider-audit-and-batch-stop.md) 的调用审计查询。控制服务、Worker RPC、SDK、步骤与预算随PR #40合并；正式受监管执行器和support固定流程分别随PR #46/#48合并。S1与[S2真实开发验收](evidence/agent-v3-s2-delivery-2026-09-17.md)已分别完成；默认配置没有收费profile，确定性机制测试与真实云端证据仍分层记录。
 
 ## 服务与数据边界
 

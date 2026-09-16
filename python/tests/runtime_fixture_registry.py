@@ -9,6 +9,7 @@ from typing import Any
 from jobforge_agent.runtime_adapters import validate_existing_proposal
 from jobforge_agent.runtime_input import RuntimeCheckpoint
 from jobforge_agent.support_adapter import SupportFixedAdapter
+from jobforge_agent.support_agent import SupportAgentAdapter
 
 
 class MechanismAdapter:
@@ -56,4 +57,5 @@ class MechanismAdapter:
 REGISTRY = {
     "bounded-readonly-mechanism-v1": MechanismAdapter(),
     "support-fixed-v1": SupportFixedAdapter(),
+    "support-agent-v1": SupportAgentAdapter(),
 }

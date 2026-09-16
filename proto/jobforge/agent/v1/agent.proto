@@ -83,7 +83,7 @@ message StepIdentity {
   string snapshot_hash = 9;
 }
 
-// StepKind is the fixed S1 sequence; no arbitrary operation is accepted.
+// StepKind contains only registered fixed and bounded-agent operations.
 enum StepKind {
   // Missing kinds are invalid.
   STEP_KIND_UNSPECIFIED = 0;
@@ -101,6 +101,8 @@ enum StepKind {
   STEP_KIND_PROTOCOL_CORRECTION = 6;
   // Validate and atomically yield a proposal or finish explicit no_action.
   STEP_KIND_SUBMIT_PROPOSAL = 7;
+  // Choose one bound read tool or a final proposal; this grants no dispatch.
+  STEP_KIND_MODEL_DECISION = 8;
 }
 
 // RunState is the control-plane lifecycle; proposal does not mean applied.

@@ -26,7 +26,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// StepKind is the fixed S1 sequence; no arbitrary operation is accepted.
+// StepKind contains only registered fixed and bounded-agent operations.
 type StepKind int32
 
 const (
@@ -46,6 +46,8 @@ const (
 	StepKind_STEP_KIND_PROTOCOL_CORRECTION StepKind = 6
 	// Validate and atomically yield a proposal or finish explicit no_action.
 	StepKind_STEP_KIND_SUBMIT_PROPOSAL StepKind = 7
+	// Choose one bound read tool or a final proposal; this grants no dispatch.
+	StepKind_STEP_KIND_MODEL_DECISION StepKind = 8
 )
 
 // Enum value maps for StepKind.
@@ -59,6 +61,7 @@ var (
 		5: "STEP_KIND_MODEL_PROPOSAL",
 		6: "STEP_KIND_PROTOCOL_CORRECTION",
 		7: "STEP_KIND_SUBMIT_PROPOSAL",
+		8: "STEP_KIND_MODEL_DECISION",
 	}
 	StepKind_value = map[string]int32{
 		"STEP_KIND_UNSPECIFIED":         0,
@@ -69,6 +72,7 @@ var (
 		"STEP_KIND_MODEL_PROPOSAL":      5,
 		"STEP_KIND_PROTOCOL_CORRECTION": 6,
 		"STEP_KIND_SUBMIT_PROPOSAL":     7,
+		"STEP_KIND_MODEL_DECISION":      8,
 	}
 )
 
@@ -3620,7 +3624,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12D\n" +
 	"\raccepted_step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.AcceptedStepR\facceptedStep\x12'\n" +
 	"\x0fattempt_outcome\x18\x03 \x01(\tR\x0eattemptOutcome\x121\n" +
-	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\xf2\x01\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\x90\x02\n" +
 	"\bStepKind\x12\x19\n" +
 	"\x15STEP_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15STEP_KIND_READ_TICKET\x10\x01\x12\x17\n" +
@@ -3629,7 +3633,8 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x17STEP_KIND_SEARCH_POLICY\x10\x04\x12\x1c\n" +
 	"\x18STEP_KIND_MODEL_PROPOSAL\x10\x05\x12!\n" +
 	"\x1dSTEP_KIND_PROTOCOL_CORRECTION\x10\x06\x12\x1d\n" +
-	"\x19STEP_KIND_SUBMIT_PROPOSAL\x10\a*\xec\x01\n" +
+	"\x19STEP_KIND_SUBMIT_PROPOSAL\x10\a\x12\x1c\n" +
+	"\x18STEP_KIND_MODEL_DECISION\x10\b*\xec\x01\n" +
 	"\bRunState\x12\x19\n" +
 	"\x15RUN_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fRUN_STATE_READY\x10\x01\x12\x15\n" +

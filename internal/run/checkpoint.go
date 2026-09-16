@@ -110,7 +110,7 @@ func CanonicalStepResult(data []byte, kind string) (StepResult, json.RawMessage,
 // CanonicalStepResultForStrategy keeps each registered proposal format closed.
 // Selecting support does not loosen the historical four-field proposal schema.
 func CanonicalStepResultForStrategy(data []byte, kind, strategy string) (StepResult, json.RawMessage, error) {
-	if strategy != BoundedReadonlyStrategy && strategy != SupportFixedStrategy {
+	if strategy != BoundedReadonlyStrategy && !IsSupportStrategy(strategy) {
 		return StepResult{}, nil, ErrProfileUnavailable
 	}
 	limit := 16384
@@ -142,7 +142,7 @@ func CanonicalStepResultForStrategy(data []byte, kind, strategy string) (StepRes
 	if result.Proposal != nil {
 		var proposal map[string]json.RawMessage
 		count := 4
-		if strategy == SupportFixedStrategy {
+		if IsSupportStrategy(strategy) {
 			count = 8
 		}
 		if json.Unmarshal(object["proposal"], &proposal) != nil || len(proposal) != count {
@@ -157,7 +157,7 @@ func CanonicalStepResultForStrategy(data []byte, kind, strategy string) (StepRes
 		if !validStringArray(proposal["evidence_refs"]) {
 			return result, nil, ErrInvalidArgument
 		}
-		if strategy == SupportFixedStrategy && validateSupportProposalShape(object["proposal"], result.Proposal) != nil {
+		if IsSupportStrategy(strategy) && validateSupportProposalShape(object["proposal"], result.Proposal) != nil {
 			return result, nil, ErrInvalidArgument
 		}
 	}
@@ -274,7 +274,7 @@ func normalizeCheckpointNumbers(value any) (any, error) {
 // Physical observation binding is checked by the transactional store separately.
 func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req CommitStepRequest) (CommitDecision, error) {
 	var decision CommitDecision
-	if (profile.Strategy != BoundedReadonlyStrategy && profile.Strategy != SupportFixedStrategy) || profile.ID != req.Step.ProfileID || profile.Hash != req.Step.ProfileHash {
+	if (profile.Strategy != BoundedReadonlyStrategy && !IsSupportStrategy(profile.Strategy)) || profile.ID != req.Step.ProfileID || profile.Hash != req.Step.ProfileHash {
 		return decision, ErrProfileUnavailable
 	}
 	result, canonical, err := CanonicalStepResultForStrategy(req.ResultJSON, req.Step.Kind, profile.Strategy)
@@ -304,6 +304,9 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 			return decision, ErrStepConflict
 		}
 		decision.NextKind = "get_order"
+		if profile.Strategy == SupportAgentStrategy {
+			decision.NextKind = "model_decision"
+		}
 		return decision, nil
 	}
 	if len(ToolSequence(req.Step.Kind)) != 0 {
@@ -312,7 +315,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 			return decision, ErrStepConflict
 		}
 		decision.NextKind = map[string]string{"get_order": "get_delivery", "get_delivery": "search_policy", "search_policy": "model_proposal"}[req.Step.Kind]
-		if profile.Strategy == SupportFixedStrategy {
+		if IsSupportStrategy(profile.Strategy) {
 			missing, err := validateSupportTool(snapshot, req.Step.Kind, result)
 			if err != nil {
 				return decision, err
@@ -321,7 +324,16 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 				decision.NextKind = "search_policy"
 			}
 		}
+		if profile.Strategy == SupportAgentStrategy {
+			if _, err := pendingSupportAgentTool(snapshot, prior, req.Step.Kind); err != nil {
+				return decision, err
+			}
+			decision.NextKind = "model_decision"
+		}
 		return decision, nil
+	}
+	if profile.Strategy == SupportAgentStrategy {
+		return decideSupportAgentModel(snapshot, prior, req, decision, allowed)
 	}
 	if req.Step.Kind != "model_proposal" && req.Step.Kind != "protocol_correction" && req.Step.Kind != "submit_proposal" {
 		return decision, ErrInvalidArgument

@@ -15,7 +15,6 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
-	"github.com/xjfyrh/jobforge/internal/runinput"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
@@ -157,7 +156,7 @@ func TestRegisterBindsVersionProfilesAndSubtractsRoundTrip(t *testing.T) {
 	clock := &atomic.Int64{}
 	clock.Store(1000)
 	client := &lifecycleClient{registerFn: func(ctx context.Context, req *agentv1.RegisterRequest) (*agentv1.RegisterResponse, error) {
-		if req.Version != runinput.ExecutorVersion || !run.ValidUUID(req.StartupId) {
+		if req.Version != run.SupportAgentExecutorVersion || !run.ValidUUID(req.StartupId) {
 			t.Fatal("registration did not bind the fixed runtime")
 		}
 		if _, ok := ctx.Deadline(); !ok {
@@ -167,7 +166,7 @@ func TestRegisterBindsVersionProfilesAndSubtractsRoundTrip(t *testing.T) {
 		return &agentv1.RegisterResponse{Session: lifecycleLease().Execution.Session, Capacity: 1, ProfileIds: []string{"test-profile"},
 			HeartbeatInterval: durationpb.New(5 * time.Second), AuthorityObservedAt: timestamppb.New(testDatabaseTime), ExpiresAt: timestamppb.New(testDatabaseTime.Add(time.Minute))}, nil
 	}}
-	w := &Worker{client: client, profiles: map[string]run.Profile{"test-profile": {}}}
+	w := &Worker{client: client, manifest: Manifest{ExecutorVersion: run.SupportAgentExecutorVersion}, profiles: map[string]run.Profile{"test-profile": {}}}
 	session, err := w.register(context.Background(), func() (int64, error) { return clock.Load(), nil })
 	if err != nil || session.deadline != 61000 {
 		t.Fatalf("registration reset relative deadline on receipt: %d %v", session.deadline, err)

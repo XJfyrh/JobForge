@@ -272,7 +272,7 @@ func subcalls(step string) []string {
 		return []string{step}
 	case "search_policy":
 		return []string{"profile_version", "profile_tags", "query_embedding", "search_policy"}
-	case "model_proposal", "protocol_correction":
+	case "model_proposal", "model_decision", "protocol_correction":
 		return []string{"chat"}
 	default:
 		return nil

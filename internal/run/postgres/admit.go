@@ -40,7 +40,7 @@ func (s *Store) Admit(ctx context.Context, input agentrun.Admission) (agentrun.S
 		if profile.Hash != input.Profile.Hash || agentrun.ValidateSupportProfile(input.Profile) != nil {
 			return agentrun.ErrProfileUnavailable
 		}
-		if profile.Strategy == agentrun.SupportFixedStrategy && profile.AuditEnabled() {
+		if agentrun.IsSupportStrategy(profile.Strategy) && profile.AuditEnabled() {
 			definition, err := json.Marshal(profile)
 			if err != nil {
 				return agentrun.ErrProfileUnavailable

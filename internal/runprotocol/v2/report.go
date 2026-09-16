@@ -38,7 +38,9 @@ func validReport(f Frame) bool {
 	return err == nil && Report(f).Verify(binding, f.ReportHash) == nil
 }
 
-func chatStep(kind string) bool { return oneOf(kind, "model_proposal", "protocol_correction") }
+func chatStep(kind string) bool {
+	return oneOf(kind, "model_proposal", "model_decision", "protocol_correction")
+}
 
 func validAuditHash(f Frame) bool {
 	if chatStep(f.Binding.StepKind) {

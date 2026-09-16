@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -213,6 +214,18 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
 			return err
 		}
+		if profile.Strategy == agentrun.SupportAgentStrategy {
+			checkpoint, err := loadCheckpoint(ctx, tx, r, a)
+			if err != nil {
+				return err
+			}
+			if err := agentrun.CheckSupportAgentTool(checkpoint.Snapshot, checkpoint.Steps, req.Step.Kind); err != nil {
+				if errors.Is(err, agentrun.ErrModelProtocol) {
+					slog.Info("agent tool refused", "run_id", r.ID, "reason", "repeated_tool_call")
+				}
+				return err
+			}
+		}
 		accounts, err = reserveLedgerAccounts(accounts, agentrun.Usage{LogicalTools: 1}, now)
 		if err != nil {
 			return err
@@ -401,7 +414,7 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 
 func checkSubcall(ctx context.Context, tx pgx.Tx, req agentrun.ReserveCallRequest, tool toolRow) error {
 	if req.Subcall == agentrun.SubcallChat {
-		if req.ToolInvocationID != "" || (req.Step.Kind != "model_proposal" && req.Step.Kind != "protocol_correction") {
+		if req.ToolInvocationID != "" || !agentrun.IsModelStep(req.Step.Kind) {
 			return agentrun.ErrCallConflict
 		}
 		return nil

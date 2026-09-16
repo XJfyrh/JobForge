@@ -36,6 +36,7 @@ _STEPS = {
     "get_delivery",
     "search_policy",
     "model_proposal",
+    "model_decision",
     "protocol_correction",
     "submit_proposal",
 }

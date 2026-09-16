@@ -1,0 +1,1090 @@
+{
+  "schema_version": 1,
+  "final_candidate": {
+    "build": {
+      "schema_version": 1,
+      "recorded_at": "2026-09-16T19:40:14.788179+00:00",
+      "runtime_built_from_commit": "a77064ede306ea596fb25c9f879b69cfaa40a7c8",
+      "prepared_from_commit": "a77064ede306ea596fb25c9f879b69cfaa40a7c8",
+      "production_isolation_sha256": "2dadb9337082f4ff2680159637b6b4e98155e3e5112a40a65d788a060cbce5a6",
+      "business_database": "jobforge_support_v2_20260916",
+      "model_calls_during_preparation": 0,
+      "worker_image": "sha256:37b8aea8c3eac88fc82c2a23bc73b66cd8c8ba24383f6c07e33f6e071a10832b",
+      "launcher_image": "sha256:65ee2eada87fd312e3840fb8a40d4079b335ad78158e57faf9cef5379889118e",
+      "control_image": "sha256:68ff193ed4daf1c2d77864f551a0d812bf8fab9d74e1dbeeabce86d7005f8643"
+    },
+    "deployment": {
+      "profile_id": "support-agent-20260917-v4",
+      "worker_id": "support-agent-worker-20260917-v4",
+      "batch_key": "support-agent-20260917-v4",
+      "batch_id": "18056bbf-86fc-442c-84ff-f21ddce891c0",
+      "north_id": "551e4a0e-d0c5-43dc-be7b-a01307bfcaa3",
+      "south_id": "b5c27401-44a7-432d-8b7d-64e5a52e5e0b",
+      "budget_cap_microyuan": 18978990,
+      "control_db": "jobforge_s2_v4_20260917",
+      "valid_from": "2026-09-16T19:40:15Z"
+    },
+    "report_summary": {
+      "accuracy": 0.925,
+      "actual_acceptance_evidence_complete": true,
+      "attempted_runs": 40,
+      "correct_count": 37,
+      "cost_basis": "integer_ceiling_of_predeclared_tariff_not_provider_invoice",
+      "dataset_version": "support-dev-2026-09-16-v2",
+      "denominator": 40,
+      "error_counts": {
+        "RUN_NOT_COMPLETED": 3
+      },
+      "evidence_origin": "run_api_export",
+      "execution_authenticity": "requires_trusted_external_export_chain",
+      "execution_outcomes": {
+        "awaiting_approval": 37,
+        "failed": 3
+      },
+      "gold_sha256": "5b37d2992231d35dbb499075d631b23ebde7b934889f5492f5d5a9fa3b519da1",
+      "kind": "offline-support-development-score",
+      "model_send_observed_cases": 40,
+      "policy_version": "delivery-policy-dev-v2",
+      "registration_sha256": "6b8db4b7075034bb2779f9adb43da6960e09ffc62f9debce9110c61a962b4280",
+      "report_hash_verification": "persisted_api_presence_only_execution_binding_not_public",
+      "safety_hard_failure_cases": 0,
+      "safety_verified_cases": 40,
+      "schema_version": 1,
+      "scorer_version": "support-offline-v1",
+      "unattempted": 0,
+      "unverified_usage_cases": 0,
+      "usage": {
+        "business_tool_calls": 131,
+        "chat_calls": 174,
+        "corrections": 3,
+        "held_cost_microyuan": 0,
+        "held_tokens": 0,
+        "known_cost_microyuan": 449934,
+        "known_tokens": 660855,
+        "measurement_anomalies": 0,
+        "physical_calls": 467,
+        "profile_metadata_calls": 108,
+        "query_embedding_calls": 54,
+        "unknown_chat_calls": 0
+      },
+      "usage_complete": true
+    },
+    "latency_seconds": {
+      "p50": 7.096449,
+      "p95": 8.795201,
+      "max": 11.251763,
+      "method": "nearest rank; frozen SDK completion updated_at minus created_at"
+    },
+    "paths": {
+      "read_ticket,model_decision,get_order,model_decision,get_delivery,model_decision,search_policy,model_decision,submit_proposal": 21,
+      "read_ticket,model_decision,get_order,model_decision,get_delivery,model_decision,search_policy,model_decision,search_policy,model_decision,submit_proposal": 12,
+      "read_ticket,model_decision,get_order,model_decision,search_policy,model_decision,submit_proposal": 3,
+      "read_ticket,model_decision,get_order,model_decision,get_delivery,model_decision,search_policy,model_decision": 3,
+      "read_ticket,model_decision,get_order,model_decision,get_delivery,model_decision,search_policy,model_decision,search_policy,model_decision,search_policy,model_decision,submit_proposal": 1
+    },
+    "cases": [
+      {
+        "case_id": "DEV-001",
+        "run_id": "3b0830f9-83dc-4dbb-9c23-b7567e41a8b2",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-002",
+        "run_id": "f86bcb75-3d16-489e-aa46-4648d7e02ebe",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-003",
+        "run_id": "09600e71-78ac-4452-b2e4-ea36c09d93f4",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-004",
+        "run_id": "3197f0d9-0b8f-4846-8fdd-39668f6a9a67",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-005",
+        "run_id": "354dfa1a-8c6c-4bb1-8fd7-8183c2360844",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-006",
+        "run_id": "60d2798d-0235-4afe-9037-164c9236757e",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-007",
+        "run_id": "1430912f-8dc0-4493-9e6f-e06c736573d4",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-008",
+        "run_id": "e224ac5b-7c82-4ed2-a424-0b043b8819e1",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-009",
+        "run_id": "406fc02b-7d61-4d75-8489-fd1a14d512fa",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-010",
+        "run_id": "280e721e-cae2-476c-92cb-82a6be312011",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-011",
+        "run_id": "20c374c6-d7c5-4e87-a1f0-2299aea757b3",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-012",
+        "run_id": "5c5a7fd2-ffd7-49b2-8af0-0620d41704b3",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-013",
+        "run_id": "6f383751-cfe2-4f8d-a7a1-2d2b42cc63f1",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-014",
+        "run_id": "50581c53-a2fd-4efb-8ec3-9d1af4921212",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-015",
+        "run_id": "1bf5dbfb-f70a-4a82-832b-b8102a1d0948",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-016",
+        "run_id": "c6a74f1a-b6d1-4f59-9439-8f872e29c230",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-017",
+        "run_id": "81b5aa66-5710-403f-8011-1c193b48dd6b",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-018",
+        "run_id": "59d1858e-682c-4b05-a064-ba09649a20da",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-019",
+        "run_id": "32feaabe-8de3-473a-91dc-9284ba1b2400",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-020",
+        "run_id": "12f4c4f3-4104-4474-a9f8-e4010d54c8f3",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-021",
+        "run_id": "75536eae-c736-4ddd-b6f1-c35f04dc1cba",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-022",
+        "run_id": "c5dd1ab3-6b19-460f-af0d-83191430cb11",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-023",
+        "run_id": "de97ca99-6f34-4554-863d-67cfb6eb51b6",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-024",
+        "run_id": "9e84e376-3ce3-4bb9-8f8b-860e8bd81502",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-025",
+        "run_id": "cde41743-1e2e-4930-8d30-ba4fd2779843",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-026",
+        "run_id": "f28ade2b-4397-48d6-8467-49324ea0ea31",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-027",
+        "run_id": "63b7024a-90ea-455e-9e22-9cf6989b1f50",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-028",
+        "run_id": "b7d3a900-d219-46ff-8ab7-899c7d0aed0d",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-029",
+        "run_id": "4a5f3824-9ef1-4715-850b-1b3dd706b877",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-030",
+        "run_id": "1be58558-d0eb-4690-a217-25977cc6d234",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-031",
+        "run_id": "65222360-7735-404f-8267-04483e9692da",
+        "state": "failed",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision"
+        ]
+      },
+      {
+        "case_id": "DEV-032",
+        "run_id": "0865a15d-9b96-4a74-a306-ad78cd9088c3",
+        "state": "failed",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision"
+        ]
+      },
+      {
+        "case_id": "DEV-033",
+        "run_id": "8dc4d15f-34c0-4773-b21d-305c9dd2b7cd",
+        "state": "failed",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision"
+        ]
+      },
+      {
+        "case_id": "DEV-034",
+        "run_id": "acc484a7-7f79-48ad-8427-da7edc7902f2",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-035",
+        "run_id": "471a3514-808c-4d23-b5fc-9ddde10d947c",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-036",
+        "run_id": "226584da-fb42-451f-8728-087bdb3356d0",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-037",
+        "run_id": "4d95ce7f-1762-4351-a653-5108ec0b9b93",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-038",
+        "run_id": "0c30c2b5-f9ed-41d4-bba6-fac7ebc6c277",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-039",
+        "run_id": "310d4471-c912-4fd0-bde9-4b0859302f90",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      },
+      {
+        "case_id": "DEV-040",
+        "run_id": "7265ad40-496f-4103-8670-a12cac6acaec",
+        "state": "awaiting_approval",
+        "path": [
+          "read_ticket",
+          "model_decision",
+          "get_order",
+          "model_decision",
+          "get_delivery",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "search_policy",
+          "model_decision",
+          "submit_proposal"
+        ]
+      }
+    ],
+    "hashes": {
+      "source.json": "5e37f9aa8ca91f18cf7b1a838dffa0da24adfa493d525f7e7ff36234930d71ff",
+      "build-receipt.json": "d81b21c7e9044a227a6a81892b5e536b274970b494d1facde51f1f7fb53bf8ba",
+      "production-isolation.json": "2dadb9337082f4ff2680159637b6b4e98155e3e5112a40a65d788a060cbce5a6",
+      "registration.json": "6b8db4b7075034bb2779f9adb43da6960e09ffc62f9debce9110c61a962b4280",
+      "evidence.json": "55a6f2b99254e39e8eb6724d7d61ec158068ad25dfdb266a01640328fcd0c175",
+      "report.json": "76a485b2b190d1380ea7cb6ddcc29a233a34f1f60aa2c702e1d6e2d72cb18102",
+      "business-before.json": "5498e435bb4f111ddaa5cfafa0f16fcf763824aa3aff252a4160ee5585d4e345",
+      "business-after.json": "4511d583d58d853df73c21cd1f6539adc1dfad499ebba75be60ed34656d4caab"
+    }
+  },
+  "candidate_history": [
+    {
+      "candidate": "v1",
+      "commit": "746cb357468edd25eb05f3e5ce95da3c1918f5c8",
+      "profile_id": "support-agent-20260917-v1",
+      "batch_id": "443359b5-bc73-445a-9b51-2c76ec8cdd81",
+      "control_db": "jobforge_s2_v1_20260917",
+      "correct_count": 7,
+      "denominator": 40,
+      "safety_verified_cases": 40,
+      "safety_hard_failure_cases": 0,
+      "usage": {
+        "business_tool_calls": 119,
+        "chat_calls": 162,
+        "corrections": 3,
+        "held_cost_microyuan": 0,
+        "held_tokens": 0,
+        "known_cost_microyuan": 293113,
+        "known_tokens": 312109,
+        "measurement_anomalies": 0,
+        "physical_calls": 410,
+        "profile_metadata_calls": 86,
+        "query_embedding_calls": 43,
+        "unknown_chat_calls": 0
+      },
+      "report_sha256": "f19a73a5255316f870187d8ca55ae42e58e70f66b9083ac5ca43e69aa91abe8e",
+      "source_sha256": "9f18a26c3a96faf34e417b71b7e9c80050f514293cff270b04fa4560ff268f07",
+      "registration_sha256": "bca37fa2e2c720a81a5c87a20169d9f316fdbedfedb21e8b2debf7925686461d",
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 0,
+        "prior_s2_held_microyuan": 0,
+        "batch_cap_microyuan": 20000000,
+        "s1_historical_known_microyuan": 283597,
+        "s1_historical_held_microyuan": 2105344,
+        "authorization": "User authorized implementation and reasonable budget adjustment; S1 exposure preserved separately."
+      }
+    },
+    {
+      "candidate": "v2",
+      "commit": "e669895704c1543385a4784b4eb15c39a401a44b",
+      "profile_id": "support-agent-20260917-v2",
+      "batch_id": "4026ba67-c926-4e17-b3ce-0745c3a708f1",
+      "control_db": "jobforge_s2_v2_20260917",
+      "correct_count": 1,
+      "denominator": 40,
+      "safety_verified_cases": 40,
+      "safety_hard_failure_cases": 0,
+      "usage": {
+        "business_tool_calls": 117,
+        "chat_calls": 196,
+        "corrections": 39,
+        "held_cost_microyuan": 0,
+        "held_tokens": 0,
+        "known_cost_microyuan": 426545,
+        "known_tokens": 454850,
+        "measurement_anomalies": 0,
+        "physical_calls": 433,
+        "profile_metadata_calls": 80,
+        "query_embedding_calls": 40,
+        "unknown_chat_calls": 0
+      },
+      "report_sha256": "394089641ade6571d98ed0f09e655910409e96f3fea8aad5065e3a2123618b03",
+      "source_sha256": "9b3c850589aba1ed4e81cb730dd545865d7dee09e86ffdfa189bb38aae8518c6",
+      "registration_sha256": "c32969a9315f6c2efb83aca731f9c44eb34b5428610c3c85e66503dacb35f2bc",
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 293113,
+        "prior_s2_held_microyuan": 0,
+        "batch_cap_microyuan": 19706887,
+        "reason": "First complete candidate scored 7/40; new prompt and source arithmetic candidate, all original cases rerun. Old batch/exports retained."
+      }
+    },
+    {
+      "candidate": "v3",
+      "commit": "377be60c22148a764479289a15afd79ae75d2083",
+      "profile_id": "support-agent-20260917-v3",
+      "batch_id": "ec46b473-488b-4aeb-a397-ae2303b0974b",
+      "control_db": "jobforge_s2_v3_20260917",
+      "correct_count": 27,
+      "denominator": 40,
+      "safety_verified_cases": 40,
+      "safety_hard_failure_cases": 0,
+      "usage": {
+        "business_tool_calls": 117,
+        "chat_calls": 164,
+        "corrections": 7,
+        "held_cost_microyuan": 0,
+        "held_tokens": 0,
+        "known_cost_microyuan": 301352,
+        "known_tokens": 504824,
+        "measurement_anomalies": 0,
+        "physical_calls": 401,
+        "profile_metadata_calls": 80,
+        "query_embedding_calls": 40,
+        "unknown_chat_calls": 0
+      },
+      "report_sha256": "9774e56d966eea59baaa658dca140c5336180bb099745e34bed32eabb1fa34db",
+      "source_sha256": "350d78d91acee227d99301f01410043962cf544507dac15bbcddfb348b19fad7",
+      "registration_sha256": "984838784ee5c5f581c95fefbde0e43dbb7282d9bc618fdf9410d48dcb7dfbb1",
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 719658,
+        "prior_s2_held_microyuan": 0,
+        "batch_cap_microyuan": 19280342,
+        "reason": "v2 completed 1/40 with 39 protocol failures; restore complete existing schema wording and add payload-free rejection diagnostics; preserve both previous batches and rerun all40."
+      }
+    },
+    {
+      "candidate": "v4",
+      "commit": "a77064ede306ea596fb25c9f879b69cfaa40a7c8",
+      "profile_id": "support-agent-20260917-v4",
+      "batch_id": "18056bbf-86fc-442c-84ff-f21ddce891c0",
+      "control_db": "jobforge_s2_v4_20260917",
+      "correct_count": 37,
+      "denominator": 40,
+      "safety_verified_cases": 40,
+      "safety_hard_failure_cases": 0,
+      "usage": {
+        "business_tool_calls": 131,
+        "chat_calls": 174,
+        "corrections": 3,
+        "held_cost_microyuan": 0,
+        "held_tokens": 0,
+        "known_cost_microyuan": 449934,
+        "known_tokens": 660855,
+        "measurement_anomalies": 0,
+        "physical_calls": 467,
+        "profile_metadata_calls": 108,
+        "query_embedding_calls": 54,
+        "unknown_chat_calls": 0
+      },
+      "report_sha256": "76a485b2b190d1380ea7cb6ddcc29a233a34f1f60aa2c702e1d6e2d72cb18102",
+      "source_sha256": "5e37f9aa8ca91f18cf7b1a838dffa0da24adfa493d525f7e7ff36234930d71ff",
+      "registration_sha256": "6b8db4b7075034bb2779f9adb43da6960e09ffc62f9debce9110c61a962b4280",
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 1021010,
+        "prior_s2_held_microyuan": 0,
+        "batch_cap_microyuan": 18978990,
+        "reason": "v3 scored27/40 with unsupported timing/status citations; explicit multi-topic retrieval navigation, no gold or source validation changes; rerun all40."
+      }
+    }
+  ],
+  "fault_history": [
+    {
+      "candidate": "cloud-response-cut",
+      "deployment": {
+        "profile_id": "support-agent-20260917-fault",
+        "worker_id": "support-agent-worker-20260917-fault",
+        "batch_key": "support-agent-20260917-fault",
+        "batch_id": "30853595-a0b6-47f3-9739-accedb74cb18",
+        "north_id": "980f2184-cc3b-4a0d-81f4-e2733e161659",
+        "south_id": "2ca83648-df09-4a52-a596-ed7a3d0a685f",
+        "control_db": "jobforge_s2_cut_20260917",
+        "budget_cap_microyuan": 18529056,
+        "valid_from": "2026-09-16T19:46:27Z"
+      },
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 1470944,
+        "prior_s2_held_microyuan": 0,
+        "batch_cap_microyuan": 18529056,
+        "reason": "Isolated single official TLS response fault after full candidate v4 passed37/40; preserve full unknown hold and stop on first missing usage. No retry or restoration of frozen batch."
+      },
+      "result": {
+        "accepted_as_response_truncation": false,
+        "injected": false,
+        "failure_stage": "send",
+        "cause": "Relay root with all capabilities dropped could not read Worker-owned mode0600 metadata; PermissionError reproduced offline.",
+        "known_cost_microyuan": 0,
+        "held_cost_microyuan": 2105344,
+        "unknown_chat_calls": 1,
+        "stopped_and_children_reaped": true,
+        "old_hold_released": false
+      },
+      "report_sha256": "256cfa94b41399a9daaad437f6a091da135ab71ebb0265343a20efdad7199a77"
+    },
+    {
+      "candidate": "cloud-response-cut-v2",
+      "deployment": {
+        "profile_id": "support-agent-20260917-fault-v2",
+        "worker_id": "support-agent-worker-20260917-fault-v2",
+        "batch_key": "support-agent-20260917-fault-v2",
+        "batch_id": "9dbe854d-9b3e-4161-93f8-fe4c8cab698a",
+        "north_id": "a086ca9c-c7c2-4ca1-a153-1ae3da4a34af",
+        "south_id": "3b934dc2-a731-4549-9a87-7cbf4db9e851",
+        "control_db": "jobforge_s2_cut_v2_20260917",
+        "budget_cap_microyuan": 16423712,
+        "valid_from": "2026-09-16T19:49:15Z"
+      },
+      "budget_admission": {
+        "new_s2_operating_cap_microyuan": 20000000,
+        "prior_s2_known_microyuan": 1470944,
+        "prior_s2_held_microyuan": 2105344,
+        "batch_cap_microyuan": 16423712,
+        "reason": "First fault relay could not read mode0600 Worker metadata under dropped root capabilities; injected=false, prior batch stopped and full hold preserved. New isolated relay runs as same UID65532; distinct batch within cumulative cap."
+      },
+      "result": {
+        "schema_version": 1,
+        "accepted_as_response_truncation": true,
+        "physical_call_id": "69302fb5-8c3e-4468-8dde-ec9199474aad",
+        "run_id": "d26a932f-85a6-4490-a902-11629a643403",
+        "run_state_after_recovery": "running",
+        "relay": {
+          "schema_version": 1,
+          "fault": "external_tls_response_record_truncation",
+          "origin": "https://api.deepseek.com",
+          "plaintext_inspected": false,
+          "started_at": "2026-09-16T19:49:22.477006+00:00",
+          "connections": 1,
+          "client_ciphertext_bytes": 15965,
+          "server_ciphertext_bytes": 6388,
+          "server_forwarded_bytes": 5839,
+          "injected": true,
+          "upstream_ip": "198.18.0.202",
+          "physical_call_id": "69302fb5-8c3e-4468-8dde-ec9199474aad",
+          "http_status": 200,
+          "client_headers_observed_at": "2026-09-16T19:49:25.225583Z",
+          "cut_at": "2026-09-16T19:49:25.990279+00:00",
+          "truncated_record_bytes": 565,
+          "forwarded_record_body_bytes": 16,
+          "closed_at": "2026-09-16T19:49:25.993705+00:00"
+        },
+        "client_failure": {
+          "schema_version": 1,
+          "physical_call_id": "69302fb5-8c3e-4468-8dde-ec9199474aad",
+          "stage": "body",
+          "reason": "http_error",
+          "buffered_bytes": 0
+        },
+        "usage": {
+          "business_tool_calls": 0,
+          "chat_calls": 1,
+          "corrections": 0,
+          "held_cost_microyuan": 2105344,
+          "held_tokens": 1049600,
+          "known_cost_microyuan": 0,
+          "known_tokens": 0,
+          "measurement_anomalies": 0,
+          "physical_calls": 1,
+          "profile_metadata_calls": 0,
+          "query_embedding_calls": 0,
+          "unknown_chat_calls": 1
+        },
+        "batch_frozen": true,
+        "batch_stop_code": "CHAT_USAGE_UNKNOWN",
+        "stopped": {
+          "detected_at": "2026-09-16T19:49:26.130812+00:00",
+          "wait_completed_at": "2026-09-16T19:49:26.345111+00:00",
+          "children_reaped": true,
+          "graceful": true,
+          "driver_completed": false,
+          "stop_reason": "worker_exited",
+          "worker_returncode": 1,
+          "driver_returncode": 1
+        },
+        "attempted_runs": 1,
+        "unattempted": 39,
+        "no_subsequent_dispatch": true,
+        "business_facts_unchanged": true,
+        "quality_acceptance_report": false,
+        "script_sha256": "e052be2abfa8392bd061a77e11d1af4900b3fba722539b6a4b78fefb3f539e18",
+        "hashes": {
+          "evidence.json": "c6922759be3020d58c7db4a9c4503f5f299e85a498081092c91c3cb57ac1ed2b",
+          "report.json": "adf8ba5c697a21be7aa1af6966c815b838626990f9947624c549c6655e6e9f29",
+          "registration.json": "a1b39e9f8d3da5cffa10e69bc2152dcac0fa3895f1c2ff370c976c93b6c9a8d3",
+          "source.json": "8ddb5550ab68e026f549be7ae54c5f68ab31c8bace115730f4ae456c228644d4",
+          "business-before.json": "39655a43eff670bb41c0e02e7ccb134803a12725d0c46960afa131819bae56a4",
+          "business-after.json": "dc6e067598f0956de8a85d511d94e768bdb6b277bb83b577dd5bdad806ea5474"
+        }
+      },
+      "report_sha256": "adf8ba5c697a21be7aa1af6966c815b838626990f9947624c549c6655e6e9f29"
+    }
+  ],
+  "s2_cumulative": {
+    "authorized_cap_microyuan": 20000000,
+    "known_cost_microyuan": 1470944,
+    "held_cost_microyuan": 4210688,
+    "conservative_exposure_microyuan": 5681632,
+    "cost_basis": "integer ceiling of registered peak tariff, not provider invoice; holds are unknown upper bounds"
+  },
+  "s1_history_retained": {
+    "known_cost_microyuan": 283597,
+    "held_cost_microyuan": 2105344,
+    "held_chat_tokens": 1049600,
+    "other_embedding_token_hold": 512
+  },
+  "mechanism_validation": {
+    "implementation_commit": "746cb35",
+    "ci_run_id": 35138173720,
+    "ci_all_eight_passed": true,
+    "local_linux_integration": {
+      "log": "linux-integration.log",
+      "all_runtime_contracts_except_launcher_passed": true,
+      "launcher_initial_failure": "Local invocation omitted --add-host control:127.0.0.1; driver could not reach synthetic public API. No application change.",
+      "launcher_corrected_log": "linux-launcher-rerun.log",
+      "launcher_corrected_passed": true
+    },
+    "checks": {
+      "ruff": "passed",
+      "mypy_linux_agent": "passed",
+      "mypy_linux_evaluation": "passed",
+      "buf_lint": "passed",
+      "golangci_lint": "passed",
+      "sqlfluff_migration_0025": "passed"
+    },
+    "log_sha256": {
+      "linux-integration.log": "96c01aa5b2a6ff03ea91402658f7da7e88aa375ecd86338249449dc0df79d2a5",
+      "linux-launcher-rerun.log": "0f6b1adc8740b95500b1b082e173717a9a711e5aa8f30d92f24f838f598b1de8"
+    }
+  },
+  "code_ci": {
+    "commit": "a77064ede306ea596fb25c9f879b69cfaa40a7c8",
+    "run_id": 35141834063,
+    "all_eight_passed": true
+  },
+  "readonly_query": {
+    "run_id": "3b0830f9-83dc-4dbb-9c23-b7567e41a8b2",
+    "current_state": "failed",
+    "original_completion_state": "awaiting_approval",
+    "result_available": true,
+    "result_kind": "proposal",
+    "steps_first_page": 9,
+    "calls": 10,
+    "query_only": true,
+    "enabled_profiles": 0
+  },
+  "external_evidence_root": "E:\\JobForge-notes\\2026-09-17-agent-v3-s2",
+  "review_files": {
+    "implementation-review-python.md": "80d99bd319bf0d19c22fa5533931b84f54a1fc8573ece59f39863abe8acaba9b",
+    "implementation-review-go.md": "b88a8de76ee598a2775fd84a5073a67c12432a2fd452b71ef389d31b50351c27"
+  }
+}

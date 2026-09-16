@@ -16,6 +16,7 @@ from jobforge.run_calls import RunCalls
 from jobforge.run_models import Run, RunResult, RunStep, RunUsage
 from jobforge_agent.runtime_input import input_hash, validate_step_result
 from jobforge_agent.support_adapter import validate_support_step
+from jobforge_agent.support_agent import validate_agent_step
 from jobforge_agent.support_contract import support_sources, validate_persisted_proposal
 
 from tools.support_evaluation.validate_data import (
@@ -311,13 +312,22 @@ def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str,
             profile["expected_response_model"],
             profile["provider_audit_policy"],
         )
-        == (
-            "support_fixed_v1",
-            "support-proposal-v1",
-            "linux-v2-audit-runtime-1",
-            "deepseek-flash",
-            "deepseek-audit-v1",
-        ),
+        in {
+            (
+                "support_fixed_v1",
+                "support-proposal-v1",
+                "linux-v2-audit-runtime-1",
+                "deepseek-flash",
+                "deepseek-audit-v1",
+            ),
+            (
+                "support_agent_v1",
+                "support-proposal-v1",
+                "linux-v2-agent-runtime-1",
+                "deepseek-flash",
+                "deepseek-audit-v1",
+            ),
+        },
         "PROFILE_CAPABILITIES",
     )
     need(
@@ -502,7 +512,11 @@ def validate_run_sources(
         )
         need(record["commit_hash"] == expected_hash, "STEP_COMMIT_HASH")
         validate_step_result(record["output"], record["kind"])
-        validate_support_step(checkpoint, record["kind"])
+        (
+            validate_agent_step
+            if profile["strategy"] == "support_agent_v1"
+            else validate_support_step
+        )(checkpoint, record["kind"])
         if record["kind"] == "read_ticket":
             need(same_source(record["output"]["content"], ticket), "TICKET_SOURCE")
             checkpoint["snapshot"]["ticket_binding_json"] = record["output"]["content"]
@@ -510,7 +524,9 @@ def validate_run_sources(
             {"step": {"kind": record["kind"]}, "result_json": record["output"]}
         )
         prior = expected_hash
-    sources = support_sources(checkpoint)
+    sources = support_sources(
+        checkpoint, repeated_search=profile["strategy"] == "support_agent_v1"
+    )
     for kind, table, identity in (
         ("get_order", package.orders, "order"),
         ("get_delivery", package.deliveries, "delivery"),
@@ -538,7 +554,9 @@ def validate_run_sources(
             "PROPOSAL_REPLACED",
         )
         validate_persisted_proposal(
-            proposal, {**checkpoint, "steps": checkpoint["steps"][:-2]}
+            proposal,
+            {**checkpoint, "steps": checkpoint["steps"][:-2]},
+            repeated_search=profile["strategy"] == "support_agent_v1",
         )
         result = row["result"]
         need(result["available"], "RESULT_BINDING")

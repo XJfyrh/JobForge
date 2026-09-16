@@ -72,6 +72,7 @@ var supportRequestedFields = []string{"ticket.order_id", "order.delivery_id", "d
 func CanonicalRegisteredStepResult(data []byte, kind string) (StepResult, json.RawMessage, error) {
 	var envelope struct {
 		Proposal map[string]json.RawMessage `json:"proposal"`
+		Content  map[string]json.RawMessage `json:"content"`
 	}
 	if json.Unmarshal(data, &envelope) != nil {
 		return StepResult{}, nil, ErrInvalidArgument
@@ -80,12 +81,19 @@ func CanonicalRegisteredStepResult(data []byte, kind string) (StepResult, json.R
 	if _, support := envelope.Proposal["conclusion"]; support {
 		strategy = SupportFixedStrategy
 	}
+	if kind == "model_decision" || kind == "protocol_correction" && envelope.Content["type"] != nil {
+		strategy = SupportAgentStrategy
+	}
 	return CanonicalStepResultForStrategy(data, kind, strategy)
 }
 
 // SupportProposalFromModel validates structure and provenance, never whether a
 // policy actually supports the model's conclusion. Scoring owns that judgment.
 func SupportProposalFromModel(snapshot SnapshotBinding, prior []Step, data []byte) (*Proposal, error) {
+	return supportProposalFromModel(snapshot, prior, data, false)
+}
+
+func supportProposalFromModel(snapshot SnapshotBinding, prior []Step, data []byte, repeatedSearch bool) (*Proposal, error) {
 	var model supportModel
 	if err := ValidateStepJSON(data, 16384); err != nil {
 		return nil, err
@@ -100,7 +108,7 @@ func SupportProposalFromModel(snapshot SnapshotBinding, prior []Step, data []byt
 	if json.Unmarshal(data, &raw) != nil || len(raw.Claims) < 1 || len(raw.Claims) > 4 {
 		return nil, ErrModelProtocol
 	}
-	sources, err := buildSupportSources(snapshot, prior)
+	sources, err := buildSupportSourcesWithSearch(snapshot, prior, repeatedSearch)
 	if err != nil {
 		return nil, err
 	}

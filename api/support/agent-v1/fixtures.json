@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "order",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_order\",\"arguments\":{\"order_id\":\"order-synthetic\"}}",
+      "missing_order": false,
+      "valid": true,
+      "expected": {
+        "type": "tool",
+        "name": "get_order",
+        "arguments": {
+          "order_id": "order-synthetic"
+        }
+      }
+    },
+    {
+      "name": "delivery",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_delivery\",\"arguments\":{\"order_id\":\"order-synthetic\"}}",
+      "missing_order": false,
+      "valid": true,
+      "expected": {
+        "type": "tool",
+        "name": "get_delivery",
+        "arguments": {
+          "order_id": "order-synthetic"
+        }
+      }
+    },
+    {
+      "name": "missing-order",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_order\",\"arguments\":{\"order_id\":null}}",
+      "missing_order": true,
+      "valid": true,
+      "expected": {
+        "type": "tool",
+        "name": "get_order",
+        "arguments": {
+          "order_id": null
+        }
+      }
+    },
+    {
+      "name": "focused-query",
+      "model_json": "{\"type\":\"tool\",\"name\":\"search_policy\",\"arguments\":{\"query\":\"delivery dispute\"}}",
+      "missing_order": false,
+      "valid": true,
+      "expected": {
+        "type": "tool",
+        "name": "search_policy",
+        "arguments": {
+          "query": "delivery dispute"
+        }
+      }
+    },
+    {
+      "name": "trim-query",
+      "model_json": "{\"type\":\"tool\",\"name\":\"search_policy\",\"arguments\":{\"query\":\" \\tdelivery dispute\\n\"}}",
+      "missing_order": false,
+      "valid": true,
+      "expected": {
+        "type": "tool",
+        "name": "search_policy",
+        "arguments": {
+          "query": "delivery dispute"
+        }
+      }
+    },
+    {
+      "name": "foreign-order",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_order\",\"arguments\":{\"order_id\":\"another-order\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "write-tool",
+      "model_json": "{\"type\":\"tool\",\"name\":\"apply_ticket_resolution\",\"arguments\":{\"order_id\":\"order-synthetic\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "extra-authority",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_order\",\"arguments\":{\"order_id\":\"order-synthetic\",\"tenant_id\":\"tenant-other\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "blank-query",
+      "model_json": "{\"type\":\"tool\",\"name\":\"search_policy\",\"arguments\":{\"query\":\" \\n\\t\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "large-query",
+      "model_json": "{\"type\":\"tool\",\"name\":\"search_policy\",\"arguments\":{\"query\":\"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "not-object",
+      "model_json": "[]",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "duplicate-name",
+      "model_json": "{\"type\":\"tool\",\"name\":\"get_order\",\"name\":\"get_delivery\",\"arguments\":{\"order_id\":\"order-synthetic\"}}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    },
+    {
+      "name": "model-url",
+      "model_json": "{\"type\":\"tool\",\"name\":\"search_policy\",\"arguments\":{\"query\":\"policy\"},\"url\":\"https://invalid.example\"}",
+      "missing_order": false,
+      "valid": false,
+      "expected": null
+    }
+  ]
+}

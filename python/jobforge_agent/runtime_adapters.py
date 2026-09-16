@@ -15,6 +15,7 @@ from jobforge_agent.runtime_input import (
     HASH,
     IDENTIFIER,
     RuntimeCheckpoint,
+    executor_matches_adapter,
 )
 
 _MANIFEST = Path("/etc/jobforge/executor.json")
@@ -44,7 +45,9 @@ class RegisteredAdapter(Protocol):
         ...
 
 
-def _manifest_profiles() -> list[dict[str, str]]:
+def _manifest_profiles(
+    executor_version: str = EXECUTOR_VERSION,
+) -> list[dict[str, str]]:
     try:
         with _MANIFEST.open("rb") as source:
             raw = source.read(16385)
@@ -56,7 +59,7 @@ def _manifest_profiles() -> list[dict[str, str]]:
             or set(value) != {"schema_version", "executor_version", "profiles"}
             or type(value["schema_version"]) is not int
             or value["schema_version"] != 1
-            or value["executor_version"] != EXECUTOR_VERSION
+            or value["executor_version"] != executor_version
             or not isinstance(value["profiles"], list)
             or not 1 <= len(value["profiles"]) <= 32
         ):
@@ -100,7 +103,9 @@ def resolve_adapter(
         "profile_hash": profile_hash,
         "adapter_id": adapter_id,
     }
-    if executor_version != EXECUTOR_VERSION or expected not in _manifest_profiles():
+    if not executor_matches_adapter(
+        executor_version, adapter_id
+    ) or expected not in _manifest_profiles(executor_version):
         raise DispatchError("PROFILE_UNAVAILABLE")
     adapter = REGISTRY.get(adapter_id)
     if adapter is None or adapter.adapter_id != adapter_id:

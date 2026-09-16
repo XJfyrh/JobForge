@@ -77,9 +77,9 @@ in the evidence file. It contains:
   `evidence_origin: "run_api_export"` or `"synthetic_test"`.
 - `dataset_version`, `policy_version`, `gold_sha256`, `scoring_sha256`,
   `anchors_sha256`, `corpus_sha256`, exactly matching the validated package.
-- `profile`: `profile_id`, `profile_hash`, `strategy: "support_fixed_v1"`,
+- `profile`: `profile_id`, `profile_hash`, `strategy: "support_fixed_v1"` or `"support_agent_v1"`,
   `proposal_schema: "support-proposal-v1"`,
-  `executor_version: "linux-v2-audit-runtime-1"`,
+  `executor_version: "linux-v2-audit-runtime-1"` for fixed or `"linux-v2-agent-runtime-1"` for agent,
   `expected_response_model: "deepseek-flash"`,
   `provider_audit_policy: "deepseek-audit-v1"`, `price_hash`, `budget_batch_id`,
   `max_input_tokens`, `max_output_tokens: 1024`, `pricing`, and `origins`.
@@ -236,3 +236,5 @@ complete safe traces from a declared actual export. It is not an accuracy
 threshold or cryptographic proof of execution. Authenticity requires the trusted
 external exporter and review of its source chain. The synthetic builder and its
 40-case regression are mechanism tests; they never establish model acceptance.
+
+S2 adds evidence validation for alternating committed model/tool decisions and accumulated actual policy references. It keeps the same scorer version, business predicates, gold, 40-case denominator and safety checks. A complete terminal protocol/count failure is an executed unsuccessful case; unknown chat still stops the batch.

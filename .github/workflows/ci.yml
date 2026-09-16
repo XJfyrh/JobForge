@@ -244,7 +244,7 @@ jobs:
       - name: Build production image and reject fixture registration
         run: |
           docker build -f deploy/Dockerfile.agent-worker -t jobforge-agent-worker:production .
-          docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; assert set(REGISTRY) == {"support-fixed-v1"}; assert REGISTRY["support-fixed-v1"].__class__.__module__ == "jobforge_agent.support_adapter"; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists(); assert not Path("/checks").exists(); assert not Path("/src/examples/support-agent/evaluation").exists()'
+          docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; assert set(REGISTRY) == {"support-fixed-v1", "support-agent-v1"}; assert REGISTRY["support-fixed-v1"].__class__.__module__ == "jobforge_agent.support_adapter"; assert REGISTRY["support-agent-v1"].__class__.__module__ == "jobforge_agent.support_agent"; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists(); assert not Path("/checks").exists(); assert not Path("/src/examples/support-agent/evaluation").exists()'
 
   observability-config:
     name: Prometheus rules & generated dashboard

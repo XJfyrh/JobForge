@@ -97,7 +97,7 @@ S1-C3b按[固定运行时指南](docs/agent-v3-runtime.md)构建`tools/agentrunt
 
 供应商审计增量还需验证 Go/Python 的 typed report 和 observation.v2 共同向量；真实 PG 首份/重放/冲突/晚到、批次 guard 和迁移往返；`TestRunProviderAuditPythonHTTPContract` 使用安装 SDK 查询真实控制库。`integration-check` 默认包含 `TestRunProviderAuditExecutor`，在实际 guardian/FD/gRPC/PG 中注入 Reserve/report/Observe/Commit 提交前阻塞和提交后 ACK 丢失。合成供应商证明执行机制，不能替代 DeepSeek、40 案评分或生产留存。
 
-运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
+运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1与support-agent-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
 
 ## 安全问题
 

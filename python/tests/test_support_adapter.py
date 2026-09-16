@@ -280,9 +280,9 @@ def test_graph_and_correction_prefix_reject_before_model_permission(
         validate_support_step(protected, kind)
 
 
-def test_registry_contains_only_the_fixed_production_support_adapter() -> None:
+def test_registry_contains_only_registered_production_support_adapters() -> None:
     """The runtime has no mechanism fixture, arbitrary import or origin selector."""
-    assert set(REGISTRY) == {"support-fixed-v1"}
+    assert set(REGISTRY) == {"support-fixed-v1", "support-agent-v1"}
     adapter = REGISTRY["support-fixed-v1"]
     assert (
         adapter.strategy == "support_fixed_v1"

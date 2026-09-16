@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/xjfyrh/jobforge/internal/business"
 	"github.com/xjfyrh/jobforge/internal/jsonstrict"
@@ -56,6 +57,8 @@ type SupportModelDefinition struct {
 // SupportProgramDefinition binds reviewed code artifacts without executable paths.
 type SupportProgramDefinition struct {
 	Strategy             string `json:"strategy"`
+	DecisionSchema       string `json:"decision_schema,omitempty"`
+	DecisionSchemaSHA256 string `json:"decision_schema_sha256,omitempty"`
 	Adapter              string `json:"adapter"`
 	ProposalSchema       string `json:"proposal_schema"`
 	ProposalSchemaSHA256 string `json:"proposal_schema_sha256"`
@@ -144,16 +147,36 @@ func supportDigest(value string) bool {
 
 func (d SupportDefinition) validate() error {
 	m, p, r, price := d.Model, d.Program, d.Resources, d.Price
-	if d.SchemaVersion != 1 || m != (SupportModelDefinition{
+	expected := SupportModelDefinition{
 		Provider: "deepseek", Origin: "https://api.deepseek.com", Path: "/chat/completions",
 		RequestModel: "deepseek-flash", ObservedVersion: "DeepSeek-V4.1-Flash", ObservedOn: "2026-09-16",
 		Thinking: "disabled", MaxTokens: 1024, ResponseFormat: "json_object",
 		RequestBodyBytes: 65536, MessageContentBytes: 16384, ResponseBodyBytes: 65536, ModelContentBytes: 16384,
-	}) || p.Strategy != SupportFixedStrategy || p.Adapter != "support-fixed-v1" ||
-		p.ProposalSchema != SupportProposalSchema || p.PromptVersion != SupportPromptVersion ||
-		r.DatasetID != SupportDatasetID || r.PolicyVersion != SupportPolicyVersion || r.ObservedAt != SupportObservedAt ||
-		price.ObservedOn != "2026-09-16" || price.Currency != "CNY" || price.Denominator != 1000000 ||
-		price.InputMissMicroyuan != 2000000 || price.InputHitMicroyuan != 40000 || price.OutputMicroyuan != 8000000 {
+	}
+	switch d.SchemaVersion {
+	case 1:
+		if p.Strategy != SupportFixedStrategy || p.Adapter != "support-fixed-v1" || p.PromptVersion != SupportPromptVersion ||
+			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || price.ObservedOn != "2026-09-16" {
+			return ErrProfileUnavailable
+		}
+	case 2:
+		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != SupportAgentPromptVersion ||
+			p.DecisionSchema != SupportAgentDecisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
+			return ErrProfileUnavailable
+		}
+		date, err := time.Parse("2006-01-02", m.ObservedOn)
+		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-09-17" {
+			return ErrProfileUnavailable
+		}
+		expected.ObservedOn = m.ObservedOn
+		expected.MessageContentBytes, expected.RequestBodyBytes = 65536, 131072
+	default:
+		return ErrProfileUnavailable
+	}
+	if m != expected || p.ProposalSchema != SupportProposalSchema || r.DatasetID != SupportDatasetID ||
+		r.PolicyVersion != SupportPolicyVersion || r.ObservedAt != SupportObservedAt ||
+		price.Currency != "CNY" || price.Denominator != 1000000 || price.InputMissMicroyuan != 2000000 ||
+		price.InputHitMicroyuan != 40000 || price.OutputMicroyuan != 8000000 {
 		return ErrProfileUnavailable
 	}
 	for _, hash := range []string{p.ProposalSchemaSHA256, p.PromptSHA256, p.AdapterSourceSHA256,
@@ -203,11 +226,14 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 		return Profile{}, err
 	}
 	d := definition.Price
-	p := Profile{ID: id, Strategy: SupportFixedStrategy, ExecutorVersion: ProviderAuditExecutorVersion,
+	p := Profile{ID: id, Strategy: definition.Program.Strategy, ExecutorVersion: ProviderAuditExecutorVersion,
 		ProviderAuditPolicy: ProviderAuditPolicyDeepSeekV1, ExpectedResponseModel: "deepseek-flash",
 		MaxInputTokens: 1048576, MaxOutputTokens: 1024, FamilyTokenLimit: 12595200, FamilyCostMicroyuan: 5000000,
 		Pricing: Pricing{Hash: priceHash, Denominator: d.Denominator, InputMissMicroyuan: d.InputMissMicroyuan,
 			InputHitMicroyuan: d.InputHitMicroyuan, OutputMicroyuan: d.OutputMicroyuan}, Definition: raw}
+	if p.Strategy == SupportAgentStrategy {
+		p.ExecutorVersion = SupportAgentExecutorVersion
+	}
 	p.Hash, err = SupportProfileHash(p)
 	return p, err
 }
@@ -215,8 +241,12 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 // SupportProfileHash validates duplicated facts before computing the entire frozen identity.
 func SupportProfileHash(p Profile) (string, error) {
 	d, err := DecodeSupportDefinition(p.Definition)
-	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != SupportFixedStrategy ||
-		p.ExecutorVersion != ProviderAuditExecutorVersion || p.ProviderAuditPolicy != ProviderAuditPolicyDeepSeekV1 ||
+	expectedExecutor := ProviderAuditExecutorVersion
+	if d.Program.Strategy == SupportAgentStrategy {
+		expectedExecutor = SupportAgentExecutorVersion
+	}
+	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||
+		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != ProviderAuditPolicyDeepSeekV1 ||
 		p.ExpectedResponseModel != "deepseek-flash" || p.MaxInputTokens != 1048576 || p.MaxOutputTokens != 1024 ||
 		p.FamilyTokenLimit != 12595200 || p.FamilyCostMicroyuan != 5000000 {
 		return "", ErrProfileUnavailable
@@ -236,7 +266,7 @@ func SupportProfileHash(p Profile) (string, error) {
 // ValidateSupportProfile applies only to the new audited support capability;
 // historical definitions remain readable for replay and late accounting.
 func ValidateSupportProfile(p Profile) error {
-	if p.Strategy != SupportFixedStrategy || !p.AuditEnabled() {
+	if !IsSupportStrategy(p.Strategy) || !p.AuditEnabled() {
 		return nil
 	}
 	hash, err := SupportProfileHash(p)

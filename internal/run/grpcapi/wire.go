@@ -14,6 +14,7 @@ import (
 var stepNames = map[agentv1.StepKind]string{
 	agentv1.StepKind_STEP_KIND_READ_TICKET: "read_ticket", agentv1.StepKind_STEP_KIND_GET_ORDER: "get_order",
 	agentv1.StepKind_STEP_KIND_GET_DELIVERY: "get_delivery", agentv1.StepKind_STEP_KIND_SEARCH_POLICY: "search_policy",
+	agentv1.StepKind_STEP_KIND_MODEL_DECISION: "model_decision",
 	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL: "model_proposal", agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
 	agentv1.StepKind_STEP_KIND_SUBMIT_PROPOSAL: "submit_proposal",
 }

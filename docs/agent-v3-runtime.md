@@ -2,7 +2,7 @@
 
 S1-C3b 实现 [PRD v0.11](product/JobForge_PRD_v0.11.md) / [ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md) 的正式进程接缝：Go Worker、严格 checkpoint 投影、固定 Python guardian/step、独立普通与计量管道，以及真实控制 PostgreSQL/gRPC 的机制测试。逐项运行结果见 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)，阶段状态见 [实施记录](agent-v3-progress.md)。本文中的复现命令不等于该层检查已通过。
 
-**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。当前运行时加入 ADR-0020 的[供应商持久报告与批次停止](agent-v3-provider-audit.md)，默认部署仍不启用收费 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 整体及 S2～S5 仍未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1` 和 `support-agent-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。当前运行时加入 ADR-0020 的[供应商持久报告与批次停止](agent-v3-provider-audit.md)，默认部署仍不启用收费 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 已完成（业务11/40），S2验收另见[动态运行指南](agent-v3-support-agent.md)；S3～S5未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
 
 ## 执行权与组件
 
@@ -18,7 +18,7 @@ flowchart LR
 
 PostgreSQL 仍是唯一事实源；Go 独占 Worker session、Run lease、心跳和控制 RPC。`internal/runworker` 持有原 v2 Conversation，`internal/runexecutor` 只管理固定进程和 I/O，不解释调度、预算或下一游标。Python 只执行当前登记单步，不 Claim、不续租、不重试 Run，也没有任务队列。交付仍为 at-least-once，外部副作用仍须业务幂等。
 
-Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 均须为 `linux-v2-audit-runtime-1`；控制面在登记及后续 session 校验中拒绝混合版本。全部执行 profile 还须有固定审计 policy 和 expected model。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
+Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 须一致：S1为 `linux-v2-audit-runtime-1`，S2为 `linux-v2-agent-runtime-1`；控制面在登记及后续 session 校验中拒绝混合版本。全部执行 profile 还须有固定审计 policy 和 expected model。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
 
 5s Heartbeat 与普通控制 RPC/管道独立运行。RPC 均有截止，普通控制请求最多 2s；20ms 本地 watchdog 独立检查 Linux `CLOCK_BOOTTIME`。Register/Claim/Heartbeat 用 RPC 发起单调时间和服务端锁后观测时间保守映射 session/lease/attempt/Run 截止，扣除整个往返等待；迟到回调不能恢复已失效的旧执行权。Heartbeat 可更新 lease/session，不能延长固定 attempt/Run 或已经授予的物理调用期限。Windows 原生不支持分支测试不能替代同一 Linux 容器验收。
 

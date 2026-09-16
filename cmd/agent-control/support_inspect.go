@@ -13,8 +13,8 @@ import (
 
 func inspectSupport(ctx context.Context, store *runpostgres.Store, config deployment) error {
 	if len(config.Profiles) != 1 || len(config.Workers) != 1 || len(config.Budgets) != 3 || len(config.Bindings) != 2 ||
-		config.Profiles[0].Strategy != run.SupportFixedStrategy || !config.Profiles[0].AuditEnabled() {
-		return errors.New("inspect-support requires one prepared fixed support batch")
+		!run.IsSupportStrategy(config.Profiles[0].Strategy) || !config.Profiles[0].AuditEnabled() {
+		return errors.New("inspect-support requires one prepared registered support batch")
 	}
 	request := runpostgres.SupportInspectionRequest{ProfileID: config.Profiles[0].ID, WorkerID: config.Workers[0].ID}
 	for _, b := range config.Budgets {

@@ -104,6 +104,7 @@ _STEPS = {
     "get_delivery",
     "search_policy",
     "model_proposal",
+    "model_decision",
     "protocol_correction",
     "submit_proposal",
 }
@@ -210,7 +211,7 @@ def _subcalls(step: str) -> list[str]:
         return [step]
     if step == "search_policy":
         return ["profile_version", "profile_tags", "query_embedding", "search_policy"]
-    if step in {"model_proposal", "protocol_correction"}:
+    if step in {"model_proposal", "model_decision", "protocol_correction"}:
         return ["chat"]
     return []
 
@@ -266,7 +267,11 @@ def observation_hash(frame: Frame) -> str:
 
 
 def _chat(frame: Frame) -> bool:
-    return frame["binding"]["step_kind"] in {"model_proposal", "protocol_correction"}
+    return frame["binding"]["step_kind"] in {
+        "model_proposal",
+        "model_decision",
+        "protocol_correction",
+    }
 
 
 def _report(frame: Frame) -> CallReport:

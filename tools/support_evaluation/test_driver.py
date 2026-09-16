@@ -121,6 +121,21 @@ def test_second_rejected_correction_uses_public_domain_error() -> None:
     assert not continuation(row)
 
 
+@pytest.mark.parametrize("code", ["MODEL_PROTOCOL_ERROR", "BUDGET_EXHAUSTED"])
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_agent_terminal_decision_requires_all_chat_audits(
+    code: str, incomplete: bool
+) -> None:
+    """A known failed case counts in the denominator; incomplete metering stops."""
+    row = case_row(PACKAGE, REGISTRATION, 0)
+    row["run"]["state"] = "failed"
+    row["run"]["error"] = {"code": code, "message": "terminal decision"}
+    row["steps"][-1]["record"]["kind"] = "model_decision"
+    if incomplete:
+        row["calls"]["items"][-1]["report_hash"] = None
+    assert continuation(row) == (not incomplete)
+
+
 def test_submission_unknown_is_one_attempt_and_preserves_all_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

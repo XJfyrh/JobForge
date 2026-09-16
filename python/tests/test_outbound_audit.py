@@ -240,6 +240,33 @@ def test_failure_diagnostic_excludes_unbounded_text_and_preserves_first_fact(
     assert path.read_bytes() == first
 
 
+def test_model_rejection_contains_code_sites_without_input_or_exception(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Locate rejection without recording even a malicious exception payload."""
+    from jobforge_agent.support_contract import require
+
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    try:
+        require(False)
+    except DispatchError as error:
+        error.args = ("PRIVATE-CUSTOMER-BODY dummy-credential",)
+        outbound_audit.model_rejection(CALL, error)
+        outbound_audit.model_rejection("../PRIVATE-CUSTOMER-BODY", error)
+    path = tmp_path / (CALL + ".model-rejection.json")
+    raw = path.read_bytes()
+    assert b"PRIVATE" not in raw and b"credential" not in raw
+    value = json.loads(raw)
+    assert value["validation_sites"][0]["module"] == "support_contract"
+    assert value["validation_sites"][0]["line"] > 0
+    assert len(raw) < 2048 and len(list(tmp_path.iterdir())) == 1
+    outbound_audit.model_rejection(CALL, ValueError("PRIVATE"))
+    assert path.read_bytes() == raw
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path / "missing")
+    outbound_audit.model_rejection(CALL, ValueError("PRIVATE"))
+    assert not (tmp_path / "missing").exists()
+
+
 @run_async
 async def test_cancel_during_real_body_read_records_only_safe_failure(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path

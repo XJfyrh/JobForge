@@ -73,6 +73,7 @@ class RunCallContext:
     run_profile_hash: str
     snapshot_content_hash: str
     tool_invocation_id: str
+    agent: bool = False
 
 
 @dataclass(frozen=True)
@@ -180,7 +181,7 @@ def _fingerprint(*values: str) -> str:
     return digest.hexdigest()
 
 
-def _shape(request: PreparedRequest) -> None:
+def _shape(request: PreparedRequest, *, agent: bool = False) -> None:
     fixed = {
         "profile_version": ("ollama", "GET", "/api/version", 1024),
         "profile_tags": ("ollama", "GET", "/api/tags", 65536),
@@ -218,7 +219,7 @@ def _shape(request: PreparedRequest) -> None:
         or (request.method == "GET" and request.body != b"")
     ):
         raise DispatchError("INPUT_INVALID")
-    if len(request.body) > 65536:
+    if len(request.body) > (131072 if agent and request.subcall == "chat" else 65536):
         raise DispatchError("INPUT_INVALID", fact="size_limit", stop=True)
 
 
@@ -268,7 +269,7 @@ def prepare_request(
     request = PreparedRequest(
         endpoint, subcall, method, path, raw, max_response_bytes, ""
     )
-    _shape(request)
+    _shape(request, agent=context.agent)
     return PreparedRequest(
         endpoint,
         subcall,
@@ -400,7 +401,7 @@ class AuthorizedDispatcher:
                     raise ProtocolError()
             if outcome == "error":
                 if not (
-                    kind == "model_proposal"
+                    kind in {"model_proposal", "model_decision"}
                     and error_code == "OUTPUT_INVALID"
                     and result["correction_required"]
                     and result["proposal"] is None
@@ -774,8 +775,12 @@ class AuthorizedDispatcher:
     ) -> tuple[T | None, DispatchError | None]:
         deadline = self._conversation.deadline
         self._guard(deadline)
-        _shape(request)
+        _shape(request, agent=context.agent)
         binding = self._start["binding"]
+        if context.agent != (
+            self._start.get("input", {}).get("adapter_id") == "support-agent-v1"
+        ):
+            raise DispatchError("INPUT_INVALID")
         if (
             context.run_profile_hash != binding["profile_hash"]
             or context.snapshot_content_hash != binding["snapshot_hash"]

@@ -7,7 +7,6 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
-	"github.com/xjfyrh/jobforge/internal/runinput"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
@@ -43,7 +42,7 @@ func New(client agentv1.AgentServiceClient, manifest Manifest, config Config) (*
 	w := &Worker{client: client, manifest: manifest, profiles: make(map[string]run.Profile), environments: make(map[string]runexecutor.Environment)}
 	w.manifest.Profiles = slices.Clone(manifest.Profiles)
 	for _, p := range config.Profiles {
-		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != runinput.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
+		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != manifest.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
 			p.ValidateAuditPolicy() != nil || !p.AuditEnabled() || p.ExpectedResponseModel != "deepseek-flash" {
 			return nil, run.ErrProfileUnavailable
 		}

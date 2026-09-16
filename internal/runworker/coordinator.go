@@ -157,7 +157,7 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 			// Only the fully confirmed second business-validation failure may
 			// finish this case without stopping the batch. Durable storage checks
 			// its exact attempt/step terminal facts before any later permission.
-			secondRejected := c.execute.Binding.StepKind == "protocol_correction" && code == "MODEL_PROTOCOL_ERROR" &&
+			secondRejected := (c.execute.Binding.StepKind == "protocol_correction" || c.profile.Strategy == run.SupportAgentStrategy && c.execute.Binding.StepKind == "model_decision") && code == "MODEL_PROTOCOL_ERROR" &&
 				confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
 				call.observation.ErrorCode == "OUTPUT_INVALID" && !c.stopped && c.failure == ""
 			if !secondRejected {
@@ -244,7 +244,7 @@ func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexec
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey}
 	case agentv1.StepKind_STEP_KIND_SEARCH_POLICY:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey, OllamaOrigin: all.OllamaOrigin}
-	case agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL, agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION:
+	case agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL, agentv1.StepKind_STEP_KIND_MODEL_DECISION, agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION:
 		return runexecutor.Environment{DeepSeekKey: all.DeepSeekKey}
 	default:
 		return runexecutor.Environment{}

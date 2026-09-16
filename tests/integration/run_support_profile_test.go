@@ -23,6 +23,11 @@ func setupSupportProfileHarness(t *testing.T, profileID string) *runHarness {
 
 func setupSupportProfileBudgetHarness(t *testing.T, profileID string, batchCap int64) *runHarness {
 	t.Helper()
+	return setupSupportProfileStrategyHarness(t, profileID, batchCap, false)
+}
+
+func setupSupportProfileStrategyHarness(t *testing.T, profileID string, batchCap int64, agent bool) *runHarness {
+	t.Helper()
 	ctx, pool := setupRunDB(t)
 	raw, err := os.ReadFile("../../api/support/profile-v1/fixtures.json")
 	if err != nil {
@@ -36,6 +41,23 @@ func setupSupportProfileBudgetHarness(t *testing.T, profileID string, batchCap i
 	}
 	p := fixture.Profile
 	p.ID, p.Executable = profileID, true
+	if agent {
+		d, decodeErr := agentrun.DecodeSupportDefinition(p.Definition)
+		if decodeErr != nil {
+			t.Fatal(decodeErr)
+		}
+		d.SchemaVersion = 2
+		d.Program.Strategy, d.Program.Adapter = agentrun.SupportAgentStrategy, "support-agent-v1"
+		d.Program.PromptVersion = agentrun.SupportAgentPromptVersion
+		d.Program.DecisionSchema, d.Program.DecisionSchemaSHA256 = agentrun.SupportAgentDecisionSchema, strings.Repeat("c", 64)
+		d.Model.ObservedOn, d.Price.ObservedOn = "2026-09-17", "2026-09-17"
+		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+		p, err = agentrun.BuildSupportProfile(profileID, d)
+		p.Executable = true
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	p.Hash, err = agentrun.SupportProfileHash(p)
 	if err != nil {
 		t.Fatal(err)
