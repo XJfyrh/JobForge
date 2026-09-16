@@ -1,8 +1,8 @@
 # ADR-0020：provider 审计报告、跨 FD 确认与首批停发
 
-- 日期：2026-09-16；状态：**Proposed，尚未接受**。
+- 日期：2026-09-16；状态：**Accepted，随 [PR #47](https://github.com/XJfyrh/JobForge/pull/47) 完成独立审查并合并时生效；尚未实现或验收**。
 - 关联：[PRD v0.12](../product/JobForge_PRD_v0.12.md)，既有 [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0017](0017-run-admission-and-call-ledger.md)/[0018](0018-deepseek-fixed-flow-and-executor.md)/[0019](0019-executor-confirmation-and-exit-contract.md)。
-- 仓库核对：C3b 已通过 PR #46 合并，起点 `0829a4c`；本稿是下一合同的建议，不修改已合并实现，也不声称本稿已实现或验收。
+- 仓库核对：C3b 已通过 PR #46 合并，起点 `0829a4c`；本文定义下一合同，不修改已合并实现，也不声称本文已实现或验收。
 - 本文只解决 provider 审计持久化、确认、读取和新首批批次停发；support_fixed_v1 的固定图/schema/模板与评分沿用 ADR-0018，不重新决定，也不扩展为 S2 动态 Agent。
 
 ## 1. 背景与选择
@@ -17,7 +17,7 @@ C3b 已实现固定进程、有效执行权、逐 HTTP 许可、独立计量、�
 
 ## 2. 精确取代范围与版本
 
-本决策接受后，仅对新审计 profile：
+本决策仅对新审计 profile：
 
 1. 细化 ADR-0018 §3 的 metering_report/ack 字段和“报告必为可结算 usage”假设，允许不具定价资格的观测计量及 audit-only；计量 FD 总帧 8KiB 不变。
 2. 细化 ADR-0019 §1 的普通 observation hash 与跨 FD 汇合：新增 audit_hash；报告 ACK 仍不替代普通 ObserveCall ACK。
@@ -151,11 +151,11 @@ call_report 保存不兼容 model 的内部完整计数，原 `physical_calls.us
 
 一份无冲突的标准报告在**一个事务**内完成：保存 call_report 和实际 report_hash；如果 §3 定价资格成立则执行现有 usage 结算或 anomaly；按 §8 必要条件冻结 batch 并记录原因；然后提交。不能出现“已 ACK report，但 audit 仍在另一个异步事务/队列里”等待的状态。因事务失败返回不确定时，不能声称其中任一步已完成。
 
-定价资格不成立时，不按原价结算；原未知预留转为/保留 unknown，全额 hold 不释放，UsageKnown=false。**measurement anomaly 独立判断**：任一结构完整报告的 input/output/total 超原 token 预留，即保存完整计数和 anomaly、冻结三层，不因 model 不兼容而丢弃异常；此时仍不调用原价计算。只有纯身份/模式问题且计数不超界时仅冻结 batch。
+定价资格不成立时，不按原价结算；原未知预留转为/保留 unknown，全额 hold 不释放，UsageKnown=false。**measurement anomaly 独立于定价资格，但只评估首次被接纳的报告**：该报告的完整 input/output/total 超原 token 预留，即保存完整计数和 anomaly、冻结三层，不因 model 不兼容而丢弃异常；此时仍不调用原价计算。只有纯身份/模式问题且计数不超界时仅冻结 batch。
 
 完全相同 report_hash 的重放重新校验绑定和 typed 内容一致，返回实际首次报告与当前账户事实，不重新扣计数或释放 hold。收到标准解码通过、原调用认证正确但不同 report_hash 时，保留第一份报告及其财务事实，至多保存第一份冲突 hash，冻结 batch 并返回 report_conflict=true；该停止事务必须提交后才返回 conflict，不能通过返回普通 error 导致事务整体 rollback 而丢掉冻结。
 
-不同报告是原“一次响应/一份不可变报告”合同的冲突，不能挑选其中更低的计数，也不能拼接第二份 identity 与第一份 usage。第二份 usage 的结构合法不自动证明它是该原请求的可信计费事实；本草案选择**不以冲突报告改变财务结算**，明确不承诺在这种信任冲突中“抢救字段继续结算”。首次 unknown 的 full hold 保留，首次 known/anomaly 的已提交财务事实不撤销，批次停发，报告中披露冲突。若需要进一步人工供应商账单核对，另行设计，禁止自动重查/重发。
+不同报告是原“一次响应/一份不可变报告”合同的冲突，不能挑选其中更低的计数，也不能拼接第二份 identity 与第一份 usage。第二份 usage 的结构合法不自动证明它是该原请求的可信计费事实；本草案选择**不以冲突报告改变财务结算**，明确不承诺在这种信任冲突中“抢救字段继续结算”。即使第二份报告的计数超出预留，也只记录冲突并冻结 batch，不保存第二份计数、不新触发 measurement anomaly 或 family/tenant 冻结。首次 unknown 的 full hold 保留，首次 known/anomaly 的已提交财务事实不撤销，批次停发，报告中披露冲突。若需要进一步人工供应商账单核对，另行设计，禁止自动重查/重发。
 
 坏 wire、错 hash、错原身份、越界对象整帧/请求拒绝，不从未经标准解码的帧抢救 usage。对正常供应商非法 metadata，固定 adapter 应依 §3 表达为合法的 null+invalid，避免“保存不了原始坏字段”阻塞其它可确认事实；这不授权从坏 IPC 解码半份数据。
 
@@ -187,24 +187,28 @@ S1 不增加自动审计清理任务。原调用、session、profile、报告及
 
 ### 8.1 新首批 profile 的持久原因
 
-对每份标准报告按以下优先序生成唯一固定 batch_stop_code；同 batch 已有原因采用 first-write-wins，原 call/audit 保留后续具体事实。frozen 一旦 true，任何低成本结算/重放/重新 bootstrap 都不能解冻。
+标准解码、原身份和 hash 校验通过后，先分流：同 report_hash 仅返回原处置；已有不同 report_hash 为 `REPORT_CONFLICT`，按 §6.3 仅冻结 batch，不评估第二份计数的 anomaly 或价格；仅原调用尚无报告时，才按下列首次报告优先序生成固定 batch_stop_code。同 batch 已有原因采用 first-write-wins，原 call/audit 保留后续具体事实。frozen 一旦 true，任何低成本结算/重放/重新 bootstrap 都不能解冻。
 
 1. `MEASUREMENT_ANOMALY`：结构完整 usage 超出原 token 预留，无论 model 是否兼容；沿用三层冻结。不兼容 model 仍不按原价结算。
-2. `REPORT_CONFLICT`：同原调用不同完整 report hash；仅 batch 冻结，不宣称新 usage 已接受。
-3. `PROVIDER_HTTP_REJECTED`：chat 完整 HTTP 非 200；仅 batch 冻结。包括 429/5xx 的首批停批，不自动重复收费；固定记录 status，不猜测供应商错误正文或账号原因。
-4. `PROVIDER_IDENTITY_INVALID`：完整 200 的 identity 为 incompatible/invalid；仅 batch 冻结。不兼容内部计数不按原价结算。
-5. `PROVIDER_MODE_INVALID`：mode unexpected/invalid 或 reasoning invalid；仅 batch 冻结；其中兼容完整计量仍先按同事务规则结算。
-6. `CHAT_USAGE_UNKNOWN`：chat 未获得可定价完整 usage，且未命中以上更具体原因；仅 batch 冻结/full hold。
+2. `PROVIDER_HTTP_REJECTED`：chat 完整 HTTP 非 200；仅 batch 冻结。包括 429/5xx 的首批停批，不自动重复收费；固定记录 status，不猜测供应商错误正文或账号原因。
+3. `PROVIDER_IDENTITY_INVALID`：完整 200 的 identity 为 incompatible/invalid；仅 batch 冻结。不兼容内部计数不按原价结算。
+4. `PROVIDER_MODE_INVALID`：mode unexpected/invalid 或 reasoning invalid；仅 batch 冻结；其中兼容完整计量仍先按同事务规则结算。
+5. `CHAT_USAGE_UNKNOWN`：chat 未获得可定价完整 usage，且未命中以上更具体原因；仅 batch 冻结/full hold。
 
 这是新首批保守停发政策，不改变其它旧 profile 的一般 unknown 语义，也不把 free metadata/business HTTP 的零计量或 embedding 缺少 DeepSeek audit 错判为 chat unknown。
 
 控制面在相同账户锁事务中将 batch.frozen=true 和原因保存。新 Claim 与 Reserve/BeginTool 及正常后续路径必须检查账户冻结；使用既有拒绝分类，不新增 Run 状态。原 transaction 内排他检查保证冻结提交后不会再得到该 batch 的新许可。未确认冻结也不能绕过下面的持久 guard。
 
-**以前一条 chat 的已有事实挡住下一条许可。** 每次新 Claim/BeginTool/Reserve，在持有既有 batch account 行锁时，检查该 batch 所有先前 chat reservation；只要有一条尚未具备以下全部事实，就不得签发新执行/HTTP许可：原 report 已持久、usage 已按兼容价格正常 known 且无 anomaly/停批、对应 ordinary observation 已持久且 hash 匹配、引用该 physical_call_id 的原 step 已成功 Commit（正常结果或唯一合法纠正标记）。不能只检查 usage_known、report row 或进程内 ACK 标志。该查询由既有 business_requests/Run/physical_calls/run_steps 关联得出，不新增队列、锁租约或 pending 状态表。
+**以前一条 chat 的已有事实挡住下一条许可。** 每次新 Claim/BeginTool/Reserve，在持有既有 batch account 行锁时，检查该 batch 所有先前 chat reservation；只要有一条尚未具备以下全部事实，就不得签发新执行/HTTP许可：原 report 已持久、usage 已按兼容价格正常 known 且无 anomaly/停批、对应 ordinary observation 已持久且 hash 匹配，并满足下面两种结束屏障之一。不能只检查 usage_known、report row 或进程内 ACK 标志。该查询由既有 business_requests/Run/physical_calls/run_steps/run_attempts 关联得出，不新增队列、锁租约或 pending 状态表。
+
+- **步骤提交**：引用该 physical_call_id 的原 step 已成功 Commit，内容为正常结果或首次唯一合法纠正标记。
+- **二次业务校验终态失败**：仅限 `protocol_correction` 的 ordinary observation 已持久为 rejected / `MODEL_PROTOCOL_ERROR`，原 Run 为 failed，原 run_attempts 行有 finished_at、outcome=`failed_terminal`，且 Run 与 attempt 的 error_code 都为 `MODEL_PROTOCOL_ERROR`。call.attempt_no 必须等于 Run.attempt_no；原 attempt 的 worker/session/fence 必须等于 call，Run 保留的 fence 必须相同。使用终态 Run 未推进的 next_step_id/kind、next_input_hash、cursor_version、sequence=cursor_version+1、profile/snapshot 与原 attempt 身份重算 execution_binding_hash，必须等于该 call 预留值；不能以同 Run 的另一步/另一个 attempt 的失败解除此屏障。现有 FailAttempt 已在 live lease 下逐项验证原 Step，并同事务保存这些终态事实，不新增失败写入接口或伪造 Commit。此分支只允许下一案例，并不恢复失败 Run。
+
+该窄失败分支覆盖“唯一纠正再次产生不合格方案”，令其按单例业务失败计入40案分母，而不伪装成 provider 停发。直接尺寸超限的现有 stop 路径没有 ordinary rejected observation，因此仍阻断本批后续收费；租约失效、取消、超时、依赖失败、EXECUTOR_PROTOCOL_ERROR、另一 step 的 MODEL_PROTOCOL_ERROR 也不能走此分支。不能仅凭 child exit code 或 Run.state=failed 解锁。持有 batch 锁后只读关联旧终态 Run/attempt，不再获取旧 Run 行锁，避免反转 Run→账户的既有锁序；读不到完整已提交事实即拒绝本次新许可。
 
 本 guard 排除“正在确认同一原调用”的 SettleUsage/ObserveCall/CommitStep，以及当前持有执行权的 GetCheckpoint/Heartbeat/失败清理；否则会锁死释放 guard 所需的原事实。Reserve 的 guard 在插入新的 reservation 之前检查先前记录，不让刚插入的本次 call 阻止它自身；同 ID 重放最多返回 newly_reserved=false 的已有事实，绝不重新授权发送。guard 只拒绝新的执行/网络许可，不能当作过期执行权的恢复通道。同一 batch 行锁下的检查+新 reservation 插入确保最多一条尚未越过上述屏障的 chat。显式 capacity=1 不替代该持久检查；另一个 driver 或 Worker 重启也必须经过它。
 
-因此 Reserve ACK 丢失、无报告、报告提交未确认、普通 ACK 丢失、尚未 Commit 的 chat 都会留下阻断事实，即便 batch.freeze 根本没成功。只有原报告、观察、步骤提交都已实际持久时，才不再是待确认窗口；例如 Commit ACK 丢失但事务已提交，可以通过只读事实证明屏障完成，不能仅凭重启就认定已完成。若原 step 未提交而 lease 已失效，本次首批不会自动重新收费恢复该步骤；只读报告保留阻断，40案可能无法完成，不清 call/补假 Commit 来解锁。本合同不增加人工解锁或另建batch绕过路径。
+因此 Reserve ACK 丢失、无报告、报告提交未确认、普通 ACK 丢失、尚未达到任一结束屏障的 chat 都会留下阻断事实，即便 batch.freeze 根本没成功。只有原报告、观察及匹配的步骤提交或上述窄终态失败均已实际持久时，才不再是待确认窗口；例如 Commit ACK 丢失但事务已提交，可以通过只读事实证明屏障完成，不能仅凭重启就认定已完成。若原 step 未提交、不满足上述窄失败且 lease 已失效，本次首批不会自动重新收费恢复该步骤；只读报告保留阻断，40案可能无法完成，不清 call/补假 Commit 来解锁。本合同不增加人工解锁或另建batch绕过路径。
 
 一个已有许可已发出的外部 HTTP 仍不能由后来的冻结撤销；本 guard 只保证不会再获得新许可，不承诺供应商取消或退款。
 
@@ -217,7 +221,7 @@ S1 不增加自动审计清理任务。原调用、session、profile、报告及
 
 ### 8.3 未确认和外部前置失败
 
-RPC 超时/断连、report ACK 不确定、坏 IPC/收尾失败只说明本地未确认。Go 本地停止所有新工作，SDK/启动器记录固定 `CONTROL_UNCONFIRMED` 或 `SUPERVISION_FAILED` 并停批，不能声称服务器没有提交、已冻结或退款。对失联的服务器无法保证写入一个停止标志，因此本草案**不声称未确认时存在持久 batch freeze**；进一步收费由 §8.1 的已有 chat reservation/report/observation/Commit 事实 guard 阻断，而非靠进程内“已停”或 restart=no。单 Worker/restart=no 是首批运维约束，不是持久保证的替代。恢复前只读核对既有事实，不能重发业务来探测。
+RPC 超时/断连、report ACK 不确定、坏 IPC/收尾失败只说明本地未确认。Go 本地停止所有新工作，SDK/启动器记录固定 `CONTROL_UNCONFIRMED` 或 `SUPERVISION_FAILED` 并停批，不能声称服务器没有提交、已冻结或退款。对失联的服务器无法保证写入一个停止标志，因此本草案**不声称未确认时存在持久 batch freeze**；进一步收费由 §8.1 的已有 chat reservation/report/observation/结束屏障事实 guard 阻断，而非靠进程内“已停”或 restart=no。单 Worker/restart=no 是首批运维约束，不是持久保证的替代。恢复前只读核对既有事实，不能重发业务来探测。
 
 执行当天官方价格/模型合同无法确认、账号配置失效或审核发现 profile 与实际请求不符，由批次驱动在第一条新收费调用前停止并保持 profile 不启用。运行中发现外部价格变更同样停止本地 Worker/后续提交；不通过审计 RPC 填造一个不存在的 provider 响应，也不凭本地标志声称 DB 已冻结。需要改变预算或解除已确认 frozen，必须另行明确决策/授权，不在本合同提供操作接口。
 
@@ -230,14 +234,14 @@ expected response model 与固定请求 model 来自不可变 profile，model mi
 ## 10. 实现与验收清单
 
 1. 源 schema/Proto/Go/Python 共同向量：字段/null/size/safeint、四种 reasoning、身份兼容/失配、业务 JSON 失败但合法计量、无完整响应、完整身份但未知计量、receipt/audit/report/observation 两端实际 domain hash。
-2. 实际 PG 事务：首次同事务、重复、冲突、不兼容计数不调用 UsageCost/不释放 hold、measurement anomaly 原值及三层冻结、batch-only 冻结、并发 Claim/Reserve 拒绝、旧 session late/窗口等号/旧 profile 被禁用；原已知计量不可回滚成 unknown。
+2. 实际 PG 事务：首次同事务、重复、冲突、不兼容计数不调用 UsageCost/不释放 hold、首次 measurement anomaly 原值及三层冻结、batch-only 冻结、并发 Claim/Reserve 拒绝、旧 session late/窗口等号/旧 profile 被禁用；原已知计量不可回滚成 unknown。首份 known、第二份不同且超 token 上限时必须仅 batch 冻结、首份计量保持，不能被判成新 anomaly。
 3. 固定 Linux 正式安装包/实际 FD + PG/gRPC：report/observation 反序、wrong hash、DB 提交前阻塞/提交后丢 ACK、免费调用、ordinary close 后有限计量、最终 report ACK 丢失、Go/child 死亡、metering reader 关闭；无新 HTTP、无第二会话恢复、原 Kill/Wait/Join 屏障保持。
 4. HTTP/SDK reader/operator、跨租户拒绝、≤44项及response 总大小、历史未采集/缺报告/已记录区别、共享 batch 不泄漏其它租户身份；报告最终 known+held 不把观测计数当已知费用。
-5. 首批启动器 restart=no、单 Worker、40 行预登记、worker/control 不确定即停后续提交、无自动新 batch/增资；分别在 Reserve/report/Observe/Commit 的提交前后丢 ACK，再用新 Worker session/第二 driver 申请新许可，验证只有实际完整持久屏障才允许继续。停止不能靠固定 sleep、进程内标记或虚构数据库 freeze。
+5. 首批启动器 restart=no、单 Worker、40 行预登记、worker/control 不确定即停后续提交、无自动新 batch/增资；分别在 Reserve/report/Observe/Commit 的提交前后丢 ACK，再用新 Worker session/第二 driver 申请新许可，验证只有实际完整持久屏障才允许继续。另验证纠正再次校验失败+正常 known/Observe+原步 failed_terminal 允许下一案例；逐项移除/错配 attempt、Step、hash、error、observed 或终态事实均拒绝，尺寸停止/失权/取消也拒绝。停止不能靠固定 sleep、进程内标记或虚构数据库 freeze。
 6. 适用 Go/Python/race/SQL/Buf/API/SDK/容器门禁、旧 profile late 回归和独立审查。真实云端只能在这些工程层与 support/scorer 冻结后，用已批准同批预算执行；确定性替身结果不计 C-07。
 
 ## 11. 后果
 
 新增状态只是原报告事实、固定 stop code 与既有账户 frozen，没有第二调度器或可继续权限；代价是一次内部 v2 不兼容细化、typed Proto/PG/只读 API 增量。unknown 首次出现就结束新首批，可能无法完成 40 案，这是明确的保守政策而非成功承诺。未提交前主机死亡和价格别名漂移仍有不可消除的证据限制。
 
-本稿不修改运行代码、不发起真实模型调用。接受及实现前，所有上述行为都只是建议合同。
+本合同不修改运行代码、不发起真实模型调用。接受不代表实现；上述行为仍须按清单交付代码和实际验证证据。
