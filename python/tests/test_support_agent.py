@@ -61,6 +61,23 @@ def test_prompt_time_arithmetic_uses_captured_instants(seconds: int) -> None:
     assert not {"action", "conclusion", "expected", "gold"} & body.keys()
 
 
+def test_policy_navigation_never_adds_unretrieved_evidence() -> None:
+    """A static topic catalog reports actual availability without granting refs."""
+    protected = agent_checkpoint()
+    before = copy.deepcopy(protected)
+    body = json.loads(
+        SupportAgentAdapter().proposal_messages(protected, correction=False)[1][
+            "content"
+        ]
+    )
+    actual = set(support_sources(protected, repeated_search=True).aliases)
+    assert protected == before and set(body["available_refs"]) == actual
+    assert body["policy_retrieval"]["ticket_status"]["retrieved"] == []
+    for topic in body["policy_retrieval"].values():
+        assert set(topic["retrieved"]) <= actual
+        assert 0 < len(topic["suggested_query"].encode("utf-8")) <= 512
+
+
 def decision_step(value: dict | None, kind: str = "model_decision") -> dict:
     """Build a protected decision; missing value is the one correction marker."""
     return {

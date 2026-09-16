@@ -65,6 +65,49 @@ AGENT_INSTRUCTIONS += (
     "target_ticket_status, claims. decision:"
     + SYSTEM_INSTRUCTIONS.split("decision:", 1)[1]
 )
+AGENT_INSTRUCTIONS += """
+
+NEXT-DECISION CHECK (do this AFTER every tool):
+The user JSON includes a policy_retrieval catalog of topics, suggested search queries and ACTUALLY retrieved paragraph aliases. An empty retrieved list means you have no evidence for that topic yet. The catalog is navigation metadata, not policy evidence. You can and should return another search_policy tool object after a search; this is a multi-step investigation, not a one-search task. Do not finish simply because one search returned three paragraphs.
+Before final, enumerate the topics needed by EACH claim. If a necessary topic is absent, your next response must be a search_policy tool decision with a focused new query. For example, carrier-exception/correction paragraphs do not establish whether delivery was timely: a critical or corrected timeline normally needs a SEPARATE timing search. A captured informational_only/escalated status needs its SEPARATE ticket-status search as well as any timing or exception policy. Search these separately instead of cramming unrelated topics into one query. Use retrieved timing P02 for not-overdue/on-time; P07.1's overdue rule alone does not establish not-overdue.
+For an active critical condition, include both the critical claim and the relevant timing claim even if the promise is still in the future (the timing evidence explains the conclusion). For an ordinary delay below 172800 seconds, do not escalate on duration alone. A vague complaint with no identifiable problem needs its clarification policy, not a timing answer that ignores the complaint. Finally recheck decision/action against every retrieved applicable policy, particularly no_action for an existing informational-only ticket.
+Output exactly one outer {"type":"tool",...} or {"type":"final","proposal":{...}} object. Never emit the nested proposal alone. No reasoning text.
+"""
+
+POLICY_TOPICS: dict[str, tuple[tuple[str, ...], str]] = {
+    "timing": (
+        ("P02.1", "P02.2"),
+        "Compare delivery timestamp or observation time with promised_delivery_at in UTC; on_time delayed fulfillment",
+    ),
+    "extended_delay": (
+        ("P07.1", "P07.2"),
+        "Outstanding undelivered order at least 48 hours after promise escalation threshold; completed late delivery",
+    ),
+    "missing_facts": (
+        ("P03.1", "P03.2"),
+        "Missing related order delivery tracking event or vague complaint needing specific problem description clarification",
+    ),
+    "delivery_dispute": (
+        ("P04.1", "P04.2"),
+        "Delivered but customer disputes receipt wrong address unauthorized recipient safe place",
+    ),
+    "structured_conflict": (
+        ("P05.1", "P05.2", "P10.1"),
+        "Authoritative structured tracking contradiction same timestamp source key pre handover post delivery conflict",
+    ),
+    "critical_exception": (
+        ("P06.1",),
+        "Active lost damaged returned_to_sender critical carrier exception escalation",
+    ),
+    "carrier_correction": (
+        ("P05.2", "P06.2"),
+        "Explicit carrier correction identifies erroneous event and supersedes it; ordinary later scans do not correct",
+    ),
+    "ticket_status": (
+        ("P08.1", "P08.2", "P09.1"),
+        "Already informational_only ticket action none; already escalated preserve status no silent downgrade",
+    ),
+}
 
 CORRECTION = """
 The previous decision failed the structure or source contract. This is the only correction for this Run. Return exactly one valid tool or final object. Use only available_refs for a final proposal. If a needed policy was not retrieved, choose a new focused search instead of fabricating a citation. Do not repeat a completed tool. Do not include commentary.
@@ -168,6 +211,15 @@ class SupportAgentAdapter:
             "T": checkpoint["snapshot"]["ticket_binding_json"],
             "available_refs": sorted(sources.aliases),
             "policies": sources.contents.get("search_policy", {}).get("matches", []),
+            "policy_retrieval": {
+                topic: {
+                    "retrieved": [
+                        alias for alias in aliases if alias in sources.aliases
+                    ],
+                    "suggested_query": query,
+                }
+                for topic, (aliases, query) in POLICY_TOPICS.items()
+            },
             "previous_tools": [],
             "allowed_ticket_status_modes": {
                 "informational_only": ["informational_no_action"],

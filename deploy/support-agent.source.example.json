@@ -29,8 +29,8 @@
     },
     "program": {
       "adapter": "support-agent-v1",
-      "adapter_source_sha256": "049d0313857a0c47b72e915a308d2b92ae14b11c69e5b19fb2965df34ba86add",
-      "prompt_sha256": "011139ecb36840dfbe49d04708d6812c5ecb8fd49a5d940f2c330abf3d161011",
+      "adapter_source_sha256": "c3644f954a1ff22a62fe1b198e958a0c4751e4acdc31b43e9ff3064f870ce143",
+      "prompt_sha256": "459a4a88d529f350756d926fe5e37ddbcecb36c05ff8a392e2cfa2e742e21770",
       "prompt_version": "support-agent-prompt-v1",
       "proposal_schema": "support-proposal-v1",
       "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",
