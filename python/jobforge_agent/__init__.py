@@ -1,4 +1,4 @@
-"""Bounded S1 business tools and free local resource preparation.
+"""Bounded business tools, registered single-step execution and local preparation.
 
-This package does not execute Runs, schedule work, or access a database.
+Run scheduling, lease ownership and control database access belong to Go.
 """

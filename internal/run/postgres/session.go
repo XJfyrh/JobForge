@@ -49,6 +49,9 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 			if !previous.ExpiresAt.After(now) {
 				return agentrun.ErrStaleLease
 			}
+			if err := s.checkExecutorVersion(principal, version); err != nil {
+				return err
+			}
 			session = previous
 			session.AuthorityObservedAt = now
 			return nil
@@ -63,6 +66,9 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 		if live {
 			return agentrun.ErrConflict
 		}
+		if err := s.checkExecutorVersion(principal, version); err != nil {
+			return err
+		}
 		session = agentrun.Session{ID: uuid.NewString(), WorkerID: principal, StartupID: startupID, Version: version,
 			CreatedAt: now, SeenAt: now, ExpiresAt: now.Add(sessionTTL), AuthorityObservedAt: now}
 		_, err = tx.Exec(ctx, `insert into worker_sessions(session_id,worker_id,startup_id,version,created_at,seen_at,expires_at)
@@ -70,6 +76,19 @@ func (s *Store) Register(ctx context.Context, principal, startupID, version stri
 		return err
 	})
 	return session, err
+}
+
+// checkExecutorVersion binds every advertised capability to the same immutable
+// deployment. A worker with no profiles can stay idle but cannot claim work.
+// Disabling execution does not erase old profiles needed for late accounting.
+func (s *Store) checkExecutorVersion(principal, version string) error {
+	for _, id := range s.workers[principal].ProfileIDs {
+		profile, ok := s.profiles[id]
+		if !ok || profile.ExecutorVersion != version {
+			return agentrun.ErrProfileUnavailable
+		}
+	}
+	return nil
 }
 
 // checkSession performs no blocking row lock. Session expiry only moves forward
@@ -85,7 +104,8 @@ func (s *Store) checkSession(ctx context.Context, tx pgx.Tx, principal, workerID
 		return agentrun.ErrProfileUnavailable
 	}
 	var expires time.Time
-	if err := tx.QueryRow(ctx, "select expires_at from worker_sessions where worker_id=$1 and session_id=$2", workerID, sessionID).Scan(&expires); err != nil {
+	var version string
+	if err := tx.QueryRow(ctx, "select expires_at,version from worker_sessions where worker_id=$1 and session_id=$2", workerID, sessionID).Scan(&expires, &version); err != nil {
 		if err == pgx.ErrNoRows {
 			return agentrun.ErrStaleLease
 		}
@@ -93,6 +113,9 @@ func (s *Store) checkSession(ctx context.Context, tx pgx.Tx, principal, workerID
 	}
 	if requireLive && !expires.After(now) {
 		return agentrun.ErrStaleLease
+	}
+	if requireLive {
+		return s.checkExecutorVersion(principal, version)
 	}
 	return nil
 }

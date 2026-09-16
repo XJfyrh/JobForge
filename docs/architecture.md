@@ -2,13 +2,15 @@
 
 本文档描述 JobForge 分布式任务编排平台的系统架构。当前产品边界与验收语义见 [PRD v0.6](product/JobForge_PRD_v0.6.md)，其上游可靠性不变量继续生效；架构决策见 [ADR 目录](adr/README.md)。
 
-Agent v3按[PRD v0.7](product/JobForge_PRD_v0.7.md)与[v0.8](product/JobForge_PRD_v0.8.md)分阶段推进。S1-A新增独立`support-business` HTTP进程和专属PG/pgvector库，Python只通过三个预注册读工具访问冻结快照；免费固定embedding在事务外准备，由受信Go装载命令原子发布。业务runtime、loader和schema owner分权，gold不进入运行镜像。[启动与边界](agent-v3-business.md)描述此切片；Run控制由后续S1-B提供。DeepSeek调用与审批写入仍未交付，不能将下列v0.6运行图当作新Agent全链路已验收。
+Agent v3按[PRD v0.7](product/JobForge_PRD_v0.7.md)及后续增量分阶段推进。S1-A新增独立`support-business` HTTP进程和专属PG/pgvector库，Python只通过三个预注册读工具访问冻结快照；免费固定embedding在事务外准备，由受信Go装载命令原子发布。业务runtime、loader和schema owner分权，gold不进入运行镜像。[启动与边界](agent-v3-business.md)描述此切片；S1-B已提供Run控制。真实DeepSeek业务流程与审批写入仍未验收，不能将下列v0.6运行图当作新Agent全链路已验收。
 
 ## 架构概览
 
-S1-B 在 [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 接受后新增 `agent-control`，独立提供 Run API/Worker RPC/有界恢复扫描，只在控制 PostgreSQL 中调度 runs。步骤、审批方案和逐物理调用账本不是第二队列；业务服务依然独立。当前分支的生产存储及确定性真实 PG/HTTP 验证不能代替 S1-C 的正式 DeepSeek 执行器或 S4 的业务写入。启动、结果权限及 unknown 预算说明见 [Run 指南](agent-v3-runs.md)。
+S1-B 在 [ADR-0017](adr/0017-run-admission-and-call-ledger.md) 接受后新增 `agent-control`，独立提供 Run API/Worker RPC/有界恢复扫描，只在控制 PostgreSQL 中调度 runs。步骤、审批方案和逐物理调用账本不是第二队列；业务服务依然独立。S1-B的生产存储及确定性真实 PG/HTTP 验证不能代替 S1-C 的真实云端固定业务链或 S4 的业务写入。启动、结果权限及 unknown 预算说明见 [Run 指南](agent-v3-runs.md)。
 
-S1-C1经PR #42提供[版本化执行器协议与共享时钟](agent-v3-executor-protocol.md)：RPC返回锁后PG观测时间，执行期限保守映射到同Linux容器的CLOCK_BOOTTIME；普通步骤权限与原调用计量分离。C2[受控HTTP适配](agent-v3-authorized-http.md)已随PR #43合并，使用固定Python请求、异步单次许可和完整响应校验。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受后，C3a在原v2 Conversation增加明确观察ACK及双通道确认屏障。正式Go进程监管、持久许可联调、云端批次和审批写入仍分别验收，模块及替身测试不能代表全链路交付。
+S1-C1经PR #42提供[版本化执行器协议与共享时钟](agent-v3-executor-protocol.md)：RPC返回锁后PG观测时间，执行期限保守映射到同Linux容器的CLOCK_BOOTTIME；普通步骤权限与原调用计量分离。C2[受控HTTP适配](agent-v3-authorized-http.md)已随PR #43合并，使用固定Python请求、异步单次许可和完整响应校验。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受后，C3a在原v2 Conversation增加明确观察ACK及双通道确认屏障。C3b的[固定运行时](agent-v3-runtime.md)将这些合同接到正式Go Worker、Linux guardian/step及独立双向FD；具体进程和真实PG联调结果见[分层证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)。云端批次和审批写入仍分别验收，合成HTTP/测试adapter不能代表全链路业务交付。
+
+Agent v3的`agent-worker`容量为1，独占session/lease/5s心跳/RPC，原Conversation决定普通发送权；`runexecutor`只监管固定已安装Python入口、进程组与I/O。独立BOOTTIME watchdog不可被RPC阻塞，停止后的窄计量不恢复步骤权限。Python无调度队列，ObserveCall持久ACK之前不得继续，合法结果必须经过实际Wait、EOF/Join、旧组消失和当前执行权屏障才可Commit。所有profile、manifest和两端runtime必须匹配固定executor_version。生产registry当前为空，测试adapter及loopback供应商origin只进入专用integration构建目标。
 
 ```mermaid
 flowchart LR
@@ -251,7 +253,7 @@ jobs 表的热路径查询均由部分索引服务，避免随表增长退化为
 
 ## 部署拓扑
 
-JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
+既有v0.6服务使用单二进制多子命令模式；Agent v3另有独立`agent-control`、`support-business`与`agent-worker`入口。下图仍是v0.6拓扑，v3固定镜像、只读manifest/秘密配置和Linux复现见[运行时指南](agent-v3-runtime.md)：
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
@@ -291,12 +293,16 @@ JobForge 使用单二进制多子命令模式，避免过早拆分微服务：
 | [ADR-0010](adr/0010-task-type-catalog-and-worker-capability-binding.md) | 类型目录与 Worker 能力绑定 | 静态部署 allowlist；Register 子集；workers 行锁内容量核算与 Claim；无 migration |
 | [ADR-0011](adr/0011-general-task-results-and-model-adapters.md) | 通用结果与模型适配器（Accepted） | Go 持有唯一任务租约；有界结果引用；独立业务键与产物发布 |
 | [ADR-0012](adr/0012-task-observability-and-otlp.md) | 任务可观测闭环（Accepted） | 提交后按状态转换计数；可选 OTLP；遥测不参与可靠性判断 |
+| [ADR-0017](adr/0017-run-admission-and-call-ledger.md) | Run执行权与物理调用账本 | 唯一Run队列；Go持权；逐次持久许可、计量与checkpoint |
+| [ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md) | 固定流程与受监管执行器 | 固定云端配置、Go/Python Linux进程、保守时钟映射；观察继续时序由ADR-0019取代 |
+| [ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md) | 观察确认与退出合同 | 明确普通ACK；固定退出码；清理、计量与Commit屏障 |
 
 ## 目录结构
 
 ```text
 jobforge/
 ├── cmd/jobforge/           # 单二进制入口（api/scheduler/gateway/worker/artifacts/publisher/consumer/ctl/migrate）
+├── cmd/agent-worker/       # Agent v3 固定Linux Worker入口；控制token仅由Go持有
 ├── internal/
 │   ├── api/http/           # HTTP 控制面 API（chi router）
 │   ├── config/             # 环境变量配置
@@ -308,12 +314,16 @@ jobforge/
 │   ├── notify/             # LISTEN/NOTIFY fan-out
 │   ├── observability/      # OTel tracing + Prometheus metrics + pprof
 │   ├── outbox/             # Outbox publisher（at-least-once 发布 + retention 清理）
+│   ├── runinput/           # RPC checkpoint到登记输入的严格投影与领域hash校验
+│   ├── runworker/          # Agent v3 session/lease/RPC、原Conversation与Commit屏障
+│   ├── runexecutor/        # 固定Linux进程组、独立普通/计量FD、实际Kill/Wait/Join
 │   ├── scheduler/          # 调度器（promote + recover 循环）
 │   ├── store/postgres/     # PostgreSQL 存储层（pgx v5）
 │   ├── tasks/              # 预注册 Agent/RAG 适配器、模型 HTTP、业务产物与查询
 │   └── worker/             # Worker Runtime + demo handlers
 ├── proto/jobforge/worker/v1/  # gRPC proto 定义
 ├── sdk/python/             # Python SDK（httpx）
+├── python/jobforge_agent/  # 安装式guardian/step、受控HTTP；生产registry当前为空
 ├── migrations/             # Versioned SQL migrations
 ├── tests/integration/      # 集成测试 + 故障注入测试
 ├── benchmarks/             # 微基准 + 端到端基准

@@ -672,7 +672,8 @@ type RegisterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Process-generated startup UUID; retries of the same startup reuse it.
 	StartupId string `protobuf:"bytes,1,opt,name=startup_id,json=startupId,proto3" json:"startup_id,omitempty"`
-	// Bounded software version label, at most 128 ASCII characters.
+	// Immutable executor_version matching every deployment-advertised profile.
+	// At most 128 ASCII identifier characters; mismatch is PROFILE_UNAVAILABLE.
 	Version       string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

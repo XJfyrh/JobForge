@@ -97,7 +97,7 @@ func TestRunWorkerRPCAuthorityObservationsUseLockedDatabaseClock(t *testing.T) {
 		"select pg_advisory_xact_lock(hashtextextended($1,18))", []any{"contract-worker-2"},
 		func(ctx context.Context) (*timestamppb.Timestamp, error) {
 			var err error
-			registered, err = client.Register(ctx, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: "authority-test"})
+			registered, err = client.Register(ctx, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: h.Profile.ExecutorVersion})
 			return registered.GetAuthorityObservedAt(), err
 		})
 	if registered.ExpiresAt.AsTime().Sub(observed) != 60*time.Second {

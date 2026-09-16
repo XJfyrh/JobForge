@@ -2,6 +2,8 @@
 
 日期：2026-09-16；基线为PR #44合并提交`d11dd2fcdc737c92ce7d11e30665ce3ab6c455e4`。[PRD v0.11](../product/JobForge_PRD_v0.11.md)与[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)已通过独立审查接受。本次同步尚未正式部署的内部v2，公开HTTP/SDK/gRPC、v1及数据库合同不变；没有migration、依赖升级或收费调用。
 
+合并状态：[PR #45](https://github.com/XJfyrh/JobForge/pull/45)最终`118ca82d`通过两份独立最终复审与[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35087095197)，合并提交`193623659de8fe41bfc4f5f0cabc048a167148e4`与审查代码树一致。以下保持C3a当时的验收范围，后续正式进程单列[C3b证据](agent-v3-s1-c3-runtime-2026-09-16.md)。
+
 ## 验收映射
 
 | 要求 | 本切片实现与证据 | 仍需后续验证 |

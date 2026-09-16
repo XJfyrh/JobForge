@@ -123,7 +123,7 @@ func TestRunWorkerRPCAuthenticationAuthorityAndCheckpoint(t *testing.T) {
 	_, err = client.AcknowledgeStopped(ctx, &agentv1.AcknowledgeStoppedRequest{Execution: lease.Execution})
 	assertRunRPCError(t, err, codes.FailedPrecondition, "STALE_LEASE")
 	secondCtx := metadata.AppendToOutgoingContext(deadline, "authorization", "Bearer contract-second-worker-token")
-	registered, err := client.Register(secondCtx, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: "contract-v1"})
+	registered, err := client.Register(secondCtx, &agentv1.RegisterRequest{StartupId: uuid.NewString(), Version: h.Profile.ExecutorVersion})
 	if err != nil || registered.Session.WorkerId != "contract-worker-2" || registered.Capacity != 2 || len(registered.ProfileIds) != 1 {
 		t.Fatalf("server configured registration: %v", err)
 	}
