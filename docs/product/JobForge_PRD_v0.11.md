@@ -1,8 +1,8 @@
 # JobForge PRD v0.11：正式执行器的确认与终止边界
 
-- 日期：2026-09-16；状态：Proposed，等待PR审查。本文不表示已实现或已验收。
+- 日期：2026-09-16；状态：随[PR #44](https://github.com/XJfyrh/JobForge/pull/44)合并接受（`d11dd2f`）。本文不表示已实现或已验收。
 - 基线：[PRD v0.10](JobForge_PRD_v0.10.md)、[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)。实现调查见[受控HTTP模块](../agent-v3-authorized-http.md)。
-- 决策提案：[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)。只细化C-02/C-03/C-08正式进程接缝，不扩大业务能力或改变费用上限。
+- 已接受决策：[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)。只细化C-02/C-03/C-08正式进程接缝，不扩大业务能力或改变费用上限。
 
 ## 1. 问题与行为
 

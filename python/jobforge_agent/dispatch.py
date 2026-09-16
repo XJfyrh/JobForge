@@ -127,8 +127,8 @@ class DispatchHooks(Protocol):
         """Return the newly issued v2 permit for this exact intent."""
         ...
 
-    async def observe(self, observation: Frame) -> None:
-        """Return only when the ordinary observation is confirmed."""
+    async def observe(self, observation: Frame) -> Frame:
+        """Return the exact v2 ACK after the observation is confirmed."""
         ...
 
     async def settle(self, report: Frame) -> Frame:
@@ -663,7 +663,10 @@ class AuthorizedDispatcher:
         )
         self._guard(deadline)
         self._conversation.accept(observation, self._now())
-        await self._bounded(self._hooks.observe(copy.deepcopy(observation)), deadline)
+        ack = await self._bounded(
+            self._hooks.observe(copy.deepcopy(observation)), deadline
+        )
+        self._conversation.accept(ack, self._now())
         if failure is not None and complete is None:
             raise failure
         return value, failure

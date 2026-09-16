@@ -9,8 +9,10 @@ type Conversation struct {
 	requestID                                                                string
 	binding                                                                  Binding
 	deadline, lastNow, lastParent, lastChild, callDeadline, dispatchDeadline int64
-	resumeFloor                                                              int64
+	resumeFloor, resumeCallDeadline                                          int64
 	intent, permit, pending                                                  Frame
+	pendingHash                                                              string
+	pendingAck                                                               *Frame
 	callIndex                                                                int
 	totalSequence                                                            int64
 	toolID                                                                   string
@@ -24,21 +26,27 @@ func (c *Conversation) Deadline() int64 { return c.deadline }
 func (c *Conversation) Closed() bool { return c.closed }
 
 // MeteringPending reports an observation awaiting its matching settled report.
-func (c *Conversation) MeteringPending() bool { return c.phase == "metering" }
+// Waiting only for an ordinary observation ACK does not count as metering.
+func (c *Conversation) MeteringPending() bool {
+	if c.phase != "observation" || c.pending.UsageDisposition != "reported" {
+		return false
+	}
+	return c.metering.calls[c.pending.PhysicalCallID].settlement != "settled"
+}
 
 // Accept validates an ordinary frame. Dedicated metering frames must use
 // AcceptMetering even after ordinary execution is stopped.
 func (c *Conversation) Accept(frame Frame, nowMonoMS int64) error {
 	if _, err := Encode(frame); err != nil {
-		c.closed = true
+		c.Stop()
 		return err
 	}
 	if err := c.accept(frame, nowMonoMS); err != nil {
-		c.closed = true
+		c.Stop()
 		return err
 	}
 	c.lastNow = nowMonoMS
-	if oneOf(frame.Kind, "execute_step", "call_permit") {
+	if ordinaryParent(frame.Kind) {
 		c.lastParent = frame.EmittedMonoMS
 	} else {
 		c.lastChild = frame.EmittedMonoMS
@@ -48,7 +56,7 @@ func (c *Conversation) Accept(frame Frame, nowMonoMS int64) error {
 
 func (c *Conversation) accept(f Frame, now int64) error {
 	lastEmitted := c.lastChild
-	if oneOf(f.Kind, "execute_step", "call_permit") {
+	if ordinaryParent(f.Kind) {
 		lastEmitted = c.lastParent
 	}
 	if c.closed || !validClock(f.EmittedMonoMS, now) || (c.started && (now < c.lastNow || f.EmittedMonoMS < lastEmitted || f.EmittedMonoMS < c.metering.start)) {
@@ -70,8 +78,10 @@ func (c *Conversation) accept(f Frame, now int64) error {
 	if f.RequestID != c.requestID || f.Binding != c.binding || now >= c.deadline {
 		return ErrProtocol
 	}
-	if oneOf(f.Kind, "call_intent", "step_result") && f.EmittedMonoMS < c.resumeFloor {
-		return ErrProtocol
+	if oneOf(f.Kind, "call_intent", "step_result") {
+		if f.EmittedMonoMS < c.resumeFloor || (c.resumeCallDeadline != 0 && now >= c.resumeCallDeadline) {
+			return ErrProtocol
+		}
 	}
 	switch f.Kind {
 	case "call_intent":
@@ -83,6 +93,9 @@ func (c *Conversation) accept(f Frame, now int64) error {
 			return ErrProtocol
 		}
 		c.toolID, c.intent, c.phase, c.totalSequence = f.ToolInvocationID, f, "intent", f.CallSequence
+		// Once the next intent is accepted, its new permit supplies the next
+		// call deadline. The previous call must not constrain that whole call.
+		c.resumeCallDeadline = 0
 	case "call_permit":
 		if c.phase != "intent" || f.EmittedMonoMS < c.intent.EmittedMonoMS || f.CallSequence != c.intent.CallSequence || f.Subcall != c.intent.Subcall || f.ParameterHash != c.intent.ParameterHash || f.ToolInvocationID != c.intent.ToolInvocationID {
 			return ErrProtocol
@@ -105,33 +118,13 @@ func (c *Conversation) accept(f Frame, now int64) error {
 		c.permit, c.phase, c.dispatchDeadline, c.callDeadline = f, "call", dispatch, deadline
 		c.metering.calls[f.PhysicalCallID] = &meteredCall{permit: f}
 	case "call_observation":
-		call := c.metering.calls[f.PhysicalCallID]
-		if c.phase != "call" || call == nil || !call.dispatched || f.CallSequence != c.permit.CallSequence || f.PhysicalCallID != c.permit.PhysicalCallID || f.EmittedMonoMS < call.dispatchedAt || now >= c.callDeadline {
+		return c.acceptObservation(f, now)
+	case "call_observation_ack":
+		if c.phase != "observation" || c.pendingAck != nil || f.CallSequence != c.pending.CallSequence || f.PhysicalCallID != c.pending.PhysicalCallID || f.ObservationHash != c.pendingHash || f.EmittedMonoMS < c.pending.EmittedMonoMS || now >= c.callDeadline {
 			return ErrProtocol
 		}
-		if f.UsageDisposition == "unknown" {
-			if call.report != nil {
-				return ErrProtocol
-			}
-			call.observationDisposition = "unknown"
-			c.finishObservation(f)
-			return nil
-		}
-		if !oneOf(call.permit.Subcall, "chat", "query_embedding") {
-			return ErrProtocol
-		}
-		if call.report != nil && *f.UsageHash != call.report.UsageHash {
-			return ErrProtocol
-		}
-		call.observationDisposition = "reported"
-		// Retain the accepted hash by value. Reusing or mutating the caller's
-		// frame must not change the identity awaiting the other pipe's report.
-		usageHash := *f.UsageHash
-		f.UsageHash = &usageHash
-		c.pending, c.phase = f, "metering"
-		if call.settlement == "settled" {
-			c.finishObservation(f)
-		}
+		c.pendingAck = &f
+		return c.joinObservation(now)
 	case "step_result":
 		if c.phase != "idle" || (c.blocked && f.Outcome != "error") || (f.Outcome == "success" && c.callIndex != len(subcalls(c.binding.StepKind))) {
 			return ErrProtocol
@@ -143,13 +136,58 @@ func (c *Conversation) accept(f Frame, now int64) error {
 	return nil
 }
 
-func (c *Conversation) finishObservation(f Frame) {
-	if call := c.metering.calls[f.PhysicalCallID]; call != nil && call.settlement == "settled" {
-		c.resumeFloor = call.ackEmitted
+func (c *Conversation) acceptObservation(f Frame, now int64) error {
+	call := c.metering.calls[f.PhysicalCallID]
+	if c.phase != "call" || call == nil || !call.dispatched || f.CallSequence != c.permit.CallSequence || f.PhysicalCallID != c.permit.PhysicalCallID || f.EmittedMonoMS < call.dispatchedAt || now >= c.callDeadline {
+		return ErrProtocol
 	}
+	if f.UsageDisposition == "unknown" {
+		if call.report != nil {
+			return ErrProtocol
+		}
+	} else {
+		if !oneOf(call.permit.Subcall, "chat", "query_embedding") || (call.report != nil && *f.UsageHash != call.report.UsageHash) {
+			return ErrProtocol
+		}
+		// Preserve the original observation identity across independent reader
+		// scheduling, even if its caller reuses or mutates the source frame.
+		usageHash := *f.UsageHash
+		f.UsageHash = &usageHash
+	}
+	call.observationDisposition = f.UsageDisposition
+	c.pending, c.pendingHash, c.phase = f, observationHash(f), "observation"
+	return nil
+}
+
+func (c *Conversation) joinObservation(now int64) error {
+	call := c.metering.calls[c.pending.PhysicalCallID]
+	if c.pending.UsageDisposition == "reported" && call.report != nil && call.report.UsageHash != *c.pending.UsageHash {
+		// A bad ordinary declaration revokes execution without discarding a
+		// valid report already accepted on the independent metering channel.
+		c.Stop()
+		return nil
+	}
+	if c.closed {
+		return nil
+	}
+	if now >= c.callDeadline || now >= c.deadline {
+		c.Stop()
+		return nil
+	}
+	if c.pendingAck == nil || (c.pending.UsageDisposition == "reported" && call.settlement != "settled") {
+		return nil
+	}
+	if c.pending.UsageDisposition == "reported" && c.pendingAck.EmittedMonoMS < call.ackEmitted {
+		c.Stop()
+		return ErrProtocol
+	}
+	c.resumeFloor = max(c.resumeFloor, c.pendingAck.EmittedMonoMS)
+	c.resumeCallDeadline = c.callDeadline
 	c.phase = "idle"
 	c.callIndex++
-	c.blocked = f.BusinessOutcome != "accepted"
+	c.blocked = c.pending.BusinessOutcome != "accepted"
+	c.pending, c.pendingHash, c.pendingAck = Frame{}, "", nil
+	return nil
 }
 
 // CanDispatch consumes a permit once. Callers recheck this immediately before
@@ -157,7 +195,7 @@ func (c *Conversation) finishObservation(f Frame) {
 func (c *Conversation) CanDispatch(id string, nowMonoMS int64) error {
 	call := c.metering.calls[id]
 	if c.closed || !between(nowMonoMS, 0, MaxInteger) || nowMonoMS < c.lastNow || c.phase != "call" || id != c.permit.PhysicalCallID || call == nil || call.dispatched || nowMonoMS >= c.dispatchDeadline || nowMonoMS >= c.deadline {
-		c.closed = true
+		c.Stop()
 		return ErrProtocol
 	}
 	call.dispatched = true
@@ -171,38 +209,33 @@ func (c *Conversation) CanDispatch(id string, nowMonoMS int64) error {
 // Overrun is retained but immediately stops ordinary execution before any ACK.
 func (c *Conversation) AcceptMetering(frame Frame, nowMonoMS int64) error {
 	if !c.started || !between(nowMonoMS, 0, MaxInteger) || nowMonoMS < c.lastNow {
-		c.closed = true
+		c.Stop()
 		return ErrProtocol
 	}
 	if err := c.metering.Accept(frame, nowMonoMS); err != nil {
-		c.closed = true
+		c.Stop()
 		return err
 	}
 	c.lastNow = nowMonoMS
 	call := c.metering.calls[frame.PhysicalCallID]
 	if nowMonoMS >= c.deadline || call.overrun || call.observationDisposition == "unknown" || oneOf(call.settlement, "anomaly", "unconfirmed") {
-		c.closed = true
+		c.Stop()
 	}
-	if c.phase == "metering" && frame.PhysicalCallID == c.pending.PhysicalCallID {
-		if call.report != nil && call.report.UsageHash != *c.pending.UsageHash {
-			c.closed = true
-			// The ordinary hash mismatch revokes execution, but must not discard
-			// independently valid original-call usage from the dedicated FD.
-			return nil
-		}
-		if !c.closed && call.settlement == "settled" {
-			if nowMonoMS >= c.callDeadline || nowMonoMS >= c.deadline {
-				c.closed = true
-				return nil
-			}
-			c.finishObservation(c.pending)
-		}
+	if c.phase == "observation" && frame.PhysicalCallID == c.pending.PhysicalCallID {
+		return c.joinObservation(nowMonoMS)
 	}
 	return nil
 }
 
 // Stop revokes only ordinary execution; original-call metering remains narrow.
-func (c *Conversation) Stop() { c.closed = true }
+func (c *Conversation) Stop() {
+	c.closed = true
+	c.pendingAck = nil
+}
+
+func ordinaryParent(kind string) bool {
+	return oneOf(kind, "execute_step", "call_permit", "call_observation_ack")
+}
 
 // AnchoredDeadline adds a bounded relative lifetime to its emission time and
 // deducts IPC delay by checking against the actual receiver clock. Equality expires.

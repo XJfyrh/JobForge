@@ -8,7 +8,7 @@
 
 派发层向执行器协调者申请许可，使用 v2 Conversation 验证绑定、顺序和原期限，在实际发送前消费一次许可；同一 body bytes 只交 HTTP transport 一次。客户端关闭自动重试、重定向和代理环境继承，拒绝并发排队。在线期限统一为 Linux CLOCK_BOOTTIME；Windows 真实运行使用 Linux 容器，测试可以显式注入时钟。
 
-`DispatchHooks` 是可信协调者的入口：authorize 必须返回对应许可，observe 必须等到 Go 的持久确认，settle 必须返回对应计量 ACK。当前仅测试协调者替身，未实现它们到 Go 的 IPC 桥接；现有 v2 没有 observation ACK，[ADR-0019提案](adr/0019-executor-confirmation-and-exit-contract.md)先补充该受审契约，不能把写入管道当成持久确认。HTTP 模块本身不连接数据库或替代持久授权。
+`DispatchHooks` 是可信协调者的入口：authorize 返回对应许可，settle 返回对应计量 ACK；observe 等待持久确认并返回普通 `call_observation_ack` Frame，由原dispatcher Conversation检查身份/hash/顺序/截止后才返回业务结果。此内部合同按PR #44接受的[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)在C3a同步实现，不能把写入管道当成持久确认。当前仍使用测试协调者，Go IPC桥接尚未实现；HTTP模块本身不连接数据库或替代持久授权。
 
 完整响应和业务有效响应分开。先有界读取并捕获完整可信计量，再验证业务结果，最后报告 observation。版本、模型 digest、向量、snapshot/index/policy 和来源绑定均须在 accepted 之前通过。search_policy 的 version、tags、embedding、search 四次请求分别授权；坏前置响应不能触发后继 HTTP。
 
@@ -33,7 +33,7 @@ usage 的原始整数必须精确且内部一致；缺失、矛盾、断连或�
 | 工程 | Python 全测试、Ruff、mypy、Linux 实际时钟路径及仓库适用 CI；SDK/离线检索回归 | 正式 Worker 的 Kill/Wait/崩溃恢复 |
 | 后续完整 C | 真 PG 许可→正式进程→真实业务/embedding/DeepSeek→SDK 查询→40 案评分 | 当前尚未验收 |
 
-测试中的 provider、向量和协调者均为替身；真实 TCP 不等于真实模型。2026-09-16，审查修复后本地 Windows 全 Python 套件663项通过，固定 Linux 镜像内485项通过，无 skip。完整验证及 PR 状态见[切片证据](evidence/agent-v3-s1c2-http-2026-09-16.md)。历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+测试中的 provider、向量和协调者均为替身；真实 TCP 不等于真实模型。C2审查修复后的历史结果为Windows全Python 663项、固定Linux镜像485项通过，无skip，见[C2证据](evidence/agent-v3-s1c2-http-2026-09-16.md)。普通ACK、每个search子调用和最终调用等待确认的新增验证单列于[C3a证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
 
 ## 本地复现
 

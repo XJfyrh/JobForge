@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/store"
@@ -17,15 +18,51 @@ import (
 // setupSchedulerStore creates a SchedulerStore with a dedicated lock connection.
 func setupSchedulerStore(t *testing.T) (*postgres.SchedulerStore, *pgx.Conn) {
 	t.Helper()
+	return setupSchedulerStoreWithPool(t, testEnv.pool)
+}
+
+func setupSchedulerStoreWithPool(t *testing.T, pool *pgxpool.Pool) (*postgres.SchedulerStore, *pgx.Conn) {
+	t.Helper()
 	ctx := context.Background()
 
-	lockConn, err := pgx.Connect(ctx, testEnv.dsn)
+	lockConn, err := pgx.ConnectConfig(ctx, pool.Config().ConnConfig)
 	if err != nil {
 		t.Fatalf("connect lock conn: %v", err)
 	}
 	t.Cleanup(func() { _ = lockConn.Close(ctx) })
 
-	return postgres.NewSchedulerStore(testEnv.pool, lockConn), lockConn
+	return postgres.NewSchedulerStore(pool, lockConn), lockConn
+}
+
+// setupIsolatedSchedulerPool keeps database-wide recovery counts independent
+// of leases left by other tests, which may expire between recovery calls.
+func setupIsolatedSchedulerPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	ctx := context.Background()
+	schema := pgx.Identifier{"scheduler_recovery_" + uuid.NewString()}.Sanitize()
+	if _, err := testEnv.pool.Exec(ctx, "create schema "+schema); err != nil {
+		t.Fatalf("create scheduler schema: %v", err)
+	}
+	t.Cleanup(func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if _, err := testEnv.pool.Exec(cleanupCtx, "drop schema if exists "+schema+" cascade"); err != nil {
+			t.Errorf("drop scheduler schema: %v", err)
+		}
+	})
+
+	config := testEnv.pool.Config()
+	// Exclude public so migration cleanup and all queries stay in this schema.
+	config.ConnConfig.RuntimeParams["search_path"] = schema
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		t.Fatalf("create scheduler pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	if err := applyMigrations(ctx, pool); err != nil {
+		t.Fatalf("apply scheduler migrations: %v", err)
+	}
+	return pool
 }
 
 // resetLeadership clears the singleton leadership row so election tests are
@@ -258,15 +295,32 @@ func TestSchedulerRecoverExpiredLease(t *testing.T) {
 // re-execute the update (the outer WHERE matches on id only),
 // double-incrementing state_version and duplicating outbox events.
 func TestRecoverExpiredLeasesConcurrentNoDoubleRecovery(t *testing.T) {
-	js := setupStore(t)
-	ssA, _ := setupSchedulerStore(t)
-	ssB, _ := setupSchedulerStore(t)
+	pool := setupIsolatedSchedulerPool(t)
+	js := postgres.NewJobStore(pool)
+	ssA, _ := setupSchedulerStoreWithPool(t, pool)
+	ssB, _ := setupSchedulerStoreWithPool(t, pool)
 	ctx := context.Background()
 
 	const queue = "sched-conc-recover"
 	const n = 10
 	for i := 0; i < n; i++ {
-		createTestJob(t, js, queue, "demo.echo")
+		job, err := domain.NewJob(uuid.NewString(), domain.NewJobParams{
+			TenantID: "test-tenant",
+			Queue:    queue,
+			Type:     "demo.echo",
+			Payload:  []byte(`{"key":"value"}`),
+		}, time.Now())
+		if err != nil {
+			t.Fatalf("create job: %v", err)
+		}
+		if _, err := js.Enqueue(ctx, job); err != nil {
+			t.Fatalf("enqueue job: %v", err)
+		}
+	}
+	// createTestJob reanchors through the shared pool; use this schema's clock.
+	if _, err := pool.Exec(ctx,
+		"update jobs set run_at = now() - interval '1 second' where queue = $1", queue); err != nil {
+		t.Fatalf("anchor run_at: %v", err)
 	}
 	claimed, err := claimJobs(ctx, js, store.ClaimParams{
 		Queues:   []string{queue},
@@ -279,7 +333,7 @@ func TestRecoverExpiredLeasesConcurrentNoDoubleRecovery(t *testing.T) {
 	}
 
 	// Force-expire all leases using the PostgreSQL clock.
-	if _, err := testEnv.pool.Exec(ctx,
+	if _, err := pool.Exec(ctx,
 		"update jobs set lease_until = now() - interval '1 second' where queue = $1 and state = 'running'",
 		queue); err != nil {
 		t.Fatalf("expire leases: %v", err)
@@ -309,7 +363,7 @@ func TestRecoverExpiredLeasesConcurrentNoDoubleRecovery(t *testing.T) {
 	// Each job must have been recovered exactly once: state_version is 3
 	// (enqueue 1 + claim 2 + recovery 3); a double recovery would make it 4.
 	var badVersions int
-	if err := testEnv.pool.QueryRow(ctx,
+	if err := pool.QueryRow(ctx,
 		"select count(*) from jobs where queue = $1 and state_version <> 3", queue).
 		Scan(&badVersions); err != nil {
 		t.Fatalf("count state_version: %v", err)
@@ -324,7 +378,7 @@ select count(*) from outbox_events
 where event_type = 'job.lease_expired'
   and aggregate_id in (select id from jobs where queue = $1)`
 	var events int
-	if err := testEnv.pool.QueryRow(ctx, countAudit, queue).Scan(&events); err != nil {
+	if err := pool.QueryRow(ctx, countAudit, queue).Scan(&events); err != nil {
 		t.Fatalf("count outbox events: %v", err)
 	}
 	if events != n {
@@ -336,7 +390,7 @@ select count(*) from job_attempts ja
 where ja.outcome = 'lease_expired'
   and ja.job_id in (select id from jobs where queue = $1)`
 	var attempts int
-	if err := testEnv.pool.QueryRow(ctx, countAttempts, queue).Scan(&attempts); err != nil {
+	if err := pool.QueryRow(ctx, countAttempts, queue).Scan(&attempts); err != nil {
 		t.Fatalf("count attempts: %v", err)
 	}
 	if attempts != n {

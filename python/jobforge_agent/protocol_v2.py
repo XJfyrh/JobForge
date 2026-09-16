@@ -47,6 +47,11 @@ _KINDS = {
         "usage_disposition",
         "usage_hash",
     },
+    "call_observation_ack": {
+        "call_sequence",
+        "physical_call_id",
+        "observation_hash",
+    },
     "step_result": {"outcome", "error_code", "result"},
     "metering_report": {"call_sequence", "physical_call_id", "parameter_hash", "usage"},
     "metering_ack": {"call_sequence", "physical_call_id", "usage_hash", "settlement"},
@@ -98,6 +103,7 @@ _ERRORS = {
     "INPUT_INVALID",
     "TIMEOUT",
 }
+_OBSERVATION_ERRORS = _ERRORS - {"STOP_REQUESTED", "STALE_LEASE", "CALL_CONFLICT"}
 
 
 class ProtocolError(ValueError):
@@ -216,6 +222,35 @@ def usage_hash(usage: Frame) -> str:
     return digest.hexdigest()
 
 
+def observation_error_code(code: str) -> str:
+    """Map a wire observation error to its authoritative ledger error code."""
+    _require(_member(code, _OBSERVATION_ERRORS))
+    return {
+        "OUTPUT_INVALID": "MODEL_PROTOCOL_ERROR",
+        "INPUT_INVALID": "INVALID_ARGUMENT",
+        "PROTOCOL_ERROR": "EXECUTOR_PROTOCOL_ERROR",
+    }.get(code, code)
+
+
+def observation_hash(frame: Frame) -> str:
+    """Fingerprint a strict observation using domain errors and original usage."""
+    encode(frame)
+    _require(frame["kind"] == "call_observation")
+    digest = hashlib.sha256()
+    for value in (
+        "jobforge.run.observation.v1",
+        frame["transport_outcome"],
+        str(frame["http_status"]),
+        observation_error_code(frame["error_code"]),
+        frame["business_outcome"],
+        frame["usage_hash"] or "",
+    ):
+        raw = value.encode("utf-8")
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+    return digest.hexdigest()
+
+
 def _permit(frame: Frame) -> None:
     _require(type(frame["granted"]) is bool)
     _require(_member(frame["error_code"], _ERRORS))
@@ -286,7 +321,7 @@ def _validate(frame: Frame) -> None:
                 else _match(_HASH, frame["usage_hash"])
             )
         )
-        _require(_member(frame["error_code"], _ERRORS))
+        _require(_member(frame["error_code"], _OBSERVATION_ERRORS))
         if frame["transport_outcome"] == "response":
             _require(_integer(frame["http_status"], 100, 599))
             _require(_member(frame["business_outcome"], {"accepted", "rejected"}))
@@ -300,6 +335,10 @@ def _validate(frame: Frame) -> None:
         _require(
             (frame["business_outcome"] == "accepted") == (frame["error_code"] == "")
         )
+    elif kind == "call_observation_ack":
+        _require(_integer(frame["call_sequence"], 1, 44))
+        _require(_match(_UUID, frame["physical_call_id"]))
+        _require(_match(_HASH, frame["observation_hash"]))
     elif kind in _METERING_KINDS:
         _require(_integer(frame["call_sequence"], 1, 44))
         _require(_match(_UUID, frame["physical_call_id"]))
@@ -452,6 +491,7 @@ class Conversation:
         self._call_sequence = 0
         self._tool_id = ""
         self._resume_floor = 0
+        self._resume_deadline = MAX_INTEGER
         self._calls: dict[str, Frame] = {}
 
     @property
@@ -467,7 +507,13 @@ class Conversation:
     @property
     def metering_pending(self) -> bool:
         """Report an ordinary observation waiting for its settled usage join."""
-        return self._phase == "settlement"
+        if self._phase != "observation_ack":
+            return False
+        call = self._calls[self._active_id]
+        return bool(
+            call["observation"]["usage_disposition"] == "reported"
+            and call["settlement"] != "settled"
+        )
 
     def _clock(self, frame: Frame, now: int, direction: str) -> None:
         _require(_integer(now, 0, MAX_INTEGER) and now >= self._last_time)
@@ -505,7 +551,7 @@ class Conversation:
         kind = frame["kind"]
         direction = (
             "ordinary_parent"
-            if kind in {"execute_step", "call_permit"}
+            if kind in {"execute_step", "call_permit", "call_observation_ack"}
             else "ordinary_child"
         )
         self._clock(frame, now, direction)
@@ -526,6 +572,7 @@ class Conversation:
                 self._phase == "idle"
                 and not self._blocked
                 and frame["emitted_mono_ms"] >= self._resume_floor
+                and now < self._resume_deadline
                 and self._call_index < len(calls)
                 and frame["subcall"] == calls[self._call_index]
                 and frame["call_sequence"] == self._call_sequence + 1
@@ -537,14 +584,18 @@ class Conversation:
             self._tool_id = frame["tool_invocation_id"]
             self._phase = "intent"
             self._call_sequence = frame["call_sequence"]
+            self._resume_deadline = MAX_INTEGER
         elif kind == "call_permit":
             self._permit(frame, now)
         elif kind == "call_observation":
             self._observe(frame, now)
+        elif kind == "call_observation_ack":
+            self._observe_ack(frame, now)
         elif kind == "step_result":
             _require(
                 self._phase == "idle"
                 and frame["emitted_mono_ms"] >= self._resume_floor
+                and now < self._resume_deadline
                 and (not self._blocked or frame["outcome"] == "error")
                 and (frame["outcome"] != "success" or self._call_index == len(calls))
             )
@@ -579,6 +630,7 @@ class Conversation:
             "dispatched_at": None,
             "report": None,
             "observation": None,
+            "observation_ack": None,
             "settlement": "",
             "ack_emitted": 0,
         }
@@ -599,37 +651,70 @@ class Conversation:
                 call["report"] is None
                 or frame["usage_hash"] == call["report"]["usage"]["usage_hash"]
             )
-            self._phase = "settlement"
         else:
             _require(call["report"] is None)
-            self._phase = "idle"
+        self._phase = "observation_ack"
         call["observation"] = frame
         self._call_index += 1
         self._blocked = frame["business_outcome"] != "accepted"
         self._join(call, now)
 
+    def _observe_ack(self, frame: Frame, now: int) -> None:
+        _require(
+            self._phase == "observation_ack"
+            and frame["physical_call_id"] == self._active_id
+        )
+        call = self._calls[self._active_id]
+        observation = call["observation"]
+        _require(
+            observation is not None
+            and call["observation_ack"] is None
+            and frame["call_sequence"] == observation["call_sequence"]
+            and frame["observation_hash"] == observation_hash(observation)
+            and frame["emitted_mono_ms"] >= observation["emitted_mono_ms"]
+            and now < call["call_deadline"]
+        )
+        call["observation_ack"] = frame
+        self._join(call, now)
+
     def _join(self, call: Frame, now: int) -> None:
         observation, report = call["observation"], call["report"]
-        if observation is None or report is None:
+        if observation is None:
             return
-        if observation["usage_disposition"] == "unknown":
+        if report is not None and observation["usage_disposition"] == "unknown":
             self._closed = True
             return
-        if observation["usage_hash"] != report["usage"]["usage_hash"]:
+        if (
+            report is not None
+            and observation["usage_hash"] != report["usage"]["usage_hash"]
+        ):
             # Preserve independently validated usage even when ordinary output
             # lied about its hash; the caller can still settle the original call.
             self._closed = True
             return
         if (
-            self._phase != "settlement"
+            self._phase != "observation_ack"
             or observation["physical_call_id"] != self._active_id
         ):
             return
         if now >= call["call_deadline"] or now >= self._deadline:
             self._closed = True
-        if call["settlement"] == "settled" and not self._closed:
-            self._phase = "idle"
-            self._resume_floor = max(self._resume_floor, call["ack_emitted"])
+        if self._closed:
+            # A discarded ordinary confirmation cannot block narrow late usage
+            # settlement, and no metering update may revive this exchange.
+            return
+        ack = call["observation_ack"]
+        if ack is None:
+            return
+        if observation["usage_disposition"] == "reported":
+            if report is None or call["settlement"] != "settled":
+                return
+            # The two readers may deliver in either order, but their emissions
+            # must prove settlement preceded the durable observation ACK.
+            _require(ack["emitted_mono_ms"] >= call["ack_emitted"])
+        self._phase = "idle"
+        self._resume_floor = max(self._resume_floor, ack["emitted_mono_ms"])
+        self._resume_deadline = call["call_deadline"]
 
     def can_dispatch(self, physical_call_id: str, now_mono_ms: int) -> None:
         """Consume permission once immediately before sending physical HTTP."""

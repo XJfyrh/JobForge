@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/xjfyrh/jobforge/internal/ctl"
+	"github.com/xjfyrh/jobforge/internal/domain"
 	"github.com/xjfyrh/jobforge/internal/store"
 )
 
@@ -344,8 +345,9 @@ func TestQuotaAT22FullTenantDoesNotBlock(t *testing.T) {
 // TestQuotaAT22SustainedFairness verifies AT-22 variant two: while tenant A
 // stays full with a 10,000-job backlog, tenant B receives sustained traffic
 // (20 jobs/s for 30s) that is claimed and completed immediately. B's
-// ready→claim latency must stay within p95 <= 1s and max <= 2s, and no B job
-// may remain after the drain.
+// submit-start→claim latency includes enqueue time as a conservative upper
+// bound on ready→claim. It must stay within p95 <= 1s and max <= 2s, and no
+// B job may remain after the drain.
 func TestQuotaAT22SustainedFairness(t *testing.T) {
 	js := setupStore(t)
 	ctx := context.Background()
@@ -383,7 +385,7 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 		mu        sync.Mutex
 		latencies []time.Duration
 	)
-	submitAt := sync.Map{} // job id -> time.Time
+	submitStartedAt := sync.Map{} // job id -> monotonic time.Time
 
 	// Producer: 20 jobs/s for 30s.
 	produceDone := make(chan struct{})
@@ -393,8 +395,29 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 		defer ticker.Stop()
 		for i := 0; i < int(duration.Seconds())*submitRate; i++ {
 			<-ticker.C
-			job := createTestJobForTenant(t, js, tenantB, queue, "demo.echo")
-			submitAt.Store(job.ID, time.Now())
+			now := time.Now()
+			pastRunAt := now.Add(-time.Second)
+			job, err := domain.NewJob(uuid.New().String(), domain.NewJobParams{
+				TenantID: tenantB,
+				Queue:    queue,
+				Type:     "demo.echo",
+				Payload:  []byte(`{"test":true}`),
+				RunAt:    &pastRunAt,
+			}, now)
+			if err != nil {
+				t.Errorf("create B job: %v", err)
+				return
+			}
+			// Publish before Enqueue can make the job claimable. Publishing
+			// after it returns can lose a sample or measure a negative duration.
+			// This monotonic interval starts before enqueue and run_at reanchoring;
+			// it is an upper bound, not an exact ready-commit timestamp.
+			submitStartedAt.Store(job.ID, time.Now())
+			if _, err := js.Enqueue(ctx, job); err != nil {
+				t.Errorf("enqueue B job: %v", err)
+				return
+			}
+			reanchorRunAt(t, job.ID)
 		}
 	}()
 
@@ -435,11 +458,13 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 					t.Errorf("consumer claimed non-B job (tenant %s)", j.TenantID)
 					continue
 				}
-				if ts, ok := submitAt.Load(j.ID); ok {
+				if ts, ok := submitStartedAt.Load(j.ID); ok {
 					lat := now.Sub(ts.(time.Time))
 					mu.Lock()
 					latencies = append(latencies, lat)
 					mu.Unlock()
+				} else {
+					t.Errorf("claimed B job %s without a submit-start timestamp", j.ID)
 				}
 				completeStart := time.Now()
 				if err := js.Complete(ctx, j.ID, "at22s-consumer-"+suffix, j.FencingToken, "", 1); err != nil {
@@ -469,7 +494,7 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	if len(latencies) != int(duration.Seconds())*submitRate {
-		t.Errorf("consumed %d B jobs, want %d", len(latencies), int(duration.Seconds())*submitRate)
+		t.Errorf("recorded %d B claim latency samples, want %d", len(latencies), int(duration.Seconds())*submitRate)
 	}
 	if len(latencies) == 0 {
 		t.Fatal("no latency samples")
@@ -477,13 +502,13 @@ func TestQuotaAT22SustainedFairness(t *testing.T) {
 	sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
 	p95 := latencies[len(latencies)*95/100]
 	maxLat := latencies[len(latencies)-1]
-	t.Logf("AT-22 variant 2: samples=%d p50=%v p95=%v max=%v",
+	t.Logf("AT-22 variant 2 submit-start→claim upper bound: samples=%d p50=%v p95=%v max=%v",
 		len(latencies), latencies[len(latencies)/2], p95, maxLat)
 	if p95 > time.Second {
-		t.Errorf("ready→claim p95 = %v, want <= 1s", p95)
+		t.Errorf("submit-start→claim upper-bound p95 = %v, want <= 1s", p95)
 	}
 	if maxLat > 2*time.Second {
-		t.Errorf("ready→claim max = %v, want <= 2s", maxLat)
+		t.Errorf("submit-start→claim upper-bound max = %v, want <= 2s", maxLat)
 	}
 
 	// Drain completeness: no B job left behind because A occupies the window.

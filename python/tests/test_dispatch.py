@@ -27,7 +27,12 @@ from jobforge_agent.dispatch import (
 )
 from jobforge_agent.errors import ToolError
 from jobforge_agent.http import strict_json
-from jobforge_agent.protocol_v2 import MAX_INTEGER, Frame, ProtocolError
+from jobforge_agent.protocol_v2 import (
+    MAX_INTEGER,
+    Frame,
+    ProtocolError,
+    observation_hash,
+)
 
 FIXTURES = json.loads(
     (
@@ -111,6 +116,7 @@ class Hooks:
         self.settle_gate: asyncio.Event | None = None
         self.observe_gate: asyncio.Event | None = None
         self.patch: dict[str, Any] = {}
+        self.observation_ack_patch: dict[str, Any] = {}
 
     async def authorize(self, intent: Frame) -> Frame:
         """Authorize."""
@@ -133,12 +139,29 @@ class Hooks:
         permit.update(self.patch)
         return permit
 
-    async def observe(self, observation: Frame) -> None:
+    async def observe(self, observation: Frame) -> Frame:
         """Observe."""
         self.observations.append(copy.deepcopy(observation))
         self.observe_entered.set()
         if self.observe_gate is not None:
             await self.observe_gate.wait()
+        ack = {
+            key: copy.deepcopy(observation[key])
+            for key in (
+                "version",
+                "request_id",
+                "binding",
+                "call_sequence",
+                "physical_call_id",
+            )
+        }
+        ack.update(
+            kind="call_observation_ack",
+            emitted_mono_ms=self.clock.now,
+            observation_hash=observation_hash(observation),
+        )
+        ack.update(self.observation_ack_patch)
+        return ack
 
     async def settle(self, report: Frame) -> Frame:
         """Settle."""

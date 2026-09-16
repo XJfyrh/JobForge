@@ -17,6 +17,7 @@ from jobforge_agent.dispatch import (
     boottime_ms,
     prepare_request,
 )
+from jobforge_agent.protocol_v2 import observation_hash
 
 Frame = dict[str, Any]
 
@@ -43,9 +44,19 @@ class Coordinator:
             "output_token_limit": 0,
         }
 
-    async def observe(self, observation: Frame) -> None:
+    async def observe(self, observation: Frame) -> Frame:
         """Record the observation without simulating durable persistence."""
         self.observations.append(observation)
+        return {
+            "version": 2,
+            "kind": "call_observation_ack",
+            "request_id": observation["request_id"],
+            "binding": observation["binding"],
+            "emitted_mono_ms": boottime_ms(),
+            "call_sequence": observation["call_sequence"],
+            "physical_call_id": observation["physical_call_id"],
+            "observation_hash": observation_hash(observation),
+        }
 
     async def settle(self, report: Frame) -> Frame:
         """Reject metering for this free business request."""

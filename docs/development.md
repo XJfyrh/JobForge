@@ -420,4 +420,6 @@ Agent v3 的新控制服务、API/SDK 与逐物理调用账本按 [Run 开发指
 
 S1-C2的[受控HTTP指南](agent-v3-authorized-http.md)提供固定Linux验证镜像和Python全套命令。既有`python-lint` job运行全部`python/tests`，覆盖真实BOOTTIME与回环TCP故障；Windows必须实际运行该镜像才能报告Linux路径通过。此层无需模型凭据，不能代替正式Worker、持久IPC确认或DeepSeek实际调用。
 
+S1-C3a按已接受ADR-0019同步内部v2观察ACK。共同fixture由Go/Python全套实际消费，旧无ACK序列必须拒绝；`DispatchHooks.observe`返回严格Frame而非空完成信号。Windows沿用上述固定镜像，将tag改为`jobforge-agent-http:c3a`；同环境本地协议微基准与验收边界见[C3a记录](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。不新增兼容双模式或数据库迁移，正式IPC/PG确认仍另验。
+
 真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。

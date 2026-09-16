@@ -5,7 +5,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -20,7 +20,7 @@ from jobforge_agent.dispatch import (
 )
 from jobforge_agent.embedding import MODEL, MODEL_DIGEST, embedding_body, vector
 from jobforge_agent.errors import ToolError
-from jobforge_agent.protocol_v2 import Conversation, usage_hash
+from jobforge_agent.protocol_v2 import Conversation, observation_hash, usage_hash
 from jobforge_agent.run_tools import RunBusinessTools
 
 SNAPSHOT = "535cf2ed-cdba-4d8c-a576-a41c865535da"
@@ -72,10 +72,22 @@ class SyntheticHooks:
         self.conversation.can_dispatch(permit["physical_call_id"], 1000)
         return permit
 
-    async def observe(self, observation: Frame) -> None:
+    async def observe(self, observation: Frame) -> Frame:
         """Confirm only a standard decoded observation from the same sequence."""
         self.conversation.accept(observation, 1000)
         self.observations.append(copy.deepcopy(observation))
+        ack = {
+            "version": 2,
+            "kind": "call_observation_ack",
+            "request_id": observation["request_id"],
+            "binding": copy.deepcopy(observation["binding"]),
+            "emitted_mono_ms": 1000,
+            "call_sequence": observation["call_sequence"],
+            "physical_call_id": observation["physical_call_id"],
+            "observation_hash": observation_hash(observation),
+        }
+        self.conversation.accept(ack, 1000)
+        return ack
 
     async def settle(self, report: Frame) -> Frame:
         """Return a synthetic same-call ACK after the real usage join checks."""
@@ -511,3 +523,134 @@ def test_no_associated_order_preserves_explicit_missing_result(name: str) -> Non
     assert len(requests) == 1
     assert hooks.observations[0]["business_outcome"] == "accepted"
     assert usage == ()
+
+
+@pytest.mark.parametrize("call_sequence", [1, 2, 3, 4])
+@pytest.mark.parametrize(
+    "confirmation",
+    [
+        "before_confirmation",
+        "lost_ack",
+        "bad_hash",
+        "wrong_binding",
+        "wrong_call",
+        "wrong_sequence",
+        "missing_frame",
+        "deadline",
+        "stop",
+        "cancel",
+        "confirmed",
+    ],
+)
+def test_search_http_and_final_return_wait_for_observation_ack(
+    monkeypatch: pytest.MonkeyPatch, call_sequence: int, confirmation: str
+) -> None:
+    """Real TCP waits for free, settled and final ACKs from a synthetic peer."""
+
+    async def run() -> None:
+        async def handler(
+            _reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter,
+            request: ReceivedRequest,
+        ) -> None:
+            await respond(writer, body=json.dumps(_payload(request.path)).encode())
+
+        now = [1000]
+        reached, release = asyncio.Event(), asyncio.Event()
+        start = _execute_step("search_policy")
+        hooks = SyntheticHooks(start)
+        observe = hooks.observe
+
+        async def intercept(observation: Frame) -> Frame:
+            if observation["call_sequence"] != call_sequence:
+                return await observe(observation)
+            if confirmation == "before_confirmation":
+                reached.set()
+                await release.wait()
+            ack = await observe(observation)
+            reached.set()
+            if confirmation in {"lost_ack", "deadline", "stop", "cancel", "confirmed"}:
+                await release.wait()
+            if confirmation == "bad_hash":
+                ack["observation_hash"] = "e" * 64
+            elif confirmation == "wrong_binding":
+                ack["binding"]["fencing_token"] += 1
+            elif confirmation == "wrong_call":
+                ack["physical_call_id"] = str(uuid4())
+            elif confirmation == "wrong_sequence":
+                ack["call_sequence"] += 1
+            elif confirmation == "missing_frame":
+                # Exercise an old hook returning None, never treat it as proof.
+                return cast(Frame, None)
+            return ack
+
+        monkeypatch.setattr(hooks, "observe", intercept)
+        async with asyncio.timeout(5), HTTPFaultServer(handler) as server:
+            monkeypatch.setattr(agent_dispatch, "OLLAMA_ORIGINS", (server.origin,))
+            dispatcher = AuthorizedDispatcher(
+                start,
+                hooks=hooks,
+                endpoints={
+                    "business": Endpoint(server.origin),
+                    "ollama": Endpoint(server.origin),
+                },
+                clock=lambda: now[0],
+            )
+            tools = RunBusinessTools(dispatcher, BINDING)
+            arguments = {"query": "synthetic policy query"}
+            task = asyncio.create_task(
+                tools.execute("search_policy", arguments, context=CONTEXT)
+            )
+            try:
+                await reached.wait()
+                assert len(server.requests) == len(hooks.intents) == call_sequence
+                if confirmation in {
+                    "before_confirmation",
+                    "lost_ack",
+                    "deadline",
+                    "stop",
+                    "cancel",
+                    "confirmed",
+                }:
+                    assert not task.done()
+                    if confirmation == "confirmed":
+                        release.set()
+                    elif confirmation == "stop":
+                        dispatcher.stop()
+                    elif confirmation == "cancel":
+                        task.cancel()
+                    else:
+                        # Jump exactly to the original call deadline; no control
+                        # wait may restart it, including a lost synthetic ACK.
+                        now[0] = 11000
+                if confirmation == "confirmed":
+                    result = await task
+                    assert result["snapshot_id"] == SNAPSHOT
+                    assert len(server.requests) == len(hooks.intents) == 4
+                    assert not dispatcher.closed
+                    return
+                with pytest.raises((DispatchError, asyncio.CancelledError)) as error:
+                    await task
+                if isinstance(error.value, DispatchError):
+                    assert error.value.__context__ is error.value.__cause__ is None
+                    expected = (
+                        "TIMEOUT"
+                        if confirmation
+                        in {"before_confirmation", "lost_ack", "deadline"}
+                        else "STOP_REQUESTED"
+                        if confirmation == "stop"
+                        else "PROTOCOL_ERROR"
+                    )
+                    assert error.value.code == expected
+                assert dispatcher.closed
+                assert len(dispatcher.recorded_usage()) == (call_sequence >= 3)
+                with pytest.raises(DispatchError):
+                    await tools.execute("search_policy", arguments, context=CONTEXT)
+                assert len(server.requests) == len(hooks.intents) == call_sequence
+            finally:
+                await dispatcher.aclose()
+                if not task.done():
+                    task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+
+    asyncio.run(run())
