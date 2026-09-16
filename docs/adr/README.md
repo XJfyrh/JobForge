@@ -61,9 +61,12 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 | [ADR-0017](0017-run-admission-and-call-ledger.md) | Run接纳、执行权与物理调用账本 | Accepted | 2026-09-16 |
 | [ADR-0018](0018-deepseek-fixed-flow-and-executor.md) | DeepSeek固定流程与正式受监管执行器 | 部分Superseded by ADR-0019；其余有效 | 2026-09-16 |
 | [ADR-0019](0019-executor-confirmation-and-exit-contract.md) | 执行器观察确认与固定退出合同 | Accepted | 2026-09-16 |
+| [ADR-0020](0020-provider-audit-and-batch-stop.md) | provider 审计报告、跨 FD 确认与首批停发 | Proposed | 2026-09-16 |
 
 ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受，细化 S1-B；实现与验收状态单独记录。
 
 ADR-0018 与 [PRD v0.10](../product/JobForge_PRD_v0.10.md) 随 [PR #41](https://github.com/XJfyrh/JobForge/pull/41) 接受，细化 S1-C；正式执行器与真实云端验收仍需实现和单独验证。
 
 [ADR-0019 执行器观察确认与固定退出合同](0019-executor-confirmation-and-exit-contract.md)与[PRD v0.11](../product/JobForge_PRD_v0.11.md)随[PR #44](https://github.com/XJfyrh/JobForge/pull/44)接受，明确取代ADR-0018普通observation后的继续执行序列。实现与正式进程验收另行记录，不能由合同合并代替。
+
+[ADR-0020](0020-provider-audit-and-batch-stop.md)和[PRD v0.12](../product/JobForge_PRD_v0.12.md)拟补齐供应商审计持久化、原报告确认、只读调用查询和首批持久停发。只提出精确取代范围，接受前不改写既有 ADR 状态；support 业务策略仍沿用 ADR-0018，真实模型验收另行报告。
