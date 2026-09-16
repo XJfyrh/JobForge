@@ -266,6 +266,9 @@ func validateFrame(f Frame) error {
 	valid := false
 	switch f.Kind {
 	case "execute_step":
+		if len(f.Checkpoint) > MaxCheckpointBytes || len(f.Input) > 16384 {
+			return ErrFrameLimit
+		}
 		valid = between(f.RemainingMS, 1, 180000) && validTrace(f.TraceContext) && boundedObject(f.Checkpoint, MaxCheckpointBytes) && boundedObject(f.Input, 16384)
 	case "call_intent", "call_permit":
 		valid = between(f.CallSequence, 1, 44) && registeredSubcall(f.Binding.StepKind, f.Subcall) && hashPattern.MatchString(f.ParameterHash) &&
@@ -289,6 +292,9 @@ func validateFrame(f Frame) error {
 		limit := 16384
 		if oneOf(f.Binding.StepKind, "read_ticket", "get_order", "get_delivery", "search_policy") {
 			limit = 8192
+		}
+		if len(f.Result) > limit {
+			return ErrFrameLimit
 		}
 		valid = boundedObject(f.Result, limit) && validError(f.ErrorCode) &&
 			((f.Outcome == "success" && f.ErrorCode == "") || (f.Outcome == "error" && f.ErrorCode != ""))

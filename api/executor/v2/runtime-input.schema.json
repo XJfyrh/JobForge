@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobforge.local/api/executor/v2/runtime-input.schema.json",
+  "title": "Registered executor runtime input and protected RPC checkpoint projection",
+  "description": "Shape only: apply to {input: execute_step.input, checkpoint: execute_step.checkpoint}. Runtime validators additionally enforce UTF-8 byte limits, integer lexemes, bindings, order, hash chains and deployment registry selection. This is not ProtoJSON.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "input",
+    "checkpoint"
+  ],
+  "properties": {
+    "input": {
+      "$ref": "#/$defs/runtimeInput"
+    },
+    "checkpoint": {
+      "$ref": "#/$defs/checkpoint"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stepKind": {
+      "enum": [
+        "read_ticket",
+        "get_order",
+        "get_delivery",
+        "search_policy",
+        "model_proposal",
+        "protocol_correction",
+        "submit_proposal"
+      ]
+    },
+    "runtimeInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "executor_version",
+        "adapter_id",
+        "tool_invocation_id"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "executor_version": {
+          "type": "string",
+          "const": "linux-v2-ack-runtime-1"
+        },
+        "adapter_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "$ref": "#/$defs/uuid"
+            }
+          ]
+        }
+      }
+    },
+    "stepIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "sequence",
+        "kind",
+        "cursor_version",
+        "input_hash",
+        "profile_id",
+        "profile_hash",
+        "snapshot_id",
+        "snapshot_hash"
+      ],
+      "properties": {
+        "step_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "kind": {
+          "$ref": "#/$defs/stepKind"
+        },
+        "cursor_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "input_hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "profile_hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "snapshot_hash": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "summary",
+        "evidence_refs",
+        "action"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "action": {
+          "type": "string"
+        }
+      }
+    },
+    "stepResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "tool_invocation_id",
+        "physical_call_id",
+        "evidence_refs",
+        "content",
+        "proposal",
+        "correction_required"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "tool_invocation_id": {
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "$ref": "#/$defs/uuid"
+            }
+          ]
+        },
+        "physical_call_id": {
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "$ref": "#/$defs/uuid"
+            }
+          ]
+        },
+        "evidence_refs": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string"
+          }
+        },
+        "content": {},
+        "proposal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/proposal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "correction_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ticket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "ticket_id",
+        "revision",
+        "observed_at",
+        "order_id",
+        "policy_version",
+        "subject",
+        "description",
+        "status"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "ticket_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "order_id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/identifier"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_version": {
+          "$ref": "#/$defs/identifier"
+        },
+        "subject": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "status": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "versionVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "ticket",
+        "order",
+        "delivery",
+        "policy",
+        "index"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "ticket": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "revision"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "order": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "exists",
+            "revision"
+          ],
+          "properties": {
+            "id": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/identifier"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exists": {
+              "type": "boolean"
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "exists",
+            "aggregate_revision"
+          ],
+          "properties": {
+            "id": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/identifier"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "exists": {
+              "type": "boolean"
+            },
+            "aggregate_revision": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "revision",
+            "corpus_sha256"
+          ],
+          "properties": {
+            "version": {
+              "$ref": "#/$defs/identifier"
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "corpus_sha256": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        },
+        "index": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "profile_hash",
+            "content_hash"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "profile_hash": {
+              "$ref": "#/$defs/hash"
+            },
+            "content_hash": {
+              "$ref": "#/$defs/hash"
+            }
+          }
+        }
+      }
+    },
+    "snapshotBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "ticket_id",
+        "snapshot_id",
+        "snapshot_hash",
+        "version_vector_json",
+        "ticket_binding_json",
+        "index_id",
+        "index_profile_hash"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "ticket_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "snapshot_hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "version_vector_json": {
+          "$ref": "#/$defs/versionVector"
+        },
+        "ticket_binding_json": {
+          "$ref": "#/$defs/ticket"
+        },
+        "index_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "index_profile_hash": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "acceptedStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step",
+        "commit_hash",
+        "result_json",
+        "result_ref"
+      ],
+      "properties": {
+        "step": {
+          "$ref": "#/$defs/stepIdentity"
+        },
+        "commit_hash": {
+          "$ref": "#/$defs/hash"
+        },
+        "result_json": {
+          "$ref": "#/$defs/stepResult"
+        },
+        "result_ref": {
+          "type": "string",
+          "pattern": "^run-step:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[1-9][0-9]?$"
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cursor_version",
+        "next_step",
+        "steps",
+        "snapshot"
+      ],
+      "properties": {
+        "cursor_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "next_step": {
+          "$ref": "#/$defs/stepIdentity"
+        },
+        "steps": {
+          "type": "array",
+          "maxItems": 31,
+          "items": {
+            "$ref": "#/$defs/acceptedStep"
+          }
+        },
+        "snapshot": {
+          "$ref": "#/$defs/snapshotBinding"
+        }
+      }
+    }
+  }
+}

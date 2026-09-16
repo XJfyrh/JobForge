@@ -14,9 +14,9 @@
 | 阶段 | 状态 | 当前证据 |
 |---|---|---|
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
-| S1 业务与基线 | S1-A/B/C1/C2及C3契约已合并；C3a补普通观察ACK | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B的真实PG/HTTP/SDK、128Run基线和C1/C2均已审查合并；PR #44接受确认/退出契约，C3a验证见[单列证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)；正式Worker、云端推理/固定流程仍未验收 |
+| S1 业务与基线 | S1-A/B/C1/C2/C3a已合并；C3b正式运行时验证中 | 独立业务HTTP/PG快照、真实20段embedding和20检索已运行，命中19/20；[S1-A证据](evidence/agent-v3-s1-business-2026-09-16.md)。B的真实PG/HTTP/SDK、128Run基线和C1/C2均已审查合并；PR #45合并普通ACK。C3b固定Worker/进程与真实PG机制证据[单列](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)；云端推理/固定业务流程仍未验收 |
 | S2 Agent 与预算 | 未开始 | S1-B提供Run/账本基础；动态Agent与真实云端预算仍未验收 |
-| S3 步骤恢复 | 未开始 | S1-B提供checkpoint事务；正式Worker/执行器真实进程恢复仍未验收 |
+| S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
 | S5 评测与展示 | 未开始 | 无新保留集、页面或观测验收 |
 
@@ -91,3 +91,9 @@ C3实施调查发现：现有v2缺普通observation持久ACK，已关闭会话�
 [PR #44](https://github.com/XJfyrh/JobForge/pull/44)最终head `3761fd9`通过两份独立契约审查及七项CI，已合并为`d11dd2f`；本次仅将对应PRD/ADR状态改为Accepted并标注ADR-0018被取代的精确时序范围，保留旧正文。C3a同步v2 schema、Go/Python codec/Conversation、共同fixtures及C2 observe hook，普通ACK与reported计量确认齐备后才继续。免费/unknown/最后调用同样受约束，停止后窄计量不能重开执行。
 
 协议与真实TCP模块验证和同环境本地codec/会话性能另见[C3a证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。正式FD/guardian/Worker、PG确认窗口和云端40案没有因该切片完成；W4失败、AT-25跳过及生产留存未验收继续保留。
+
+## S1-C3a合并与C3b正式进程
+
+[PR #45](https://github.com/XJfyrh/JobForge/pull/45)的最终head `118ca82dd4874786f262412ed75166ee5559ea9c`经两份独立上下文最终复审无剩余问题，[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35087095197)通过，已合并为`193623659de8fe41bfc4f5f0cabc048a167148e4`。第三次Windows全仓race通过1049个测试/子测试事件，5个skip保留；此前真实发现并修复的测试隔离和延迟采样竞态、失败原始日志继续留存。
+
+C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、严格输入投影、Python单步/guardian、固定FD与有限清理、持久确认和Commit屏障、executor_version门禁。Linux实际进程race和Python、首轮真实PG/gRPC联合机制检查已运行，最终检查与恢复证据见[C3b记录](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)。新增专门CI覆盖正式进程层，普通平台skip不能代替。当前生产registry为空，测试注册器/固定loopback模型只进入测试镜像；无收费调用，support策略/provider审计/跨队列trace/真实40案及整体S1仍未完成。

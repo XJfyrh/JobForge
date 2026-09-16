@@ -426,7 +426,8 @@ def _raw_sizes(text: str, frame: Frame) -> None:
         start = index
         _, index = decoder.raw_decode(text, index)
         if key in limits:
-            _require(len(text[start:index].encode("utf-8")) <= limits[key])
+            if len(text[start:index].encode("utf-8")) > limits[key]:
+                raise ProtocolError("FRAME_LIMIT")
         while text[index].isspace():
             index += 1
         if text[index] == ",":

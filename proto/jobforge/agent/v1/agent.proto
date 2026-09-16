@@ -129,7 +129,8 @@ enum RunState {
 message RegisterRequest {
   // Process-generated startup UUID; retries of the same startup reuse it.
   string startup_id = 1;
-  // Bounded software version label, at most 128 ASCII characters.
+  // Immutable executor_version matching every deployment-advertised profile.
+  // At most 128 ASCII identifier characters; mismatch is PROFILE_UNAVAILABLE.
   string version = 2;
 }
 

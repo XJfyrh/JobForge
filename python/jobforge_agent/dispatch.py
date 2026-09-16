@@ -24,6 +24,7 @@ from jobforge_agent.protocol_v2 import (
     Conversation,
     Frame,
     ProtocolError,
+    encode,
     usage_hash,
 )
 
@@ -110,6 +111,23 @@ class CapturedUsageAudit:
     receipt_hash: str
     provider_identity: str
     reasoning_tokens: int | None
+
+
+@dataclass(frozen=True)
+class ConfirmedObservation:
+    """Remember only an observation accepted by this step's original authority."""
+
+    call_sequence: int
+    subcall: str
+    tool_invocation_id: str
+    physical_call_id: str
+    transport_outcome: str
+    business_outcome: str
+    error_code: str
+    usage_disposition: str
+    usage_hash: str | None
+    observation_hash: str
+    ack_emitted_mono_ms: int
 
 
 @dataclass(frozen=True)
@@ -315,6 +333,8 @@ class AuthorizedDispatcher:
         self._reports: list[Frame] = []
         self._audits: list[CapturedUsageAudit] = []
         self._owner: asyncio.Task[Any] | None = None
+        self._confirmed: ConfirmedObservation | None = None
+        self._finalized = False
 
     @property
     def closed(self) -> bool:
@@ -333,6 +353,74 @@ class AuthorizedDispatcher:
     def recorded_audit(self) -> tuple[CapturedUsageAudit, ...]:
         """Read immutable identity/count audit facts beside the captured reports."""
         return tuple(self._audits)
+
+    def last_confirmed_observation(self) -> ConfirmedObservation | None:
+        """Return an immutable copy only after metering and ordinary ACK checks."""
+        return self._confirmed
+
+    def finalize_result(
+        self,
+        result: dict[str, Any],
+        *,
+        outcome: Literal["success", "error"],
+        error_code: str,
+    ) -> Frame:
+        """Validate and close the same Conversation with one bound step result."""
+        # Imported locally to keep the generic C2 dispatcher independent at load.
+        from jobforge_agent.runtime_input import RuntimeInputError, validate_step_result
+
+        kind = self._start["binding"]["step_kind"]
+        try:
+            if self._finalized or self._busy:
+                raise ProtocolError()
+            validate_step_result(result, kind)
+            confirmed = self._confirmed
+            local = kind in {"read_ticket", "submit_proposal"}
+            if not local:
+                if confirmed is None or (
+                    result["physical_call_id"] != confirmed.physical_call_id
+                    or result["tool_invocation_id"] != confirmed.tool_invocation_id
+                ):
+                    raise ProtocolError()
+            if outcome == "error":
+                if not (
+                    kind == "model_proposal"
+                    and error_code == "OUTPUT_INVALID"
+                    and result["correction_required"]
+                    and result["proposal"] is None
+                    and confirmed is not None
+                    and confirmed.transport_outcome == "response"
+                    and confirmed.business_outcome == "rejected"
+                    and confirmed.error_code == "OUTPUT_INVALID"
+                ):
+                    raise ProtocolError()
+            elif outcome != "success" or error_code or result["correction_required"]:
+                raise ProtocolError()
+            elif not local and (
+                confirmed is None or confirmed.business_outcome != "accepted"
+            ):
+                raise ProtocolError()
+            frame = self._frame(
+                "step_result",
+                outcome=outcome,
+                error_code=error_code,
+                result=copy.deepcopy(result),
+            )
+            encode(frame)
+            self._conversation.accept(frame, self._now())
+            self._finalized = True
+            return frame
+        except RuntimeInputError as error:
+            self.stop()
+            raise DispatchError(
+                "PROTOCOL_ERROR", fact="size_limit" if error.size_limit else ""
+            ) from None
+        except ProtocolError as error:
+            self.stop()
+            raise DispatchError(
+                "PROTOCOL_ERROR",
+                fact="size_limit" if error.code == "FRAME_LIMIT" else "",
+            ) from None
 
     def _now(self) -> int:
         now = self._clock()
@@ -596,6 +684,7 @@ class AuthorizedDispatcher:
         ):
             raise DispatchError("PROTOCOL_ERROR")
         self._sequence += 1
+        self._confirmed = None
         intent = self._frame(
             "call_intent",
             call_sequence=self._sequence,
@@ -667,6 +756,19 @@ class AuthorizedDispatcher:
             self._hooks.observe(copy.deepcopy(observation)), deadline
         )
         self._conversation.accept(ack, self._now())
+        self._confirmed = ConfirmedObservation(
+            permit["call_sequence"],
+            request.subcall,
+            permit["tool_invocation_id"],
+            permit["physical_call_id"],
+            observation["transport_outcome"],
+            observation["business_outcome"],
+            observation["error_code"],
+            observation["usage_disposition"],
+            observation["usage_hash"],
+            ack["observation_hash"],
+            ack["emitted_mono_ms"],
+        )
         if failure is not None and complete is None:
             raise failure
         return value, failure

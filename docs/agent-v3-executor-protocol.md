@@ -1,12 +1,12 @@
 # Agent v3：执行器协议、观察确认与时钟
 
-[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受；[PR #42](https://github.com/XJfyrh/JobForge/pull/42)提供严格codec、顺序校验、计量权限和Worker RPC时间接缝，见[C1证据](evidence/agent-v3-s1c1-protocol-2026-09-16.md)。C2的[受控HTTP适配](agent-v3-authorized-http.md)已合并。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受，本次C3a同步内部v2的明确观察ACK和两端状态校验，见[C3a证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。正式Worker、IPC监管循环及40例云端执行仍待实现，模块通过不代表这些层次已验收。
+[ADR-0018](adr/0018-deepseek-fixed-flow-and-executor.md)随PR #41接受；[PR #42](https://github.com/XJfyrh/JobForge/pull/42)提供严格codec、顺序校验、计量权限和Worker RPC时间接缝，见[C1证据](evidence/agent-v3-s1c1-protocol-2026-09-16.md)。C2的[受控HTTP适配](agent-v3-authorized-http.md)已合并。[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)经PR #44接受，C3a同步内部v2的明确观察ACK和两端状态校验并随PR #45合并，见[C3a证据](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。正式Worker与IPC监管循环现见[C3b运行时](agent-v3-runtime.md)，其实际验证单列；40例云端执行仍未验收。
 
 ## 版本与所有权
 
 `api/executor/v2/schema.json`为新帧的源合同，`fixtures`是Go/Python共同用例；实现分别在`internal/runprotocol/v2`和`python/jobforge_agent/protocol_v2.py`。v1合同、fixture和行为保留，不把新字段静默加入旧严格解码。帧、许可状态机及窄计量接收器不持lease、不启动HTTP或子进程、不写控制库，也不具备独立调度权。
 
-正式执行器必须将普通JSONL与计量JSONL放在不同继承FD，由各自的标准decode与8KiB/384KiB上限处理。codec和状态机只验证输入及权限，真实FD生命周期、Kill/Wait、有限排空和完整usage后有界SettleUsage仍由后续Worker负责。不能从拒绝帧中宽松捞取usage，也不能把异常报告当成新的执行许可。
+正式执行器将普通JSONL与计量JSONL放在不同继承FD，由各自的标准decode与8KiB/384KiB上限处理。codec和状态机只验证输入及权限，真实FD生命周期、Kill/Wait、有限排空和完整usage后有界SettleUsage由[C3b Worker](agent-v3-runtime.md)负责。不能从拒绝帧中宽松捞取usage，也不能把异常报告当成新的执行许可。
 
 ## 时间
 
@@ -26,7 +26,7 @@ v2的`emitted_mono_ms`是剩余期限的发出锚，接收方扣除IPC排队时�
 
 ACK与汇合检查原call/step截止，等号过期。确认后第一个intent或result还必须在前一call截止前被接收，发出时间不能早于ACK；及时接受新intent后，其新permit定义新call截止，不把旧call截止继承到整次新请求。首次intent与零HTTP步骤没有虚构的前一call期限。此处执行ADR-0019的保守截止约束，等待ACK不会重新获得完整timeout。
 
-`DispatchHooks.observe`返回具体ACK Frame，由原dispatcher Conversation验证后才释放业务结果。普通ACK只表示控制事实确认，不授予下一次HTTP、续期或提交步骤。当前测试hooks仍是替身；后续Go桥接必须在真实SettleUsage/ObserveCall明确成功且执行权仍有效后发送，不能把pipe write或本地codec成功当作数据库已提交。
+`DispatchHooks.observe`返回具体ACK Frame，由原dispatcher Conversation验证后才释放业务结果。普通ACK只表示控制事实确认，不授予下一次HTTP、续期或提交步骤。模块测试hooks是替身；C3b Go桥接在真实SettleUsage/ObserveCall明确成功且执行权仍有效后发送，不能把pipe write或本地codec成功当作数据库已提交。
 
 计量逐字段接受safeint，交账本判断超预留异常，不按许可或1024输出token截断。Worker RPC的`measurement_anomaly`明确表示已保存原始计量、冻结三层账户并保留hold；正常晚到usage不因此冻结。原principal/session/attempt/fence及30日窗口仍由数据库核验，补报不能修改Run终态、清除新attempt调用或推进游标。
 

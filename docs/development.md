@@ -311,10 +311,13 @@ go test -tags scale -count=1 ./tests/scale/
 | `proto-lint` | `buf lint`（Buf 1.72.0） | `.tools/bin/buf lint` |
 | `observability-config` | 固定 Prometheus 镜像运行 promtool config/rule tests；重建仪表盘无 diff | `python tools/generate_task_dashboard.py`；Docker promtool 命令见 CONTRIBUTING.md |
 | `executor-process-probe` | S0 固定 Go/Python 镜像内真实进程故障与 Linux race；S1-C1真实跨进程BOOTTIME域 | 构建 `tools/executorprobe/Dockerfile`，按 CI 用 `--init --network none` 分别运行默认进程套件与`./clock.test` |
+| `agent-runtime-contract` | S1-C3b正式Linux进程/race、真实PG/TCP gRPC联合机制；生产镜像构建和空registry边界 | 按[运行时指南](agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`的`process-check/integration-check`并带`--init`运行；构建`deploy/Dockerfile.agent-worker` |
 
 `python-lint` 另实际安装 SDK 并运行 `python -m pytest sdk/python/tests`，不会只通过类型检查便宣称 Python 测试通过。Windows 例：`$env:JOBFORGE_TEST_PYTHON = 'E:\JobForge\.venv\Scripts\python.exe'`；Go 契约测试未设置解释器时标记 skip。
 
 Agent v3 S0 另运行 `python -m pytest tools/agent_probe_data tools/executorprobe` 和两个探针入口的 Linux 平台 mypy；它们是确定性边界检查，不调用真实模型。执行器 Go 进程套件要求 `JOBFORGE_EXECUTOR_PROCESS_TESTS=1` 与容器 init，由专门 job 执行；普通 Go 测试中的该项 skip 不计进程验收通过。S0 详细状态见[实施记录](agent-v3-progress.md)。
+
+S1-C3b正式运行时另由`agent-runtime-contract`执行；S0探针不能替代该层。`JOBFORGE_RUNEXECUTOR_PROCESS_TESTS=1`启用固定进程检查，`JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1`启用真实PG/gRPC的`TestRunExecutor`。Windows通过同一Linux镜像验证，原生不支持分支或缺环境导致的skip不计通过。联合测试使用宿主5433的可重建PG，先执行标准Compose/DSN前置条件；容器内将localhost替换为`host.docker.internal`，同一DSN只运行一个可能清理数据库的测试进程。Python全套仍进入`python-lint`，也可用`python-check` target复现；完整命令与测试替身边界见[运行时指南](agent-v3-runtime.md)。
 
 独立 [real-models 工作流](../.github/workflows/real-models.yml) 使用固定 Ollama 模型与真实 PostgreSQL，实际运行 SDK/产物/进程 kill 场景；本地完整观测故障脚本另查询 Collector、Jaeger、Prometheus、Grafana。CI 和本地结果分别记在[实施记录](agent-rag-progress.md)。
 
@@ -327,6 +330,7 @@ Agent v3 S0 另运行 `python -m pytest tools/agent_probe_data tools/executorpro
 - 事件消费集成测试：使用真实 PostgreSQL + Redis 验证 commit-before-ACK、XAUTOCLAIM 多页 cursor、inbox group binding/去重、瞬时 read/processor/ACK 恢复、deleted pending fail-fast、默认五次 poison 和晚建 group backlog；migration 0017 另在独立临时 0016 数据库上通过正式 Migrator 前滚。
 - 契约测试：验证 HTTP/gRPC 错误映射、每个 Worker 错误的稳定 detail、deadline、未知 type 零副作用、Register/Poll 子集与容量、重复提交和 Proto 兼容性。
 - 故障测试：kill Worker/Scheduler、阻断 heartbeat、ACK 前崩溃和陈旧写入。
+- Agent v3运行时：共同输入向量与纯租约单测；固定Linux进程/FD/race；真实控制PG/TCP gRPC及正式Worker/guardian/step联合机制分别运行。合成业务/embedding/供应商响应只验证确认与清理，不代表真实云端或业务质量。
 - scale 可靠性测试（`-tags scale`）：100 轮故障注入、万级幂等和 NFR-306 heartbeat 写放大的字面规模验证，独立于默认 CI（见“Scale 可靠性套件”一节）。
 - 性能测试：固定环境后报告吞吐、延迟、CPU、heap 与 goroutine 稳态。
 
@@ -421,5 +425,7 @@ Agent v3 的新控制服务、API/SDK 与逐物理调用账本按 [Run 开发指
 S1-C2的[受控HTTP指南](agent-v3-authorized-http.md)提供固定Linux验证镜像和Python全套命令。既有`python-lint` job运行全部`python/tests`，覆盖真实BOOTTIME与回环TCP故障；Windows必须实际运行该镜像才能报告Linux路径通过。此层无需模型凭据，不能代替正式Worker、持久IPC确认或DeepSeek实际调用。
 
 S1-C3a按已接受ADR-0019同步内部v2观察ACK。共同fixture由Go/Python全套实际消费，旧无ACK序列必须拒绝；`DispatchHooks.observe`返回严格Frame而非空完成信号。Windows沿用上述固定镜像，将tag改为`jobforge-agent-http:c3a`；同环境本地协议微基准与验收边界见[C3a记录](evidence/agent-v3-s1c3a-ack-2026-09-16.md)。不新增兼容双模式或数据库迁移，正式IPC/PG确认仍另验。
+
+S1-C3b的[固定运行时指南](agent-v3-runtime.md)描述新增`cmd/agent-worker`、生产Dockerfile、只读manifest、独立秘密配置与双向FD接缝。生产registry仍为空，默认Compose不登记收费Worker；专用integration target才安装合成adapter与固定loopback origin。Go仍独占执行权和RPC，只有普通观察ACK、进程清理及当前执行权全部成立才能提交结果；真实云端、完整support策略及40案验收继续单列。
 
 真实任务启动、固定模型、安装 SDK、分层验收与清理见 [real-tasks.md](real-tasks.md)；版本化 Handler / 产物访问契约见 [task-extension.md](task-extension.md)。真实模型套件单独运行，未设置 JOBFORGE_REAL_MODEL_URL 时明确跳过；手动 CI 入口为 Real model acceptance。

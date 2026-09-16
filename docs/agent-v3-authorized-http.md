@@ -8,7 +8,7 @@
 
 派发层向执行器协调者申请许可，使用 v2 Conversation 验证绑定、顺序和原期限，在实际发送前消费一次许可；同一 body bytes 只交 HTTP transport 一次。客户端关闭自动重试、重定向和代理环境继承，拒绝并发排队。在线期限统一为 Linux CLOCK_BOOTTIME；Windows 真实运行使用 Linux 容器，测试可以显式注入时钟。
 
-`DispatchHooks` 是可信协调者的入口：authorize 返回对应许可，settle 返回对应计量 ACK；observe 等待持久确认并返回普通 `call_observation_ack` Frame，由原dispatcher Conversation检查身份/hash/顺序/截止后才返回业务结果。此内部合同按PR #44接受的[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)在C3a同步实现，不能把写入管道当成持久确认。当前仍使用测试协调者，Go IPC桥接尚未实现；HTTP模块本身不连接数据库或替代持久授权。
+`DispatchHooks` 是可信协调者的入口：authorize 返回对应许可，settle 返回对应计量 ACK；observe 等待持久确认并返回普通 `call_observation_ack` Frame，由原dispatcher Conversation检查身份/hash/顺序/截止后才返回业务结果。此内部合同按PR #44接受的[ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md)在C3a同步实现，不能把写入管道当成持久确认。模块测试使用替身协调者，正式Go IPC桥接及真实PG/gRPC证据见[C3b运行时](agent-v3-runtime.md)；HTTP模块本身不连接数据库或替代持久授权。
 
 完整响应和业务有效响应分开。先有界读取并捕获完整可信计量，再验证业务结果，最后报告 observation。版本、模型 digest、向量、snapshot/index/policy 和来源绑定均须在 accepted 之前通过。search_policy 的 version、tags、embedding、search 四次请求分别授权；坏前置响应不能触发后继 HTTP。
 
