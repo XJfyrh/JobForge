@@ -1,6 +1,6 @@
 # JobForge PRD v0.16：S2 有界 Agent 可用闭环
 
-- 日期：2026-09-17；状态：Proposed，独立审查合并后 Accepted。
+- 日期：2026-09-17；状态：Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 独立审查通过并合并时生效）。
 - 对应：[ADR-0024](../adr/0024-bounded-support-agent.md)。本轮实施授权及合理费用调整已由维护者确认。
 
 ## 产品结果

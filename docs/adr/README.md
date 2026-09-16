@@ -84,4 +84,4 @@ ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://g
 
 ## S2 有界 Agent
 
-[ADR-0024](0024-bounded-support-agent.md) / [PRD v0.16](../product/JobForge_PRD_v0.16.md) 为 Proposed：在复用 S1 执行器和账本的基础上加入 Go 校验的动态只读决定，开发集至少 32/40 业务正确；维护者授权合理预算自主调整。仅对新 S2 profile 部分取代 ADR-0018/0020 的固定图和终结判断及 ADR-0021～0023 的 S1 专属费用范围，其余合同和历史记录保留。契约接受、实现和真实验收分别记录。
+[ADR-0024](0024-bounded-support-agent.md) / [PRD v0.16](../product/JobForge_PRD_v0.16.md) 为 Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 合并生效）：在复用 S1 执行器和账本的基础上加入 Go 校验的动态只读决定，开发集至少 32/40 业务正确；维护者授权合理预算自主调整。仅对新 S2 profile 部分取代 ADR-0018/0020 的固定图和终结判断及 ADR-0021～0023 的 S1 专属费用范围，其余合同和历史记录保留。契约接受、实现和真实验收分别记录。

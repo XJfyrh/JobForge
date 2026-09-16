@@ -1,6 +1,6 @@
 # ADR-0024：有界售后 Agent 与可用成果验收
 
-- 日期：2026-09-17；状态：Proposed，独立审查并合并后 Accepted。
+- 日期：2026-09-17；状态：Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 独立审查通过并合并时生效）。
 - 对应：[PRD v0.16](../product/JobForge_PRD_v0.16.md)。维护者已确认实施本方案，并授权按任务需要调整合理预算，无需重复确认。
 - 仅对新 S2 profile 部分取代 ADR-0018 的固定图/提示、ADR-0020 的固定模型步骤终结判断、ADR-0021～0023 的 S1 首批/5 CNY 准入限制。其余执行权、审计、停止和未知费用规则保留；历史记录不改写。
 
@@ -15,7 +15,7 @@ S1 已以 PR #51 合并：40/40 开发案完成，安全硬失败 0，业务正�
 3. 模型 JSON 使用闭合联合：`{"type":"tool","name":...,"arguments":...}` 或 `{"type":"final","proposal":...}`。工具名仅为 `get_order`、`get_delivery`、`search_policy`；前两者仅含与快照工单一致的 `order_id`（可空），检索仅含 1..512 UTF-8 字节的 `query`。`final.proposal` 使用原六字段模型方案，确定性展开成原八字段持久方案。没有文字推理、动态 URL、租户或代码字段。
 4. 现有七字段 StepResult 不变：工具决定放入 `content`，`proposal=null`；最终决定使用 `content=null` 和展开后的 `proposal`。模型步骤均关联真实 physical call。新 `model_decision` Proto 枚举只追加编号；共同 schema、Go/Python、SDK 和新增 migration 同步，不改历史 migration。外层执行器 v2 帧不变，新固定 executor version 防止旧进程误解新输入。
 5. 工具参数从最近的已提交决定派生，完整决定被 commit hash 与下一步 input hash 绑定；Go 校验名称、参数、快照身份、重复及来源，Worker 不能另报下一游标。仍先 BeginTool/Reserve，持久审计/观察，实际 Wait/EOF/Join/组消失后 Commit。
-6. 相同规范化工具参数不再次派发：query 首尾空白去除，其余字符原样；JSON 键顺序不影响身份。重复决定终止为 `MODEL_PROTOCOL_ERROR`，安全原因字段记录 `repeated_tool_call`；不消耗第二次工具调用。结构/来源错误最多一次全 Run 纠错，纠错后可继续动态循环，后续错误直接终止。
+6. 相同规范化工具参数不再次派发：query 首尾空白去除，其余字符原样；JSON 键顺序不影响身份。重复决定终止为 `MODEL_PROTOCOL_ERROR`，复用现有失败消息记录固定值 `repeated_tool_call`；不消耗第二次工具调用。结构/来源错误最多一次全 Run 纠错，纠错后可继续动态循环，后续错误直接终止。
 7. 多次政策检索累积唯一 chunk/evidence ref。重复段落仅在快照、版本、来源和正文一致时合并，距离随 query 改变可不同；身份相同但内容冲突拒绝。订单/物流各读一次。方案只能引用实际取得的字段和段落，不能因模型输出政策编号就加入来源。
 8. 提示只使用已提交事实、去重政策及紧凑动作记录。S2 消息内容上限 64 KiB、请求体 128 KiB；模型输出仍为 1024 tokens / 16 KiB，响应体 64 KiB、工具 8 KiB、checkpoint 256 KiB、游标 32 不变。超限明确失败，不静默截断事实。首选既有 DeepSeek Flash 非思考 JSON 后端及原本地 embedding，不把评分器/答案装进运行镜像。
 
