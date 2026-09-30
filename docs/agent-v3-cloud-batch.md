@@ -1,5 +1,7 @@
 # S1 固定云端批次运行指南
 
+> 本页冻结 **S1 固定流程** 的部署与历史验收；不是当前 S2 的快速开始。当前主线见[S2 动态 Agent](agent-v3-support-agent.md)，免费隔离演示见[README](../README.md)。历史批次身份、价格、授权和本机路径不可直接用于新运行。
+
 本页对应 [PRD v0.13](product/JobForge_PRD_v0.13.md) 与 [ADR-0021](adr/0021-first-cloud-batch-admission-and-launcher.md)。入口使用真实 DeepSeek `deepseek-flash` 完成主线方案推理，本地 Ollama `all-minilm:22m` 只做 embedding。固定策略为 `support-fixed-v1`，版本为 `linux-v2-audit-runtime-1`，关闭 thinking，输出上限 1024 tokens。
 
 两个租户各 20 案共享一个有界 batch，期限 6 小时，Worker、tenant、profile 容量均为 1。每案最多一次 Submit 尝试；方案停在 `awaiting_approval` 供评估，不批准方案、不写工单。[首批实际结果](evidence/agent-v3-s1-first-cloud-2026-09-16.md)未通过：15案执行结束、第16案中断，余下24案未尝试；本页命令不能用于重启已经停止的原批次。
@@ -8,7 +10,7 @@
 
 本页的[独立干净环境复现](evidence/agent-v3-s1-reproduction-2026-09-17.md)已完成必要部署/SDK/停止检查，未调用收费模型；这份部署检查与下方完整40案真实模型证据分别报告。
 
-**当前结果：** [最新完整批次](evidence/agent-v3-s1-delivery-2026-09-17.md)40/40实际执行、安全40/40完整且硬失败0、业务11/40（27.5%）。两次历史不完整批次与unknown/full hold保留。ADR-0023允许符合条件的已停止传输失败保留full hold后准入独立新批；本次修复心跳饥饿后已完成。下面命令用于新的独立批次，不能重启任何已停止身份。
+**S1 历史结果（2026-09-17）：** [最新完整批次](evidence/agent-v3-s1-delivery-2026-09-17.md)40/40实际执行、安全40/40完整且硬失败0、业务11/40（27.5%）。两次历史不完整批次与unknown/full hold保留。ADR-0023允许符合条件的已停止传输失败保留full hold后准入独立新批；本次修复心跳饥饿后已完成。下面命令用于新的独立批次，不能重启任何已停止身份。
 
 ## 环境、数据库与安装
 

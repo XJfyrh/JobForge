@@ -19,6 +19,18 @@
 MYPYPATH=python:sdk/python .venv/bin/mypy --explicit-package-bases tools/support_evaluation
 ```
 
+## 最快完整演示
+
+```sh
+bash tools/demo-support.sh
+# 同时验收 Worker 和全部联合故障机制：
+bash tools/demo-support.sh --all
+```
+
+只要求 Linux Docker Engine / BuildKit；测试镜像安装当前 SDK 和 Agent，不依赖宿主虚拟环境。创建独立内部网络、全新 PG 和受限非 root runner，运行时不转发宿主模型配置、不访问外网、不发布端口。输出结构化 `DEMO` 方案/步骤/调用摘要和日志目录。成功或失败均按本次 ID 清理容器、匿名数据库卷和网络；保留构建缓存及镜像。不可把该合成模型结果当作 DeepSeek 质量验收。
+
+若 Docker Hub 限流，可设置 `JOBFORGE_BUILD_REGISTRY=mirror.gcr.io`（工具链仍按同一 digest 锁定）。企业代理需要额外公共 CA 时，设置 `JOBFORGE_BUILD_CA=/path/to/public-ca.crt`；只通过 BuildKit secret 挂载公共证书，不传密钥、不关闭 TLS 验证。当前云环境对应已有 `CODEX_PROXY_CERT` 路径。该设置仅用于构建，不授权收费调用。vfs 存储会复制镜像层，首次构建建议预留至少 12 GiB；不要用全局 prune 清理其他任务资源。
+
 ## 隔离服务验收（Linux）
 
 ```sh
@@ -55,20 +67,19 @@ Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具�
 
 SDK 安装：`python -m pip install ./sdk/python`；Go/Python 跨语言契约需设置 `JOBFORGE_TEST_PYTHON` 为安装该 SDK 的解释器路径（CI 显式安装并启用）。本地未设置时该用例 skip，不代表契约通过。
 
-Agent v3 的 S0 探针另运行 `python -m pytest tools/agent_probe_data tools/executorprobe`、`mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py`；真实执行器生命周期与 Linux race 使用 `tools/executorprobe/Dockerfile` 构建镜像，按 CI 的 `docker run --init --network none` 命令执行。常规 Go 测试跳过受平台约束的进程套件不代表通过；专门 CI job 实际执行。模型 guardrail 测试不调用模型，真实模型协议试验与业务验收分别报告。
+## 专用运行时与模型层
 
-Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
+普通 Go 测试有意跳过下列依赖场景；必须分别报告，不能把 skip 算通过。当前分支的逐项映射见[77 项 skip 复核](evidence/reviewable-agent-skips.md)。
 
-Agent v3 S1-A另运行`python -m pytest python/tests`、`mypy python/jobforge_agent`；独立业务库启动、`JOBFORGE_BUSINESS_TEST_DSN`和跨语言解释器配置见[业务开发指南](agent-v3-business.md)。CI专门使用固定pgvector镜像运行真实HTTP/PG/race，不以普通Go测试中的依赖skip代替。真实模型层保留20条查询的全部结果和未命中，不能用合成向量证明检索质量。
+| 专项 | 运行入口 | 关键边界 |
+|---|---|---|
+| S0 探针与 BOOTTIME | `tools/executorprobe/Dockerfile`；CI `executor-process-probe` | 真实 Linux 子进程、FD、退出和同一时钟域；不能替代正式 Worker |
+| 正式进程 | `tools/agentruntimecheck/Dockerfile --target process-check`；按[运行时指南](agent-v3-runtime.md)运行 | 非 root、`--init --network none`，实际 Kill/Wait/EOF/Join/组消失 |
+| Worker 与联合机制 | `bash tools/demo-support.sh --all` | 新建隔离 PG、真实 gRPC/Worker/已安装 SDK；包括故障注入、预算、审计、固定与动态流程和 launcher |
+| Linux 受控 HTTP | [受控 HTTP 指南](agent-v3-authorized-http.md)与 CI | 实际 loopback TCP、固定时钟；供应商和 embedding 是合成响应 |
+| 旧 Jobs 真实模型 | [Jobs 指南](jobs-guide.md)、[真实任务](real-tasks.md) | 需要固定 Ollama 后端；普通服务检查不启动、不声称覆盖 |
+| S2 真实供应商与检索质量 | [S2 运行指南](agent-v3-support-agent.md)、[业务指南](agent-v3-business.md) | 冻结身份、价格、预算，真实检索和逐案评分；先核验秘密和当次授权 |
 
-Agent v3 S1-B新增的 `TestRun*` 使用真实控制PostgreSQL，并通过独立数据库隔离各用例；实际HTTP故障服务与模型替身的边界见 [Run指南](agent-v3-runs.md)。生产 `agent-control` 只启动Run扫描，不并行运行旧jobs调度器。新Proto生成仍使用 `buf generate`，执行器Go/Python共同fixture与已安装SDK真实HTTP均为门禁。Run定向性能只记录新基线，不改变历史W4失败或AT-25跳过结论。
+SDK 测试应同时包含当前源码与已安装包的真实 HTTP；API 改动覆盖正常和拒绝路径，并发改动加 race。模型/审计变动还需 Go/Python 共同 report/observation 向量、真实 PG 首报告/冲突/晚到/冻结和批次屏障。运行时变动同步核对 schema、profile executor_version、只读 manifest、秘密与 FD 白名单及生产 registry 边界。
 
-S1-C1的v2执行器codec/计量顺序使用共同fixture，随`go test -race ./...`与`pytest python/tests`执行。Linux共享BOOTTIME验证还需构建上述S0镜像后运行`docker run --rm --init --network none jobforge-executor-probe:s0 ./clock.test '-test.v' '-test.timeout=30s'`；CI明确执行，不能拿Windows非Linux分支测试替代。它只验证时钟域，不代表正式执行器进程或真实DeepSeek已验收，见[协议指南](agent-v3-executor-protocol.md)。
-
-S1-C2受控HTTP/DeepSeek适配随`pytest python/tests`和Python类型检查执行；CI在Linux运行真实BOOTTIME分支。本地Windows还应按[受控HTTP指南](agent-v3-authorized-http.md)构建并执行`tools/agenthttpcheck/Dockerfile`，验证固定Linux时钟和实际loopback TCP。测试的模型、向量、协调者均为替身，不代表云端推理或持久授权已验收。
-
-S1-C3b按[固定运行时指南](agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`：`process-check`验证真实进程/race/FD清理，`integration-check`验证真实PostgreSQL/TCP gRPC/正式Worker与合成业务HTTP，`python-check`复现Python全套。CI的`agent-runtime-contract`运行进程/联合检查并构建生产镜像核对registry边界；`python-lint`继续运行Python测试。Windows同样使用Linux容器和`--init`；先`docker compose -f deploy/compose.yaml up -d postgres`并设置`JOBFORGE_TEST_DSN`，容器使用可达的宿主5433地址。同一DSN不能并行运行会清理数据库的测试进程。普通Go测试中的平台/专用环境skip不计正式进程通过。
-
-供应商审计增量还需验证 Go/Python 的 typed report 和 observation.v2 共同向量；真实 PG 首份/重放/冲突/晚到、批次 guard 和迁移往返；`TestRunProviderAuditPythonHTTPContract` 使用安装 SDK 查询真实控制库。`integration-check` 默认包含 `TestRunProviderAuditExecutor`，在实际 guardian/FD/gRPC/PG 中注入 Reserve/report/Observe/Commit 提交前阻塞和提交后 ACK 丢失。合成供应商证明执行机制，不能替代 DeepSeek、40 案评分或生产留存。
-
-运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1与support-agent-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
+生产 registry 只含 `support-fixed-v1` 与 `support-agent-v1`；合成 adapter、测试 origin、gold 只进测试镜像。默认 compose 不启用收费 profile；已接受合同、枚举或历史报告不能代替当前验收。保留集和 scale 另按各自指南执行，不默认触发。

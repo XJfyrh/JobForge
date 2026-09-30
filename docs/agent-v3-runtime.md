@@ -94,20 +94,18 @@ docker build --file tools/agentruntimecheck/Dockerfile --target python-check --t
 docker run --rm --init --network none jobforge-agent-runtime:python
 ```
 
-联合机制测试使用可重建的本地测试 PostgreSQL。先执行 Windows 的标准前置条件，再把容器内 DSN 指向宿主暴露的 5433：
+联合机制测试从新建可重建 PostgreSQL 开始；不要直接指向已有 compose 库。Linux / WSL2 在仓库根执行：
 
-```powershell
-docker compose -f deploy/compose.yaml up -d postgres
-$env:JOBFORGE_TEST_DSN = 'postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable'
-docker build --file tools/agentruntimecheck/Dockerfile --target integration-check --tag jobforge-agent-runtime:integration .
-docker run --rm --init --network none jobforge-agent-runtime:integration /app/worker.test '-test.v' '-test.timeout=120s'
-docker run --rm --init --add-host control:127.0.0.1 -e 'JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1' -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
+```sh
+bash tools/demo-support.sh --all
 ```
 
-`worker.test` 单独验证协调器和真实 Linux 时钟，不访问 PG；`integration-check` 默认执行已用 race 编译的 `TestRunExecutor`、`TestRunSupportExecutor` 和 `TestRunProviderAuditExecutor`。support 场景经正式 adapter 验证完整方案和一次纠正；审计场景在真实 PG/gRPC/FD 中验证提交前数据库锁阻塞、提交后 ACK 丢失、停批和第二次纠正终态。固定回环模型仍是合成响应，不能当真实 DeepSeek 结果。Linux 宿主若没有 `host.docker.internal`，为最后一条命令追加 `--add-host host.docker.internal:host-gateway`（放在镜像名之前），或使用可达的专用测试 PG 地址。PG联合层不能加 `--network none`，否则无法连接 PG。**同一 DSN 同时只运行一个可能清理数据库的测试进程**，不要与宿主全仓集成/race并发运行。
+脚本构建 `integration-check`，顺序运行 Worker 和全部联合机制测试；数据库在无外网的独立 Docker 网络内，不发布宿主端口。包含 `TestRunExecutor`、`TestRunSupportExecutor`、`TestRunSupportAgentExecutor`、`TestRunProviderAuditExecutor` 与 `TestRunSupportLauncher`。成功、失败或信号退出都仅清理本次资源，日志保留在打印的目录。构建代理、相同 digest 镜像源与资源要求统一见[验证指南](verification.md)。
+
+`worker.test` 验证协调器和真实 Linux 时钟，不访问 PG；联合层验证实际 PG/gRPC/FD、提交前锁阻塞、ACK 丢失、取消、预算停发、动态取证和纠错。固定回环业务/模型/embedding 是合成响应，不能替代真实 DeepSeek 或检索质量验收。**同一 DSN 不得并行运行会清理数据库的测试进程**。
 
 默认还执行 `TestRunSupportLauncher`：安装后的 SDK driver、正式 Worker、launcher 与真实 PG/gRPC 联合验证 driver 在 Submit 后退出、Reserve 已提交但回复未交付时终止监管。`control:127.0.0.1` 仅把测试容器内的固定 SDK 地址指向本例 HTTP listener；真实部署仍使用 Compose 的 control 服务。
 
 仅 integration target 在构建时运行 [test_install.py](../tools/agentruntimecheck/test_install.py)，将固定测试 registry 和固定 loopback 供应商 origin 安装到该测试镜像。它没有运行时 URL/模块开关，也不进入生产 Dockerfile。合成服务的调用计数用于检查“未确认时后续 HTTP 为 0”等执行机制，不能记作实际供应商调用。
 
-常规 `go test -race ./...` 和 `python -m pytest python/tests` 继续验证可移植单元/共同向量；未启用 `JOBFORGE_RUNEXECUTOR_PROCESS_TESTS=1`、`JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1` 或非 Linux 导致的 skip 不计正式进程验收通过。CI 的 `agent-runtime-contract` 专门执行固定镜像进程/联合检查及生产镜像边界检查；Python 全套仍由 `python-lint` 执行。最终命令、结果、失败和未运行层次以 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)为准。
+常规 `go test -race ./...` 和 `python -m pytest python/tests` 继续验证可移植单元/共同向量；未启用 `JOBFORGE_RUNEXECUTOR_PROCESS_TESTS=1`、`JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1` 或非 Linux 导致的 skip 不计正式进程验收通过。CI 的 `agent-runtime-contract` 专门执行固定镜像进程/联合检查及生产镜像边界检查；Python 全套仍由 `python-lint` 执行。历史结果见 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)，当前复核见[阶段交付](evidence/reviewable-agent-release.md)。

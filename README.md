@@ -8,7 +8,15 @@
 
 ## 先运行什么
 
-无需模型密钥的开发检查：
+最快演示需要 Linux（或 WSL2）与 Docker Engine / BuildKit，不需要本地 Go、Python 或模型密钥：
+
+```sh
+bash tools/demo-support.sh
+```
+
+脚本从当前源码构建测试镜像，在无外网的独立网络中启动全新 PostgreSQL，运行正式 Go Worker / gRPC / Python 执行器，再通过已安装 SDK 的真实 HTTP 读回方案和调用账本。预期输出 `awaiting_approval`、`escalate`、11 个步骤、15 条物理调用记录。模型、业务 HTTP 和 embedding 为合成响应，收费调用为 0；这演示执行机制，不证明模型质量。日志位置会打印，退出时清理本次容器与数据库卷，保留可复用的构建镜像。
+
+首次构建需下载锁定工具链；网络代理和镜像源配置见[验证指南](docs/verification.md)。开发检查另需本地 Python 3.12：
 
 ```sh
 python3 -m venv .venv

@@ -3,16 +3,19 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	agentrun "github.com/xjfyrh/jobforge/internal/run"
+	"github.com/xjfyrh/jobforge/internal/run/httpapi"
 	"github.com/xjfyrh/jobforge/internal/runworker"
 )
 
@@ -151,6 +154,9 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			if tools != wantTools || calls != wantCalls || observed != calls || unknown != 0 || slots != 0 {
 				t.Fatalf("tools=%d calls=%d observed=%d unknown=%d slots=%d", tools, calls, observed, unknown, slots)
 			}
+			if mode == "dynamic" {
+				demoSupportReadback(t, h.Service, r.ID)
+			}
 			running.cancel()
 			select {
 			case <-running.done:
@@ -168,4 +174,47 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			}
 		})
 	}
+}
+
+// demoSupportReadback exercises the installed SDK against the actual public
+// router after real Worker execution. All business/model facts are synthetic.
+func demoSupportReadback(t *testing.T, service httpapi.API, runID string) {
+	t.Helper()
+	router, err := httpapi.NewRouter(service, map[string]httpapi.Identity{
+		"demo-reader": {TenantID: "tenant-north", Role: "reader"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(router)
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	const program = `import json, sys
+from jobforge import RunClient
+with RunClient(sys.argv[1], "demo-reader") as client:
+    run = client.get(sys.argv[2])
+    result = client.result(run.run_id)
+    steps = client.steps(run.run_id, limit=100)
+    calls = client.calls(run.run_id)
+    assert run.state.value == "awaiting_approval" and result.available
+    assert steps.next_after is None and len(steps.items) == 11
+    assert len(calls.items) == 15 and not calls.batch_frozen
+    proposal = steps.items[-1].output["proposal"]
+    assert proposal["action"] == "escalate"
+    assert all(row.usage_known for row in calls.items if row.subcall == "chat")
+    print(json.dumps({"synthetic_model": True, "state": run.state.value,
+        "action": proposal["action"], "conclusion": proposal["conclusion"],
+        "steps": len(steps.items), "physical_calls": len(calls.items),
+        "real_api_spend_cny": 0}, ensure_ascii=False))
+`
+	command := exec.CommandContext(ctx, "/usr/local/bin/python", "-I", "-c", program, server.URL, runID)
+	command.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin", "LANG=C.UTF-8", "PYTHONDONTWRITEBYTECODE=1"}
+	command.WaitDelay = 2 * time.Second
+	output := &runContractOutput{}
+	command.Stdout, command.Stderr = output, output
+	if err := command.Run(); err != nil || output.overflow {
+		t.Fatalf("synthetic demo SDK readback failed: %v: %s", err, output.String())
+	}
+	t.Logf("DEMO %s", strings.TrimSpace(output.String()))
 }

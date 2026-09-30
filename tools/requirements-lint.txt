@@ -8,3 +8,4 @@ mypy==2.3.0
 pytest==9.1.1
 ruff==0.16.0
 sqlfluff==4.2.2
+hatchling==1.27.0
