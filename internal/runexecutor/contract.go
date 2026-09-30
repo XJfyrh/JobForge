@@ -30,10 +30,12 @@ var (
 // Environment contains only deployment-selected, least-privilege credentials.
 // Never format this value: it contains secrets, unlike the process receipt.
 type Environment struct {
-	BusinessOrigin  string
-	BusinessReadKey string
-	OllamaOrigin    string
-	DeepSeekKey     string
+	BusinessOrigin      string
+	BusinessReadKey     string
+	OllamaOrigin        string
+	DeepSeekKey         string
+	DeepSeekProxyOrigin string
+	DeepSeekCAFile      string
 }
 
 // Spec contains internal deployment configuration, never a command selector.

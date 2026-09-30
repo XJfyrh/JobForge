@@ -51,3 +51,27 @@ func TestCredentialTransportPolicyAndInjectionRejection(t *testing.T) {
 		t.Fatal("default TLS credential policy changed")
 	}
 }
+
+func TestCredentialDecoderAcceptsEphemeralPipe(t *testing.T) {
+	if os.PathSeparator != '/' {
+		t.Skip("requires a POSIX anonymous descriptor path")
+	}
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = reader.Close() }()
+	if _, err := writer.Write([]byte(`{"control_token":"synthetic-control","tenants":{"tenant-north":{"business_read_key":"synthetic-business","deepseek_api_key":"synthetic-provider"}}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var value secrets
+	if err := readJSON(fmt.Sprintf("/dev/fd/%d", reader.Fd()), &value); err != nil {
+		t.Fatal("pipe credential input rejected")
+	}
+	if value.ControlToken != "synthetic-control" || value.Tenants["tenant-north"].DeepSeekKey != "synthetic-provider" {
+		t.Fatal("pipe input did not bind credentials")
+	}
+}

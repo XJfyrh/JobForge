@@ -7,9 +7,11 @@ import copy
 import hashlib
 import json
 import re
+import ssl
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
+from pathlib import PurePosixPath
 from typing import Any, Literal, Protocol, TypeVar, cast
 
 import httpx
@@ -145,6 +147,8 @@ class Endpoint:
 
     base_origin: str
     bearer_key: str | None = field(default=None, repr=False)
+    proxy_origin: str = ""
+    ca_file: str = ""
 
 
 class DispatchHooks(Protocol):
@@ -342,7 +346,28 @@ class AuthorizedDispatcher:
                 or any(ord(char) <= 32 or ord(char) == 127 for char in key)
             ):
                 raise DispatchError("INPUT_INVALID")
-            self._endpoints[alias] = Endpoint(base, key)
+            if endpoint.proxy_origin or endpoint.ca_file:
+                if (
+                    alias != "deepseek"
+                    or base != "https://api.deepseek.com"
+                    or not endpoint.proxy_origin
+                    or not endpoint.ca_file
+                    or len(endpoint.ca_file) > 4096
+                    or not endpoint.ca_file.startswith("/")
+                    or str(PurePosixPath(endpoint.ca_file)) != endpoint.ca_file
+                    or ".." in PurePosixPath(endpoint.ca_file).parts
+                    or any(c in endpoint.ca_file for c in "\x00\r\n")
+                ):
+                    raise DispatchError("INPUT_INVALID")
+                try:
+                    proxy = origin(endpoint.proxy_origin)
+                except ToolError:
+                    raise DispatchError("INPUT_INVALID") from None
+                if proxy != endpoint.proxy_origin:
+                    raise DispatchError("INPUT_INVALID")
+            self._endpoints[alias] = Endpoint(
+                base, key, endpoint.proxy_origin, endpoint.ca_file
+            )
         self._clients: dict[EndpointAlias, httpx.AsyncClient] = {}
         self._busy = False
         self._stopped = asyncio.Event()
@@ -506,12 +531,30 @@ class AuthorizedDispatcher:
             headers = {"Accept": "application/json", "Accept-Encoding": "identity"}
             if settings.bearer_key is not None:
                 headers["Authorization"] = f"Bearer {settings.bearer_key}"
+            verify: ssl.SSLContext | bool = True
+            proxy: httpx.Proxy | None = None
+            if settings.proxy_origin:
+                try:
+                    verify = ssl.create_default_context(cafile=settings.ca_file)
+                    proxy = httpx.Proxy(
+                        settings.proxy_origin,
+                        ssl_context=verify
+                        if httpx.URL(settings.proxy_origin).scheme == "https"
+                        else None,
+                    )
+                except (OSError, ssl.SSLError):
+                    raise DispatchError("PROFILE_UNAVAILABLE") from None
             self._clients[endpoint] = httpx.AsyncClient(
                 headers=headers,
                 follow_redirects=False,
                 trust_env=False,
                 timeout=httpx.Timeout(60, connect=5),
-                transport=httpx.AsyncHTTPTransport(retries=0, trust_env=False),
+                transport=httpx.AsyncHTTPTransport(
+                    retries=0,
+                    trust_env=False,
+                    verify=verify,
+                    proxy=proxy,
+                ),
                 limits=httpx.Limits(max_connections=1, max_keepalive_connections=1),
             )
         return self._clients[endpoint]

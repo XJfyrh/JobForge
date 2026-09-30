@@ -67,6 +67,14 @@ Stop 不可逆且非阻塞；独立清理路径发送 TERM，100ms 后 KILL 全�
 
 普通协议失败后，独立计量通道仍只接受标准解码的完整原调用报告。已经完整收到的报告可在独立总计 ≤2s 内尝试结算；这不延长进程生命或执行权，不从坏 stdout 捞字段。未接收或未确认报告可能仍为 unknown/full hold；没有本地 journal 或自动退款保证。
 
+## 显式供应商代理与临时凭据输入
+
+默认仍不继承任何通用 proxy / CA 环境变量。按[ADR-0025](adr/0025-explicit-provider-egress.md)，可信 Worker 部署配置的每个 tenant 可选增加 `deepseek_proxy_origin` 和 `deepseek_ca_file`；必须成对提供，代理不能含用户信息、路径或 query，CA 必须是绝对规范路径的只读公共证书文件。该配置仅影响固定 DeepSeek endpoint，业务与 embedding 保持直连；始终验证证书及 hostname，禁止重定向、禁止隐式 HTTP 重试。
+
+已有凭据读取器支持匿名管道（例如凭据入口设为 `/dev/stdin`），无需增加通用环境查找或把真实 key 写入文件。只有明确授权的临时 launcher 可以从既有安全凭据机制构造内存中的凭据输入；不能使用包含真实 key 的命令行、Docker 创建环境或日志。管道读入后仍由 Worker 生成白名单子进程环境。
+
+这两个能力不代表环境已获准接入。实际启用秘密输入及代理/公共 CA 挂载前，按当次授权单独确认。当前分支离线检查只使用合成凭据和回环拒绝代理；真实整链路需单独记录收费请求、known / held、停止与资源清理。
+
 ## 构建与分层复现
 
 在仓库根目录执行；Windows 使用 Docker Desktop 的 Linux 容器模式。生产镜像 [deploy/Dockerfile.agent-worker](../deploy/Dockerfile.agent-worker)固定 Go/Python 基础镜像、安装 wheel、以非 root 用户运行，不复制测试 registry、测试 origin 安装器或 gold：

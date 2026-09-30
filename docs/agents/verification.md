@@ -27,7 +27,7 @@
 
 仅新建可重建测试资源。同一控制库不并行运行清表套件；按本次创建的 ID 清理，不全局 prune 服务或卷。迁移只新增，历史 SQLFluff 基线不能扩充以绕过检查。
 
-生产 registry 保留 `support-fixed-v1` 与 `support-agent-v1`；测试 adapter、固定回环供应商 origin 和 gold 只能进专用测试构建。所有 profile、manifest、两端运行时须匹配固定 executor version。不得把真实凭据、敏感 payload、gold 或保留集装进 Worker。
+生产 registry 保留 `support-fixed-v1` 与 `support-agent-v1`；测试 adapter、固定回环供应商 origin 和 gold 只能进专用测试构建。所有 profile、manifest、两端运行时须匹配固定 executor version。不得把真实凭据、敏感 payload、gold 或保留集装进 Worker 镜像；运行时凭据仅通过经授权的秘密注入渠道供给。
 
 收费调用需要本次明确授权与可核验的保守计费上界；历史授权不沿用。未知 usage 按全额 hold、停止当前批次，不能用新批重置累计预算。具体流程按云端运行指南。
 

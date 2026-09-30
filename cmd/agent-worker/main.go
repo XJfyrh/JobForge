@@ -33,8 +33,10 @@ type deployment struct {
 }
 
 type endpoints struct {
-	BusinessOrigin string `json:"business_origin"`
-	OllamaOrigin   string `json:"ollama_origin"`
+	BusinessOrigin      string `json:"business_origin"`
+	OllamaOrigin        string `json:"ollama_origin"`
+	DeepSeekProxyOrigin string `json:"deepseek_proxy_origin,omitempty"`
+	DeepSeekCAFile      string `json:"deepseek_ca_file,omitempty"`
 }
 
 type secrets struct {
@@ -112,7 +114,8 @@ func serve(ctx context.Context) error {
 			return run.ErrInvalidArgument
 		}
 		environments[tenant] = runexecutor.Environment{BusinessOrigin: origin.BusinessOrigin, OllamaOrigin: origin.OllamaOrigin,
-			BusinessReadKey: key.BusinessReadKey, DeepSeekKey: key.DeepSeekKey}
+			BusinessReadKey: key.BusinessReadKey, DeepSeekKey: key.DeepSeekKey,
+			DeepSeekProxyOrigin: origin.DeepSeekProxyOrigin, DeepSeekCAFile: origin.DeepSeekCAFile}
 	}
 	target := os.Getenv("JOBFORGE_AGENT_GATEWAY")
 	host, port, err := net.SplitHostPort(target)

@@ -49,7 +49,12 @@ def _endpoints(kind: str) -> dict[EndpointAlias, Endpoint]:
         key = os.environ.get("DEEPSEEK_API_KEY", "")
         if not key:
             raise DispatchError("PROFILE_UNAVAILABLE")
-        values["deepseek"] = Endpoint("https://api.deepseek.com", key)
+        values["deepseek"] = Endpoint(
+            "https://api.deepseek.com",
+            key,
+            os.environ.get("JOBFORGE_DEEPSEEK_PROXY_ORIGIN", ""),
+            os.environ.get("JOBFORGE_DEEPSEEK_CA_FILE", ""),
+        )
     return values
 
 
