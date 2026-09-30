@@ -82,16 +82,24 @@ Go / PostgreSQL / gRPC 保留执行与事务责任；Python / RAG 保留业务�
 
 首轮 demo 的 SDK 断言误写 `kind`，真实回读暴露错误，改为契约字段 `subcall` 后通过。第二次构建再次触及 vfs 磁盘上限；核对并仅清理本任务的构建缓存/失败镜像后，将 Go 源与编译缓存改用 BuildKit mount、合并 integration fixture 安装层。后续规范 Dockerfile 构建和演示/完整机制均通过，不再依赖第一阶段的宿主编译替代路径。公开代理 CA 仅作为构建 secret 输入，TLS 校验保持开启；镜像源可更换但 digest 不变。生产 Dockerfile 未改，完整生产镜像仍未重建。
 
-## API 预算
+## API 配置复核与最小烟测（追加）
 
-本次授权最多 50 CNY。未发起付费调用：实际本次花费 **0 CNY**，预留 **0**，未知费用 **0**，剩余授权 **50 CNY**。历史账本不作本次消费，也不作为可退款余额。
+前两阶段收费调用为零。随后在原工作区追加只读配置核查与一次经授权的合成供应商接缝烟测，纠正“缺 Worker 配置即无法验证 API”的过度推断。
 
-只核对配置入口是否存在，不读取、打印、复制或落盘真实密钥。环境有 `DEEPSEEK_API_KEY`，但正式入口 `cmd/agent-worker` 要求的 `JOBFORGE_AGENT_WORKER_CONFIG` 和 `JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE` 均未配置；不能据此声称该 key 无效，也不能声称正式付费执行链路可用。本轮没有将环境 key 转写到 Worker 凭据文件，没有调用鉴权 API。
+仅核对环境键存在性，不打印、提取或落盘密钥值。`DEEPSEEK_API_KEY`、`HTTPS_PROXY` / `HTTP_PROXY`、`CODEX_PROXY_CERT`、`SSL_CERT_FILE` 存在；`JOBFORGE_AGENT_WORKER_CONFIG`、`JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE`、`JOBFORGE_AGENT_GATEWAY`、`JOBFORGE_AGENT_GRPC_TLS` 未设置，固定 `/etc/jobforge/executor.json` 也未部署。
 
-2026-09-30 已成功读取[官方中文价格页](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)（公共 HTTP 200）与[usage 口径](https://api-docs.deepseek.com/quick_start/token_usage/)：OpenAI 格式 endpoint 为 `https://api.deepseek.com`，`deepseek-flash` 对应 DeepSeek-V4.1-Flash。每百万 tokens 高峰人民币单价为缓存命中输入 **0.04 元**、未命中输入 **2 元**、输出 **8 元**，空闲价格为其一半。计费以实际输入/输出 token 用量为准；这次价格读取纠正第一阶段中文页面获取失败的限制。样例 profile 使用关闭 thinking、输出 1024 上限；价格在正式调用前仍须重新确认。
+沿用现有环境的凭据与 TLS/代理机制，禁止重定向，GET `/models` 返回 HTTP 200 且包含 `deepseek-flash`。这证明当前环境的鉴权路径可用，不需要查看变量是实际值还是平台占位符，更不需要让用户重新填写 API key。没有改变代理配置、关闭 TLS、扩权或手工安装秘密。
 
-付费 smoke 未运行：正式 Worker 的配置/秘密交付链路尚不可核验，也未启动经当次价格冻结和累计预算准入的真实业务/模型环境。现有 Go 账本有逐次上界、unknown 全额 hold 与停批回归，但本次没有用它建立真实付费部署，不把离线回归当成已生效的 50 元预算控制。若继续真实模型验收，需要用户通过既有安全渠道完成 Worker 秘密配置，再冻结 profile、预留每次调用上界；并发与失败未知均计入累计额度。本轮不手工搬运秘密，不为消耗预算做孤立 ping。实际花费 / 预留 / 未确定费用均为 **0**，剩余授权 **50 CNY**。
+2026-09-30 成功读取[官方中文价格页](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)与[usage 口径](https://api-docs.deepseek.com/quick_start/token_usage/)：endpoint 为 `https://api.deepseek.com`，`deepseek-flash` 对应 DeepSeek-V4.1-Flash。每百万 tokens 高峰价：缓存命中输入 0.04 元、未命中输入 2 元、输出 8 元，空闲价减半。正式新调用前仍须重新核实价格。
+
+随后用项目 `prepare_chat_request` 构造固定模型、关闭 thinking、输出上限 1024 的极短合成请求，经既有代理 POST `/chat/completions`，用项目 `complete_usage` / `proposal_object` 校验真实响应。先在独占本地账本预留 **3 CNY**（按整个 1M 上下文上界加输出上界计算仍小于 3 元），只允许一次请求、并发 1、重试 0；未知或失败停止后续调用，保留预留。没有真实客户数据，未保存请求鉴权或响应正文。
+
+结果：**HTTP 200，解析通过，模型 `deepseek-flash`，输入 48、缓存命中 0、输出 7 tokens**，合成结果为 `{"action":"escalate"}`。请求时间为 `2026-09-30T14:22:15Z`，属于空闲时段；按 usage / 官方价格推算 **0.000076 CNY**。为保守核算，本任务按高峰价保留 **0.000152 CNY**，剩余授权 **49.999848 CNY**；未知 usage hold 为 0。**未查询账户扣款，推算费用不是独立账单核验**。没有继续发起收费请求。
+
+不含秘密的执行脚本和累计账本位于 `.cache/verification/deepseek-safe-smoke.py`、`deepseek-safe-smoke-ledger.json`；账本使用独占创建阻止误重跑，只存摘要、hash、usage 与费用事实。
+
+该检查验证真实供应商请求/响应兼容性，不是完整生产 Worker、Go 持久预算、业务检索或 40 案质量验收。生产 Worker 从配置/凭据文件读取并显式生成子进程环境（`cmd/agent-worker/main.go`、`internal/runexecutor/environment.go`），不继承宿主 proxy/CA；正式 HTTP transport 使用 `trust_env=False`（`python/jobforge_agent/dispatch.py`）。所以完整接通还需要部署 manifest/profile、业务与 gateway，并通过既有安全渠道挂载 Worker 凭据；如果依赖当前代理，须另行明确受控的代理/CA 注入策略，不能直接放开环境继承。本次没有为了烟测改动这条安全边界，也没有要求用户把密钥贴进对话。
 
 ## 交付边界
 
-仅云工作区分支提交，无远端推送、PR、合并或部署。本次创建的隔离服务容器已全部清理。验收中间镜像、可再生缓存和详细日志留在本工作区供复查，不进入 Git。第一阶段的替代构建材料仅保留作排障记录；当前优先按 README / 验证指南使用仓库 Dockerfile 与隔离脚本。当前阶段已具备可复现演示和可审阅回归证据；没有已知未修复的入口或新增功能基础问题。真实收费模型、旧 Ollama 质量层、S3～S5、scale 和生产完整镜像仍按上述边界明确未验收，不称生产就绪。
+仅云工作区分支提交，无远端推送、PR、合并或部署。本次创建的隔离服务容器已全部清理。验收中间镜像、可再生缓存和详细日志留在本工作区供复查，不进入 Git。第一阶段的替代构建材料仅保留作排障记录；当前优先按 README / 验证指南使用仓库 Dockerfile 与隔离脚本。当前阶段已具备可复现演示和可审阅回归证据；没有已知未修复的入口或新增功能基础问题。完整真实模型业务验收、旧 Ollama 质量层、S3～S5、scale 和生产完整镜像仍按上述边界明确未验收，不称生产就绪。
