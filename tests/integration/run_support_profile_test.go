@@ -27,6 +27,10 @@ func setupSupportProfileBudgetHarness(t *testing.T, profileID string, batchCap i
 }
 
 func setupSupportProfileStrategyHarness(t *testing.T, profileID string, batchCap int64, agent bool) *runHarness {
+	return setupSupportProfileConfiguredHarness(t, profileID, batchCap, agent, nil)
+}
+
+func setupSupportProfileConfiguredHarness(t *testing.T, profileID string, batchCap int64, agent bool, configure func(*agentrun.SupportDefinition)) *runHarness {
 	t.Helper()
 	ctx, pool := setupRunDB(t)
 	raw, err := os.ReadFile("../../api/support/profile-v1/fixtures.json")
@@ -52,6 +56,9 @@ func setupSupportProfileStrategyHarness(t *testing.T, profileID string, batchCap
 		d.Program.DecisionSchema, d.Program.DecisionSchemaSHA256 = agentrun.SupportAgentDecisionSchema, strings.Repeat("c", 64)
 		d.Model.ObservedOn, d.Price.ObservedOn = "2026-09-17", "2026-09-17"
 		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+		if configure != nil {
+			configure(&d)
+		}
 		p, err = agentrun.BuildSupportProfile(profileID, d)
 		p.Executable = true
 		if err != nil {

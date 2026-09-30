@@ -132,6 +132,10 @@ jobs:
         run: python -m pytest python/tests
       - name: Support development data and semantic anchors (offline, no holdout)
         run: python -m pytest tools/support_evaluation
+      - name: Real-provider launcher budget checks (offline)
+        run: python -m pytest tools/test_provider_acceptance.py
+      - name: Real-provider launcher types
+        run: mypy tools/run_provider_acceptance.py
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations

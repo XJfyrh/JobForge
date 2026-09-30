@@ -74,3 +74,19 @@ WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
 CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor)", "-test.timeout=420s"]
+
+# Opt-in real-provider target: never apply test_install.py or replace registry/origin.
+FROM runtime AS provider-check
+RUN --mount=type=bind,target=/source \
+    --mount=type=bind,from=integration-build,source=/out,target=/compiled \
+    cp /compiled/integration.test /app/ && \
+    cp /compiled/agent-worker /usr/local/bin/ && \
+    python -m pip install --no-cache-dir --no-deps --no-build-isolation /source/sdk/python && \
+    mkdir -p /src/api /src/tests/integration /etc/jobforge/cloud && \
+    cp -r /source/migrations /src/migrations && \
+    cp -r /source/api/executor /source/api/support /src/api/ && \
+    chmod -R a+rX /src && chown -R 65532:65532 /etc/jobforge
+WORKDIR /src/tests/integration
+USER 65532:65532
+# The opt-in and private pipe are supplied only by the separately approved launcher.
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRunRealProviderWorker$", "-test.timeout=180s"]

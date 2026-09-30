@@ -83,3 +83,17 @@ SDK 安装：`python -m pip install ./sdk/python`；Go/Python 跨语言契约需
 SDK 测试应同时包含当前源码与已安装包的真实 HTTP；API 改动覆盖正常和拒绝路径，并发改动加 race。模型/审计变动还需 Go/Python 共同 report/observation 向量、真实 PG 首报告/冲突/晚到/冻结和批次屏障。运行时变动同步核对 schema、profile executor_version、只读 manifest、秘密与 FD 白名单及生产 registry 边界。
 
 生产 registry 只含 `support-fixed-v1` 与 `support-agent-v1`；合成 adapter、测试 origin、gold 只进测试镜像。默认 compose 不启用收费 profile；已接受合同、枚举或历史报告不能代替当前验收。保留集和 scale 另按各自指南执行，不默认触发。
+
+## 正式供应商验收（需单次批准）
+
+离线预算回归：`.venv/bin/python -m pytest tools/test_provider_acceptance.py`，
+类型检查：`.venv/bin/mypy tools/run_provider_acceptance.py`；已纳入 CI。
+
+真实收费测试默认 skip。专用镜像为 `tools/agentruntimecheck/Dockerfile` 的
+`provider-check` target，启动器为 `tools/run_provider_acceptance.py`。
+它要求 `--execute-approved`、新 `--receipt-dir` 和
+`--prior-exposure-microyuan`（累计已知费用加全部未释放 hold，不是新预算）。
+仅在既有安全凭据、固定代理/只读 CA、本次明确批准及价格重新核实后执行；
+不把 CLI 标志当成用户批准，也不自动重跑未知费用批次。
+
+本次已停止，结果与剩余额度以[正式 Worker 验收证据](evidence/worker-real-provider-2026-09-30.md)为准。
