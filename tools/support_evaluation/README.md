@@ -1,6 +1,6 @@
 # Support batch evidence and offline scoring
 
-The fixed cloud batch now has a single [reproducible runbook](../../docs/agent-v3-cloud-batch.md): offline `agent-control prepare-support`, pre-Submit `assemble register`, disabled bootstrap/read-only inspection, one Linux launcher/Worker/SDK driver, then append-only export, `assemble collect` and offline scoring. The shared limit remains 5 CNY over six hours for the registered 40 cases. This implementation is not evidence that the real cloud batch has run or passed.
+The fixed cloud batch now has a single [reproducible runbook](../../docs/agent-v3-cloud-batch.md): offline `agent-control prepare-support`, pre-Submit `assemble register`, disabled bootstrap/read-only inspection, one Linux launcher/Worker/SDK driver, then append-only export, `assemble collect` and offline scoring. S1 historical batches used 5 CNY over six hours; S2 uses an explicitly frozen finite cap under the current operator authorization. Historical authorization does not fund new runs. Actual S1/S2 results are linked from the [current product scope](../../docs/product/README.md).
 
 `launcher.py`, `driver.py` and `export.py` are the only modules copied into the batch image. They keep case state and use the public SDK; the fixed Go Worker retains execution authority. `assemble.py` and `business_audit.sql` join actual protected exports, outbound metadata and separately sampled read-only business facts. Data, gold, predicates, scoring and synthetic fixtures stay outside that image. Local MiniLM supplies embeddings; DeepSeek supplies the main proposal inference.
 
@@ -47,7 +47,7 @@ The complete scorer and its actual deployment registration must be reviewed and 
 these offline checks do not complete C-05, C-06, C-07 or S1. The v2 policy wording and
 anchors passed independent Agent review. Real v2 indexing/retrieval was run
 separately, with [recorded results](../../docs/evidence/agent-v3-s1-support-retrieval-v2-2026-09-16.json).
-Cloud execution remains unaccepted; validation, assembly and scoring make no model calls.
+Cloud acceptance is recorded separately; validation, assembly and scoring make no model calls.
 
 ## Scorer inputs and execution
 
@@ -238,3 +238,7 @@ external exporter and review of its source chain. The synthetic builder and its
 40-case regression are mechanism tests; they never establish model acceptance.
 
 S2 adds evidence validation for alternating committed model/tool decisions and accumulated actual policy references. It keeps the same scorer version, business predicates, gold, 40-case denominator and safety checks. A complete terminal protocol/count failure is an executed unsuccessful case; unknown chat still stops the batch.
+
+## Bounded SDK exports
+
+The exporter stops reading decoded responses above 2 MiB and closes the transport on success, oversize and interrupted reads. Partial or oversized reads create no completed receipt. Captured compressed responses are decoded once; the SDK receives the same decoded bytes as the private archive. Calls in the SDK retain their stricter 256 KiB limit. Neither path retries a request.

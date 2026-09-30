@@ -160,3 +160,82 @@ def test_calls_error_size_and_duplicate_handling(variant: str) -> None:
         with pytest.raises(expected):
             client.calls(FIXTURES["empty"]["run_id"])
     assert count == 1
+
+
+@pytest.mark.parametrize("status", [200, 503])
+def test_calls_stops_reading_oversized_stream_and_closes(status: int) -> None:
+    """The limit must stop the download, not inspect an already buffered body."""
+
+    class EndlessBody(httpx.SyncByteStream):
+        reads = 0
+        closed = False
+
+        def __iter__(self):
+            while self.reads < 1000:
+                self.reads += 1
+                yield b" " * 8192
+            pytest.fail("the SDK consumed the oversized response")
+
+        def close(self) -> None:
+            self.closed = True
+
+    stream = EndlessBody()
+    requests = []
+
+    def serve(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(status, stream=stream)
+
+    with RunClient(
+        "http://synthetic.invalid",
+        "synthetic-reader",
+        transport=httpx.MockTransport(serve),
+    ) as client:
+        with pytest.raises(InternalError, match="invalid run server response"):
+            client.calls(FIXTURES["empty"]["run_id"])
+    assert stream.closed
+    assert stream.reads == MAX_CALL_RESPONSE_BYTES // 8192 + 1
+    assert len(requests) == 1
+
+
+def test_calls_accepts_exact_decoded_limit() -> None:
+    value = FIXTURES["empty"]
+    raw = json.dumps(value).encode()
+    raw += b" " * (MAX_CALL_RESPONSE_BYTES - len(raw))
+    with RunClient(
+        "http://synthetic.invalid",
+        "synthetic-reader",
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, content=raw)),
+    ) as client:
+        assert client.calls(value["run_id"]) == RunCalls.from_dict(value)
+
+
+def test_calls_closes_midstream_timeout_without_retry() -> None:
+    class InterruptedBody(httpx.SyncByteStream):
+        closed = False
+
+        def __iter__(self):
+            yield b"{"
+            raise httpx.ReadTimeout("synthetic interrupted read")
+
+        def close(self) -> None:
+            self.closed = True
+
+    from jobforge import RequestTimeoutError
+
+    stream = InterruptedBody()
+    requests = []
+
+    def serve(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, stream=stream)
+
+    with RunClient(
+        "http://synthetic.invalid",
+        "synthetic-reader",
+        transport=httpx.MockTransport(serve),
+    ) as client:
+        with pytest.raises(RequestTimeoutError):
+            client.calls(FIXTURES["empty"]["run_id"])
+    assert stream.closed
+    assert len(requests) == 1

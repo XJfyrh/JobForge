@@ -245,9 +245,21 @@ class RunClient:
         ) as span:
             propagator.inject(headers)
             try:
-                response = self._client.request(
+                with self._client.stream(
                     method, path, content=content, params=params, headers=headers
-                )
+                ) as response:
+                    if operation == "calls":
+                        # Bound decoded bytes while reading, even without a
+                        # trustworthy Content-Length (including error bodies).
+                        raw = bytearray()
+                        for chunk in response.iter_bytes(chunk_size=8192):
+                            if len(raw) + len(chunk) > MAX_CALL_RESPONSE_BYTES:
+                                span.set_status(StatusCode.ERROR, "oversized response")
+                                raise InternalError("invalid run server response")
+                            raw.extend(chunk)
+                        response_content = bytes(raw)
+                    else:
+                        response_content = response.read()
             except httpx.TimeoutException as exc:
                 span.set_status(StatusCode.ERROR, "request timeout")
                 raise RequestTimeoutError() from exc
@@ -259,13 +271,8 @@ class RunClient:
             if not success:
                 span.set_status(StatusCode.ERROR, "server rejected request")
             try:
-                if (
-                    operation == "calls"
-                    and len(response.content) > MAX_CALL_RESPONSE_BYTES
-                ):
-                    raise ValueError("oversized call evidence")
                 data = json.loads(
-                    response.content.decode("utf-8"),
+                    response_content.decode("utf-8"),
                     object_pairs_hook=_unique_object,
                     parse_constant=_invalid_constant,
                     parse_float=_finite_float,

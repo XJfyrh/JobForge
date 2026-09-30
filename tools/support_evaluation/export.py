@@ -60,9 +60,15 @@ class CaptureTransport(httpx.BaseTransport):
         """Delegate exactly once and retain response bytes before SDK parsing."""
         self.last = None
         response = self.inner.handle_request(request)
-        raw = response.read()
-        if len(raw) > 2 * 1024 * 1024:
-            raise ExportError("API_RESPONSE_TOO_LARGE")
+        body = bytearray()
+        try:
+            for chunk in response.iter_bytes(chunk_size=8192):
+                if len(body) + len(chunk) > 2 * 1024 * 1024:
+                    raise ExportError("API_RESPONSE_TOO_LARGE")
+                body.extend(chunk)
+        finally:
+            response.close()
+        raw = bytes(body)
         self.sequence += 1
         # Each export uses a fresh exclusive directory; filenames never replace
         # earlier samples, including samples taken before late reports arrive.
@@ -84,7 +90,19 @@ class CaptureTransport(httpx.BaseTransport):
             },
         )
         self.last = raw
-        return response
+        # iter_bytes already decoded Content-Encoding. Do not decode twice
+        # when the SDK consumes the captured response, or retain stale length.
+        headers = [
+            (key, value)
+            for key, value in response.headers.multi_items()
+            if key.lower() not in {"content-encoding", "content-length"}
+        ]
+        return httpx.Response(
+            response.status_code,
+            headers=headers,
+            content=raw,
+            extensions=response.extensions,
+        )
 
     def close(self) -> None:
         """Release the underlying transport."""
