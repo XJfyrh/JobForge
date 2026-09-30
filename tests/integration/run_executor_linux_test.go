@@ -29,20 +29,33 @@ import (
 )
 
 func executorChildren(pid int) []int {
-	files, _ := filepath.Glob(fmt.Sprintf("/proc/%d/task/*/children", pid))
-	var children []int
+	// task/*/children depends on CONFIG_PROC_CHILDREN, which is absent
+	// on some Linux hosts. stat's PPID is available without that kernel option.
+	files, _ := filepath.Glob("/proc/[0-9]*/stat")
+	var result []int
 	for _, file := range files {
 		data, err := os.ReadFile(file)
 		if err != nil {
+			continue // A process can exit between enumeration and reading.
+		}
+		end := strings.LastIndexByte(string(data), ')')
+		if end < 0 {
 			continue
 		}
-		for _, word := range strings.Fields(string(data)) {
-			if child, err := strconv.Atoi(word); err == nil {
-				children = append(children, child)
-			}
+		fields := strings.Fields(string(data[end+1:]))
+		if len(fields) < 2 {
+			continue
+		}
+		parent, err := strconv.Atoi(fields[1])
+		if err != nil || parent != pid {
+			continue
+		}
+		child, err := strconv.Atoi(filepath.Base(filepath.Dir(file)))
+		if err == nil {
+			result = append(result, child)
 		}
 	}
-	return children
+	return result
 }
 
 type executorHelperInput struct {

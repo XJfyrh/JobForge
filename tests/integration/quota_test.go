@@ -749,10 +749,3 @@ func filterCtlDrift(drift []ctl.QuotaDriftRow, tenant string) []ctl.QuotaDriftRo
 	}
 	return rows
 }
-
-// TestCancelAT25ControlStreamDegradation is the M0 skeleton for AT-25
-// (PRD v0.3 §10). The server-streaming Control RPC is the cuttable P1/M5
-// extension (FR-733/734, ADR-0008 §4); only required when M5 ships.
-func TestCancelAT25ControlStreamDegradation(t *testing.T) {
-	t.Skip("PRD v0.3 M5 (FR-733/734): ControlStream is a cuttable P1 extension; skeleton per M0 exit criteria")
-}

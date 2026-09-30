@@ -1,18 +1,36 @@
 # Agent 验证专题
 
-仅在修改对应领域时读取。人类验证入口见[验证指南](../verification.md)，实际 CI 以[工作流](../../.github/workflows/ci.yml)为准。
+命令与 CI 对照统一维护在[验证指南](../verification.md)。本页只说明如何选择层次、识别假通过和汇报边界，不复制检查清单。
 
+## 按修改选择证据
 
-- 运行与修改范围相称的格式、lint、单元、集成、故障和 race 检查。
-- Windows 上运行集成测试（`go test ./tests/integration/...`）前，必须先执行 `docker compose -f deploy/compose.yaml up -d postgres` 并设置 `JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable`（testcontainers 不支持 Windows 上的 Docker Desktop rootless/WSL2 后端；Linux CI 无需该变量，testcontainers 会自动启动临时 PostgreSQL）。
-- 其中机械检查子集（golangci-lint、`go test -race ./...`、ruff、mypy、SQLFluff 历史基线校验、`sqlfluff lint migrations`、buf lint）由 [.github/workflows/ci.yml](../../.github/workflows/ci.yml) 在每个 Pull Request 上强制执行，检查项清单与 [CONTRIBUTING.md](../../CONTRIBUTING.md) 验证要求保持一致，详见 [docs/development.md](../development.md) 的 “CI 质量门禁” 一节。
-- Python SDK 单测与真实 HTTP 跨语言契约也属于 CI 门禁；安装 SDK 后设置 `JOBFORGE_TEST_PYTHON`，否则 Go 契约测试的 skip 不计通过。
-- 可观测配置变更还需通过 promtool 配置/告警规则测试，以及 Grafana 仪表盘生成一致性检查；这些检查在 PR CI 中执行。依赖真实模型的验收在独立工作流与本地真实模型层运行，不用替身替代。
-- Agent v3 S0 探针的确定性 Python guardrails、Linux 类型检查和独立容器内 Go race/真实进程故障均由 CI 执行；常规 Go 测试因未启用专用进程环境产生的 skip 不计验收通过。模型协议探针使用的工具 fixture 不代表真实业务工具已验收。
-- S1-C1 v2共同fixture随Go/Python测试执行；Go/Python共享CLOCK_BOOTTIME由同一固定Linux镜像内的`clock.test`实际验证。Windows非Linux分支或协议fixture不能替代正式Worker进程/真实云端验收。
-- S1-C2授权HTTP适配随`python/tests`进入Linux CI；Windows本地使用`tools/agenthttpcheck/Dockerfile`验证实际BOOTTIME和回环TCP。协调者、向量和供应商响应是测试替身，不能据此宣称持久IPC或真实云端通过。
-- S1-C3b运行时使用`tools/agentruntimecheck/Dockerfile`的`process-check`与`integration-check`，由`agent-runtime-contract` CI job运行真实Linux进程/race及真实PG/gRPC联合检查；Python全套仍由`python-lint`执行。Windows必须运行相同Linux镜像并带`--init`；缺少`JOBFORGE_RUNEXECUTOR_PROCESS_TESTS`或`JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS`导致的skip不计通过。联合测试先启动本地postgres并设置DSN，同一DSN只允许一个可能清理数据库的测试进程。
-- 生产registry仅登记support-fixed-v1与support-agent-v1；合成adapter与固定回环供应商origin仅在专用测试target构建时安装，不得进入生产Dockerfile或通过运行时开关启用。正式输入/manifest/全部profile必须匹配固定executor_version；Go保留唯一执行权，ACK/Wait/EOF/Join/组消失屏障不可用替身成功信号代替。support共同schema/fixture与离线开发数据锚校验由CI执行；注册能力不等于收费profile启用或真实云端验收。复现与分层边界见[运行时指南](../agent-v3-runtime.md)。
-- 不得把缺少代码、服务或依赖误报为检查通过；明确区分已运行、未适用和无法运行。
-- ADR-0020的审计版本还需通过共同audit/report/observation向量、真实PG首报告/冲突/冻结/晚到/批次屏障、安装SDK的Calls真实HTTP契约，以及固定Linux的`TestRunProviderAuditExecutor`确认丢失/停发检查。observed usage不等于已结算费用，unknown/full hold不能记成零费；生产长期留存与真实云端验收仍须单列。当前合同见[审计指南](../agent-v3-provider-audit.md)。
-- 提交前检查 staged diff、敏感信息、迁移安全和文档链接。
+| 修改 | 必须覆盖的风险 | 领域入口 |
+|---|---|---|
+| Jobs / Run 事务 | 真实 PG、陈旧 fence、取消竞争、幂等、恢复；并发修改加 race | [故障语义](../failure-semantics.md)、[Run](../agent-v3-runs.md) |
+| SDK / 公共接口 | 正常与拒绝路径、已安装当前 SDK 的真实 HTTP 契约；不能只跑源码 fixture | [SDK](../../sdk/python/README.md) |
+| 执行器 / Worker | 真实 Linux 进程、FD、ACK、Wait/EOF/Join、旧进程组消失与失权停止 | [运行时](../agent-v3-runtime.md) |
+| 模型 / 审计 / 预算 | 共同 audit/report/observation 向量，真实 PG 首报告/冲突/冻结/晚到与批次屏障 | [审计](../agent-v3-provider-audit.md) |
+| S2 决定 / 来源 | Go/Python 决定与方案 schema、跨检索来源合并、重复工具零二次派发、纠错上限 | [S2](../agent-v3-support-agent.md) |
+| 业务 / 检索 | 独立 pgvector 库、角色权限、租户与快照绑定；检索质量另跑真实模型 | [业务](../agent-v3-business.md) |
+| 观测 | promtool 配置/规则测试、仪表盘生成一致性；遥测失败不改变任务状态 | [观测](../observability.md) |
+
+## 不算通过的情况
+
+- 缺少 DSN、已安装 SDK、专用进程开关或模型后端导致的 skip。
+- Windows 不支持分支、纯协议 fixture、合成 HTTP/embedding/model 响应，代替正式 Linux 进程或真实模型质量。
+- profile 已登记、合同已接受、字段或枚举已存在，代替实现和验收。
+- 只看到 report recorded、管道 write 成功或进程退出码 0，代替完整持久确认和进程清理屏障。
+- observed usage、known cost 或缺失 usage，被当作供应商实际账单或零费用。
+- 历史冻结报告，被当作当前源码重新验收。
+
+## 资源与安全
+
+仅新建可重建测试资源。同一控制库不并行运行清表套件；按本次创建的 ID 清理，不全局 prune 服务或卷。迁移只新增，历史 SQLFluff 基线不能扩充以绕过检查。
+
+生产 registry 保留 `support-fixed-v1` 与 `support-agent-v1`；测试 adapter、固定回环供应商 origin 和 gold 只能进专用测试构建。所有 profile、manifest、两端运行时须匹配固定 executor version。不得把真实凭据、敏感 payload、gold 或保留集装进 Worker。
+
+收费调用需要本次明确授权与可核验的保守计费上界；历史授权不沿用。未知 usage 按全额 hold、停止当前批次，不能用新批重置累计预算。具体流程按云端运行指南。
+
+## 汇报
+
+记录实际命令、源码版本、环境、服务隔离方式、通过/失败/skip、替身边界及日志位置。先诊断失败，不删除有效回归保障。只有新的修改、失败或未解决风险才扩大或重复检查。提交前检查 staged diff、敏感信息、文档链接与迁移风险。

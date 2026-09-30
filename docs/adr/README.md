@@ -34,9 +34,9 @@ ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义
 
 ## 已接受 ADR 索引
 
-路线 v3 的S0详细决策已随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 接受：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。接受范围为新版本设计，S1～S5仍未实现；现有v0.6运行代码与验收保持原边界。
+路线 v3 的S0详细决策已随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 接受：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。接受时仅为设计；当前 S1/S2 已交付，S3～S5 未交付，状态见[产品范围](../product/README.md)。
 
-当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
+兼容 Jobs 的通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
 
 S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 业务快照与政策检索](0016-business-snapshots-and-policy-retrieval.md)。功能实现和验收仍分别记录。
 

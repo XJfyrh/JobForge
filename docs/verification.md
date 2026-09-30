@@ -19,6 +19,18 @@
 MYPYPATH=python:sdk/python .venv/bin/mypy --explicit-package-bases tools/support_evaluation
 ```
 
+## 隔离服务验收（Linux）
+
+```sh
+bash tools/test-linux.sh
+```
+
+脚本需要本机 Docker、Go 和已安装依赖的 `.venv`。它先用 pip（或已有 uv）从当前源码重装 SDK 与 Agent 包，避免旧 wheel 混入验收；Go 缓存默认位于仓库 `.cache`。它不接受现有 DSN，清除继承的 JobForge/模型配置，新建独立 PostgreSQL、pgvector 与 AOF Redis，仅绑定 loopback 随机端口，执行完整 Go race 与已安装 SDK 的 HTTP 契约。正常退出、失败或收到 INT/TERM 时仅清理本次创建的容器及其匿名卷，不执行全局 prune。日志与逐项 skip 留在 `.cache/verification/`。硬 Kill 或宿主故障无法执行 trap，应依据 `jobforge.purpose=isolated-verification` 标签人工核对遗留资源，不能批量清理别人的运行。
+
+这层不运行收费模型、固定 Linux 执行器镜像或 scale；这些层按下文独立运行，skip 不能算验收。AT-25 ControlStream 尚未实现，空壳 skip 测试已移除；功能限制仍保留，现有 heartbeat 取消测试继续执行。
+
+## 机械检查
+
 按修改范围执行机械检查：
 
 ```text

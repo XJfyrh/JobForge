@@ -12,6 +12,7 @@ WORKDIR /probe
 COPY --from=build /out/executorprobe /out/probe.test /out/clock.test /probe/
 COPY tools/executorprobe/executor.py /probe/
 COPY tools/executorprobe/testdata /probe/testdata/
+RUN chmod -R a+rX /probe
 USER 65532:65532
 ENV JOBFORGE_EXECUTOR_PROCESS_TESTS=1
 CMD ["./probe.test", "-test.v", "-test.timeout=90s"]

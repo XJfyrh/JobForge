@@ -1,6 +1,6 @@
 # 通用任务扩展契约
 
-当前范围由 [PRD v0.6](product/JobForge_PRD_v0.6.md) 定义，设计取舍见 [ADR-0011](adr/0011-general-task-results-and-model-adapters.md)。PostgreSQL 是任务事实源，业务包只实现已注册的能力；新增业务类型不改核心状态机或存储。
+本页描述兼容 Jobs 扩展；当前 Agent 主线见[产品范围](product/README.md)。Jobs 范围由 [PRD v0.6](product/JobForge_PRD_v0.6.md) 定义，设计取舍见 [ADR-0011](adr/0011-general-task-results-and-model-adapters.md)。PostgreSQL 是任务事实源，业务包只实现已注册的能力；新增业务类型不改核心状态机或存储。
 
 Agent v3新增的三个工单工具位于`python/jobforge_agent/business.py`，绑定Go授权的snapshot/order/index，访问独立业务HTTP，见[业务工具指南](agent-v3-business.md)和[ADR-0016](adr/0016-business-snapshots-and-policy-retrieval.md)。它们目前是S1-A依赖，尚未注册为新Run流程；不能用旧Handler成功状态表示等待审批的写入建议。新增工具仍须先明确能力、参数、次数/期限、证据引用及权限，再注册，不能从模型输出加载动态代码。
 

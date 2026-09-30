@@ -29,6 +29,8 @@ COPY --from=build /out/process.test /app/process.test
 COPY internal/runexecutor/testdata /src/internal/runexecutor/testdata
 COPY api/executor /src/api/executor
 WORKDIR /src/internal/runexecutor
+# Saved workspaces may have mode 0600 files; fixtures are non-secret inputs.
+RUN chmod -R a+rX /src
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_PROCESS_TESTS=1
 CMD ["/app/process.test", "-test.v", "-test.timeout=180s"]
@@ -39,6 +41,7 @@ COPY ruff.toml mypy.ini /checks/
 COPY python /checks/python
 COPY api/executor /checks/api/executor
 COPY api/support /checks/api/support
+RUN chmod -R a+rX /checks
 USER 65532:65532
 CMD ["python", "-m", "pytest", "-p", "no:cacheprovider", "python/tests", "-q"]
 
@@ -59,6 +62,7 @@ COPY tools/agentruntimecheck/test_install.py /tmp/test_install.py
 RUN python /tmp/test_install.py
 RUN mkdir -p /etc/jobforge/cloud /run/secrets /var/lib/jobforge/batches /var/lib/jobforge/exports && chown -R 65532:65532 /etc/jobforge/cloud /run/secrets /var/lib/jobforge && chown 65532:65532 /etc/jobforge/executor.json
 WORKDIR /src/tests/integration
+RUN chmod -R a+rX /src /usr/local/lib/python3.12/site-packages/tools
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
 CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor)", "-test.timeout=420s"]

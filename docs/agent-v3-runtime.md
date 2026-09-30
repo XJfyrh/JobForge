@@ -2,7 +2,7 @@
 
 S1-C3b 实现 [PRD v0.11](product/JobForge_PRD_v0.11.md) / [ADR-0019](adr/0019-executor-confirmation-and-exit-contract.md) 的正式进程接缝：Go Worker、严格 checkpoint 投影、固定 Python guardian/step、独立普通与计量管道，以及真实控制 PostgreSQL/gRPC 的机制测试。逐项运行结果见 [C3b 证据](evidence/agent-v3-s1-c3-runtime-2026-09-16.md)，阶段状态见 [实施记录](agent-v3-progress.md)。本文中的复现命令不等于该层检查已通过。
 
-**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1` 和 `support-agent-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。当前运行时加入 ADR-0020 的[供应商持久报告与批次停止](agent-v3-provider-audit.md)，默认部署仍不启用收费 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 已完成（业务11/40），S2验收另见[动态运行指南](agent-v3-support-agent.md)；S3～S5未完成，历史 W4 失败、AT-25 跳过、远程模型和生产留存未验收继续保留。
+**生产 `runtime_registry.REGISTRY` 仅登记 `support-fixed-v1` 和 `support-agent-v1`。** 它实现 ADR-0018 的 `support_fixed_v1` 固定只读流程与结构化方案，源合同见 [support-proposal-v1](../api/support/v1/README.md)。当前运行时加入 ADR-0020 的[供应商持久报告与批次停止](agent-v3-provider-audit.md)，默认部署仍不启用收费 profile/manifest。机制测试使用单独构建目标中的合成 adapter、业务 HTTP、embedding 和模型响应；它们不证明真实 DeepSeek、检索质量或 40 案通过。S1 已完成（业务11/40），S2验收另见[动态运行指南](agent-v3-support-agent.md)；S3～S5未完成，历史 W4 失败、AT-25 未实现、生产长期留存未验收继续保留；真实模型结果只引用各冻结报告。
 
 ## 执行权与组件
 
