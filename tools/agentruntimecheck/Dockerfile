@@ -82,10 +82,10 @@ RUN --mount=type=bind,target=/source \
     cp /compiled/integration.test /app/ && \
     cp /compiled/agent-worker /usr/local/bin/ && \
     python -m pip install --no-cache-dir --no-deps --no-build-isolation /source/sdk/python && \
-    mkdir -p /src/api /src/tests/integration /etc/jobforge/cloud && \
+    mkdir -p /src/api /src/tests/integration /etc/jobforge/cloud /var/lib/jobforge/outbound && \
     cp -r /source/migrations /src/migrations && \
     cp -r /source/api/executor /source/api/support /src/api/ && \
-    chmod -R a+rX /src && chown -R 65532:65532 /etc/jobforge
+    chmod -R a+rX /src && chown -R 65532:65532 /etc/jobforge /var/lib/jobforge/outbound
 WORKDIR /src/tests/integration
 USER 65532:65532
 # The opt-in and private pipe are supplied only by the separately approved launcher.

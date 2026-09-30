@@ -723,11 +723,35 @@ class AuthorizedDispatcher:
         except asyncio.CancelledError:
             failure_reason = "cancelled"
             raise
-        except httpx.TimeoutException:
-            failure_reason = "http_timeout"
+        except httpx.TimeoutException as error:
+            # Fixed classes only: exception text can contain URLs or credentials.
+            failure_reason = next(
+                (
+                    reason
+                    for kind, reason in (
+                        (httpx.ConnectTimeout, "connect_timeout"),
+                        (httpx.ReadTimeout, "read_timeout"),
+                        (httpx.WriteTimeout, "write_timeout"),
+                        (httpx.PoolTimeout, "pool_timeout"),
+                    )
+                    if isinstance(error, kind)
+                ),
+                "http_timeout",
+            )
             raise
-        except (httpx.HTTPError, OSError):
-            failure_reason = "http_error"
+        except (httpx.HTTPError, OSError) as error:
+            failure_reason = next(
+                (
+                    reason
+                    for kind, reason in (
+                        (httpx.ProxyError, "proxy_error"),
+                        (httpx.RemoteProtocolError, "remote_protocol_error"),
+                        (httpx.ConnectError, "connect_error"),
+                    )
+                    if isinstance(error, kind)
+                ),
+                "http_error",
+            )
             raise
         finally:
             if audit is not None:

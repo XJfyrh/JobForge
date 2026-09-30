@@ -72,3 +72,46 @@ DNS、代理 TCP、CONNECT HTTP 200、目标 TLS 验证均成功。这不能证�
 - Ruff check/format、启动器 mypy：通过。
 - Go lint：0 issues；新建隔离 PostgreSQL 16 的 3 项 support profile race 回归通过，资源已清理。
 - 新实模失败后没有再次执行付费验收；提前退出检测等 harness 修正不声称经第二次实模验证。
+
+## 零付费故障定位（同日追加）
+
+本轮没有发送供应商模型或鉴权请求，没有修改原 JSON 账本。未知费用仍保留 2.105344 元，累计暴露 2.105496 元，剩余 47.894504 元。
+
+**确定的缺陷是验收诊断丢失；原请求失败根因仍无法唯一确定。**
+
+原镜像没有创建可选目录 `/var/lib/jobforge/outbound`，`outbound_audit.begin` 因此返回 None；Worker stdout/stderr 丢弃，Wait 错误也未保存。PG 的 unavailable 报告是计量事实，不区分连接失败、读超时、截断或取消；HTTP 0 也不能证明服务器从未返回 headers。原容器已清理，缺失现场无法补造。
+
+| 层 | 已核实事实 | 结论 |
+|---|---|---|
+| HTTPX | `dispatch._client` 显式 connect=5，读/写/pool=60 秒，retries=0 | 5 秒不是意外继承默认值 |
+| HTTPcore | 安装包 `http_proxy.py` 将 connect timeout 用于 CONNECT 后的 start_tls | TCP 连通不能排除 TLS 阶段的 5 秒超时 |
+| 许可 | 原 call_deadline 为 15:28:44，报告在 15:27:49 | 没有到达该 60 秒调用截止时间 |
+| Worker | 控制 RPC 上限 2 秒；step 总期限由服务授权约束 | 没有证据表明是固定 5 秒 Worker 总时限 |
+| Python | HTTP timeout 映射为 TIMEOUT；取消、协议、网络失败均保留未知报告 | 无法从原报告反推具体异常 |
+| 进程 | 报告已落 PG，后续 Worker/guardian 停止 | 无法判定先被杀还是先网络失败 |
+
+新增三个回环代理回归使用生产 dispatcher/HTTPX、合成凭据，不连接外部地址：
+
+1. CONNECT 200 后不完成 TLS：保留生产 connect=5，在 4.5～10 秒断言范围内触发 `connect_timeout`，留下未知 usage，只有一次 CONNECT。
+2. 不返回 CONNECT 响应：仅测试内缩短 read timeout，得到 `read_timeout`。
+3. CONNECT 407：得到 `proxy_error`，不重试，不泄露供应商 Authorization 或正文。
+
+已有响应截断回归保留 HTTP 200 元数据，归类为 `remote_protocol_error`；取消、尺寸和编码失败回归继续通过。TLS 停顿能复现约 5 秒症状，但只是候选机制，不能当作原故障根因。没有因此调大超时或关闭 TLS。
+
+修复仅增强诊断：细分 connect/read/write/pool timeout 和 proxy/connect/remote-protocol 错误，使用闭集字符串，不记录异常文本、完整 URL、正文或任意 headers。专用 provider-check 镜像创建短期元数据目录，启动器在清理容器前导出；导出失败不会释放 hold。harness 保存数字 Worker exit code，不复制 stderr。默认生产镜像配置不变。
+
+本轮 Python 全套 **1813 passed**（新增 3 个代理复现），Ruff check/format、Agent 与启动器 mypy、Go lint 通过。镜像离线检查不代表新实模验收。
+
+### 最小用户操作与后续决定
+
+原报告没有 response_id，也没有留存供应商 request ID；没有可用于单请求查询的标识，未编造用量查询接口。请在原 DeepSeek 账户控制台查看 **2026-09-30 15:27:44～15:27:50 UTC** 附近 `deepseek-flash` 的用量/扣款；北京时间为 **23:27:44～23:27:50**。只需脱敏 token/扣款摘要及是否能对应本次请求，不提供 key 或模型正文。若只有汇总账单，不能据此认定该请求免费，仍保留未知额度。
+
+当前批准不允许自动重试。下一步需要用户决定是否在保留旧 hold 的前提下，另行批准一次带新诊断的隔离实模验收；旧冻结批次不得重开，剩余额度本身不是新调用授权。
+
+新镜像 `jobforge-review-runtime:provider-diagnostics` 已构建，ID 为
+`sha256:d0f3843543e154f5c8db0069c0c4acab1fa6dc03a279fa43d4b67169128ecc8e`。
+使用 `--network none`、镜像默认非 root 身份验证正式 registry/origin 未替换，
+合成 `connect_timeout` 元数据可写入并通过 Docker cp 导出；检查容器已删除。
+这没有启动收费 Worker。未来获准后必须重建 provider-check target，并显式选择已更新镜像
+（启动器 `--image`），不能误用早期缓存镜像。验证日志位于工作区
+`.cache/verification/provider-diagnosis-{python,go-lint,build}.log`。

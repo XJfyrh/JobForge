@@ -174,3 +174,89 @@ async def test_business_ignores_ambient_proxy_and_ca(
         await value.aclose()
         server.close()
         await server.wait_closed()
+
+
+@run_async
+@pytest.mark.parametrize(
+    "mode,reason",
+    [
+        ("tls_stall", "connect_timeout"),
+        ("connect_stall", "read_timeout"),
+        ("refuse", "proxy_error"),
+    ],
+)
+async def test_real_proxy_failure_retains_safe_phase_and_unknown_usage(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mode: str, reason: str
+) -> None:
+    """Use only loopback: even the TLS-stall case never reaches a provider."""
+    import json
+    import time
+
+    from jobforge_agent import outbound_audit
+    from test_dispatch import context, valid
+    from test_outbound_audit import request
+
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    requests: list[bytes] = []
+    finished = asyncio.Event()
+
+    async def proxy(reader, writer) -> None:
+        try:
+            requests.append(await reader.readuntil(b"\r\n\r\n"))
+            if mode == "refuse":
+                writer.write(b"HTTP/1.1 407 Refused\r\nContent-Length: 0\r\n\r\n")
+                await writer.drain()
+                return
+            if mode == "tls_stall":
+                writer.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                await writer.drain()
+            # Consume only the TLS ClientHello, never acknowledge the handshake.
+            while await reader.read(4096):
+                pass
+        finally:
+            writer.close()
+            await writer.wait_closed()
+            finished.set()
+
+    server = await asyncio.start_server(proxy, "127.0.0.1", 0)
+    value = dispatcher(
+        Endpoint(
+            "https://api.deepseek.com",
+            "fixture-key",
+            f"http://127.0.0.1:{server.sockets[0].getsockname()[1]}",
+            certifi.where(),
+        )
+    )
+    client = value._client("deepseek")
+    assert client.timeout.connect == 5 and client.timeout.read == 60
+    if mode == "connect_stall":
+        # Shorten only this read reproduction; keep production TLS timeout below.
+        client.timeout = httpx.Timeout(0.1, connect=5)
+    started = time.monotonic()
+    try:
+        with pytest.raises(DispatchError):
+            await value.execute(request(), context=context(), validate=valid)
+        elapsed = time.monotonic() - started
+        if mode == "tls_stall":
+            assert 4.5 <= elapsed < 10
+        reports = value.recorded_usage()
+        assert len(reports) == 1
+        assert reports[0]["usage"] is None
+        assert reports[0]["provider_audit"]["http_status"] == 0
+        assert reports[0]["provider_audit"]["response_complete"] is False
+        diagnostics = list(tmp_path.glob("*.failure.json"))
+        assert len(diagnostics) == 1
+        diagnostic = json.loads(diagnostics[0].read_text())
+        assert diagnostic["reason"] == reason
+        assert diagnostic["stage"] == "send"
+        assert diagnostic["buffered_bytes"] == 0
+        assert len(requests) == 1  # No automatic retry.
+        assert b"fixture-key" not in requests[0]
+        assert b"Authorization" not in requests[0]
+        assert b"PRIVATE-CUSTOMER-BODY" not in requests[0]
+        assert "fixture-key" not in diagnostics[0].read_text()
+    finally:
+        await value.aclose()
+        await asyncio.wait_for(finished.wait(), 2)
+        server.close()
+        await server.wait_closed()

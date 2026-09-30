@@ -53,3 +53,9 @@ Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲�
 ## S2兼容扩展
 
 [ADR-0024](adr/0024-bounded-support-agent.md)的新`support_agent_v1`使用`linux-v2-agent-runtime-1`与`model_decision`，仍使用相同provider audit和Calls合同。全部已提交工具决定的chat可通过原commit/report/observation屏障；全Run纠错用尽后的新模型失败，仅在相同attempt/fence/当前步骤和持久failed_terminal、完整known审计匹配时允许下一案。重复工具决定本身已提交，拒绝发生在后续BeginTool且不扣工具额度。unknown、异常、身份/模式不兼容、确认丢失仍停止当前批次。
+
+## 可选出站故障诊断
+
+已有可信短期目录 `/var/lib/jobforge/outbound` 时，固定执行器记录发送阶段、已见 HTTP 状态和完成性；`.failure.json` 只保存闭集原因、阶段和已缓冲字节数。原因区分 connect/read/write/pool timeout、proxy/connect/remote-protocol error、取消、编码/长度/尺寸失败。不记录异常文本、凭据、模型正文或任意 headers。目录缺失或写入失败不改变执行和结算；诊断不是权限或计费事实源。
+
+专用 provider-check 镜像创建该目录，单次验收启动器在清理容器前导出并记录是否成功；默认生产镜像不增加持久挂载。缺少诊断的旧 unavailable 报告不能被反推为某种网络错误或零费用。详见[实模与零付费定位记录](evidence/worker-real-provider-2026-09-30.md)。

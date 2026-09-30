@@ -243,6 +243,18 @@ def main() -> int:
                     process.wait()
         exit_code = int(docker("inspect", "--format", "{{.State.ExitCode}}", runner))
         ledger["runner_exit_code"] = exit_code
+        # Only fixed, bounded metadata from the installed outbound auditor.
+        # Copy before container removal; missing diagnostics never release holds.
+        diagnostic_copy = subprocess.run(
+            [
+                "docker",
+                "cp",
+                f"{runner}:/var/lib/jobforge/outbound",
+                str(evidence / "outbound"),
+            ],
+            capture_output=True,
+        )
+        ledger["outbound_diagnostics_exported"] = diagnostic_copy.returncode == 0
         records = []
         for line in (evidence / "run.log").read_text().splitlines():
             if "REAL_PROVIDER_RECEIPT " in line:

@@ -71,6 +71,13 @@ class OutboundAudit:
             "size_limit",
             "cancelled",
             "http_timeout",
+            "connect_timeout",
+            "read_timeout",
+            "write_timeout",
+            "pool_timeout",
+            "proxy_error",
+            "remote_protocol_error",
+            "connect_error",
             "http_error",
             "incomplete",
         }:

@@ -209,7 +209,7 @@ async def test_real_send_boundary_preserves_response_completeness(
         assert (
             value["reason"]
             == {
-                "truncated": "http_error",
+                "truncated": "remote_protocol_error",
                 "encoding": "content_encoding",
                 "oversized": "size_limit",
             }[failure]

@@ -109,6 +109,17 @@ func TestRunRealProviderWorker(t *testing.T) {
 	go func() { done <- command.Wait() }()
 	groups := map[int]bool{}
 	stopped := false
+	workerExitCode := -1
+	recordExit := func(err error) {
+		if err == nil {
+			workerExitCode = 0
+			return
+		}
+		var status *exec.ExitError
+		if errors.As(err, &status) {
+			workerExitCode = status.ExitCode()
+		}
+	}
 	stop := func() {
 		if stopped {
 			return
@@ -116,10 +127,11 @@ func TestRunRealProviderWorker(t *testing.T) {
 		stopped = true
 		_ = command.Process.Signal(syscall.SIGTERM)
 		select {
-		case <-done:
+		case err := <-done:
+			recordExit(err)
 		case <-time.After(5 * time.Second):
 			_ = command.Process.Kill()
-			<-done
+			recordExit(<-done)
 			t.Error("Worker required forced termination")
 		}
 	}
@@ -141,7 +153,7 @@ func TestRunRealProviderWorker(t *testing.T) {
 			t.Error("could not export complete budget evidence")
 			return
 		}
-		report, _ := json.Marshal(map[string]any{"run_id": r.ID, "state": view.State, "calls": calls, "known_cost_microyuan": known, "held_cost_microyuan": held, "batch_cap_microyuan": 3000000, "worker_stopped": stopped, "guardian_groups_seen": len(groups), "synthetic_business": true, "real_provider": true, "profile_hash": h.Profile.Hash})
+		report, _ := json.Marshal(map[string]any{"run_id": r.ID, "state": view.State, "calls": calls, "known_cost_microyuan": known, "held_cost_microyuan": held, "batch_cap_microyuan": 3000000, "worker_stopped": stopped, "worker_exit_code": workerExitCode, "guardian_groups_seen": len(groups), "synthetic_business": true, "real_provider": true, "profile_hash": h.Profile.Hash})
 		t.Logf("REAL_PROVIDER_RECEIPT %s", report)
 		if known+held > 3000000 {
 			t.Error("batch ceiling violated")
@@ -153,7 +165,8 @@ func TestRunRealProviderWorker(t *testing.T) {
 	defer ticker.Stop()
 	for {
 		select {
-		case <-done:
+		case err := <-done:
+			recordExit(err)
 			stopped = true
 			t.Fatal("formal Worker stopped before terminal proposal; export receipt and do not retry")
 		case <-deadline.C:
