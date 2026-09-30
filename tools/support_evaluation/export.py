@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 from jobforge import RunClient
+from jobforge.http_body import read_bounded_response
 
 
 class ExportError(ValueError):
@@ -60,15 +61,12 @@ class CaptureTransport(httpx.BaseTransport):
         """Delegate exactly once and retain response bytes before SDK parsing."""
         self.last = None
         response = self.inner.handle_request(request)
-        body = bytearray()
         try:
-            for chunk in response.iter_bytes(chunk_size=8192):
-                if len(body) + len(chunk) > 2 * 1024 * 1024:
-                    raise ExportError("API_RESPONSE_TOO_LARGE")
-                body.extend(chunk)
+            raw = read_bounded_response(response, 2 * 1024 * 1024)
+        except ValueError:
+            raise ExportError("API_RESPONSE_INVALID_OR_TOO_LARGE") from None
         finally:
             response.close()
-        raw = bytes(body)
         self.sequence += 1
         # Each export uses a fresh exclusive directory; filenames never replace
         # earlier samples, including samples taken before late reports arrive.
@@ -90,7 +88,7 @@ class CaptureTransport(httpx.BaseTransport):
             },
         )
         self.last = raw
-        # iter_bytes already decoded Content-Encoding. Do not decode twice
+        # The bounded reader decoded Content-Encoding. Do not decode twice
         # when the SDK consumes the captured response, or retain stale length.
         headers = [
             (key, value)

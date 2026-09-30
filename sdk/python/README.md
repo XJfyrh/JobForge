@@ -75,4 +75,4 @@ HTTP 2xx 也会校验已知结果字段：错误的 ID/标量类型、状态、�
 
 快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。上述 get 可能仍返回执行中状态；安装 `[demo]` extra 后运行 `examples/agent_rag.py` 可等待两个真实任务并验证产物。启动和清理见[真实任务指南](../../docs/real-tasks.md)，Trace/故障演练见[可观测性指南](../../docs/observability.md)。
 
-Calls 响应在读取过程中按解码后 256 KiB 限制，超限立即停止并关闭响应，抛出 `InternalError`；错误响应同样受限。SDK 不因读取失败自动重试。
+Calls 响应在读取过程中按解码后 256 KiB 限制，超限立即停止并关闭响应，抛出 `InternalError`；错误响应同样受限。支持 identity、gzip（含串联 member）与 zlib deflate；解压本身使用剩余额度，压缩输入另限解码额度加 64 KiB，拒绝截断、损坏或不支持的编码。SDK 不因读取失败自动重试。自定义 transport 已预缓存的数据只能校验大小，SDK 无法约束该 transport 之前的分配。

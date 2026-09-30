@@ -48,7 +48,7 @@ def test_capture_stops_before_unbounded_body_and_writes_no_receipt(
         tmp_path, httpx.MockTransport(lambda _: httpx.Response(200, stream=body))
     )
     with httpx.Client(transport=capture) as client:
-        with pytest.raises(ExportError, match="API_RESPONSE_TOO_LARGE"):
+        with pytest.raises(ExportError, match="API_RESPONSE_INVALID_OR_TOO_LARGE"):
             client.get("http://synthetic.invalid/v2/runs")
     assert body.closed and body.reads == 257
     assert capture.last is None and capture.sequence == 0
@@ -104,3 +104,28 @@ def test_capture_decodes_compressed_body_once_and_preserves_archive(
     assert json.loads((tmp_path / "0001.receipt.json").read_bytes())["bytes"] == len(
         raw
     )
+
+
+def test_capture_rejects_compressed_expansion_without_archiving(tmp_path: Path) -> None:
+    """A small wire body cannot expand beyond the archive's decoded limit."""
+    compressed = gzip.compress(b" " * (4 * 1024 * 1024))
+
+    def chunks() -> Iterator[bytes]:
+        yield compressed
+        pytest.fail("capture continued after compressed expansion")
+
+    body = Body(chunks())
+    capture = CaptureTransport(
+        tmp_path,
+        httpx.MockTransport(
+            lambda _: httpx.Response(
+                200, stream=body, headers={"Content-Encoding": "gzip"}
+            )
+        ),
+    )
+    with httpx.Client(transport=capture) as client:
+        with pytest.raises(ExportError, match="API_RESPONSE_INVALID_OR_TOO_LARGE"):
+            client.get("http://synthetic.invalid/v2/runs")
+    assert body.closed and body.reads == 1
+    assert capture.last is None and capture.sequence == 0
+    assert not list(tmp_path.iterdir())

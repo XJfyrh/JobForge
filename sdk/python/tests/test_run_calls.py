@@ -239,3 +239,78 @@ def test_calls_closes_midstream_timeout_without_retry() -> None:
             client.calls(FIXTURES["empty"]["run_id"])
     assert stream.closed
     assert len(requests) == 1
+
+
+@pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+@pytest.mark.parametrize("variant", ["valid", "oversize", "truncated", "invalid"])
+def test_calls_bounds_decompression_and_rejects_incomplete_encoding(
+    encoding: str, variant: str
+) -> None:
+    import gzip
+    import zlib
+
+    raw = json.dumps(FIXTURES["empty"]).encode()
+    if variant == "oversize":
+        raw += b" " * (MAX_CALL_RESPONSE_BYTES * 16)
+    compressed = gzip.compress(raw) if encoding == "gzip" else zlib.compress(raw)
+    if variant == "truncated":
+        compressed = compressed[:-4]
+    if variant == "invalid":
+        compressed = b"invalid compressed response"
+
+    class CompressedBody(httpx.SyncByteStream):
+        closed = False
+
+        def __iter__(self):
+            yield compressed
+            if variant == "oversize":
+                pytest.fail("reader continued after decoded limit")
+
+        def close(self) -> None:
+            self.closed = True
+
+    body = CompressedBody()
+    with RunClient(
+        "http://synthetic.invalid",
+        "synthetic-reader",
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200, stream=body, headers={"Content-Encoding": encoding}
+            )
+        ),
+    ) as client:
+        if variant == "valid":
+            assert client.calls(FIXTURES["empty"]["run_id"]) == RunCalls.from_dict(
+                FIXTURES["empty"]
+            )
+        else:
+            with pytest.raises(InternalError, match="invalid run server response"):
+                client.calls(FIXTURES["empty"]["run_id"])
+    assert body.closed
+
+
+def test_calls_accepts_concatenated_gzip_members_at_limit() -> None:
+    import gzip
+
+    raw = json.dumps(FIXTURES["empty"]).encode()
+    parts = [
+        gzip.compress(raw),
+        gzip.compress(b" " * (MAX_CALL_RESPONSE_BYTES - len(raw))),
+    ]
+
+    class Members(httpx.SyncByteStream):
+        def __iter__(self):
+            yield from parts
+
+    with RunClient(
+        "http://synthetic.invalid",
+        "synthetic-reader",
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(
+                200, stream=Members(), headers={"Content-Encoding": "gzip"}
+            )
+        ),
+    ) as client:
+        assert client.calls(FIXTURES["empty"]["run_id"]) == RunCalls.from_dict(
+            FIXTURES["empty"]
+        )

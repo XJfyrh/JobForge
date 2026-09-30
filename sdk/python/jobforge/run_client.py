@@ -21,6 +21,7 @@ from jobforge.errors import (
     TransportError,
     from_response,
 )
+from jobforge.http_body import read_bounded_response
 from jobforge.run_calls import MAX_CALL_RESPONSE_BYTES, RunCalls
 from jobforge.run_models import (
     MAX_SAFE_INTEGER,
@@ -78,6 +79,7 @@ class RunClient:
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "Accept-Encoding": "gzip, deflate",
             },
             transport=transport,
         )
@@ -249,15 +251,13 @@ class RunClient:
                     method, path, content=content, params=params, headers=headers
                 ) as response:
                     if operation == "calls":
-                        # Bound decoded bytes while reading, even without a
-                        # trustworthy Content-Length (including error bodies).
-                        raw = bytearray()
-                        for chunk in response.iter_bytes(chunk_size=8192):
-                            if len(raw) + len(chunk) > MAX_CALL_RESPONSE_BYTES:
-                                span.set_status(StatusCode.ERROR, "oversized response")
-                                raise InternalError("invalid run server response")
-                            raw.extend(chunk)
-                        response_content = bytes(raw)
+                        try:
+                            response_content = read_bounded_response(
+                                response, MAX_CALL_RESPONSE_BYTES
+                            )
+                        except ValueError:
+                            span.set_status(StatusCode.ERROR, "invalid response body")
+                            raise InternalError("invalid run server response") from None
                     else:
                         response_content = response.read()
             except httpx.TimeoutException as exc:
