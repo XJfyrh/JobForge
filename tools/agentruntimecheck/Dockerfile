@@ -85,6 +85,7 @@ RUN --mount=type=bind,target=/source \
     mkdir -p /src/api /src/tests/integration /etc/jobforge/cloud /var/lib/jobforge/outbound && \
     cp -r /source/migrations /src/migrations && \
     cp -r /source/api/executor /source/api/support /src/api/ && \
+    cp -r /source/examples/support-agent/runtime/policies /src/policies && \
     chmod -R a+rX /src && chown -R 65532:65532 /etc/jobforge /var/lib/jobforge/outbound
 WORKDIR /src/tests/integration
 USER 65532:65532

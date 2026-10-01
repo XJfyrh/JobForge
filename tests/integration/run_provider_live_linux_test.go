@@ -15,7 +15,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -25,6 +27,8 @@ import (
 	"github.com/xjfyrh/jobforge/internal/runworker"
 )
 
+const providerUnconfirmedCallsSQL = "select count(*) from physical_calls where run_id=$1 and ((subcall='chat' and status<>'known') or observation_hash is null or measurement_anomaly)"
+
 // This opt-in test never runs in ordinary CI. Its installed registry and provider
 // origin are production originals. Only the captured business/embedding data are
 // synthetic. The launcher owns single-run admission and supplies secrets by pipe.
@@ -32,6 +36,29 @@ func TestRunRealProviderWorker(t *testing.T) {
 	if os.Getenv("JOBFORGE_REAL_WORKER_ACCEPTANCE") != "approved-single-run-v1" {
 		t.Skip("requires separately authorized isolated real-provider acceptance")
 	}
+	runProviderWorker(t, false, true)
+}
+
+// The isolated runner has no Internet route; this proxy never opens a tunnel.
+func TestRunProviderProxyOffline(t *testing.T) {
+	if os.Getenv("JOBFORGE_PROVIDER_PROXY_OFFLINE") != "1" {
+		t.Skip("requires isolated installed Worker and PostgreSQL")
+	}
+	for _, agent := range []bool{false, true} {
+		name := "fixed"
+		if agent {
+			name = "agent"
+		}
+		t.Run(name, func(t *testing.T) { runProviderWorker(t, true, agent) })
+	}
+}
+
+func runProviderWorker(t *testing.T, offline, agent bool) {
+	t.Helper()
+	var proxyCalls atomic.Int32
+	var proxyLeak atomic.Bool
+	var workerPID atomic.Int64
+	var modelEnvChecked, businessEnvChecked atomic.Bool
 	var input struct {
 		APIKey     string `json:"api_key"`
 		Proxy      string `json:"proxy"`
@@ -39,13 +66,25 @@ func TestRunRealProviderWorker(t *testing.T) {
 		ObservedOn string `json:"observed_on"`
 		PriceSHA   string `json:"price_sha"`
 	}
-	if json.NewDecoder(io.LimitReader(os.Stdin, 16384)).Decode(&input) != nil || input.APIKey == "" || !agentrun.ValidHash(input.PriceSHA) {
+	if offline {
+		proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			proxyCalls.Add(1)
+			modelEnvChecked.Store(offlineProviderEnvironment(int(workerPID.Load()), true))
+			if r.Method != http.MethodConnect || r.Host != "api.deepseek.com:443" || r.Header.Get("Authorization") != "" || r.Header.Get("Proxy-Authorization") != "" {
+				proxyLeak.Store(true)
+			}
+			w.WriteHeader(http.StatusProxyAuthRequired)
+		}))
+		t.Cleanup(proxy.Close)
+		input.APIKey, input.Proxy, input.CA = "synthetic-provider-only", proxy.URL, "/opt/jobforge-provider-ca.pem"
+		input.ObservedOn, input.PriceSHA = time.Now().UTC().Format("2006-01-02"), strings.Repeat("a", 64)
+	} else if json.NewDecoder(io.LimitReader(os.Stdin, 16384)).Decode(&input) != nil || input.APIKey == "" || !agentrun.ValidHash(input.PriceSHA) {
 		t.Fatal("invalid private pipe input")
 	}
 	if parsed, err := time.Parse("2006-01-02", input.ObservedOn); err != nil || parsed.Format("2006-01-02") != time.Now().UTC().Format("2006-01-02") {
 		t.Fatal("price snapshot is not current")
 	}
-	h := setupSupportProfileConfiguredHarness(t, "support-agent-real-single-v1", 3000000, true, func(d *agentrun.SupportDefinition) {
+	h := setupSupportProfileConfiguredHarness(t, "support-agent-real-single-v1", 3000000, agent, func(d *agentrun.SupportDefinition) {
 		d.Model.ObservedOn, d.Price.ObservedOn, d.Price.SourceSHA256 = input.ObservedOn, input.ObservedOn, input.PriceSHA
 		d.Program.AdapterSourceSHA256 = liveSourceHash(t, "/usr/local/lib/python3.12/site-packages/jobforge_agent/support_agent.py")
 		d.Program.PromptSHA256 = d.Program.AdapterSourceSHA256 // Prompt and decision code share this installed module.
@@ -56,6 +95,16 @@ func TestRunRealProviderWorker(t *testing.T) {
 	r := h.submit(t, "tenant-north", "real-single")
 	fixture := &supportExecutorHTTPFixture{executorHTTPFixture: &executorHTTPFixture{counts: map[string]int{}}, withOrder: false}
 	fixture.snapshot = snapshot
+	policyBytes, err := os.ReadFile("/src/policies/P03.md")
+	if err != nil {
+		t.Fatal("read public runtime missing-facts policy")
+	}
+	_, policyText, found := strings.Cut(string(policyBytes), "<!-- paragraph_id: P03.1 -->")
+	policyText, _, _ = strings.Cut(policyText, "<!-- paragraph_id: P03.2 -->")
+	policyText = strings.TrimSpace(policyText)
+	if !found || policyText == "" {
+		t.Fatal("missing public P03.1 paragraph")
+	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/chat/completions" {
 			fixture.reject(w)
@@ -76,6 +125,26 @@ func TestRunRealProviderWorker(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"model": "all-minilm:22m", "embeddings": [][]float64{vector}, "prompt_eval_count": 3})
 			return
 		}
+		if offline {
+			businessEnvChecked.Store(offlineProviderEnvironment(int(workerPID.Load()), false))
+		}
+		if strings.HasSuffix(request.URL.Path, "/search") {
+			captured := httptest.NewRecorder()
+			fixture.serveSupport(captured, request)
+			if captured.Code != http.StatusOK {
+				w.WriteHeader(captured.Code)
+				return
+			}
+			var response map[string]any
+			if json.Unmarshal(captured.Body.Bytes(), &response) != nil {
+				fixture.reject(w)
+				return
+			}
+			response["matches"] = []any{map[string]any{"index_id": snapshot.IndexID, "chunk_id": "P03.1", "policy_version": agentrun.SupportPolicyVersion, "evidence_ref": "business-policy:" + snapshot.IndexID + ":P03.1", "text": policyText, "source": "runtime/policies/P03.md", "distance": 0.1}}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(response)
+			return
+		}
 		fixture.serveSupport(w, request)
 	})
 	business := httptest.NewServer(handler)
@@ -90,7 +159,11 @@ func TestRunRealProviderWorker(t *testing.T) {
 	embedding.Start()
 	t.Cleanup(embedding.Close)
 	gateway := executorGateway(t, h)
-	launcherJSON(t, "/etc/jobforge/executor.json", runworker.Manifest{SchemaVersion: 1, ExecutorVersion: h.Profile.ExecutorVersion, Profiles: []runworker.ManifestProfile{{ProfileID: h.Profile.ID, ProfileHash: h.Profile.Hash, AdapterID: "support-agent-v1"}}})
+	adapterID := "support-fixed-v1"
+	if agent {
+		adapterID = "support-agent-v1"
+	}
+	launcherJSON(t, "/etc/jobforge/executor.json", runworker.Manifest{SchemaVersion: 1, ExecutorVersion: h.Profile.ExecutorVersion, Profiles: []runworker.ManifestProfile{{ProfileID: h.Profile.ID, ProfileHash: h.Profile.Hash, AdapterID: adapterID}}})
 	config := map[string]any{"schema_version": 1, "profiles": []agentrun.Profile{h.Profile}, "tenants": map[string]any{"tenant-north": map[string]string{"business_origin": business.URL, "ollama_origin": "http://127.0.0.1:11434", "deepseek_proxy_origin": input.Proxy, "deepseek_ca_file": input.CA}}}
 	launcherJSON(t, "/etc/jobforge/cloud/worker.json", config)
 	credentials, err := json.Marshal(map[string]any{"control_token": "executor-synthetic-control-token", "tenants": map[string]any{"tenant-north": map[string]string{"business_read_key": "synthetic-business-read-key", "deepseek_api_key": input.APIKey}}})
@@ -105,6 +178,7 @@ func TestRunRealProviderWorker(t *testing.T) {
 	if err := command.Start(); err != nil {
 		t.Fatal("start formal Worker")
 	}
+	workerPID.Store(int64(command.Process.Pid))
 	done := make(chan error, 1)
 	go func() { done <- command.Wait() }()
 	groups := map[int]bool{}
@@ -153,7 +227,7 @@ func TestRunRealProviderWorker(t *testing.T) {
 			t.Error("could not export complete budget evidence")
 			return
 		}
-		report, _ := json.Marshal(map[string]any{"run_id": r.ID, "state": view.State, "calls": calls, "known_cost_microyuan": known, "held_cost_microyuan": held, "batch_cap_microyuan": 3000000, "worker_stopped": stopped, "worker_exit_code": workerExitCode, "guardian_groups_seen": len(groups), "synthetic_business": true, "real_provider": true, "profile_hash": h.Profile.Hash})
+		report, _ := json.Marshal(map[string]any{"run_id": r.ID, "state": view.State, "calls": calls, "known_cost_microyuan": known, "held_cost_microyuan": held, "batch_cap_microyuan": 3000000, "worker_stopped": stopped, "worker_exit_code": workerExitCode, "guardian_groups_seen": len(groups), "synthetic_business": true, "real_provider": !offline, "profile_hash": h.Profile.Hash})
 		t.Logf("REAL_PROVIDER_RECEIPT %s", report)
 		if known+held > 3000000 {
 			t.Error("batch ceiling violated")
@@ -168,6 +242,20 @@ func TestRunRealProviderWorker(t *testing.T) {
 		case err := <-done:
 			recordExit(err)
 			stopped = true
+			if offline {
+				if proxyCalls.Load() != 1 || proxyLeak.Load() || fixture.badRequest.Load() || !modelEnvChecked.Load() || (!agent && !businessEnvChecked.Load()) {
+					t.Fatal("scoped proxy/credential boundary failed")
+				}
+				if len(groups) < 2 {
+					t.Fatal("formal child lifecycle evidence missing")
+				}
+				var unconfirmed int
+				if err := h.Pool.QueryRow(h.Ctx, providerUnconfirmedCallsSQL, r.ID).Scan(&unconfirmed); err != nil || unconfirmed != 1 {
+					t.Fatal("free observed calls were confused with the one unconfirmed chat")
+				}
+				t.Log("OFFLINE_PROXY_VERIFIED formal coordinator/Worker/guardian/step reached exactly one local CONNECT without credentials")
+				return
+			}
 			t.Fatal("formal Worker stopped before terminal proposal; export receipt and do not retry")
 		case <-deadline.C:
 			t.Fatal("single-run deadline exceeded")
@@ -186,7 +274,7 @@ func TestRunRealProviderWorker(t *testing.T) {
 					t.Fatal("business credential or fixture contract violation")
 				}
 				var badCalls int
-				if err := h.Pool.QueryRow(h.Ctx, "select count(*) from physical_calls where run_id=$1 and (status<>'known' or observation_hash is null or measurement_anomaly)", r.ID).Scan(&badCalls); err != nil || badCalls != 0 {
+				if err := h.Pool.QueryRow(h.Ctx, providerUnconfirmedCallsSQL, r.ID).Scan(&badCalls); err != nil || badCalls != 0 {
 					t.Fatal("unconfirmed or unknown call")
 				}
 				liveSDKReadback(t, h.Service, r.ID)
@@ -234,4 +322,38 @@ with RunClient(sys.argv[1], "synthetic-reader") as c:
 		t.Fatal("installed SDK public readback failed")
 	}
 	t.Logf("REAL_PROVIDER_SDK %s", strings.TrimSpace(output.String()))
+}
+
+// Only the offline fixture calls this: all credentials are synthetic. Retain no
+// values or raw environment, and require both guardian and step to be observed.
+func offlineProviderEnvironment(workerPID int, model bool) bool {
+	seen := 0
+	for _, guardian := range executorChildren(workerPID) {
+		for _, pid := range append([]int{guardian}, executorChildren(guardian)...) {
+			raw, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/environ")
+			if err != nil {
+				return false
+			}
+			keys := map[string]bool{}
+			for _, pair := range strings.Split(string(raw), "\x00") {
+				key, _, _ := strings.Cut(pair, "=")
+				keys[key] = true
+			}
+			for _, key := range []string{"DEEPSEEK_API_KEY", "JOBFORGE_DEEPSEEK_PROXY_ORIGIN", "JOBFORGE_DEEPSEEK_CA_FILE"} {
+				if keys[key] != model {
+					return false
+				}
+			}
+			for _, key := range []string{"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "JOBFORGE_TEST_DSN", "JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE"} {
+				if keys[key] {
+					return false
+				}
+			}
+			if model && (keys["JOBFORGE_BUSINESS_READ_KEY"] || keys["JOBFORGE_OLLAMA_ORIGIN"]) {
+				return false
+			}
+			seen++
+		}
+	}
+	return seen >= 2
 }

@@ -97,3 +97,13 @@ SDK 测试应同时包含当前源码与已安装包的真实 HTTP；API 改动�
 不把 CLI 标志当成用户批准，也不自动重跑未知费用批次。
 
 本次已停止，结果与剩余额度以[正式 Worker 验收证据](evidence/worker-real-provider-2026-09-30.md)为准。
+
+
+免费完整代理配置验收：构建 provider-check target 后执行
+`tools/test-provider-proxy.sh /etc/ssl/certs/ca-certificates.crt IMAGE`。
+脚本创建禁止外网的内部 Docker 网络及独立 PG，只用合成凭据；本地代理拒绝 CONNECT，
+不建立供应商隧道。固定策略/Agent 均经过真实 coordinator、Worker、guardian/step，
+检查模型与非模型子进程环境及代理凭据隔离，结束删除自建容器、网络和卷。该层已纳入 CI。
+它验证配置传递，不是模型业务成功，也不计入真实 API 账本。
+
+当前真实合成验收通过记录见[完整 Worker 验收](evidence/worker-full-acceptance-2026-10-01.md)，其中保留失败批次、修复依据和完整费用核算。
