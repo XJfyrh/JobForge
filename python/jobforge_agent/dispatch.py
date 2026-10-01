@@ -674,6 +674,21 @@ class AuthorizedDispatcher:
             self._start,
             self._endpoints[request.endpoint].base_origin,
         )
+        if audit is not None:
+            transport_audit = audit
+            hop = (
+                "proxy" if self._endpoints[request.endpoint].proxy_origin else "origin"
+            )
+
+            async def trace(event: str, _info: dict[str, Any]) -> None:
+                nonlocal hop
+                # proxy.start_tls is the target handshake after CONNECT, whereas
+                # connection.start_tls may be TLS to an HTTPS proxy itself.
+                if event == "proxy.start_tls.started":
+                    hop = "origin"
+                transport_audit.transport(event, hop)
+
+            outbound.extensions["trace"] = trace
         # Optional metadata I/O may consume the remaining dispatch window.
         # Recheck and consume permission immediately before entering HTTP send.
         now = self._guard(deadline)

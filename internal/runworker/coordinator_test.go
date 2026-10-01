@@ -527,3 +527,20 @@ func TestCoordinatorLateQueuedACKCannotRenewOriginalCall(t *testing.T) {
 		t.Fatal("queued ACK extended a finished physical call")
 	}
 }
+
+func TestStepEnvironmentPreservesScopedProviderNetwork(t *testing.T) {
+	all := runexecutor.Environment{BusinessOrigin: "http://business:8090", BusinessReadKey: "synthetic-business", OllamaOrigin: "http://ollama:11434", DeepSeekKey: "synthetic-provider", DeepSeekProxyOrigin: "http://proxy:8080", DeepSeekCAFile: "/opt/provider-ca.pem"}
+	for _, kind := range []agentv1.StepKind{agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL, agentv1.StepKind_STEP_KIND_MODEL_DECISION, agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION} {
+		got := stepEnvironment(all, kind)
+		want := runexecutor.Environment{DeepSeekKey: all.DeepSeekKey, DeepSeekProxyOrigin: all.DeepSeekProxyOrigin, DeepSeekCAFile: all.DeepSeekCAFile}
+		if got != want {
+			t.Errorf("model step %v lost scoped provider configuration", kind)
+		}
+	}
+	for _, kind := range []agentv1.StepKind{agentv1.StepKind_STEP_KIND_GET_ORDER, agentv1.StepKind_STEP_KIND_GET_DELIVERY, agentv1.StepKind_STEP_KIND_SEARCH_POLICY, agentv1.StepKind_STEP_KIND_UNSPECIFIED} {
+		got := stepEnvironment(all, kind)
+		if got.DeepSeekKey != "" || got.DeepSeekProxyOrigin != "" || got.DeepSeekCAFile != "" {
+			t.Errorf("non-model step %v inherited provider configuration", kind)
+		}
+	}
+}

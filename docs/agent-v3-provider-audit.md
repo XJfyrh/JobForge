@@ -59,3 +59,7 @@ Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲�
 已有可信短期目录 `/var/lib/jobforge/outbound` 时，固定执行器记录发送阶段、已见 HTTP 状态和完成性；`.failure.json` 只保存闭集原因、阶段和已缓冲字节数。原因区分 connect/read/write/pool timeout、proxy/connect/remote-protocol error、取消、编码/长度/尺寸失败。不记录异常文本、凭据、模型正文或任意 headers。目录缺失或写入失败不改变执行和结算；诊断不是权限或计费事实源。
 
 专用 provider-check 镜像创建该目录，单次验收启动器在清理容器前导出并记录是否成功；默认生产镜像不增加持久挂载。缺少诊断的旧 unavailable 报告不能被反推为某种网络错误或零费用。详见[实模与零付费定位记录](evidence/worker-real-provider-2026-09-30.md)。
+
+短期 `.transport.jsonl` 另记录闭集 HTTPcore TCP/TLS/HTTP 阶段及 proxy/origin hop，
+不序列化 trace info。代理 CONNECT 的 headers/body 事件不等于模型 HTTP 已发送；
+本地发送完成也不等于供应商已接受或计费。阶段诊断不覆盖原持久报告及未知费用 hold。

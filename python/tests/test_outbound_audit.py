@@ -405,3 +405,16 @@ async def test_slow_metadata_cannot_send_after_dispatch_permission_expires(
         assert observed[0]["http_status"] is None
     finally:
         await dispatcher.aclose()
+
+
+def test_transport_trace_rejects_unbounded_event_and_hop(monkeypatch, tmp_path):
+    """Raw HTTPcore exceptions/headers never enter the stage-only trace."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    audit = outbound_audit.OutboundAudit({"physical_call_id": CALL})
+    audit.transport("PRIVATE-SECRET", "origin")
+    audit.transport("http11.send_request_headers.complete", "PRIVATE-SECRET")
+    assert not list(tmp_path.iterdir())
+    audit.transport("http11.send_request_headers.complete", "origin")
+    row = json.loads((tmp_path / (CALL + ".transport.jsonl")).read_text())
+    assert set(row) == {"schema_version", "physical_call_id", "event", "hop", "time"}
+    assert row["hop"] == "origin"

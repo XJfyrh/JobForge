@@ -245,7 +245,7 @@ func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexec
 	case agentv1.StepKind_STEP_KIND_SEARCH_POLICY:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey, OllamaOrigin: all.OllamaOrigin}
 	case agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL, agentv1.StepKind_STEP_KIND_MODEL_DECISION, agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION:
-		return runexecutor.Environment{DeepSeekKey: all.DeepSeekKey}
+		return runexecutor.Environment{DeepSeekKey: all.DeepSeekKey, DeepSeekProxyOrigin: all.DeepSeekProxyOrigin, DeepSeekCAFile: all.DeepSeekCAFile}
 	default:
 		return runexecutor.Environment{}
 	}

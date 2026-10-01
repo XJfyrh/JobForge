@@ -63,6 +63,48 @@ class OutboundAudit:
 
     metadata: dict[str, Any] = field(repr=False)
 
+    def transport(self, event: str, hop: str) -> None:
+        """Persist fixed transport stages only; never serialize HTTPcore info."""
+        parts = event.split(".")
+        if (
+            len(parts) != 3
+            or parts[0] not in {"connection", "proxy", "http11", "http2"}
+            or parts[1]
+            not in {
+                "connect_tcp",
+                "start_tls",
+                "send_request_headers",
+                "send_request_body",
+                "receive_response_headers",
+                "receive_response_body",
+            }
+            or parts[2] not in {"started", "complete", "failed"}
+            or hop not in {"proxy", "origin"}
+        ):
+            return
+        try:
+            value = {
+                "schema_version": 1,
+                "physical_call_id": self.metadata["physical_call_id"],
+                "event": event,
+                "hop": hop,
+                "time": datetime.now(timezone.utc).isoformat(timespec="microseconds"),
+            }
+            line = (json.dumps(value, separators=(",", ":")) + "\n").encode("ascii")
+            if len(line) > _MAX_RECORD_BYTES:
+                return
+            descriptor = os.open(
+                _DIRECTORY / (self.metadata["physical_call_id"] + ".transport.jsonl"),
+                os.O_WRONLY | os.O_CREAT | os.O_APPEND,
+                0o600,
+            )
+            try:
+                os.write(descriptor, line)
+            finally:
+                os.close(descriptor)
+        except (OSError, ValueError, TypeError):
+            return
+
     def failure(self, *, stage: str, reason: str, buffered_bytes: int) -> None:
         """Retain bounded failure facts separately from immutable send records."""
         if stage not in {"send", "headers", "body"} or reason not in {

@@ -250,6 +250,25 @@ async def test_real_proxy_failure_retains_safe_phase_and_unknown_usage(
         assert diagnostic["reason"] == reason
         assert diagnostic["stage"] == "send"
         assert diagnostic["buffered_bytes"] == 0
+        stages = [
+            json.loads(line)
+            for line in next(tmp_path.glob("*.transport.jsonl"))
+            .read_text()
+            .splitlines()
+        ]
+        assert any(
+            row["event"] == "http11.send_request_headers.complete"
+            and row["hop"] == "proxy"
+            for row in stages
+        )
+        assert not any(
+            row["event"] == "http11.send_request_headers.started"
+            and row["hop"] == "origin"
+            for row in stages
+        )
+        if mode == "tls_stall":
+            assert stages[-1]["event"] == "proxy.start_tls.failed"
+            assert stages[-1]["hop"] == "origin"
         assert len(requests) == 1  # No automatic retry.
         assert b"fixture-key" not in requests[0]
         assert b"Authorization" not in requests[0]

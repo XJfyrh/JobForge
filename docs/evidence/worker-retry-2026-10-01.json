@@ -1,0 +1,123 @@
+{
+  "ledger": {
+    "started_at": "2026-10-01T00:38:06.041844+00:00",
+    "prior_conservative_microyuan": 2105420,
+    "project_cap_microyuan": 50000000,
+    "batch_cap_microyuan": 3000000,
+    "pending_upper_microyuan": 2105344,
+    "state": "receipt_retained_no_further_calls",
+    "account_debit_checked": false,
+    "price_sha256": "5a7b1832592387340f2fc456399b34b89b05f3fa167c2e35909e2fa4afe021e3",
+    "docker_config_contains_provider_secret": false,
+    "runner_exit_code": 1,
+    "outbound_diagnostics_exported": true,
+    "known_cost_microyuan": 0,
+    "held_cost_microyuan": 2105344,
+    "remaining_authorized_microyuan": 45789236,
+    "owned_containers_cleaned": true,
+    "finished_at": "2026-10-01T00:38:25.980781+00:00"
+  },
+  "receipt": {
+    "batch_cap_microyuan": 3000000,
+    "calls": {
+      "run_id": "3699c1ae-977d-4fa7-a3a6-efe8aed344f7",
+      "captured_at": "2026-10-01T00:38:25.231179Z",
+      "batch_frozen": true,
+      "batch_stop_code": "CHAT_USAGE_UNKNOWN",
+      "items": [
+        {
+          "physical_call_id": "f3eef6b7-d7e3-4e8f-a1b6-48dccbba32ae",
+          "step_id": "a9bb1f8a-80ea-40f5-87cb-3a5568b4fea5",
+          "step_kind": "model_decision",
+          "attempt_no": 1,
+          "ordinal": 1,
+          "subcall": "chat",
+          "parameter_hash": "919d7f94e00c58d81602373afc0db87aea12e41f07535f2f6c053843ab9a82ca",
+          "profile_id": "support-agent-real-single-v1",
+          "profile_hash": "f2a075876cce3d852fbd478a930ea6c23c45dbcf9ed780cd88ea55725a3a4a18",
+          "price_hash": "3eab3f012077e4fe4a2cb245942262b7e4995f82f731595a609dfacb0d43fbdd",
+          "reserved_at": "2026-10-01T00:38:19.998941Z",
+          "dispatch_expires_at": "2026-10-01T00:38:49.425385Z",
+          "call_deadline": "2026-10-01T00:39:19.998941Z",
+          "observed_at": null,
+          "report_recorded_at": "2026-10-01T00:38:25.121488Z",
+          "settled_at": null,
+          "reserved": {
+            "input_tokens": 1048576,
+            "output_tokens": 1024,
+            "total_tokens": 1049600,
+            "cost_microyuan": 2105344
+          },
+          "known_tokens": 0,
+          "known_cost_microyuan": 0,
+          "held_tokens": 1049600,
+          "held_cost_microyuan": 2105344,
+          "usage_known": false,
+          "measurement_anomaly": false,
+          "report_hash": "fa288d44b214a3cd331112ed58caba36c5936fdaf5e558b9a8cea50330f54105",
+          "audit_hash": "51244defa351cb2954efaed33bff1a3de3620ebc7cddbb2cc4c9f81f4c1f273c",
+          "provider_audit": {
+            "schema_version": 1,
+            "provider": "deepseek",
+            "response_complete": false,
+            "http_status": 0,
+            "response_sha256": null,
+            "identity_state": "unavailable",
+            "response_id": null,
+            "response_model": null,
+            "system_fingerprint": null,
+            "created": null,
+            "usage_evidence": "unavailable",
+            "reasoning_state": "unavailable",
+            "reasoning_tokens": null,
+            "mode_state": "unavailable",
+            "audit_hash": "51244defa351cb2954efaed33bff1a3de3620ebc7cddbb2cc4c9f81f4c1f273c"
+          },
+          "observed_usage": null,
+          "settled_usage": null,
+          "report_conflict": false,
+          "audit_status": "recorded",
+          "transport_outcome": null,
+          "http_status": null,
+          "error_code": null,
+          "business_outcome": null
+        }
+      ]
+    },
+    "guardian_groups_seen": 2,
+    "held_cost_microyuan": 2105344,
+    "known_cost_microyuan": 0,
+    "profile_hash": "f2a075876cce3d852fbd478a930ea6c23c45dbcf9ed780cd88ea55725a3a4a18",
+    "real_provider": true,
+    "run_id": "3699c1ae-977d-4fa7-a3a6-efe8aed344f7",
+    "state": "running",
+    "synthetic_business": true,
+    "worker_exit_code": 1,
+    "worker_stopped": true
+  },
+  "transport": [
+    {
+      "schema_version": 1,
+      "physical_call_id": "f3eef6b7-d7e3-4e8f-a1b6-48dccbba32ae",
+      "event": "connection.connect_tcp.started",
+      "hop": "origin",
+      "time": "2026-10-01T00:38:20.108117+00:00"
+    },
+    {
+      "schema_version": 1,
+      "physical_call_id": "f3eef6b7-d7e3-4e8f-a1b6-48dccbba32ae",
+      "event": "connection.connect_tcp.failed",
+      "hop": "origin",
+      "time": "2026-10-01T00:38:25.109654+00:00"
+    }
+  ],
+  "failures": [
+    {
+      "schema_version": 1,
+      "physical_call_id": "f3eef6b7-d7e3-4e8f-a1b6-48dccbba32ae",
+      "stage": "send",
+      "reason": "connect_timeout",
+      "buffered_bytes": 0
+    }
+  ]
+}

@@ -57,3 +57,9 @@ TLS 校验、非 root 或 5 秒 connect timeout 的配置故障。Go 入口将�
 本轮配置回归：6 项 Go 顶层测试（含 race）通过，覆盖环境白名单、注入拒绝、代理/CA 显式范围、
 凭据格式与匿名管道；Python provider network 19 passed。日志为
 `.cache/verification/connect-only-config-{go,python}.log`。本轮仅提交证据文档，不改生产代码。
+
+## 后续发现：分层检查遗漏中间筛选
+
+随后获准的正式 Worker 重试揭示 coordinator 的 stepEnvironment 漏传 proxy/CA，
+此前直接构造客户端的检查未经过该层。因此“客户端连接前置条件通过”不能替代完整传参验收。
+具体根因、修复与新预留见[单任务重试记录](worker-retry-2026-10-01.md)。
