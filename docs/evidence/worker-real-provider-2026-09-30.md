@@ -115,3 +115,9 @@ DNS、代理 TCP、CONNECT HTTP 200、目标 TLS 验证均成功。这不能证�
 这没有启动收费 Worker。未来获准后必须重建 provider-check target，并显式选择已更新镜像
 （启动器 `--image`），不能误用早期缓存镜像。验证日志位于工作区
 `.cache/verification/provider-diagnosis-{python,go-lint,build}.log`。
+
+## 次日同路径连接复核
+
+原实例恢复后，无凭据标准库及正式 HTTPX 的 CONNECT/TLS 均成功；没有模型 HTTP 请求。
+控制台确认实际费用仅 0.000076 元，失败尝试没有计费记录，软件 hold 不代表实际花费。
+详见[2026-10-01 同路径检查](worker-connect-only-2026-10-01.md)。

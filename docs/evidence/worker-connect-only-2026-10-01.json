@@ -1,0 +1,81 @@
+{
+  "checked_on": "2026-10-01",
+  "image_id": "sha256:d0f3843543e154f5c8db0069c0c4acab1fa6dc03a279fa43d4b67169128ecc8e",
+  "network": "host",
+  "uid": 65532,
+  "cpus": 2,
+  "memory": "512m",
+  "pids_limit": 96,
+  "ca_matches_original": true,
+  "provider_credentials_used": false,
+  "origin_http_sent": false,
+  "events": [
+    {
+      "uid": 65532,
+      "ca_readable": true,
+      "tls_verified": true,
+      "ambient_proxy_present": false,
+      "provider_key_present": false
+    },
+    {
+      "mode": "stdlib",
+      "connect_status": 200,
+      "tls_success": true,
+      "elapsed": 0.239
+    },
+    {
+      "mode": "production_httpx",
+      "event": "connection.connect_tcp.started",
+      "elapsed": 0.034
+    },
+    {
+      "mode": "production_httpx",
+      "event": "connection.connect_tcp.complete",
+      "elapsed": 0.041
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.send_request_headers.started",
+      "elapsed": 0.042
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.send_request_headers.complete",
+      "elapsed": 0.042
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.send_request_body.started",
+      "elapsed": 0.042
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.send_request_body.complete",
+      "elapsed": 0.042
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.receive_response_headers.started",
+      "elapsed": 0.042
+    },
+    {
+      "mode": "production_httpx",
+      "event": "http11.receive_response_headers.complete",
+      "elapsed": 0.169
+    },
+    {
+      "mode": "production_httpx",
+      "event": "proxy.start_tls.started",
+      "elapsed": 0.169
+    },
+    {
+      "mode": "production_httpx",
+      "event": "proxy.start_tls.complete",
+      "elapsed": 0.171
+    },
+    {
+      "mode": "production_httpx",
+      "stopped_before_origin_http": true
+    }
+  ]
+}
