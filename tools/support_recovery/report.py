@@ -172,10 +172,16 @@ def report(
     before_path: Path,
     after_path: Path,
     control_path: Path,
+    continuation_path: Path | None = None,
 ) -> dict[str, Any]:
     """Reuse existing source/policy/safety scoring; keep every original intention."""
     plan, plan_hash = read_json(plan_path, 2 << 20)
-    validate(plan)
+    if continuation_path is None:
+        validate(plan)
+    else:
+        from tools.support_recovery.continuation import verify_reporting
+
+        verify_reporting(continuation_path, plan_path, archive)
     actual_rows, _ = read_json(archive / "rows.json", 2 << 20)
     if len(actual_rows["runs"]) != 11:
         raise ValueError("S3_ROW_COVERAGE")
@@ -359,6 +365,7 @@ def main() -> None:
         "out",
     ):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument("--continuation", type=Path)
     args = parser.parse_args()
     save_new(
         args.out,
@@ -369,6 +376,7 @@ def main() -> None:
             args.before,
             args.after,
             args.control_audit,
+            args.continuation,
         ),
     )
 

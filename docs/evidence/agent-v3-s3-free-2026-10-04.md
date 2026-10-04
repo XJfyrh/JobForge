@@ -63,6 +63,6 @@ Windows 全仓 `go test -race ./...` 已通过，真实PG集成包耗时439.558s
 
 正式Linux schema3协议坏帧/普通片段/计量片段/stderr超限四模式通过（11.37s，`protocol-negative-01.log`）；协调器Linux全套与生产镜像边界通过。默认联合层 `integration-full-01.log` 的自然恢复/原正式执行器与launcher等检查通过，但SDK新HTTP脚本未复制到镜像而失败，整轮退出1，不计全套通过。补齐镜像路径后，该实际安装SDK/PG HTTP合同通过（3.48s）；外部F06/F07增量含信号/Wait/组消失独立时间通过（76.12s），日志 `integration-repair-02.log`。新增S3合同在相同Linux镜像实际22 passed（0.88s，`recovery-python-linux-01.log`）。没有修改生产 lease/deadline 或放宽失败断言。
 
-功能草稿 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 已触发八项CI。初次Python job因新测试未设置Agent源码路径而失败，已补显式 `PYTHONPATH`；最终head完整门禁结果仍待记录。原初次联合与CI失败保留，已通过且未变化的分段不反复执行。
+功能草稿 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 的 `a59bc6f1f807e1e2f18770646225495a726273cc` 已通过[完整八项CI](https://github.com/XJfyrh/JobForge/actions/runs/37191872335)。初次Python job因新测试未设置Agent源码路径而失败，已补显式 `PYTHONPATH`。原初次联合与CI失败保留，已通过且未变化的分段不反复执行。
 
-D4 已重新核对实际官方GET模型/余额、保存当天价格快照，并只读核验保留业务数据和两个向量索引；清单release、真实云端导出/评分/费用对照尚未执行。S3 真实收费调用 **0**，无 S2 余额转用；S3 整体与 S4/S5 不标为完成。历史 W4、AT-25、远程模型与生产长期留存的原结论不改写。
+D4 在实际官方GET模型/余额、当天价格快照及保留业务数据/索引只读核验后，已按独立放行执行原固定清单前七项。实际中断、费用和剩余四项见[真实模型记录](agent-v3-s3-cloud-2026-10-04.md)。无 S2 余额转用；S3 整体与 S4/S5 不标为完成。历史 W4、AT-25、远程模型与生产长期留存的原结论不改写。

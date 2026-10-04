@@ -19,6 +19,7 @@ import httpx
 from jobforge import RunClient
 
 from tools.support_evaluation.driver import instant
+from tools.support_evaluation.evidence import canonical, fingerprint
 from tools.support_evaluation.export import (
     CaptureTransport,
     ExportError,
@@ -31,7 +32,10 @@ WORKER = "/usr/local/bin/agent-worker"
 
 
 def verify_runtime(
-    plan: dict[str, Any], settings: dict[str, Any], release: dict[str, Any]
+    plan: dict[str, Any],
+    settings: dict[str, Any],
+    release: dict[str, Any],
+    continuation: dict[str, Any] | None = None,
 ) -> None:
     """Bind actual private mounts, installed packages and binaries before Submit."""
     from importlib import import_module
@@ -105,6 +109,14 @@ def verify_runtime(
     ]
     if len(batch) != 1 or batch[0]["limits"]["cost_microyuan"] > remaining:
         raise ValueError("S3_CUMULATIVE_CAP_MISMATCH")
+    if continuation is not None:
+        for name in ("driver.py", "plan.py", "continuation.py"):
+            path = Path(__file__).parent / name
+            if (
+                digest(path)
+                != continuation["reviewed_sources"]["tools/support_recovery/" + name]
+            ):
+                raise ValueError("S3_CONTINUATION_INSTALLED_TOOL_CHANGED")
 
 
 class FailureCapture(CaptureTransport):
@@ -126,14 +138,79 @@ class FailureCapture(CaptureTransport):
         return super().handle_request(request)
 
 
+def committed_chat(evidence: dict[str, Any], call: dict[str, Any]) -> bool:
+    """Bind the unique reported call to a canonical persisted SDK checkpoint.
+
+    SDK steps do not expose attempt_no. Go verifies that execution binding;
+    continuation preflight additionally checks the actual PG step attempt.
+    """
+    from jobforge_agent.runtime_input import input_hash, validate_step_result
+
+    run = evidence["run"]
+    identity = call["physical_call_id"]
+    matches = [
+        entry
+        for entry in evidence["steps"]
+        if entry["record"]["output"].get("physical_call_id") == identity
+    ]
+    if (
+        len(matches) != 1
+        or sum(
+            item["physical_call_id"] == identity for item in evidence["calls"]["items"]
+        )
+        != 1
+    ):
+        return False
+    entry = matches[0]
+    step, raw = entry["record"], entry["output_json"]
+    try:
+        validate_step_result(step["output"], step["kind"])
+        sequence = step["sequence"]
+        previous = (
+            ""
+            if sequence == 1
+            else evidence["steps"][sequence - 2]["record"]["commit_hash"]
+        )
+        return bool(
+            call["attempt_no"] > 0
+            and step["step_id"] == call["step_id"]
+            and step["kind"] == call["step_kind"]
+            and call["profile_id"] == run["profile_id"]
+            and step["profile_hash"] == call["profile_hash"] == run["profile_hash"]
+            and step["snapshot_hash"] == run["snapshot_hash"]
+            and step["cursor_version"] == sequence
+            and 1 <= sequence <= run["cursor_version"]
+            and evidence["steps"][sequence - 1] == entry
+            and step["input_hash"]
+            == input_hash(
+                run["profile_hash"], run["snapshot_hash"], sequence - 1, previous
+            )
+            and step["output_ref"] == f"run-step:{run['run_id']}:{sequence}"
+            and json.loads(raw) == step["output"]
+            and step["commit_hash"]
+            == fingerprint(
+                "jobforge.run.commit.v1",
+                step["step_id"],
+                str(sequence),
+                step["kind"],
+                str(sequence - 1),
+                step["input_hash"],
+                run["profile_id"],
+                run["profile_hash"],
+                run["snapshot_id"],
+                run["snapshot_hash"],
+                canonical(raw),
+            )
+        )
+    except (ValueError, KeyError, IndexError, TypeError):
+        return False
+
+
 def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
     """Inspect exported facts only; Go/PostgreSQL remain the permission authority."""
     calls = evidence["calls"]
     if calls["batch_frozen"] or calls["batch_stop_code"] is not None:
         return False
-    committed_calls = {
-        row["record"]["output"].get("physical_call_id") for row in evidence["steps"]
-    }
     for call in calls["items"]:
         if call["subcall"] != "chat":
             continue
@@ -144,16 +221,36 @@ def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
             or call["measurement_anomaly"]
             or call["report_conflict"]
             or call["report_hash"] is None
+            or call["report_recorded_at"] is None
             or call["observed_at"] is None
             or call["settled_at"] is None
             or call["transport_outcome"] != "response"
-            or call["business_outcome"] != "accepted"
-            or call["error_code"]
+            or call["http_status"] != 200
             or audit is None
             or audit["identity_state"] != "compatible"
             or audit["mode_state"] != "nonthinking"
-            or (committed and call["physical_call_id"] not in committed_calls)
+            or not audit["response_complete"]
+            or audit["usage_evidence"] != "complete"
         ):
+            return False
+        accepted = call["business_outcome"] == "accepted" and not call["error_code"]
+        bound = committed_chat(evidence, call) if committed or not accepted else False
+        if not accepted:
+            if not (
+                bound
+                and call["step_kind"] == "model_decision"
+                and call["business_outcome"] == "rejected"
+                and call["error_code"] == "MODEL_PROTOCOL_ERROR"
+                and next(
+                    entry["record"]["output"]["correction_required"] is True
+                    and entry["record"]["output"]["proposal"] is None
+                    for entry in evidence["steps"]
+                    if entry["record"]["output"].get("physical_call_id")
+                    == call["physical_call_id"]
+                )
+            ):
+                return False
+        elif committed and not bound:
             return False
     return True
 
@@ -198,7 +295,11 @@ def require_linux() -> None:
         raise ValueError("FIXED_LINUX_REQUIRED")
 
 
-def inspect(plan: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
+def inspect(
+    plan: dict[str, Any],
+    settings: dict[str, Any],
+    continuation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Read the exact checked deployment and bind its original batch/profile."""
     from tools.support_evaluation.launcher import validate_setup
 
@@ -232,7 +333,12 @@ def inspect(plan: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
         or accounts[0]["limits"]["cost_microyuan"] > plan["max_cost_microyuan"]
     ):
         raise ValueError("S3_INSPECTION_BINDING_MISMATCH")
-    validate_setup(receipt, plan)
+    if continuation is None:
+        validate_setup(receipt, plan)
+    else:
+        from tools.support_recovery.continuation import setup_valid
+
+        setup_valid(receipt, plan)
     return receipt
 
 
@@ -387,7 +493,12 @@ class Supervisor:
         }
 
 
-def launch(plan: dict[str, Any], settings: dict[str, Any], output: Path) -> None:
+def launch(
+    plan: dict[str, Any],
+    settings: dict[str, Any],
+    output: Path,
+    continuation: dict[str, Any] | None = None,
+) -> None:
     """Execute each persistent intent once; retain every failure and unattempted row."""
     validate(plan, check_sources=False)
     require_linux()
@@ -396,22 +507,35 @@ def launch(plan: dict[str, Any], settings: dict[str, Any], output: Path) -> None
     # Inspect the actual isolated batch immediately before its sole launch.
     # Credentials/DSN stay in the operator process environment and never reach
     # the Worker or Python step. This command only performs read transactions.
-    inspection = inspect(plan, settings)
+    inspection = (
+        inspect(plan, settings)
+        if continuation is None
+        else inspect(plan, settings, continuation)
+    )
     output.mkdir(mode=0o700)
     atomic_json(output / "setup.json", inspection)
+    if continuation is None:
+        rows = [
+            dict(row, status="unattempted", run_id=None, error_code="")
+            for row in plan["runs"]
+        ]
+        eligible = rows
+    else:
+        from tools.support_recovery.continuation import preflight
+
+        rows = preflight(continuation, plan, settings, inspection, output)
+        eligible = rows[7:]
     directory = Path(settings["barriers"])
     directory.mkdir(mode=0o700)
-    rows = [
-        dict(row, status="unattempted", run_id=None, error_code="")
-        for row in plan["runs"]
-    ]
-    row = rows[0]
+    row = eligible[0]
 
     def save() -> None:
         atomic_json(output / "rows.json", {"schema_version": 1, "runs": rows})
 
     save()
     supervisor = Supervisor(settings, directory)
+    if continuation is not None:
+        supervisor.last_stop = {index: time.monotonic() for index in range(2)}
     proxy = subprocess.Popen(
         [
             "/usr/local/bin/supportrecoveryproxy",
@@ -432,7 +556,7 @@ def launch(plan: dict[str, Any], settings: dict[str, Any], output: Path) -> None
 
     try:
         wait_proxy(proxy)
-        for row in rows:
+        for row in eligible:
             check()
             archive = output / row["experiment"]
             archive.mkdir(mode=0o700)
@@ -642,6 +766,7 @@ def main() -> None:
     parser.add_argument("--settings", type=Path, required=True)
     parser.add_argument("--release", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--continuation", type=Path)
     args = parser.parse_args()
     raw = args.plan.read_bytes()
     release = json.loads(args.release.read_bytes())
@@ -651,14 +776,32 @@ def main() -> None:
     ):
         raise ValueError("S3_LIST_NOT_RELEASED")
     plan, settings = json.loads(raw), json.loads(args.settings.read_bytes())
-    verify_runtime(plan, settings, release)
+    continuation = None
+    if args.continuation is not None:
+        from tools.support_recovery.continuation import KIND, verify
+
+        continuation = json.loads(args.continuation.read_bytes())
+        if (
+            release.get("kind") != KIND
+            or release.get("continuation_sha256")
+            != hashlib.sha256(args.continuation.read_bytes()).hexdigest()
+            or release.get("settings_sha256")
+            != hashlib.sha256(args.settings.read_bytes()).hexdigest()
+            or str(args.out) != "/var/lib/jobforge/exports/run-02-continuation"
+            or settings["barriers"] != "/var/lib/jobforge/barriers-02-continuation"
+        ):
+            raise ValueError("S3_CONTINUATION_NOT_RELEASED")
+        verify(continuation, plan, Path(settings["original_root"]), check_sources=False)
+    elif release.get("kind") == "support-s3-interrupted-continuation-v1":
+        raise ValueError("S3_CONTINUATION_REQUIRED")
+    verify_runtime(plan, settings, release, continuation)
 
     def stopped(_signal: int, _frame: Any) -> None:
         raise ValueError("OPERATOR_STOP")
 
     for selected in (signal.SIGINT, signal.SIGTERM):
         signal.signal(selected, stopped)
-    launch(plan, settings, args.out)
+    launch(plan, settings, args.out, continuation)
 
 
 if __name__ == "__main__":
