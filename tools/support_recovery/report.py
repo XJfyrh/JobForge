@@ -22,6 +22,50 @@ def sum_usage(rows: list[dict[str, Any]]) -> dict[str, int] | None:
     return {key: sum(row["ledger_usage"][key] for row in rows) for key in ZERO_USAGE}
 
 
+def group_calls(
+    actual: dict[str, Any] | None, fault: dict[str, Any] | None
+) -> dict[str, list[str]]:
+    """Include every subcall from the actual committed step/attempt."""
+    groups: dict[str, list[str]] = {
+        key: []
+        for key in (
+            "committed_prefix",
+            "uncommitted_before_fault",
+            "after_fault",
+            "no_fault_execution",
+        )
+    }
+    if actual is None:
+        return groups
+    calls = actual["calls"]["items"]
+    by_id = {call["physical_call_id"]: call for call in calls}
+    prefix = (
+        0
+        if fault is None
+        else fault["sequence"]
+        if fault["phase"] == "commit_ack_lost"
+        else fault["cursor_version"]
+    )
+    committed = set()
+    for entry in actual["steps"]:
+        step = entry["record"]
+        selected = by_id.get(step["output"].get("physical_call_id"))
+        if step["sequence"] <= prefix and selected is not None:
+            committed.add((step["step_id"], selected["attempt_no"]))
+    for call in calls:
+        group = (
+            "no_fault_execution"
+            if fault is None
+            else "committed_prefix"
+            if (call["step_id"], call["attempt_no"]) in committed
+            else "after_fault"
+            if instant(call["reserved_at"]) >= instant(fault["observed_at"])
+            else "uncommitted_before_fault"
+        )
+        groups[group].append(call["physical_call_id"])
+    return groups
+
+
 def pair(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Include original H0 and restarted H1 exposure before comparing with C."""
     by_arm = {row["arm"]: row for row in rows}
@@ -57,8 +101,77 @@ def pair(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def timing_facts(
+    row: dict[str, Any], actual: dict[str, Any] | None, control: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Separate signal/cleanup, sampled lease, persisted closure and claim times."""
+    fault = row.get("fault") or {}
+    sampled = row.get("pre_fault_run") or {}
+    attempts = [] if control is None else control["attempts"]
+    original = next(
+        (a for a in attempts if a["attempt_no"] == fault.get("attempt_no")), None
+    )
+    replacement = next(
+        (a for a in attempts if a["attempt_no"] > fault.get("attempt_no", 1)), None
+    )
+    persisted_steps = [] if control is None else control["steps"]
+    first = next(
+        (
+            s
+            for s in persisted_steps
+            if replacement is not None and s["attempt_no"] == replacement["attempt_no"]
+        ),
+        None,
+    )
+    run = {} if actual is None else actual["run"]
+    terminal = (
+        run.get("updated_at")
+        if run.get("state") in {"awaiting_approval", "succeeded", "failed", "cancelled"}
+        else None
+    )
+    facts: dict[str, Any] = {
+        "kill_sent_at": fault.get("kill_sent_at"),
+        "worker_wait_completed_at": fault.get("worker_wait_completed_at"),
+        "group_gone_confirmed_at": fault.get("group_gone_confirmed_at"),
+        "child_group_at_boundary": fault.get("child_group_at_boundary"),
+        "lease_sampled_at": sampled.get("sampled_at"),
+        "sampled_lease_until": sampled.get("lease_until"),
+        "original_closed_at": None if original is None else original["finished_at"],
+        "replacement_claimed_at": None
+        if replacement is None
+        else replacement["started_at"],
+        "first_new_step_at": None if first is None else first["created_at"],
+        "terminal_at": terminal,
+        "run_created_at": run.get("created_at"),
+        **{
+            key: row.get(key)
+            for key in ("ready_at", "replacement_started_at", "finished_at")
+        },
+    }
+    for name, start, end in (
+        ("kill_to_close_seconds", "kill_sent_at", "original_closed_at"),
+        ("closed_to_claim_seconds", "original_closed_at", "replacement_claimed_at"),
+        ("kill_to_claim_seconds", "kill_sent_at", "replacement_claimed_at"),
+        ("claim_to_first_step_seconds", "replacement_claimed_at", "first_new_step_at"),
+        ("active_after_claim_seconds", "replacement_claimed_at", "terminal_at"),
+        ("fault_to_terminal_seconds", "kill_sent_at", "terminal_at"),
+        ("total_run_seconds", "run_created_at", "terminal_at"),
+    ):
+        facts[name] = (
+            None
+            if facts[start] is None or facts[end] is None
+            else (instant(facts[end]) - instant(facts[start])).total_seconds()
+        )
+    return facts
+
+
 def report(
-    plan_path: Path, archive: Path, metadata: Path, before_path: Path, after_path: Path
+    plan_path: Path,
+    archive: Path,
+    metadata: Path,
+    before_path: Path,
+    after_path: Path,
+    control_path: Path,
 ) -> dict[str, Any]:
     """Reuse existing source/policy/safety scoring; keep every original intention."""
     plan, plan_hash = read_json(plan_path, 2 << 20)
@@ -70,6 +183,15 @@ def report(
     grouped, trace_hash, metadata_valid = outbound(metadata)
     before, _ = read_json(before_path, 2 << 20)
     after, _ = read_json(after_path, 2 << 20)
+    control, control_hash = read_json(control_path, 2 << 20)
+    if (
+        control["schema_version"] != 1
+        or control["batch_account_id"] != plan["batch_account_id"]
+    ):
+        raise ValueError("S3_CONTROL_AUDIT_BINDING_MISMATCH")
+    control_runs = {row["run_id"]: row for row in control["runs"]}
+    if len(control_runs) != len(control["runs"]):
+        raise ValueError("S3_CONTROL_AUDIT_DUPLICATE_RUN")
     audit_hash = sha(
         json_bytes(
             {
@@ -139,6 +261,16 @@ def report(
             ledger_error = "ACCEPTANCE_UNKNOWN"
         else:
             ledger_usage = dict(ZERO_USAGE)
+        control_run = control_runs.get(row["run_id"])
+        if control_run is not None and any(
+            control_run[key] != expected
+            for key, expected in {
+                "tenant_id": frozen["binding"]["tenant_id"],
+                "profile_id": plan["profile"]["profile_id"],
+                "profile_hash": plan["profile"]["profile_hash"],
+            }.items()
+        ):
+            raise ValueError("S3_CONTROL_RUN_BINDING_MISMATCH")
         fault = row.get("fault")
         prefix = (
             0
@@ -158,25 +290,6 @@ def report(
             for entry in steps
             if entry["record"]["sequence"] <= prefix
         ]
-        call_groups: dict[str, list[str]] = {
-            key: []
-            for key in ("committed_prefix", "uncommitted_before_fault", "after_fault")
-        }
-        prefix_calls = {
-            entry["record"]["output"].get("physical_call_id")
-            for entry in steps
-            if entry["record"]["sequence"] <= prefix
-        }
-        for call in [] if actual is None else actual["calls"]["items"]:
-            group = (
-                "committed_prefix"
-                if call["physical_call_id"] in prefix_calls
-                else "after_fault"
-                if fault is not None
-                and instant(call["reserved_at"]) >= instant(fault["observed_at"])
-                else "uncommitted_before_fault"
-            )
-            call_groups[group].append(call["physical_call_id"])
         result_rows.append(
             {
                 "experiment": row["experiment"],
@@ -195,11 +308,8 @@ def report(
                 else actual["run"]["recovery_count"],
                 "ledger_usage": ledger_usage,
                 "ledger_error": ledger_error,
-                "call_groups": call_groups,
-                "timing": {
-                    key: row.get(key)
-                    for key in ("ready_at", "replacement_started_at", "finished_at")
-                },
+                "call_groups": group_calls(actual, fault),
+                "timing": timing_facts(row, actual, control_run),
                 "score": evaluate_case(
                     score_row, frozen["binding"], plan["profile"], package
                 ),
@@ -214,6 +324,8 @@ def report(
         "schema_version": 1,
         "kind": "support-s3-eleven-run-experiment",
         "execution_list_sha256": plan_hash,
+        "control_audit_sha256": control_hash,
+        "unbound_control_run_ids": sorted(set(control_runs) - run_ids),
         "denominator": 11,
         "outcomes": dict(Counter(row["status"] for row in result_rows)),
         "usage": sum_usage(result_rows),
@@ -237,12 +349,27 @@ def report(
 def main() -> None:
     """Write a fresh private report; no reruns or automatic normalization."""
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("plan", "archive", "outbound", "before", "after", "out"):
+    for name in (
+        "plan",
+        "archive",
+        "outbound",
+        "before",
+        "after",
+        "control-audit",
+        "out",
+    ):
         parser.add_argument("--" + name, type=Path, required=True)
     args = parser.parse_args()
     save_new(
         args.out,
-        report(args.plan, args.archive, args.outbound, args.before, args.after),
+        report(
+            args.plan,
+            args.archive,
+            args.outbound,
+            args.before,
+            args.after,
+            args.control_audit,
+        ),
     )
 
 

@@ -281,18 +281,21 @@ class Supervisor:
             stderr=subprocess.DEVNULL,
         )
 
-    def stop(self, kill: bool = False) -> None:
+    def stop(self, kill: bool = False) -> dict[str, Any] | None:
         """Actual Wait is mandatory, including an externally killed Worker."""
         if self.current is None:
-            return
+            return None
         process = self.current
+        signal_sent_at = None
         if process.poll() is None:
+            signal_sent_at = datetime.now(UTC).isoformat()
             if kill:
                 process.kill()
             else:
                 process.terminate()
         try:
             code = process.wait(timeout=3)
+            waited_at = datetime.now(UTC).isoformat()
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=2)
@@ -301,6 +304,11 @@ class Supervisor:
         self.current = None
         if code != (-signal.SIGKILL if kill else 0):
             raise ValueError("WORKER_EXIT_UNEXPECTED")
+        return {
+            "worker_signal_sent_at": signal_sent_at,
+            "worker_wait_completed_at": waited_at,
+            "worker_returncode": code,
+        }
 
     def inject(self, row: dict[str, Any], barrier: dict[str, Any]) -> dict[str, Any]:
         """Keep PID/Wait/pipe facts; never describe queued ACK as consumed by Python."""
@@ -325,6 +333,8 @@ class Supervisor:
         elif barrier["phase"] != "commit_ack_lost":
             raise ValueError("INJECTION_WINDOW_MISSED")
         queued = 0
+        kill_sent_at = None
+        group_gone_at = None
         if row["target"] == "step":
             import fcntl
             import termios
@@ -348,16 +358,22 @@ class Supervisor:
                 (self.directory / f"{row['experiment']}.release").touch(exist_ok=False)
                 wait_fact(lambda: pending() > 0, 0.75)
                 queued = pending()
+                kill_sent_at = datetime.now(UTC).isoformat()
                 os.kill(step, signal.SIGKILL)
             finally:
                 os.close(descriptor)
             wait_fact(lambda: gone(group, step), 3)
-            self.stop()
+            group_gone_at = datetime.now(UTC).isoformat()
+            wait_receipt = self.stop()
         else:
-            self.stop(kill=True)
+            wait_receipt = self.stop(kill=True)
+            if wait_receipt is not None:
+                kill_sent_at = wait_receipt["worker_signal_sent_at"]
             if group:
                 wait_fact(lambda: gone(group, step), 3)
+                group_gone_at = datetime.now(UTC).isoformat()
         return {
+            **(wait_receipt or {}),
             "worker_pid": worker,
             "guardian_pid": group,
             "step_pid": step,
@@ -365,7 +381,9 @@ class Supervisor:
             "group_gone": True,
             "ordinary_ack_queued_bytes": queued,
             "python_ack_consumed": False,
-            "killed_at": datetime.now(UTC).isoformat(),
+            "kill_sent_at": kill_sent_at,
+            "group_gone_confirmed_at": group_gone_at,
+            "child_group_at_boundary": "present" if group else "no_child",
         }
 
 
@@ -489,6 +507,17 @@ def launch(plan: dict[str, Any], settings: dict[str, Any], output: Path) -> None
                             raise ValueError("FAULT_BINDING_MISMATCH")
                         # Write the original export before replacement, so paid
                         # prefix and an uncommitted old chat cannot disappear.
+                        sampled = client.get(row["run_id"])
+                        row["pre_fault_run"] = {
+                            "sampled_at": datetime.now(UTC).isoformat(),
+                            "attempt_no": sampled.attempt_no,
+                            "lease_until": None
+                            if sampled.lease_until is None
+                            else sampled.lease_until.isoformat(),
+                            "attempt_deadline": None
+                            if sampled.attempt_deadline is None
+                            else sampled.attempt_deadline.isoformat(),
+                        }
                         row["fault"] = {**barrier, **supervisor.inject(row, barrier)}
                         injected = True
                         save()

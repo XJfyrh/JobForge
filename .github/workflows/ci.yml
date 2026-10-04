@@ -133,7 +133,7 @@ jobs:
       - name: Support development data and semantic anchors (offline, no holdout)
         run: python -m pytest tools/support_evaluation
       - name: S3 frozen list and failure export (offline, no model calls)
-        run: python -m pytest tools/support_recovery
+        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_recovery
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations

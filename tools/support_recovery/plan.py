@@ -46,6 +46,8 @@ def source_hashes() -> dict[str, str]:
         + list((ROOT / "sdk/python/jobforge").glob("*.py"))
         + [ROOT / "deploy/Dockerfile.agent-worker"]
         + [ROOT / "deploy/Dockerfile.support-recovery"]
+        + [ROOT / "tools/support_recovery/control_audit.sql"]
+        + [ROOT / "tools/support_evaluation/business_audit.sql"]
     )
     return {
         file.relative_to(ROOT).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()

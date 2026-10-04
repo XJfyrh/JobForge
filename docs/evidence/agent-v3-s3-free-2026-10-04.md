@@ -20,7 +20,7 @@
 | 免费工具恢复分配新 IDs、三层 counters/known/held 保留；3 scope×3 chat/token/费用边界 | 通过，22.157s | `recovery-budget-01.log` |
 | 原 batch 锁内的实际 SELECT 执行计划比较 | 通过，2.965s | `recovery-queryplan-01.log` |
 | Windows SDK/Agent/探针/开发评分/S3 全套 Python | 1780 passed、12 skipped，126.18s；skip 不计 Linux 验收 | `python-full-01.log` |
-| S3 清单、单 Submit、失败 Wait 后导出、配置/profile/batch 漂移及全部十一行费用报告合同 | 19 passed；Linux mypy 八文件通过 | 本会话逐命令输出，CI 同步执行 |
+| S3 清单、单 Submit、失败 Wait 后导出、配置/profile/batch 漂移、物理子调用归类与分离计时报告合同 | 22 passed；Linux mypy 八文件通过 | 本会话逐命令输出，CI 同步执行 |
 | 代理真实 loopback 转发鉴权/成功上游、准确下一许可与原窗口、原子且独占完整 JSON 发布 | Go race 通过，2.813s（最终增量随全仓门禁） | 本会话定向输出 |
 
 F06 外部链路在首次 search_policy 的成功 Commit ACK **正常返回后**，阻断下一完整相同 step 的 Reserve，实际杀死 Go Worker、Wait 并确认原组消失；自然恢复 31.45s，已提交前缀无重发。F07 先 SIGSTOP 实际 step，再释放原持久 Observe ACK，实测普通管道 948 字节；未读取 ACK，`python_ack_consumed=false`，实际杀 step 后确认组消失并 Wait Worker，自然恢复 35.14s。入管不称 Python 已消费。
@@ -61,6 +61,8 @@ F06 外部链路在首次 search_policy 的成功 Commit ACK **正常返回后**
 
 Windows 全仓 `go test -race ./...` 已通过，真实PG集成包耗时439.558s（`go-race-full-01.log`）；平台专用skip不计Linux验收。Linux process 全套首次在并行构建负载下两项一秒满队列断言失败，等待所有重构建/race结束后，两项实际重跑通过（4.54s，`process-repair-01.log`）。Linux Python全套首次1365 passed、2 failed；隔离后四个相关IPC tail用例全部通过（1.03s，`python-ipc-repair-01.log`）。这两个原全套失败保留，不改称首次全套通过。
 
-正式Linux schema3协议坏帧/普通片段/计量片段/stderr超限四模式通过（11.37s，`protocol-negative-01.log`）；协调器Linux全套与生产镜像边界通过。没有修改生产 lease/deadline 或放宽失败断言。完整默认联合层当前仍在执行，PR CI仍待触发并记录最终结果。
+正式Linux schema3协议坏帧/普通片段/计量片段/stderr超限四模式通过（11.37s，`protocol-negative-01.log`）；协调器Linux全套与生产镜像边界通过。默认联合层 `integration-full-01.log` 的自然恢复/原正式执行器与launcher等检查通过，但SDK新HTTP脚本未复制到镜像而失败，整轮退出1，不计全套通过。补齐镜像路径后，该实际安装SDK/PG HTTP合同通过（3.48s）；外部F06/F07增量含信号/Wait/组消失独立时间通过（76.12s），日志 `integration-repair-02.log`。新增S3合同在相同Linux镜像实际22 passed（0.88s，`recovery-python-linux-01.log`）。没有修改生产 lease/deadline 或放宽失败断言。
 
-D4 的官方当日价格/metadata、实际业务/向量资源、独立清单 release、完整云端导出/评分/费用对照均未运行。S3 真实收费调用 **0**，无 S2 余额转用；S3 整体与 S4/S5 不标为完成。历史 W4、AT-25、远程模型与生产长期留存的原结论不改写。
+功能草稿 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 已触发八项CI。初次Python job因新测试未设置Agent源码路径而失败，已补显式 `PYTHONPATH`；最终head完整门禁结果仍待记录。原初次联合与CI失败保留，已通过且未变化的分段不反复执行。
+
+D4 已重新核对实际官方GET模型/余额、保存当天价格快照，并只读核验保留业务数据和两个向量索引；清单release、真实云端导出/评分/费用对照尚未执行。S3 真实收费调用 **0**，无 S2 余额转用；S3 整体与 S4/S5 不标为完成。历史 W4、AT-25、远程模型与生产长期留存的原结论不改写。

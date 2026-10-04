@@ -51,6 +51,7 @@ COPY --from=integration-build /out/agent-worker /out/agent-control /usr/local/bi
 COPY --from=integration-build /out/supportrecoveryproxy /usr/local/bin/
 COPY sdk/python /tmp/sdk
 RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/sdk
+COPY sdk/python/tests/run_recovery_http_contract.py /src/sdk/python/tests/run_recovery_http_contract.py
 COPY tools/support_evaluation/launcher.py tools/support_evaluation/driver.py tools/support_evaluation/export.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_evaluation/assemble.py tools/support_evaluation/evidence.py tools/support_evaluation/validate_data.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_recovery /usr/local/lib/python3.12/site-packages/tools/support_recovery/

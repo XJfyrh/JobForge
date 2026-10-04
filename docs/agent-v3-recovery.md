@@ -43,3 +43,5 @@ driver 需要主规划会话另行发布的 release，绑定原清单、prefligh
 清单生成不等于允许收费。D4 要待免费门禁、独立实现审查、适用 CI 及主规划会话明确放行；新增累计最多 5 CNY/6 小时/11 Runs，不沿用 S2 余额。unknown、冲突、冻结或窗口失败停止后续收费，不能换 batch、thaw、退款或增资。成本与业务评分仍需结合实际 outbound、业务只读前后摘要和全部原始导出，不能由本轮合成 HTTP 验收代替。
 
 外部实验镜像使用[独立 Dockerfile](../deploy/Dockerfile.support-recovery)，基于已核对 digest 的正式 Worker 镜像，仅加入已安装SDK、真实控制CLI、代理与进程监管/只读预检代码，不安装gold、评分器、合成registry或fault hook。原生产Dockerfile和S1/S2 launcher不变。`report.py`在容器外保留并评分全部十一行，H0和H1费用累计后再与C比较；缺少账本导出保留unknown。`known_cost_microyuan` 是按冻结定价和 observed usage计算的账本值，不能称供应商已结算费用；余额差值如取证须另列且说明无法精确归因到本实验。
+
+报告按已提交step实际物理调用所绑定的attempt/tool将全部检索subcalls纳入前缀，同逻辑step旧attempt仍为未提交调用；无故障H1单列。Supervisor分别记录信号发出、Worker Wait完成和进程组消失确认时点；无child窗口明确记录且无虚构组消失时间。外部操作进程以[只读SQL](../tools/support_recovery/control_audit.sql)导出原attempt关闭/新Claim与首个新step时间，报告的 `--control-audit` 绑定原batch。SDK故障前lease仅称观测样本，不称最后一次续租事实；自然关闭等待、关闭到Claim、活跃执行和Run总耗时分别保留。

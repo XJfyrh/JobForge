@@ -639,17 +639,24 @@ func TestRunRecoveryExternalProxyAndSupervisor(t *testing.T) {
 				t.Fatalf("external supervisor did not verify real process facts: %v %s", err, raw)
 			}
 			var receipt struct {
-				Passed    bool   `json:"passed"`
-				StepID    string `json:"step_id"`
-				Phase     string `json:"phase"`
-				Queued    int    `json:"ordinary_ack_queued_bytes"`
-				Consumed  bool   `json:"python_ack_consumed"`
-				Waited    bool   `json:"worker_waited"`
-				GroupGone bool   `json:"group_gone"`
+				Passed    bool      `json:"passed"`
+				StepID    string    `json:"step_id"`
+				Phase     string    `json:"phase"`
+				Queued    int       `json:"ordinary_ack_queued_bytes"`
+				Consumed  bool      `json:"python_ack_consumed"`
+				Waited    bool      `json:"worker_waited"`
+				GroupGone bool      `json:"group_gone"`
+				KillSent  time.Time `json:"kill_sent_at"`
+				WaitAt    time.Time `json:"worker_wait_completed_at"`
+				GoneAt    time.Time `json:"group_gone_confirmed_at"`
+				Child     string    `json:"child_group_at_boundary"`
 			}
 			raw, err := os.ReadFile(resultPath)
 			if err != nil || json.Unmarshal(raw, &receipt) != nil || !receipt.Passed || !receipt.Waited || !receipt.GroupGone || receipt.Consumed {
 				t.Fatal("external receipt lost factual cleanup/ACK distinction")
+			}
+			if receipt.KillSent.IsZero() || receipt.WaitAt.Before(receipt.KillSent) || receipt.GoneAt.Before(receipt.KillSent) || receipt.Child != "present" {
+				t.Fatal("external receipt replaced signal time with cleanup or invented a child window")
 			}
 			wantCursor, wantChats := int64(5), 5
 			if mode == "F07" {
@@ -680,7 +687,7 @@ func TestRunRecoveryExternalProxyAndSupervisor(t *testing.T) {
 			if f.badRequest.Load() || f.count("/chat/completions") != wantChats || f.count("order") != 1 || f.count("delivery") != 1 {
 				t.Fatal("external recovery replayed accepted prefix or lost old chat exposure")
 			}
-			t.Logf("actual external %s: phase=%s queued=%d consumed=false actual Wait/group gone, natural recovery=%s", mode, receipt.Phase, receipt.Queued, time.Since(start))
+			t.Logf("actual external %s: phase=%s queued=%d consumed=false kill=%s Wait=%s groupGone=%s natural recovery=%s", mode, receipt.Phase, receipt.Queued, receipt.KillSent.Format(time.RFC3339Nano), receipt.WaitAt.Format(time.RFC3339Nano), receipt.GoneAt.Format(time.RFC3339Nano), time.Since(start))
 		})
 	}
 }

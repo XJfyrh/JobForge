@@ -55,6 +55,45 @@ def frozen() -> dict[str, Any]:
     }
 
 
+def test_worker_signal_and_wait_times_keep_no_child_window_explicit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty boundary has no invented group disappearance timestamp."""
+    supervisor = driver.Supervisor({}, tmp_path)
+    observed: dict[str, str] = {}
+
+    class Process:
+        pid = 100
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            observed["kill"] = datetime.now(UTC).isoformat()
+
+        def wait(self, **_: Any) -> int:
+            observed["wait"] = datetime.now(UTC).isoformat()
+            return -driver.signal.SIGKILL
+
+    supervisor.current = Process()  # type: ignore[assignment]
+    supervisor.index = 0
+    monkeypatch.setattr(driver.signal, "SIGKILL", 9, raising=False)
+    monkeypatch.setattr(driver, "children", lambda *_: [])
+    facts = supervisor.inject(
+        {"experiment": "test", "target": "worker"}, {"phase": "commit_ack_lost"}
+    )
+    assert (
+        facts["kill_sent_at"]
+        <= observed["kill"]
+        <= observed["wait"]
+        <= facts["worker_wait_completed_at"]
+    )
+    assert facts["worker_returncode"] == -driver.signal.SIGKILL
+    assert facts["child_group_at_boundary"] == "no_child"
+    assert facts["group_gone_confirmed_at"] is None
+    assert supervisor.current is None
+
+
 @pytest.mark.parametrize(
     "change", ["omit", "repeat", "replace", "identity", "legacy", "budget", "window"]
 )
