@@ -85,3 +85,7 @@ ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://g
 ## S2 有界 Agent
 
 [ADR-0024](0024-bounded-support-agent.md) / [PRD v0.16](../product/JobForge_PRD_v0.16.md) 为 Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 合并生效）：在复用 S1 执行器和账本的基础上加入 Go 校验的动态只读决定，开发集至少 32/40 业务正确；维护者授权合理预算自主调整。仅对新 S2 profile 部分取代 ADR-0018/0020 的固定图和终结判断及 ADR-0021～0023 的 S1 专属费用范围，其余合同和历史记录保留。契约接受、实现和真实验收分别记录。
+
+## S3 持久步骤与故障恢复
+
+[ADR-0025](0025-confirmed-step-recovery.md) / [PRD v0.17](../product/JobForge_PRD_v0.17.md) 为 **Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）**：按原 call/profile 的完整审计与持久 attempt/步骤恢复证明，限定恢复未提交步骤，并区分纯进程丢失与协议错误。仅对新 S3 profile 部分取代 ADR-0019/0020 的对应保守限定；实现与收费验收另记。具体锁序、自然故障矩阵及预算前提见[实施计划](../plans/agent-v3-s3-recovery.md)，历史 ADR 正文保持。

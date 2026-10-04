@@ -16,3 +16,4 @@ Agent v3 使用独立增量合同；接受设计、完成实现和真实验收�
 | [v0.13](JobForge_PRD_v0.13.md) | 首批可信 profile、快照约束与40行串行驱动 | Accepted；启动/评分实现与真实40案随PR #51交付 |
 | [v0.14](JobForge_PRD_v0.14.md) | S1 收尾新批次与新增累计 5 CNY 授权 | **Accepted（PR #53 合并生效）；不恢复原批，实施与真实验收另行记录** |
 | [v0.15](JobForge_PRD_v0.15.md) | 保留历史未知费用全额预留后的独立新批准入 | Accepted（PR #54 合并生效）；历史hold保留，完整40案证据见S1报告；后续预算按维护者最新授权记录 |
+| [v0.17](JobForge_PRD_v0.17.md) | S3持久步骤与自然故障恢复 | Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）；[ADR-0025](../adr/0025-confirmed-step-recovery.md)及[实施计划](../plans/agent-v3-s3-recovery.md)，实现/收费验收另记；S2已交付范围继续按[v0.16](JobForge_PRD_v0.16.md)与[S2报告](../evidence/agent-v3-s2-delivery-2026-09-17.md) |
