@@ -778,7 +778,7 @@ def main() -> None:
     plan, settings = json.loads(raw), json.loads(args.settings.read_bytes())
     continuation = None
     if args.continuation is not None:
-        from tools.support_recovery.continuation import KIND, verify
+        from tools.support_recovery.continuation import KIND
 
         continuation = json.loads(args.continuation.read_bytes())
         if (
@@ -791,7 +791,8 @@ def main() -> None:
             or settings["barriers"] != "/var/lib/jobforge/barriers-02-continuation"
         ):
             raise ValueError("S3_CONTINUATION_NOT_RELEASED")
-        verify(continuation, plan, Path(settings["original_root"]), check_sources=False)
+        # preflight performs the sole complete artifact verification before any
+        # Worker or Submit. Repeating it here can expire the fresh PG snapshot.
     elif release.get("kind") == "support-s3-interrupted-continuation-v1":
         raise ValueError("S3_CONTINUATION_REQUIRED")
     verify_runtime(plan, settings, release, continuation)

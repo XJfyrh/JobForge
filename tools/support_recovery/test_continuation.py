@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -454,3 +455,80 @@ def test_waiting_expiry_allows_only_original_deadline_transition(wrong: str) -> 
     elif wrong == "recovery":
         current["recovery_count"] = 2
     assert continuation.waiting_expiry(previous, current) == (wrong == "none")
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="fixed Linux CLI path")
+def test_main_does_not_repeat_the_complete_preflight_material_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The real CLI cannot consume snapshot freshness by verifying twice."""
+    value = frozen()
+    plan_path, settings_path, manifest_path, release_path = (
+        tmp_path / name
+        for name in (
+            "execution-list.json",
+            "settings.json",
+            "manifest.json",
+            "release.json",
+        )
+    )
+    atomic_json(plan_path, value)
+    settings = {
+        "original_root": str(tmp_path),
+        "barriers": "/var/lib/jobforge/barriers-02-continuation",
+    }
+    atomic_json(settings_path, settings)
+    manifest = {
+        "schema_version": 1,
+        "kind": continuation.KIND,
+        "remaining_ordinals": [8, 9, 10, 11],
+        "execution_list_sha256": continuation.digest(plan_path),
+        "original_artifacts": {},
+    }
+    atomic_json(manifest_path, manifest)
+    atomic_json(
+        release_path,
+        {
+            "approved": True,
+            "kind": continuation.KIND,
+            "execution_list_sha256": continuation.digest(plan_path),
+            "continuation_sha256": continuation.digest(manifest_path),
+            "settings_sha256": continuation.digest(settings_path),
+        },
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "driver",
+            "--plan",
+            str(plan_path),
+            "--settings",
+            str(settings_path),
+            "--release",
+            str(release_path),
+            "--continuation",
+            str(manifest_path),
+            "--out",
+            "/var/lib/jobforge/exports/run-02-continuation",
+        ],
+    )
+    checked = []
+    actual_verify = continuation.verify
+
+    def counted_verify(*args: Any, **kwargs: Any) -> None:
+        checked.append("material_check")
+        actual_verify(*args, **kwargs)
+
+    def preflight_stop(*_args: Any) -> None:
+        continuation.verify(manifest, value, tmp_path, check_sources=False)
+        raise ValueError("PREFLIGHT_TEST_STOP")
+
+    monkeypatch.setattr(continuation, "verify", counted_verify)
+    monkeypatch.setattr(driver, "verify_runtime", lambda *_: None)
+    monkeypatch.setattr(driver.signal, "signal", lambda *_: None)
+    monkeypatch.setattr(driver, "launch", preflight_stop)
+    with pytest.raises(ValueError, match="PREFLIGHT_TEST_STOP"):
+        driver.main()
+    assert checked == ["material_check"]

@@ -25,3 +25,5 @@ DEV-035-C 的 call `51e2167b-3f4a-48cd-b16a-713f6d3a5402` 为 attempt 2 的 mode
 修复后的外部工具定向测试 62 项通过，Linux 平台 mypy 九文件通过。覆盖已提交纠正的准确绑定与负例、PG 实际 attempt/关闭状态漂移、原导出字节改变、非白名单源码、账户/known/held/freeze变化、余项 Submit 不确定性不重试，以及自然等待超时的正负例。安装后新镜像和原七项的实时只读预检另存回执，不用离线测试代替真实 F03/F07。
 
 准备期间五条 awaiting_approval 的原 Run deadline 已到期。另经主规划会话授权仅启用原控制服务，既有 Sweep 自然将它们转为 failed/RUN_DEADLINE_EXCEEDED，两条 cancelled 不变，新增收费为 0。实际 SDK/PG 核验 Step/attempt/Call/Result 和全部账本不变；仅等待态 state/error/updated_at 与一条对应事件变化。每条 SDK 的 tenant/batch 聚合视图对照原首轮最终账户值，family/run_usage 不变。88 个最新取证文件单列绑定，9,334 个原文件及原执行报告不改写。事后等待审批超时不计入最初执行耗时，不改变最初模型业务评分。
+
+首次受控续执行入口在任何 Submit/Worker 前因 PG 快照超过原 120 秒而退出，保留失败容器和目录。原 PG 仍为 7 Runs/77 calls/28 chat、known 66,306、held 0，原 principal startup 计数未增加。原因是 main 与 preflight 重复完整校验 9,334 个原文件；仅移除 main 的冗余校验，保留 preflight 在任何 Submit/Worker 前的唯一完整校验、release/source/runtime 绑定和 120 秒有效期。修复后仍须重新冻结和具体放行，不把零提交的预检失败记为新增 Run 重跑。
