@@ -1,0 +1,29 @@
+# Build deploy/Dockerfile.agent-worker first and bind its digest in the release.
+ARG WORKER_IMAGE=jobforge-agent-worker:s3-production
+FROM golang:1.26.5-bookworm@sha256:53eeac89074db483fdf0ab3be1df32bf6e47562263d2d0d6baa7f26acb4957dd AS tools-build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/agent-control ./cmd/agent-control
+COPY tools/supportrecoveryproxy ./tools/supportrecoveryproxy
+COPY internal ./internal
+COPY proto ./proto
+COPY migrations ./migrations
+RUN CGO_ENABLED=0 go build -trimpath -o /out/agent-control ./cmd/agent-control && CGO_ENABLED=0 go build -trimpath -o /out/supportrecoveryproxy ./tools/supportrecoveryproxy
+
+FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS sdk-build
+COPY sdk/python /sdk
+RUN python -m pip install --no-cache-dir hatchling==1.27.0 && python -m pip wheel --no-deps --no-build-isolation -w /wheels /sdk
+
+FROM ${WORKER_IMAGE}
+USER root
+COPY --from=sdk-build /wheels /sdk-wheels
+RUN python -m pip install --no-cache-dir --no-deps /sdk-wheels/*.whl
+COPY --from=tools-build /out/agent-control /out/supportrecoveryproxy /usr/local/bin/
+WORKDIR /app
+# External experiment supervisor and readonly preflight helpers only. No gold,
+# scorer, fixture registry, fault installer or replacement Worker enters here.
+COPY tools/support_evaluation/driver.py tools/support_evaluation/export.py tools/support_evaluation/launcher.py tools/support_evaluation/assemble.py tools/support_evaluation/evidence.py tools/support_evaluation/validate_data.py /app/tools/support_evaluation/
+COPY tools/support_recovery/driver.py tools/support_recovery/plan.py tools/support_recovery/continuation.py /app/tools/support_recovery/
+USER 65532:65532
+ENTRYPOINT ["python", "-m", "tools.support_recovery.driver"]

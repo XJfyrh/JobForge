@@ -99,6 +99,8 @@ S1-C3b按[固定运行时指南](docs/agent-v3-runtime.md)构建`tools/agentrunt
 
 运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1与support-agent-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
 
+S3 增量使用 schema3 共同 recovery fixture、真实PG原关闭证明/guard/预算/迁移和安装SDK HTTP，并进入现有固定Linux `integration-check` 的 `TestRunRecovery`。自然30s lease、180s attempt、最多三次恢复及外部代理/Supervisor逐项验证；平台/环境skip不计通过。新增实验准备合同另运行 `pytest tools/support_recovery`、Linux平台mypy，均进入PR CI。生产镜像拒绝测试fault模块/安装器/manifest，详见[恢复指南](docs/agent-v3-recovery.md)。
+
 ## 安全问题
 
 不要在公开 Issue 或 Pull Request 中提交未公开漏洞、凭据或敏感数据。请遵循 [SECURITY.md](SECURITY.md) 的私密报告流程。

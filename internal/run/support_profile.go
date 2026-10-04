@@ -57,6 +57,7 @@ type SupportModelDefinition struct {
 // SupportProgramDefinition binds reviewed code artifacts without executable paths.
 type SupportProgramDefinition struct {
 	Strategy             string `json:"strategy"`
+	RecoveryPolicy       string `json:"recovery_policy,omitempty"`
 	DecisionSchema       string `json:"decision_schema,omitempty"`
 	DecisionSchemaSHA256 string `json:"decision_schema_sha256,omitempty"`
 	Adapter              string `json:"adapter"`
@@ -156,10 +157,13 @@ func (d SupportDefinition) validate() error {
 	switch d.SchemaVersion {
 	case 1:
 		if p.Strategy != SupportFixedStrategy || p.Adapter != "support-fixed-v1" || p.PromptVersion != SupportPromptVersion ||
-			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || price.ObservedOn != "2026-09-16" {
+			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != "2026-09-16" {
 			return ErrProfileUnavailable
 		}
-	case 2:
+	case 2, 3:
+		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion == 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
+			return ErrProfileUnavailable
+		}
 		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != SupportAgentPromptVersion ||
 			p.DecisionSchema != SupportAgentDecisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
 			return ErrProfileUnavailable
@@ -234,6 +238,9 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 	if p.Strategy == SupportAgentStrategy {
 		p.ExecutorVersion = SupportAgentExecutorVersion
 	}
+	if definition.SchemaVersion == 3 {
+		p.ExecutorVersion = SupportRecoveryExecutorVersion
+	}
 	p.Hash, err = SupportProfileHash(p)
 	return p, err
 }
@@ -244,6 +251,9 @@ func SupportProfileHash(p Profile) (string, error) {
 	expectedExecutor := ProviderAuditExecutorVersion
 	if d.Program.Strategy == SupportAgentStrategy {
 		expectedExecutor = SupportAgentExecutorVersion
+	}
+	if d.SchemaVersion == 3 {
+		expectedExecutor = SupportRecoveryExecutorVersion
 	}
 	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||
 		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != ProviderAuditPolicyDeepSeekV1 ||

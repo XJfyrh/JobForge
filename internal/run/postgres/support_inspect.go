@@ -90,7 +90,11 @@ func (s *Store) InspectSupport(ctx context.Context, request SupportInspectionReq
 		return result, dbError(err)
 	}
 	if schemaPresent {
-		if err := tx.QueryRow(ctx, "select count(*)=24 from schema_migrations where version between 1 and 24").Scan(&result.MigrationsReady); err != nil {
+		required := 24 // Preserve the historical inspection contract.
+		if profile.ConfirmedStepRecovery() {
+			required = 26
+		}
+		if err := tx.QueryRow(ctx, "select count(*)=$1 from schema_migrations where version between 1 and $1", required).Scan(&result.MigrationsReady); err != nil {
 			return result, dbError(err)
 		}
 	}

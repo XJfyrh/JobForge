@@ -156,6 +156,12 @@ func TestPrepareSupportAgentVersionAndOperatorBudget(t *testing.T) {
 	priceReceipt := source.Definition.Price.SourceSHA256
 	source.Definition = example.Definition
 	source.Definition.Price.SourceSHA256 = priceReceipt
+	// The checked-in example preserves its historical package identity. This
+	// new synthetic deployment binds the currently tested source package.
+	source.Definition.Program.AdapterSourceSHA256, err = supportAdapterSHA256(o.Repo)
+	if err != nil {
+		t.Fatal(err)
+	}
 	o.ValidFrom, o.BatchCostMicroyuan = "2026-09-17T12:00:00Z", 20000000
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
 		t.Fatal(err)
@@ -319,7 +325,7 @@ func TestDeploymentRequiresAuditedSupportAndRecomputedHash(t *testing.T) {
 	}
 }
 
-func TestSupportSourceExampleMatchesReviewedFilesButRequiresReceipts(t *testing.T) {
+func TestSupportHistoricalSourceExamplePreservesDefinitionAndRequiresReceipts(t *testing.T) {
 	repo := filepath.Join("..", "..")
 	raw, err := os.ReadFile(filepath.Join(repo, "deploy", "support-cloud.source.example.json"))
 	if err != nil {
@@ -330,10 +336,43 @@ func TestSupportSourceExampleMatchesReviewedFilesButRequiresReceipts(t *testing.
 		t.Fatal(err)
 	}
 	profile, err := run.BuildSupportProfile("source-example-validation", source.Definition)
-	if err != nil || profile.Executable || verifySupportSources(repo, source.Definition) != nil {
-		t.Fatal("source example differs from the fixed definition or reviewed files", err)
+	if err != nil || profile.Executable || supportSHA256(raw) != "99ed22c9024ba5bf04dee90d23881b1938378ba405794458b8cec48136cc6503" {
+		t.Fatal("historical source example identity changed", err)
 	}
 	if source.BuildReceipt.SHA256 != "" || source.DataReview.SHA256 != "" || source.ScoringReview.SHA256 != "" {
 		t.Fatal("source example claims completed deployment/review receipts")
 	}
+}
+
+func TestPrepareSupportRecoveryVersionAndSourceBinding(t *testing.T) {
+	o, source := supportPrepareFixture(t)
+	raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var example supportSource
+	if json.Unmarshal(raw, &example) != nil || verifySupportSources(o.Repo, example.Definition) != nil {
+		t.Fatal("S3 source template differs from the reviewed source tree")
+	}
+	priceReceipt := source.Definition.Price.SourceSHA256
+	source.Definition = example.Definition
+	source.Definition.Price.SourceSHA256 = priceReceipt
+	o.ValidFrom = "2026-10-04T12:00:00Z"
+	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := runworker.ParseManifest(files["executor.json"])
+	if err != nil || manifest.ExecutorVersion != run.SupportRecoveryExecutorVersion || manifest.Profiles[0].AdapterID != "support-agent-v1" {
+		t.Fatal("S3 manifest did not require its fixed version")
+	}
+	var launch supportLaunch
+	if json.Unmarshal(files["launch.json"], &launch) != nil || len(launch.Cases) != 40 {
+		t.Fatal("source preparation changed historical 40-case registration")
+	}
+	// The independent S3 driver selects its frozen eleven intentions; neither
+	// the S1/S2 launcher nor its restart=no semantics are changed here.
 }

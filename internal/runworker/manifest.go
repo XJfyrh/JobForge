@@ -59,7 +59,7 @@ func ParseManifest(data []byte) (Manifest, error) {
 
 // Validate rejects mixed versions, missing identities, and duplicate profiles.
 func (m Manifest) Validate() error {
-	if m.SchemaVersion != 1 || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
+	if m.SchemaVersion != 1 || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
 		return run.ErrProfileUnavailable
 	}
 	seen := make(map[string]bool, len(m.Profiles))

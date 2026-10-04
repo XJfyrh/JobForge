@@ -1,6 +1,6 @@
 # S3 持久步骤与故障恢复：实施与验收计划
 
-2026-10-04（Asia/Shanghai）；**D0 独立方案审查通过，合同随本决策 PR 合并生效；D1～D3 待实施与验收**。对应[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)。基线为 `e2b9bad`（[PR #56](https://github.com/XJfyrh/JobForge/pull/56)），合同分支 `XJfyrh/docs/agent-v3-s3-recovery`，开始时工作区干净。实施会话承担源码、测试和文档，原规划会话负责方案审查与结果验收；合同 PR 按授权提交、推送并在必需 CI 通过后合并，随后实施免费工程层。功能 PR 另行审查，收费仍等待 D4 清单放行。
+**D0 规划时历史记录**（2026-10-04，Asia/Shanghai）：当时独立方案审查通过，合同随决策 PR 合并生效，D1～D3 尚待实施与验收。当前实施与真实验收结果见第 7 节。对应[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)。基线为 `e2b9bad`（[PR #56](https://github.com/XJfyrh/JobForge/pull/56)），合同分支 `XJfyrh/docs/agent-v3-s3-recovery`，开始时工作区干净。实施会话承担源码、测试和文档，原规划会话负责方案审查与结果验收；合同 PR 按授权提交、推送并在必需 CI 通过后合并，随后实施免费工程层。功能 PR 另行审查，收费仍等待 D4 清单放行。
 
 ## 1. 已核对的接缝与最小落点
 
@@ -67,11 +67,11 @@ F03及F05/F06至少使用动态`support-agent-v1`正式入口、真实PG/gRPC和
 | 强制门禁 | Go build/vet/golangci-lint/全仓race；ruff/check+format、mypy SDK/Agent、Python全套；SQLFluff基线+migrations；Buf及适用生成/registry边界 | 按[CONTRIBUTING](../../CONTRIBUTING.md)和[开发指南](../development.md)；并发修改必须`go test -race ./...`，skip单列 |
 | 真实云端 | 已批准有限profile/batch、正式安装包/SDK与真实业务HTTP/embedding/pgvector | 仅D4；不能由上述fixture替代 |
 
-新增自然故障集按顺序运行，估算30秒回收场景及四次丢失约需数分钟，实际180秒attempt场景另需至少3分钟；建议专门联合套件有12分钟上限，记录实测后只调整必要CI/test timeout，不缩短生产lease。镜像构建与全仓门禁另计，尚无本次实测耗时；该估算不是SLO。自然等待期间使用有界最终断言/进程屏障，不让单次阻塞调用妨碍进度输出。
+新增自然故障集按顺序运行。定向自然场景已实测约630秒，新增外部两例约76秒，尚须既有合同/正式进程与PG预算检查；联合套件固定上限因此调整为1200秒、CI job为35分钟，不缩短生产lease。镜像构建与全仓门禁另计；上述耗时不是SLO。自然等待期间使用有界最终断言/进程屏障，不让单次阻塞调用妨碍进度输出。
 
 完整新免费验收预计包含一次固定镜像构建、一轮定向PG/进程故障、一轮适用全仓门禁；有失败只重跑修复项与受影响门禁，不循环重复已通过或无关验收。观测配置无改动时不另追加本地promtool/dashboard循环，现有必需PR CI保持。依赖或专用开关缺失造成skip，必须补对应层或明确未执行。
 
-## 5. 真实云端环境与费用前提（本轮只读）
+## 5. 真实云端环境与费用前提（D0 规划时只读记录）
 
 已先查仓库外 `E:/JobForge-notes/2026-09-17-agent-v3-s2` 的目录与配置用途，没有输出凭据/DSN口令/业务正文：
 
@@ -128,4 +128,6 @@ checkpoint组让正式新Worker自然Claim原Run，不再次Submit/Retry。控�
 
 每轮记录源码commit/tree、未提交差异、命令/退出码、镜像digest/安装包摘要、profile/price/schema/prompt/数据/评分摘要、注入点、实际进程事实、PG只读摘要及SDK导出/抓取时间。原日志与报告追加保存于本次外部目录；公开仓库只提交必要脱敏摘要和哈希，秘密、原始业务/模型全文不进日志或普通Trace。失败原始记录不被修复后的通过覆盖。
 
-D0 只运行文档/差异检查和环境只读核对；没有生产代码/migration/Proto改动，也未运行本次Go/Python回归、真实PG、Linux进程或云端推理。这些层次仍待D1～D4实际执行，不计通过。合同已通过独立方案审查；本决策 PR 的 CI 与合并结果、功能实施和验收将另行记录。S3 收费调用仍为 0。
+D0 合同 PR #57 经独立审查、八项 CI 后已合并。D1/D2 的 schema3/关闭证明/guard 与正式进程恢复、D3 的真实 PG/已安装 SDK/自然计时/全套强制门禁已获独立接受；最终工具 head `782db17` 八项 CI 通过，失败及 F01～F17 映射见[免费证据](../evidence/agent-v3-s3-free-2026-10-04.md)。
+
+D4 已按原固定十一项的两轮具体放行完成，并获独立验收：五个真实接管通过，完整方案业务 7/8、DEV-035-C 失败保留，三条 H0 有意取消、安全 11/11。总 50 chat/139 physical，known 118,126 microyuan，held/unknown/anomaly 为 0；不是供应商发票。首七项中断、零提交预检失败、原等待态自然到期与报告窗口修正均保留，来源/审批/预算及原四项续执行没有重置，详见[云端证据](../evidence/agent-v3-s3-cloud-2026-10-04.md)。收费与 S3 控制服务已停止；最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准。S4/S5 未开始，历史未验收事项不变。

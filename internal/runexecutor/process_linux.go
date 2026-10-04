@@ -312,9 +312,15 @@ func (p *Process) lifecycle(ctx context.Context, pgid int, pipes processPipes, w
 		limitTimer = time.NewTimer(cleanupLimit)
 		limit = limitTimer.C
 		if !groupGone(pgid) {
-			// Reaping the guardian is insufficient. A surviving child makes this
-			// execution unclean even if our subsequent forced cleanup succeeds.
-			p.problem(Ordinary, PipeFailure)
+			// A killed guardian can leave its child alive. Cleanup must still join
+			// it and prove group disappearance. Only a claimed normal/typed exit
+			// with a survivor is itself a protocol fault; a signal is process loss.
+			p.mu.Lock()
+			exit := p.facts.Guardian
+			p.mu.Unlock()
+			if !exit.Signaled && exit.Code != 72 {
+				p.problem(Ordinary, PipeFailure)
+			}
 			p.Stop()
 		}
 	case <-ctx.Done():

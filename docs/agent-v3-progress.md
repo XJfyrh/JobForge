@@ -1,6 +1,6 @@
 # Agent v3 实施记录
 
-**2026-09-17 当前状态：S2冻结候选完整40案，业务37/40（92.5%）、安全40/40完整且硬失败0；隔离响应截断/unknown全hold/停止验证完成。** 见[S2完整报告](evidence/agent-v3-s2-delivery-2026-09-17.md)与[PR #56](https://github.com/XJfyrh/JobForge/pull/56)。S1的11/40基线与历史失败保持原样；S3～S5未开始。后文保留各时期事实。
+**2026-10-04 当前状态：S3 机制与固定十一项真实模型验收已获独立接受；最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准。** 五个故障接管通过，八个完整方案业务 7/8、DEV-035-C 失败保留，三条 H0 有意取消，安全 11/11；50 chat 的声明定价 known 为 0.118126 CNY，held/unknown/anomaly 为 0，收费已停止。见[S3 完整证据](evidence/agent-v3-s3-cloud-2026-10-04.md)。S2冻结候选40案的业务37/40、安全40/40，S1的11/40基线及历史失败保持原样；S4/S5未开始。后文保留各时期事实。
 
 ## 起点记录（历史）
 
@@ -20,7 +20,7 @@
 | S0 契约与关键试验 | 已交付并合并 | PRD v0.7、ADR-0013～0015接受；执行器11类真实进程/race通过；模型探针32项确定性回归通过；独立审查与六项CI通过 |
 | S1 业务与基线 | 已完成真实验收；PR #51交付 | 40/40完整执行、安全硬失败0、业务11/40（27.5%）；[完整报告](evidence/agent-v3-s1-delivery-2026-09-17.md)、[运行指南](agent-v3-cloud-batch.md)。历史两批失败及hold保留 |
 | S2 Agent 与预算 | 完整开发验收37/40、安全硬失败0；PR #56交付 | Go授权动态只读循环、13案补充检索、隔离响应截断与unknown全hold；[完整报告](evidence/agent-v3-s2-delivery-2026-09-17.md) |
-| S3 步骤恢复 | 阶段未开始；S1-C3b已实测基础恢复机制 | 固定流程的真实Worker SIGKILL、新Claim和checkpoint恢复已实跑；动态Agent的S3故障矩阵与真实云端效果仍未验收 |
+| S3 步骤恢复 | 机制及有限真实模型验收已独立接受；交付与合并以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准 | schema3/关闭证明/guard、真实 PG/SDK/自然进程与八项 CI 通过；固定 11 Runs、五个接管通过、业务 7/8、安全 11/11，原失败和费用完整保留 |
 | S4 审批与写入 | 未开始 | 无新审批/写入验收 |
 | S5 评测与展示 | 未开始 | 无新保留集、页面或观测验收 |
 
@@ -123,3 +123,9 @@ C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、�
 新 batch `901bce9d…` 于 2026-09-17 00:31:12～00:32:13（UTC+8）实际运行。14 案方案进入 `awaiting_approval`，DEV-015 中断，25 案未尝试；业务评分为 9/40，安全证据为 14 案通过、1 案不完整、25 案未执行。方案完成不表示已批准、写入业务或解决工单；不能将部分安全结果写成全批通过。完整结果见[证据](evidence/agent-v3-s1-closeout-2026-09-17.md)及[机器报告](evidence/agent-v3-s1-closeout-2026-09-17.json)。
 
 中断调用取得 HTTP 200 响应头后未取得完整响应体，usage 无法确认，批次以 `CHAT_USAGE_UNKNOWN` 停止。新增已知费用为 48,653 microyuan（0.048653 CNY），未释放金额 hold 为 2,105,344 microyuan（2.105344 CNY）；hold 不代表供应商账单，unknown 不能当零费。按 ADR-0022，缺少必要持久确认时不得换 batch 绕过。已停止收费，PR #51 保持 Draft，S1 未闭合；历史首批证据、W4 失败、AT-25 跳过及生产长期留存未验收继续保留，不推进 S2～S5。
+
+## S3 实现与当前验收边界（2026-10-04）
+
+恢复合同 PR #57 已合并为 `30cc7b6`，采用[PRD v0.17](product/JobForge_PRD_v0.17.md)和[ADR-0025](adr/0025-confirmed-step-recovery.md)。当前功能分支交付schema3/原关闭证明、原账户锁内guard、正式Worker自然恢复与有限外部实验驱动；旧schema1/2与历史unknown/hold不升级或清零。真实PG/SDK、Linux实际进程、30s lease、180s attempt、三次恢复与预算不重置的免费证据见[S3检查记录](evidence/agent-v3-s3-free-2026-10-04.md)。
+
+全仓 race、原生产及最终工具 head `782db17` 的[八项 CI](https://github.com/XJfyrh/JobForge/actions/runs/37195154303)通过，独立 D1～D3 审查已接受。用户要求的 D4 已按两轮具体放行完成原十一项并获独立验收：五个真实接管通过、完整方案业务 7/8、三条 H0 有意取消、安全 11/11。DEV-035-C 的业务失败、首轮 driver 错误、零提交续执行失败、旧等待态自然到期及报告窗口修正均保留。总 50 chat/139 physical、known 118,126 microyuan，held/unknown/anomaly 为 0；仅是声明定价账本，不是发票。完整来源/审批/计时/费用见[证据](evidence/agent-v3-s3-cloud-2026-10-04.md)与[机器摘要](evidence/agent-v3-s3-cloud-2026-10-04.json)。最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准；S4/S5 未开始，既有失败及留存限制不改写。

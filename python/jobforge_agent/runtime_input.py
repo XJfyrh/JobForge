@@ -14,6 +14,7 @@ from jobforge_agent.protocol_v2 import Frame, ProtocolError, encode
 
 EXECUTOR_VERSION = "linux-v2-audit-runtime-1"
 AGENT_EXECUTOR_VERSION = "linux-v2-agent-runtime-1"
+RECOVERY_EXECUTOR_VERSION = "linux-v2-recovery-runtime-1"
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 HASH = re.compile(r"[0-9a-f]{64}")
@@ -388,7 +389,6 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
 
 def executor_matches_adapter(version: str, adapter: str) -> bool:
     """Bind a manifest selection to one known implementation version."""
-    expected = (
-        AGENT_EXECUTOR_VERSION if adapter == "support-agent-v1" else EXECUTOR_VERSION
-    )
-    return version == expected
+    if adapter == "support-agent-v1":
+        return version in (AGENT_EXECUTOR_VERSION, RECOVERY_EXECUTOR_VERSION)
+    return version == EXECUTOR_VERSION

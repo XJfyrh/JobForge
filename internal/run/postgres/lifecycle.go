@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -17,9 +18,35 @@ type executionSlot struct {
 }
 
 type attemptResources struct {
-	Authority agentrun.Authority
-	AttemptNo int64
-	Slots     [3]executionSlot
+	Authority    agentrun.Authority
+	AttemptNo    int64
+	Slots        [3]executionSlot
+	RecoveryStep *agentrun.StepIdentity
+}
+
+// S3 closure publishes proof under the same batch lock as new permissions.
+// Frozen accounts still allow cleanup; closure neither refunds nor checks quota.
+func (s *Store) lockClosingAttemptResources(ctx context.Context, tx pgx.Tx, r agentrun.Run, a agentrun.Authority) (attemptResources, error) {
+	profile, err := s.ledgerProfile(ctx, tx, r, false)
+	if err != nil {
+		return attemptResources{}, err
+	}
+	recovery := profile.ConfirmedStepRecovery()
+	if recovery {
+		if _, err := loadAccounts(ctx, tx, r.TenantID, r.BusinessRequestID, true); err != nil {
+			return attemptResources{}, err
+		}
+	}
+	resources, err := lockAttemptResources(ctx, tx, r, a)
+	if err != nil || !recovery {
+		return resources, err
+	}
+	step := agentrun.PendingStep(r, a)
+	if err := agentrun.CheckStep(r, a, step); err != nil {
+		return resources, err
+	}
+	resources.RecoveryStep = &step
+	return resources, nil
 }
 
 func lockSlots(ctx context.Context, tx pgx.Tx, r agentrun.Run, worker string, capacities *[3]int) ([3]executionSlot, error) {
@@ -107,8 +134,18 @@ func closeAttemptRecords(ctx context.Context, tx pgx.Tx, r *agentrun.Run, a *age
 	if r.Error != nil {
 		code = &r.Error.Code
 	}
-	tag, err := tx.Exec(ctx, `update run_attempts set finished_at=$4,outcome=$5,error_code=$6
-		where tenant_id=$1 and run_id=$2 and attempt_no=$3 and finished_at is null`, r.TenantID, r.ID, resources.AttemptNo, now, outcome, code)
+	var recoveryJSON []byte
+	var ordinal *int64
+	if resources.RecoveryStep != nil && code != nil && agentrun.RecoveryClosure(outcome, *code) {
+		var err error
+		recoveryJSON, err = json.Marshal(resources.RecoveryStep)
+		if err != nil || r.RecoveryCount < 1 || r.RecoveryCount > agentrun.MaxRecoveries {
+			return agentrun.ErrInternal
+		}
+		ordinal = &r.RecoveryCount
+	}
+	tag, err := tx.Exec(ctx, `update run_attempts set finished_at=$4,outcome=$5,error_code=$6,recovery_step=$7,recovery_ordinal=$8
+		where tenant_id=$1 and run_id=$2 and attempt_no=$3 and finished_at is null`, r.TenantID, r.ID, resources.AttemptNo, now, outcome, code, recoveryJSON, ordinal)
 	if err != nil {
 		return err
 	}
@@ -196,7 +233,28 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		if err := accountsAvailable(accounts, now); err != nil {
 			return err
 		}
-		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
+			return err
+		}
+		// History reads can consume time even while all mutation locks are
+		// held. Grant the new lease only against a fresh database clock.
+		now, err = databaseTime(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if err := s.checkSession(ctx, tx, principal, principal, sessionID, r.TenantID, r.ProfileID, now, true); err != nil {
+			return err
+		}
+		if !r.RunDeadline.After(now) {
+			if err := agentrun.ExpireWaiting(&r, now); err != nil {
+				return err
+			}
+			if err := appendEvent(ctx, tx, &r, &a, "deadline_exceeded", now); err != nil {
+				return err
+			}
+			return saveRun(ctx, tx, &r, &a)
+		}
+		if err := accountsAvailable(accounts, now); err != nil {
 			return err
 		}
 		for _, slot := range slots {
@@ -339,7 +397,7 @@ func (s *Store) FailExecution(ctx context.Context, principal string, lease agent
 		if err != nil {
 			return err
 		}
-		resources, err := lockAttemptResources(ctx, tx, r, a)
+		resources, err := s.lockClosingAttemptResources(ctx, tx, r, a)
 		if err != nil {
 			return err
 		}
@@ -384,7 +442,7 @@ func (s *Store) AcknowledgeStop(ctx context.Context, principal string, lease age
 		if r.State != agentrun.Stopping || !sameAttempt(r, a, lease) {
 			return agentrun.ErrStaleLease
 		}
-		resources, err := lockAttemptResources(ctx, tx, r, a)
+		resources, err := s.lockClosingAttemptResources(ctx, tx, r, a)
 		if err != nil {
 			return err
 		}
@@ -531,7 +589,7 @@ func (s *Store) sweepRun(ctx context.Context, tenant, id string) (bool, error) {
 		}
 		before := r.State
 		if r.State == agentrun.Running || r.State == agentrun.Stopping {
-			resources, err := lockAttemptResources(ctx, tx, r, a)
+			resources, err := s.lockClosingAttemptResources(ctx, tx, r, a)
 			if err != nil {
 				return err
 			}

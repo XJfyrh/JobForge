@@ -252,7 +252,7 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 // ExecutorMatchesAdapter prevents mixed strategy/version deployments.
 func ExecutorMatchesAdapter(version, adapter string) bool {
 	if adapter == "support-agent-v1" {
-		return version == run.SupportAgentExecutorVersion
+		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion
 	}
 	return version == ExecutorVersion
 }
