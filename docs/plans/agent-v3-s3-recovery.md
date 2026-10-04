@@ -1,6 +1,6 @@
 # S3 持久步骤与故障恢复：实施与验收计划
 
-2026-10-04（Asia/Shanghai）；**D0 独立方案审查通过，合同随本决策 PR 合并生效；D1～D3 待实施与验收**。对应[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)。基线为 `e2b9bad`（[PR #56](https://github.com/XJfyrh/JobForge/pull/56)），合同分支 `XJfyrh/docs/agent-v3-s3-recovery`，开始时工作区干净。实施会话承担源码、测试和文档，原规划会话负责方案审查与结果验收；合同 PR 按授权提交、推送并在必需 CI 通过后合并，随后实施免费工程层。功能 PR 另行审查，收费仍等待 D4 清单放行。
+**D0 规划时历史记录**（2026-10-04，Asia/Shanghai）：当时独立方案审查通过，合同随决策 PR 合并生效，D1～D3 尚待实施与验收。当前实施与真实验收结果见第 7 节。对应[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)。基线为 `e2b9bad`（[PR #56](https://github.com/XJfyrh/JobForge/pull/56)），合同分支 `XJfyrh/docs/agent-v3-s3-recovery`，开始时工作区干净。实施会话承担源码、测试和文档，原规划会话负责方案审查与结果验收；合同 PR 按授权提交、推送并在必需 CI 通过后合并，随后实施免费工程层。功能 PR 另行审查，收费仍等待 D4 清单放行。
 
 ## 1. 已核对的接缝与最小落点
 
@@ -71,7 +71,7 @@ F03及F05/F06至少使用动态`support-agent-v1`正式入口、真实PG/gRPC和
 
 完整新免费验收预计包含一次固定镜像构建、一轮定向PG/进程故障、一轮适用全仓门禁；有失败只重跑修复项与受影响门禁，不循环重复已通过或无关验收。观测配置无改动时不另追加本地promtool/dashboard循环，现有必需PR CI保持。依赖或专用开关缺失造成skip，必须补对应层或明确未执行。
 
-## 5. 真实云端环境与费用前提（本轮只读）
+## 5. 真实云端环境与费用前提（D0 规划时只读记录）
 
 已先查仓库外 `E:/JobForge-notes/2026-09-17-agent-v3-s2` 的目录与配置用途，没有输出凭据/DSN口令/业务正文：
 
@@ -128,4 +128,6 @@ checkpoint组让正式新Worker自然Claim原Run，不再次Submit/Retry。控�
 
 每轮记录源码commit/tree、未提交差异、命令/退出码、镜像digest/安装包摘要、profile/price/schema/prompt/数据/评分摘要、注入点、实际进程事实、PG只读摘要及SDK导出/抓取时间。原日志与报告追加保存于本次外部目录；公开仓库只提交必要脱敏摘要和哈希，秘密、原始业务/模型全文不进日志或普通Trace。失败原始记录不被修复后的通过覆盖。
 
-D0 合同 PR #57 已经独立方案审查、八项 CI 并合并。D1/D2 的 schema3/关闭证明/guard 与正式进程恢复已实现并完成定向真实PG/安装SDK/自然计时验证，原日志及 F01～F17 映射见[免费实现证据](../evidence/agent-v3-s3-free-2026-10-04.md)。D3 最终全套及功能PR审查正在执行；D4 仍须独立放行清单，不把免费合成响应验收当作云端通过。S3 收费调用仍为 0。
+D0 合同 PR #57 经独立审查、八项 CI 后已合并。D1/D2 的 schema3/关闭证明/guard 与正式进程恢复、D3 的真实 PG/已安装 SDK/自然计时/全套强制门禁已获独立接受；最终工具 head `782db17` 八项 CI 通过，失败及 F01～F17 映射见[免费证据](../evidence/agent-v3-s3-free-2026-10-04.md)。
+
+D4 已按原固定十一项的两轮具体放行完成，并获独立验收：五个真实接管通过，完整方案业务 7/8、DEV-035-C 失败保留，三条 H0 有意取消、安全 11/11。总 50 chat/139 physical，known 118,126 microyuan，held/unknown/anomaly 为 0；不是供应商发票。首七项中断、零提交预检失败、原等待态自然到期与报告窗口修正均保留，来源/审批/预算及原四项续执行没有重置，详见[云端证据](../evidence/agent-v3-s3-cloud-2026-10-04.md)。收费与 S3 控制服务已停止；最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准。S4/S5 未开始，历史未验收事项不变。

@@ -1,6 +1,6 @@
 # Agent v3：已确认步骤恢复
 
-[PRD v0.17](product/JobForge_PRD_v0.17.md)与[ADR-0025](adr/0025-confirmed-step-recovery.md)规定 S3 的持久恢复合同。schema 3 的 `support_agent_v1` profile 显式声明 `confirmed_uncommitted_v1`，并固定 `linux-v2-recovery-runtime-1`。原 schema 1/2 的 definition、hash、runtime 和晚到审计保持原合同，未提交的历史 chat 不能借用新 profile 的豁免。免费实现证据见[S3 检查记录](evidence/agent-v3-s3-free-2026-10-04.md)；真实云端首轮已执行 7/11 Runs，停止原因和剩余范围见[中断记录](evidence/agent-v3-s3-cloud-2026-10-04.md)，S3 尚未完成。
+[PRD v0.17](product/JobForge_PRD_v0.17.md)与[ADR-0025](adr/0025-confirmed-step-recovery.md)规定 S3 的持久恢复合同。schema 3 的 `support_agent_v1` profile 显式声明 `confirmed_uncommitted_v1`，并固定 `linux-v2-recovery-runtime-1`。原 schema 1/2 的 definition、hash、runtime 和晚到审计保持原合同，未提交的历史 chat 不能借用新 profile 的豁免。免费实现证据见[S3 检查记录](evidence/agent-v3-s3-free-2026-10-04.md)；固定十一项真实模型验收已完成并获独立接受：五个故障接管通过，八个完整方案中七个业务通过、DEV-035-C 失败保留，三条 H0 有意取消，安全十一项通过。完整结果与原中断见[云端证据](evidence/agent-v3-s3-cloud-2026-10-04.md)及[机器摘要](evidence/agent-v3-s3-cloud-2026-10-04.json)。最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准。
 
 ## 原关闭事务与新执行权
 

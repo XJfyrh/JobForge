@@ -1,6 +1,6 @@
 # S3 免费实现与故障检查（2026-10-04）
 
-本轮实现[已接受恢复合同](../adr/0025-confirmed-step-recovery.md)，本页仅记录免费机制检查。真实模型 D4 是 S3 完成的必要步骤，待独立冻结清单放行后运行并另行报告。合同 PR [#57](https://github.com/XJfyrh/JobForge/pull/57) 以 `1594bd0179c37e44093d7d4df371806c634356fe` 通过八项 CI，合并为 `30cc7b6b73f8ddc22ca8bf4e3d4c6184a7768d57`；本功能分支从该 main 开始。运行时与实验准备见[恢复指南](../agent-v3-recovery.md)。
+本轮实现[已接受恢复合同](../adr/0025-confirmed-step-recovery.md)，本页仅记录免费机制检查。真实模型 D4 是 S3 完成的必要步骤；现已按两轮具体放行完成原固定十一项并获独立验收，结果另见[云端证据](agent-v3-s3-cloud-2026-10-04.md)。免费合成响应的检查边界保持原样。合同 PR [#57](https://github.com/XJfyrh/JobForge/pull/57) 以 `1594bd0179c37e44093d7d4df371806c634356fe` 通过八项 CI，合并为 `30cc7b6b73f8ddc22ca8bf4e3d4c6184a7768d57`；本功能分支从该 main 开始。运行时与实验准备见[恢复指南](../agent-v3-recovery.md)。
 
 ## 已运行的定向结果
 
@@ -65,4 +65,6 @@ Windows 全仓 `go test -race ./...` 已通过，真实PG集成包耗时439.558s
 
 功能草稿 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 的 `a59bc6f1f807e1e2f18770646225495a726273cc` 已通过[完整八项CI](https://github.com/XJfyrh/JobForge/actions/runs/37191872335)。初次Python job因新测试未设置Agent源码路径而失败，已补显式 `PYTHONPATH`。原初次联合与CI失败保留，已通过且未变化的分段不反复执行。
 
-D4 在实际官方GET模型/余额、当天价格快照及保留业务数据/索引只读核验后，已按独立放行执行原固定清单前七项。实际中断、费用和剩余四项见[真实模型记录](agent-v3-s3-cloud-2026-10-04.md)。无 S2 余额转用；S3 整体与 S4/S5 不标为完成。历史 W4、AT-25、远程模型与生产长期留存的原结论不改写。
+最终续执行工具 head `782db17b9eda6af23db3b2b414c81cf844e6bbcf` 已通过[八项强制 CI](https://github.com/XJfyrh/JobForge/actions/runs/37195154303)，包含完整 Linux 真实进程/race、真实 PG 联合与已安装 SDK HTTP。外部工具的 Linux 实际定向测试 63 passed（1.56s，`cloud-v1/continuation/python-linux-04.log`），Linux 平台 mypy 九文件与 Ruff 通过；Windows 62 passed/1 Linux CLI skip 单列。新增纠正标记/续执行检查覆盖原材料字节与身份、实际 PG attempt/关闭状态、账户/known/held/freeze 漂移、自然审批到期、Submit 不确定性不重试、唯一完整入口 preflight，生产源码不变。
+
+D4 实际官方 metadata/价格、保留业务数据/索引核验后，首轮七项中断，具体续执行放行后只完成原四项。全部原失败、零提交失败、自然等待到期和报告窗口修正保留，最终真实十一项结果见[云端证据](agent-v3-s3-cloud-2026-10-04.md)。S3 机制与有限真实模型验收已独立接受，最终代码交付、文档审查及最新 head CI 以 [PR #58](https://github.com/XJfyrh/JobForge/pull/58) 记录为准；S4/S5 未开始。无 S2 余额转用，历史 W4、AT-25、远程模型与生产长期留存结论不改写。
