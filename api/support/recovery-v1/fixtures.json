@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "profile": {
+    "profile_id": "recovery-shared-profile",
+    "profile_hash": "faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23",
+    "strategy": "support_agent_v1",
+    "executor_version": "linux-v2-recovery-runtime-1",
+    "provider_audit_policy": "deepseek-audit-v1",
+    "expected_response_model": "deepseek-flash",
+    "max_input_tokens": 1048576,
+    "max_output_tokens": 1024,
+    "family_token_limit": 12595200,
+    "family_cost_microyuan": 5000000,
+    "pricing": {
+      "hash": "81da838350cf5d8dc258dc602d68382511ce09ffa3cbcb7c310914ba055a9df9",
+      "denominator": 1000000,
+      "input_miss_microyuan": 2000000,
+      "input_hit_microyuan": 40000,
+      "output_microyuan": 8000000
+    },
+    "definition": {
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-04",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-04",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 3
+    }
+  },
+  "lease": {
+    "TenantID": "tenant-a",
+    "RunID": "11111111-1111-4111-8111-111111111111",
+    "WorkerID": "worker-a",
+    "SessionID": "22222222-2222-4222-8222-222222222222",
+    "AttemptNo": 2,
+    "FencingToken": 3
+  },
+  "step": {
+    "step_id": "33333333-3333-4333-8333-333333333333",
+    "sequence": 5,
+    "kind": "model_proposal",
+    "cursor_version": 4,
+    "input_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "profile_id": "recovery-shared-profile",
+    "profile_hash": "faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23",
+    "snapshot_id": "44444444-4444-4444-8444-444444444444",
+    "snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "execution_binding_hash": "a8f1e74d9662069a843c7087044da1cfc4bc06e9ad88fdac00a79012ec5ad67c",
+  "invalid_steps": {
+    "alias": "{\"Step_ID\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"kind\":\"model_proposal\",\"cursor_version\":4,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}",
+    "duplicate": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"sequence\":5,\"kind\":\"model_proposal\",\"cursor_version\":4,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}",
+    "float_cursor": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"kind\":\"model_proposal\",\"cursor_version\":4.0,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}",
+    "missing_cursor": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"kind\":\"model_proposal\",\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}",
+    "null_cursor": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"kind\":\"model_proposal\",\"cursor_version\":null,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}",
+    "unknown": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":5,\"kind\":\"model_proposal\",\"cursor_version\":4,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"lease\":{}}",
+    "wrong_sequence": "{\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"sequence\":6,\"kind\":\"model_proposal\",\"cursor_version\":4,\"input_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"profile_id\":\"recovery-shared-profile\",\"profile_hash\":\"faf8bb071e9a953f4c8a38a6898b5d1aae56649d01244fb6029813bec79dac23\",\"snapshot_id\":\"44444444-4444-4444-8444-444444444444\",\"snapshot_hash\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}"
+  }
+}

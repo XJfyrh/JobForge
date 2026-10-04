@@ -32,6 +32,15 @@ def main() -> None:
     if registry.read_text(encoding="utf-8").count("REGISTRY") != 1:
         raise RuntimeError("production registry source changed")
     shutil.copyfile("/tmp/runtime_fixture_registry.py", registry)
+    shutil.copyfile(
+        "/tmp/runtime_recovery_faults.py", package / "runtime_recovery_faults.py"
+    )
+    dispatch = package / "dispatch.py"
+    with dispatch.open("a", encoding="utf-8") as output:
+        output.write(
+            "\nfrom jobforge_agent.runtime_recovery_faults import install as _install_recovery_fixture\n"
+            "_install_recovery_fixture()\n"
+        )
     destination = Path("/etc/jobforge/executor.json")
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile("/tmp/test-manifest.json", destination)

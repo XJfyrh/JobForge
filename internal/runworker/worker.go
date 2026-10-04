@@ -43,7 +43,7 @@ func New(client agentv1.AgentServiceClient, manifest Manifest, config Config) (*
 	w.manifest.Profiles = slices.Clone(manifest.Profiles)
 	for _, p := range config.Profiles {
 		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != manifest.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
-			p.ValidateAuditPolicy() != nil || !p.AuditEnabled() || p.ExpectedResponseModel != "deepseek-flash" {
+			p.ValidateAuditPolicy() != nil || run.ValidateSupportProfile(p) != nil || !p.AuditEnabled() || p.ExpectedResponseModel != "deepseek-flash" {
 			return nil, run.ErrProfileUnavailable
 		}
 		if _, exists := w.profiles[p.ID]; exists {

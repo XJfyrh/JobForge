@@ -327,6 +327,13 @@ def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str,
                 "deepseek-flash",
                 "deepseek-audit-v1",
             ),
+            (
+                "support_agent_v1",
+                "support-proposal-v1",
+                "linux-v2-recovery-runtime-1",
+                "deepseek-flash",
+                "deepseek-audit-v1",
+            ),
         },
         "PROFILE_CAPABILITIES",
     )

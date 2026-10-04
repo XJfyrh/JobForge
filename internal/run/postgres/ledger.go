@@ -211,7 +211,7 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 		if err != nil {
 			return err
 		}
-		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
 			return err
 		}
 		if profile.Strategy == agentrun.SupportAgentStrategy {
@@ -333,7 +333,7 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 		if err := checkSubcall(ctx, tx, req, tool); err != nil {
 			return err
 		}
-		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile); err != nil {
+		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
 			return err
 		}
 		budget, err := agentrun.ReservationBudget(profile, req.Subcall)

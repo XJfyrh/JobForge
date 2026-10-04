@@ -17,6 +17,7 @@ from tools.support_evaluation.evidence import (
     fingerprint,
     load_package,
     read_json,
+    registration,
 )
 from tools.support_evaluation.fixtures import (
     case_row,
@@ -30,6 +31,18 @@ from tools.support_evaluation.validate_data import instant, sha256
 
 PACKAGE = load_package()
 REGISTRATION = registered(PACKAGE)
+
+
+def test_recovery_scorer_capability_is_explicit_and_keeps_legacy_registration() -> None:
+    """Version recognition does not make a synthetic result cloud acceptance."""
+    registration(REGISTRATION, PACKAGE)
+    recovery = copy.deepcopy(REGISTRATION)
+    recovery["profile"]["strategy"] = "support_agent_v1"
+    recovery["profile"]["executor_version"] = "linux-v2-recovery-runtime-1"
+    registration(recovery, PACKAGE)
+    recovery["profile"]["strategy"] = "support_fixed_v1"
+    with pytest.raises(EvidenceError, match="PROFILE_CAPABILITIES"):
+        registration(recovery, PACKAGE)
 
 
 def _facts(index: int) -> Any:

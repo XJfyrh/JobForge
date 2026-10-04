@@ -20,12 +20,12 @@ func (p Profile) AuditEnabled() bool { return p.ProviderAuditPolicy == ProviderA
 // registrar must include these fields in its immutable content and profile hash.
 func (p Profile) ValidateAuditPolicy() error {
 	if p.ProviderAuditPolicy == "" {
-		if p.ExpectedResponseModel != "" || (p.ExecutorVersion == ProviderAuditExecutorVersion || p.ExecutorVersion == SupportAgentExecutorVersion) {
+		if p.ExpectedResponseModel != "" || (p.ExecutorVersion == ProviderAuditExecutorVersion || p.ExecutorVersion == SupportAgentExecutorVersion || p.ExecutorVersion == SupportRecoveryExecutorVersion) {
 			return ErrProfileUnavailable
 		}
 		return nil
 	}
-	if !p.AuditEnabled() || (p.ExecutorVersion != ProviderAuditExecutorVersion && p.ExecutorVersion != SupportAgentExecutorVersion) || !ValidIdentifier(p.ExpectedResponseModel) {
+	if !p.AuditEnabled() || (p.ExecutorVersion != ProviderAuditExecutorVersion && p.ExecutorVersion != SupportAgentExecutorVersion && p.ExecutorVersion != SupportRecoveryExecutorVersion) || !ValidIdentifier(p.ExpectedResponseModel) {
 		return ErrProfileUnavailable
 	}
 	return nil

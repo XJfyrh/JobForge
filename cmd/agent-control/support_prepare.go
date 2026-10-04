@@ -149,7 +149,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)}},
 		Bindings: []budgetBinding{{TenantID: tenants[0], BatchAccountID: o.BatchID, TenantAccountID: o.NorthID}, {TenantID: tenants[1], BatchAccountID: o.BatchID, TenantAccountID: o.SouthID}}}
 	config.Budgets[0].Limits.CostMicroyuan = o.BatchCostMicroyuan
-	if d.SchemaVersion == 2 {
+	if d.SchemaVersion >= 2 {
 		for i := range config.Budgets {
 			config.Budgets[i].Limits.CostMicroyuan = o.BatchCostMicroyuan
 		}
@@ -232,7 +232,7 @@ func supportJSON(value any) []byte {
 
 func verifySupportSources(repo string, d run.SupportDefinition) error {
 	promptPath := "python/jobforge_agent/support_adapter.py"
-	if d.SchemaVersion == 2 {
+	if d.SchemaVersion >= 2 {
 		promptPath = "python/jobforge_agent/support_agent.py"
 	}
 	sources := map[string]string{
@@ -241,7 +241,7 @@ func verifySupportSources(repo string, d run.SupportDefinition) error {
 		"examples/support-agent/runtime/dataset-manifest.json": d.Resources.RuntimeManifestSHA256,
 		"examples/support-agent/runtime/seed.json":             d.Resources.SeedSHA256,
 	}
-	if d.SchemaVersion == 2 {
+	if d.SchemaVersion >= 2 {
 		sources["api/support/agent-v1/schema.json"] = d.Program.DecisionSchemaSHA256
 	}
 	for name, want := range sources {

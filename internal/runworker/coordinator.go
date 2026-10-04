@@ -148,6 +148,18 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 			"cleanup_timed_out", receipt.CleanupTimedOut)
 		return stepOutcome{Fatal: ErrCleanup}
 	}
+	if c.profile.ConfirmedStepRecovery() && c.failure == "" && processLoss(receipt) {
+		// Actual Wait and every cleanup barrier precede abandonment. No local
+		// signal can stand in for a provider result or an accepted checkpoint.
+		// Missing chat confirmation stops this Worker; a fresh Worker must pass
+		// the persisted batch guard after natural lease expiry and closure.
+		for _, call := range c.calls {
+			if call.intent.Subcall == "chat" && !confirmedChat(call) {
+				return stepOutcome{Fatal: ErrBatchStopped}
+			}
+		}
+		return stepOutcome{Abandoned: true}
+	}
 	code := receiptFailure(receipt)
 	if c.meteringClosed && !closedMeteringHasTypedExit(receipt) && code != "CHECKPOINT_TOO_LARGE" {
 		code = "EXECUTOR_PROTOCOL_ERROR"
@@ -190,6 +202,11 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 		return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 	}
 	outcome := c.commit(ctx)
+	if c.profile.ConfirmedStepRecovery() && outcome.Abandoned {
+		// The bounded read-only lookup is evidence of the original commit only.
+		// Found=false cannot turn an uncertain Commit ACK into rollback or Fail.
+		return outcome
+	}
 	if outcome.Commit == nil && outcome.Fatal == nil {
 		for _, call := range c.calls {
 			if call.intent.Subcall == "chat" {
@@ -418,6 +435,12 @@ func (c *coordinator) send(ctx context.Context, frame v2.Frame, meter bool) {
 
 func cleaned(r runexecutor.Receipt) bool {
 	return r.Guardian.Observed && r.GroupGone && r.Ordinary.Joined && r.Metering.Joined && r.StderrJoined && !r.CleanupTimedOut
+}
+
+func processLoss(r runexecutor.Receipt) bool {
+	return cleaned(r) && r.Ordinary.EOF && r.Metering.EOF && r.StderrBytes <= 8192 && !r.EventDeliveryFailed &&
+		r.Ordinary.Problem == runexecutor.NoProblem && (r.Metering.Problem == runexecutor.NoProblem || r.Metering.Problem == runexecutor.MeteringWriteClosed) &&
+		(r.Guardian.Signaled || r.Guardian.Code == 72)
 }
 
 func receiptFailure(r runexecutor.Receipt) string {

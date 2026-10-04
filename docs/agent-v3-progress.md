@@ -123,3 +123,9 @@ C3b实现[固定运行时](agent-v3-runtime.md)：Go唯一控制面执行权、�
 新 batch `901bce9d…` 于 2026-09-17 00:31:12～00:32:13（UTC+8）实际运行。14 案方案进入 `awaiting_approval`，DEV-015 中断，25 案未尝试；业务评分为 9/40，安全证据为 14 案通过、1 案不完整、25 案未执行。方案完成不表示已批准、写入业务或解决工单；不能将部分安全结果写成全批通过。完整结果见[证据](evidence/agent-v3-s1-closeout-2026-09-17.md)及[机器报告](evidence/agent-v3-s1-closeout-2026-09-17.json)。
 
 中断调用取得 HTTP 200 响应头后未取得完整响应体，usage 无法确认，批次以 `CHAT_USAGE_UNKNOWN` 停止。新增已知费用为 48,653 microyuan（0.048653 CNY），未释放金额 hold 为 2,105,344 microyuan（2.105344 CNY）；hold 不代表供应商账单，unknown 不能当零费。按 ADR-0022，缺少必要持久确认时不得换 batch 绕过。已停止收费，PR #51 保持 Draft，S1 未闭合；历史首批证据、W4 失败、AT-25 跳过及生产长期留存未验收继续保留，不推进 S2～S5。
+
+## S3 实现与当前验收边界（2026-10-04）
+
+恢复合同 PR #57 已合并为 `30cc7b6`，采用[PRD v0.17](product/JobForge_PRD_v0.17.md)和[ADR-0025](adr/0025-confirmed-step-recovery.md)。当前功能分支交付schema3/原关闭证明、原账户锁内guard、正式Worker自然恢复与有限外部实验驱动；旧schema1/2与历史unknown/hold不升级或清零。真实PG/SDK、Linux实际进程、30s lease、180s attempt、三次恢复与预算不重置的免费证据见[S3检查记录](evidence/agent-v3-s3-free-2026-10-04.md)。
+
+全仓race已通过，功能PR完整CI和独立审查仍待收口。用户要求的真实模型D4验收是完成S3的必要步骤，冻结11-Run清单后由主规划会话独立放行，目前收费调用0次。方案、成本与业务结果另行记录；S3整体及S4/S5尚未完成，既有历史失败与留存限制保持原记录。

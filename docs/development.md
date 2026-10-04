@@ -321,6 +321,8 @@ Agent v3 S0 另运行 `python -m pytest tools/agent_probe_data tools/executorpro
 
 S1-C3b正式运行时另由`agent-runtime-contract`执行；S0探针不能替代该层。`JOBFORGE_RUNEXECUTOR_PROCESS_TESTS=1`启用固定进程检查，`JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1`启用真实PG/gRPC的`TestRunExecutor`。Windows通过同一Linux镜像验证，原生不支持分支或缺环境导致的skip不计通过。联合测试使用宿主5433的可重建PG，先执行标准Compose/DSN前置条件；容器内将localhost替换为`host.docker.internal`，同一DSN只运行一个可能清理数据库的测试进程。Python全套仍进入`python-lint`，也可用`python-check` target复现；完整命令与测试替身边界见[运行时指南](agent-v3-runtime.md)。
 
+S3 的 `TestRunRecovery` 进入同一默认联合检查，包含实际30s lease、180s attempt、1/2/4s退避、三次恢复上限及外部代理/Supervisor；默认超时1200s，CI job上限35分钟。`python-lint` 同时执行 `pytest tools/support_recovery` 与该目录/外部Supervisor的Linux平台mypy。收费11-Run实验不由这些合成检查代替，准备、独立放行和报告见[恢复指南](agent-v3-recovery.md)。
+
 独立 [real-models 工作流](../.github/workflows/real-models.yml) 使用固定 Ollama 模型与真实 PostgreSQL，实际运行 SDK/产物/进程 kill 场景；本地完整观测故障脚本另查询 Collector、Jaeger、Prometheus、Grafana。CI 和本地结果分别记在[实施记录](agent-rag-progress.md)。
 
 该清单对应 AGENTS.md “验证与汇报”中的格式、lint、单元、集成、故障与 race 检查；`buf breaking` 仍按改动范围在本地执行，暂不进入 CI。新增或移除 CI 检查项时，必须同步更新本表、AGENTS.md 与 CONTRIBUTING.md。

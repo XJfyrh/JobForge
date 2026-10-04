@@ -67,7 +67,7 @@ F03及F05/F06至少使用动态`support-agent-v1`正式入口、真实PG/gRPC和
 | 强制门禁 | Go build/vet/golangci-lint/全仓race；ruff/check+format、mypy SDK/Agent、Python全套；SQLFluff基线+migrations；Buf及适用生成/registry边界 | 按[CONTRIBUTING](../../CONTRIBUTING.md)和[开发指南](../development.md)；并发修改必须`go test -race ./...`，skip单列 |
 | 真实云端 | 已批准有限profile/batch、正式安装包/SDK与真实业务HTTP/embedding/pgvector | 仅D4；不能由上述fixture替代 |
 
-新增自然故障集按顺序运行，估算30秒回收场景及四次丢失约需数分钟，实际180秒attempt场景另需至少3分钟；建议专门联合套件有12分钟上限，记录实测后只调整必要CI/test timeout，不缩短生产lease。镜像构建与全仓门禁另计，尚无本次实测耗时；该估算不是SLO。自然等待期间使用有界最终断言/进程屏障，不让单次阻塞调用妨碍进度输出。
+新增自然故障集按顺序运行。定向自然场景已实测约630秒，新增外部两例约76秒，尚须既有合同/正式进程与PG预算检查；联合套件固定上限因此调整为1200秒、CI job为35分钟，不缩短生产lease。镜像构建与全仓门禁另计；上述耗时不是SLO。自然等待期间使用有界最终断言/进程屏障，不让单次阻塞调用妨碍进度输出。
 
 完整新免费验收预计包含一次固定镜像构建、一轮定向PG/进程故障、一轮适用全仓门禁；有失败只重跑修复项与受影响门禁，不循环重复已通过或无关验收。观测配置无改动时不另追加本地promtool/dashboard循环，现有必需PR CI保持。依赖或专用开关缺失造成skip，必须补对应层或明确未执行。
 
@@ -128,4 +128,4 @@ checkpoint组让正式新Worker自然Claim原Run，不再次Submit/Retry。控�
 
 每轮记录源码commit/tree、未提交差异、命令/退出码、镜像digest/安装包摘要、profile/price/schema/prompt/数据/评分摘要、注入点、实际进程事实、PG只读摘要及SDK导出/抓取时间。原日志与报告追加保存于本次外部目录；公开仓库只提交必要脱敏摘要和哈希，秘密、原始业务/模型全文不进日志或普通Trace。失败原始记录不被修复后的通过覆盖。
 
-D0 只运行文档/差异检查和环境只读核对；没有生产代码/migration/Proto改动，也未运行本次Go/Python回归、真实PG、Linux进程或云端推理。这些层次仍待D1～D4实际执行，不计通过。合同已通过独立方案审查；本决策 PR 的 CI 与合并结果、功能实施和验收将另行记录。S3 收费调用仍为 0。
+D0 合同 PR #57 已经独立方案审查、八项 CI 并合并。D1/D2 的 schema3/关闭证明/guard 与正式进程恢复已实现并完成定向真实PG/安装SDK/自然计时验证，原日志及 F01～F17 映射见[免费实现证据](../evidence/agent-v3-s3-free-2026-10-04.md)。D3 最终全套及功能PR审查正在执行；D4 仍须独立放行清单，不把免费合成响应验收当作云端通过。S3 收费调用仍为 0。
