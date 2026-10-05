@@ -1,0 +1,493 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jobforge.local/business-action/v1/schema.json",
+  "title": "Approved ticket resolution and first receipt",
+  "$ref": "#/$defs/SignedAction",
+  "$defs": {
+    "ResolutionParameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "action",
+        "conclusion",
+        "requested_fields",
+        "target_ticket_status",
+        "summary",
+        "evidence_refs",
+        "claims",
+        "ticket_id"
+      ],
+      "properties": {
+        "decision": {
+          "const": "proposal"
+        },
+        "action": {
+          "enum": [
+            "record_conclusion",
+            "request_information",
+            "escalate"
+          ]
+        },
+        "conclusion": {
+          "$ref": "../../support/v1/schema.json#/$defs/conclusion"
+        },
+        "requested_fields": {
+          "$ref": "../../support/v1/schema.json#/$defs/requestedFields"
+        },
+        "target_ticket_status": {
+          "$ref": "../../support/v1/schema.json#/$defs/targetStatus"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "claims": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "../../support/v1/schema.json#/$defs/persistedClaim"
+          }
+        },
+        "ticket_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      }
+    },
+    "ActionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "tenant_id",
+        "operation_id",
+        "business_request_id",
+        "authorization_hash",
+        "proposal_hash",
+        "parameters_hash",
+        "approval_id",
+        "ticket_id",
+        "before_revision",
+        "after_revision",
+        "ticket_status",
+        "applied_at",
+        "retain_until",
+        "receipt_hash"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "const": 1
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "operation_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "business_request_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "authorization_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "proposal_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "parameters_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "approval_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "ticket_id": {
+          "type": "string"
+        },
+        "before_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "after_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "ticket_status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "awaiting_information",
+            "escalated",
+            "informational_only"
+          ]
+        },
+        "applied_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "retain_until": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "receipt_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "VersionVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "ticket",
+        "order",
+        "delivery",
+        "policy",
+        "index"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "ticket": {
+          "$ref": "#/$defs/TicketVersion"
+        },
+        "order": {
+          "$ref": "#/$defs/OrderVersion"
+        },
+        "delivery": {
+          "$ref": "#/$defs/DeliveryVersion"
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicyVersion"
+        },
+        "index": {
+          "$ref": "#/$defs/IndexVersion"
+        }
+      },
+      "description": "Trusted metadata derived from the persisted immutable snapshot, not from a model or current source rows."
+    },
+    "TicketVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740990
+        }
+      }
+    },
+    "OrderVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "exists",
+        "revision"
+      ],
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Missing rows retain the expected relationship ID; revision is null exactly when exists is false."
+    },
+    "DeliveryVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "exists",
+        "aggregate_revision"
+      ],
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exists": {
+          "type": "boolean"
+        },
+        "aggregate_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Missing rows retain the expected relationship ID. No order implies null delivery ID. Aggregate revision is null exactly when exists is false."
+    },
+    "PolicyVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "revision",
+        "corpus_sha256"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "corpus_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "IndexVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "profile_hash",
+        "content_hash"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "profile_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "ActionAuthorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "key_id",
+        "operation",
+        "tenant_id",
+        "business_request_id",
+        "business_request_created_at",
+        "operation_id",
+        "run_id",
+        "approval_id",
+        "actor_id",
+        "decided_at",
+        "proposal_hash",
+        "parameters_hash",
+        "snapshot_id",
+        "snapshot_hash",
+        "version_vector",
+        "authorized_at",
+        "permission_expires_at",
+        "authorization_expires_at",
+        "run_deadline"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "const": 1
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "operation": {
+          "const": "apply_ticket_resolution"
+        },
+        "tenant_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "business_request_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "business_request_created_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "operation_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "approval_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "actor_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "decided_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "proposal_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "parameters_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "snapshot_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "version_vector": {
+          "$ref": "#/$defs/VersionVector"
+        },
+        "authorized_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "permission_expires_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "authorization_expires_at": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "run_deadline": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "SignedAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorization",
+        "parameters",
+        "signature"
+      ],
+      "properties": {
+        "authorization": {
+          "$ref": "#/$defs/ActionAuthorization"
+        },
+        "parameters": {
+          "$ref": "#/$defs/ResolutionParameters"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    }
+  },
+  "$comment": "ADR0026: strict UTF-8/duplicate/null/integer/closed-field rules; request <=32KiB, parameters <=16KiB, receipt <=4KiB. Cross-field, exact hashes, Ed25519 trust and database versions are enforced by Go. Times are UTC Unix microseconds; retain_until is a minimum, never a GET expiry."
+}

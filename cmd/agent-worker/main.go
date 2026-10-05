@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/xjfyrh/jobforge/internal/run"
+	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/run/grpcapi"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
 	"github.com/xjfyrh/jobforge/internal/runworker"
@@ -35,6 +36,7 @@ type deployment struct {
 type endpoints struct {
 	BusinessOrigin string `json:"business_origin"`
 	OllamaOrigin   string `json:"ollama_origin"`
+	ActionOrigin   string `json:"action_origin,omitempty"`
 }
 
 type secrets struct {
@@ -45,6 +47,8 @@ type secrets struct {
 type tenantSecrets struct {
 	BusinessReadKey string `json:"business_read_key"`
 	DeepSeekKey     string `json:"deepseek_api_key"`
+	ActionReaderKey string `json:"action_reader_key,omitempty"`
+	ActionWriterKey string `json:"action_writer_key,omitempty"`
 }
 
 type bearer struct {
@@ -106,6 +110,7 @@ func serve(ctx context.Context) error {
 		return run.ErrInvalidArgument
 	}
 	environments := make(map[string]runexecutor.Environment, len(config.Tenants))
+	actions := make(map[string]businessclient.ActionCredentials)
 	for tenant, origin := range config.Tenants {
 		key, ok := keys.Tenants[tenant]
 		if !ok || !run.ValidIdentifier(tenant) {
@@ -113,6 +118,12 @@ func serve(ctx context.Context) error {
 		}
 		environments[tenant] = runexecutor.Environment{BusinessOrigin: origin.BusinessOrigin, OllamaOrigin: origin.OllamaOrigin,
 			BusinessReadKey: key.BusinessReadKey, DeepSeekKey: key.DeepSeekKey}
+		if origin.ActionOrigin != "" || key.ActionReaderKey != "" || key.ActionWriterKey != "" {
+			if key.ActionReaderKey == keys.ControlToken || key.ActionWriterKey == keys.ControlToken {
+				return run.ErrInvalidArgument
+			}
+			actions[tenant] = businessclient.ActionCredentials{Origin: origin.ActionOrigin, ReaderKey: key.ActionReaderKey, WriterKey: key.ActionWriterKey}
+		}
 	}
 	target := os.Getenv("JOBFORGE_AGENT_GATEWAY")
 	host, port, err := net.SplitHostPort(target)
@@ -137,7 +148,7 @@ func serve(ctx context.Context) error {
 	}
 	defer func() { _ = connection.Close() }()
 	worker, err := runworker.New(agentv1.NewAgentServiceClient(connection), manifest,
-		runworker.Config{Profiles: config.Profiles, Environments: environments})
+		runworker.Config{Profiles: config.Profiles, Environments: environments, Actions: actions})
 	if err != nil {
 		return err
 	}

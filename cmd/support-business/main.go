@@ -162,6 +162,17 @@ func serve(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return errors.New("business identities rejected")
 	}
+	actions, closeActions, err := actionHandler(ctx, keys)
+	if err != nil {
+		return err
+	}
+	defer closeActions()
+	if actions != nil {
+		mux := http.NewServeMux()
+		mux.Handle("/business/v1/actions/", actions)
+		mux.Handle("/", handler)
+		handler = mux
+	}
 	resourceCtx, resourceCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer resourceCancel()
 	for _, identity := range keys {

@@ -424,7 +424,23 @@ def validate_run_sources(
     """Validate raw public API projections and reconstruct the accepted checkpoint."""
     run = row["run"]
     Run.from_dict(run)
-    RunResult.from_dict(row["result"])
+    result = row["result"]
+    # Historical S1–S3 exports predate disposition. Validate their original
+    # exact wire shape without modifying the raw evidence or inferring effects.
+    if set(result) == {"available", "kind", "ref"} and profile["executor_version"] in {
+        "linux-v2-audit-runtime-1",
+        "linux-v2-agent-runtime-1",
+        "linux-v2-recovery-runtime-1",
+    }:
+        result = {
+            **result,
+            "disposition": "none"
+            if result["kind"] is None
+            else "proposal"
+            if result["kind"] == "proposal"
+            else "no_action",
+        }
+    RunResult.from_dict(result)
     RunCalls.from_dict(row["calls"])
     for key in ("tenant_id", "ticket_id", "business_request_key"):
         need(run[key] == binding[key], "RUN_BINDING")

@@ -49,6 +49,11 @@ func Decode(data []byte, target any) error {
 // encoding/json alone accepts case-folded field aliases and null numeric
 // elements. Validate the exact typed wire shape before its normal conversion.
 func validateShape(value any, target reflect.Type) error {
+	// RawMessage deliberately defers its closed schema to the consuming domain.
+	// The recursive scan above still rejects duplicates, nesting and bad UTF-8.
+	if target == reflect.TypeFor[json.RawMessage]() {
+		return nil
+	}
 	if target.Kind() == reflect.Pointer {
 		if value == nil {
 			return nil

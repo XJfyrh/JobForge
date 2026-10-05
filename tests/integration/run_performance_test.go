@@ -51,7 +51,7 @@ func TestRunHotPathPlansAndBaseline(t *testing.T) {
 	t.Logf("RUN-PERF seed: runs=%d elapsed=%s", n, time.Since(seedStart))
 	runPerfAnalyze(t, h)
 	runPerfExplain(t, h, "claim-ready", "lifecycle.go", "Claim", "where state='ready'",
-		[]string{"tenant-a", "tenant-b"}, []string{h.Profile.ID}, h.Principal)
+		[]string{"tenant-a", "tenant-b"}, []string{h.Profile.ID}, h.Principal, []string{})
 
 	secondSession, err := h.Store.Register(h.Ctx, "contract-worker-2", uuid.NewString(), "fixture-v1")
 	if err != nil {
@@ -137,7 +137,7 @@ func TestRunHotPathPlansAndBaseline(t *testing.T) {
 	runPerfAnalyze(t, h)
 	t.Logf("RUN-PLAN sparse fixture: ready=1 succeeded=%d total_runs=%d", n, n+1)
 	runPerfExplain(t, h, "claim-sparse-ready", "lifecycle.go", "Claim", "where state='ready'",
-		[]string{"tenant-a", "tenant-b"}, []string{h.Profile.ID}, h.Principal)
+		[]string{"tenant-a", "tenant-b"}, []string{h.Profile.ID}, h.Principal, []string{})
 }
 
 func runPerfFinish(t *testing.T, h *runHarness, claimed *agentrun.ClaimedRun, samples *runPerfSamples) {

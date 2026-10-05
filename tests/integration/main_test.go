@@ -223,7 +223,9 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	// Clean slate: drop tables in reverse dependency order for direct DSN mode.
-	cleanup := `drop table if exists physical_calls, tool_invocations, run_approvals,
+	cleanup := `drop table if exists action_receipt_queries,tenant_receipt_query_gates,
+		action_receipt_views,action_calls,action_authorizations,
+		physical_calls, tool_invocations, run_approvals,
 		run_events, run_steps, run_attempts, run_operations, runs, business_requests,
 		budget_batch_tenants, budget_accounts, worker_sessions, execution_slots,
 		agent_profiles, task_artifacts, demo_idempotent_effects,
@@ -232,6 +234,9 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		job_attempts, workers, jobs cascade`
 	if _, err := pool.Exec(ctx, cleanup); err != nil {
 		return fmt.Errorf("cleanup: %w", err)
+	}
+	if _, err := pool.Exec(ctx, "drop function if exists guard_action_identity()"); err != nil {
+		return fmt.Errorf("cleanup action guard: %w", err)
 	}
 
 	for _, entry := range entries {

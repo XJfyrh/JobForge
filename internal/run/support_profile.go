@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -33,6 +34,7 @@ type SupportDefinition struct {
 	Program       SupportProgramDefinition  `json:"program"`
 	Resources     SupportResourceDefinition `json:"resources"`
 	Price         SupportPriceDefinition    `json:"price"`
+	Action        *SupportActionDefinition  `json:"action,omitempty"`
 }
 
 // SupportModelDefinition fixes the single allowed physical provider request.
@@ -58,6 +60,7 @@ type SupportModelDefinition struct {
 type SupportProgramDefinition struct {
 	Strategy             string `json:"strategy"`
 	RecoveryPolicy       string `json:"recovery_policy,omitempty"`
+	ApprovalPolicy       string `json:"approval_policy,omitempty"`
 	DecisionSchema       string `json:"decision_schema,omitempty"`
 	DecisionSchemaSHA256 string `json:"decision_schema_sha256,omitempty"`
 	Adapter              string `json:"adapter"`
@@ -66,6 +69,14 @@ type SupportProgramDefinition struct {
 	PromptVersion        string `json:"prompt_version"`
 	PromptSHA256         string `json:"prompt_sha256"`
 	AdapterSourceSHA256  string `json:"adapter_source_sha256"`
+}
+
+// SupportActionDefinition freezes the one receiver and trusted signing key.
+type SupportActionDefinition struct {
+	Operation       string `json:"operation"`
+	Origin          string `json:"origin"`
+	KeyID           string `json:"key_id"`
+	PublicKeySHA256 string `json:"public_key_sha256"`
 }
 
 // SupportResourceDefinition freezes the resources expressible by existing snapshots.
@@ -148,6 +159,19 @@ func supportDigest(value string) bool {
 
 func (d SupportDefinition) validate() error {
 	m, p, r, price := d.Model, d.Program, d.Resources, d.Price
+	if d.SchemaVersion != 4 && (d.Action != nil || p.ApprovalPolicy != "") {
+		return ErrProfileUnavailable
+	}
+	if d.SchemaVersion == 4 {
+		if d.Action == nil || p.ApprovalPolicy != TicketResolutionApprovalPolicy ||
+			d.Action.Operation != business.ResolutionOperation || !ValidIdentifier(d.Action.KeyID) || !supportDigest(d.Action.PublicKeySHA256) {
+			return ErrProfileUnavailable
+		}
+		u, err := url.Parse(d.Action.Origin)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.String() != d.Action.Origin {
+			return ErrProfileUnavailable
+		}
+	}
 	expected := SupportModelDefinition{
 		Provider: "deepseek", Origin: "https://api.deepseek.com", Path: "/chat/completions",
 		RequestModel: "deepseek-flash", ObservedVersion: "DeepSeek-V4.1-Flash", ObservedOn: "2026-09-16",
@@ -160,8 +184,8 @@ func (d SupportDefinition) validate() error {
 			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != "2026-09-16" {
 			return ErrProfileUnavailable
 		}
-	case 2, 3:
-		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion == 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
+	case 2, 3, 4:
+		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion >= 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
 			return ErrProfileUnavailable
 		}
 		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != SupportAgentPromptVersion ||
@@ -241,6 +265,9 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 	if definition.SchemaVersion == 3 {
 		p.ExecutorVersion = SupportRecoveryExecutorVersion
 	}
+	if definition.SchemaVersion == 4 {
+		p.ExecutorVersion = SupportApprovalExecutorVersion
+	}
 	p.Hash, err = SupportProfileHash(p)
 	return p, err
 }
@@ -254,6 +281,9 @@ func SupportProfileHash(p Profile) (string, error) {
 	}
 	if d.SchemaVersion == 3 {
 		expectedExecutor = SupportRecoveryExecutorVersion
+	}
+	if d.SchemaVersion == 4 {
+		expectedExecutor = SupportApprovalExecutorVersion
 	}
 	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||
 		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != ProviderAuditPolicyDeepSeekV1 ||

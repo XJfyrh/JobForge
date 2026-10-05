@@ -10,6 +10,8 @@
 | S2 有界 Agent | [40 案，业务 37/40；真实截断注入](agent-v3-s2-delivery-2026-09-17.md) | [评分](agent-v3-s2-delivery-2026-09-17.json)、[receipt](agent-v3-s2-delivery-receipt-2026-09-17.json) |
 | S3 步骤恢复 | [11 项：5 个接管通过，DEV-035-C 业务失败](agent-v3-s3-cloud-2026-10-04.md) | [完整机器摘要](agent-v3-s3-cloud-2026-10-04.json) |
 | S3 免费机制 | [检查与原失败](agent-v3-s3-free-2026-10-04.md) | 原提交/私有原日志从报告进入 |
+| S4 人工审批与回执 | [10 个原方案/机制通过、12 个实际 Run](agent-v3-s4-cloud-2026-10-05.md) | [机器摘要](agent-v3-s4-cloud-2026-10-05.json) |
+| S4 免费工程 | [检查分层](agent-v3-s4-free-2026-10-05.md) | 当前 CI / 私有原日志从报告进入 |
 
 机器 JSON 保留原数值/状态/哈希；原始模型正文、SDK/PG/outbound 和秘密仅在仓库外私有材料中。known/hold 不等于已结算账单，失败/未尝试不从分母删除。
 

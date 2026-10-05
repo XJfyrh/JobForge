@@ -68,6 +68,7 @@ type budgetBinding struct {
 type publicIdentity struct {
 	TenantID string `json:"tenant_id"`
 	Role     string `json:"role"`
+	ActorID  string `json:"actor_id,omitempty"`
 }
 
 type credentials struct {
@@ -111,6 +112,12 @@ func command(ctx context.Context, args []string) error {
 	}
 	defer pool.Close()
 	options := runpostgres.Options{Profiles: config.Profiles, TenantCapacity: config.TenantCapacity, ProfileCapacity: config.ProfileCapacity}
+	if args[0] == "serve" {
+		options.ActionSigners, err = loadActionSigners(config.Profiles)
+		if err != nil {
+			return err
+		}
+	}
 	for _, w := range config.Workers {
 		options.Workers = append(options.Workers, agentrun.WorkerConfig{ID: w.ID, Tenants: w.Tenants, ProfileIDs: w.Profiles, Capacity: w.Capacity})
 	}
@@ -291,7 +298,8 @@ func loadCredentials(workers []agentrun.WorkerConfig, tenants []string) (credent
 		return true
 	}
 	for key, identity := range result.public {
-		if !slices.Contains(tenants, identity.TenantID) || (identity.Role != "reader" && identity.Role != "operator") || !accept(key, 1) {
+		if !slices.Contains(tenants, identity.TenantID) || (identity.Role != "reader" && identity.Role != "operator" && identity.Role != "approver") ||
+			(identity.ActorID != "" && !agentrun.ValidIdentifier(identity.ActorID)) || (identity.Role == "approver" && !agentrun.ValidIdentifier(identity.ActorID)) || !accept(key, 1) {
 			return result, errors.New("invalid or overlapping Run credentials")
 		}
 	}
@@ -315,13 +323,17 @@ func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, op
 	}
 	keys := make(map[string]httpapi.Identity, len(configured.public))
 	for key, value := range configured.public {
-		keys[key] = httpapi.Identity{TenantID: value.TenantID, Role: value.Role}
+		keys[key] = httpapi.Identity{TenantID: value.TenantID, Role: value.Role, ActorID: value.ActorID}
 	}
 	capture, err := businessclient.New(os.Getenv("JOBFORGE_AGENT_BUSINESS_URL"), configured.business)
 	if err != nil {
 		return errors.New("invalid configured business capture boundary")
 	}
-	service, err := agentrun.NewService(store, capture, tenants)
+	reader, err := loadActionReader(options.Profiles, tenants, configured)
+	if err != nil {
+		return err
+	}
+	service, err := agentrun.NewService(store, capture, tenants, agentrun.WithReceiptReader(reader))
 	if err != nil {
 		return errors.New("run admission service unavailable")
 	}
@@ -377,6 +389,8 @@ func checkControlReady(ctx context.Context, pool *pgxpool.Pool) error {
 	err := pool.QueryRow(ctx, `select to_regclass('public.runs') is not null
 		and to_regclass('public.physical_calls') is not null
 		and to_regclass('public.run_steps') is not null
+		and to_regclass('public.action_authorizations') is not null
+		and to_regclass('public.action_calls') is not null
 		and to_regclass('business_meta.database_identity') is null`).Scan(&ready)
 	if err != nil || !ready {
 		return errors.New("control schema is unavailable")

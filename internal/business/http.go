@@ -269,6 +269,12 @@ func writeBusinessError(w http.ResponseWriter, err error) {
 		status, code = http.StatusNotFound, "NOT_FOUND"
 	case errors.Is(err, ErrConflict):
 		status, code = http.StatusConflict, "CONFLICT"
+	case errors.Is(err, ErrActionConflict):
+		status, code = http.StatusConflict, "ACTION_CONFLICT"
+	case errors.Is(err, ErrAuthorizationExpired):
+		status, code = http.StatusConflict, "ACTION_AUTHORIZATION_EXPIRED"
+	case errors.Is(err, ErrActionForbidden):
+		status, code = http.StatusForbidden, "FORBIDDEN"
 	case errors.Is(err, ErrProfileUnavailable):
 		status, code = http.StatusConflict, "PROFILE_UNAVAILABLE"
 	case errors.Is(err, ErrDependencyUnavailable), errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):

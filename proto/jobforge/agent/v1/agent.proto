@@ -37,6 +37,16 @@ service AgentService {
   rpc AcknowledgeStopped(AcknowledgeStoppedRequest) returns (AcknowledgeStoppedResponse);
   // GetAcceptedCommit confirms lost ACKs read-only, including released leases.
   rpc GetAcceptedCommit(GetAcceptedCommitRequest) returns (GetAcceptedCommitResponse);
+  // GetAction reads the original binding under current fenced execution.
+  rpc GetAction(GetActionRequest) returns (GetActionResponse);
+  // AuthorizeAction signs one immutable approved operation on its original Run.
+  rpc AuthorizeAction(AuthorizeActionRequest) returns (AuthorizeActionResponse);
+  // ReserveActionCall permits one automatic query or write outside model usage.
+  rpc ReserveActionCall(ReserveActionCallRequest) returns (ReserveActionCallResponse);
+  // ObserveActionCall preserves original physical facts without changing Run state.
+  rpc ObserveActionCall(ObserveActionCallRequest) returns (ObserveActionCallResponse);
+  // CompleteAction atomically accepts a validated receipt and closes the attempt.
+  rpc CompleteAction(CompleteActionRequest) returns (CompleteActionResponse);
 }
 
 // SessionIdentity is correlation, not authentication; principal comes from RPC auth.
@@ -103,6 +113,8 @@ enum StepKind {
   STEP_KIND_SUBMIT_PROPOSAL = 7;
   // Choose one bound read tool or a final proposal; this grants no dispatch.
   STEP_KIND_MODEL_DECISION = 8;
+  // Execute the approved fixed business action in Go; never starts Python.
+  STEP_KIND_APPLY_TICKET_RESOLUTION = 9;
 }
 
 // RunState is the control-plane lifecycle; proposal does not mean applied.
@@ -195,6 +207,131 @@ message Checkpoint {
   repeated AcceptedStep steps = 3;
   // Immutable admission facts needed by the first step; counted in 256 KiB.
   SnapshotBinding snapshot = 4;
+  // Protected ActionBinding JSON, at most 40 KiB; only present at action cursor.
+  // It carries no endpoint credentials or signing private key.
+  bytes action_binding_json = 5;
+}
+
+// GetActionRequest reads a binding at the current action cursor.
+message GetActionRequest {
+  // Current execution identity.
+  ExecutionIdentity execution = 1;
+  // Exact server-selected action step.
+  StepIdentity step = 2;
+}
+
+// GetActionResponse carries the closed Go ActionBinding JSON contract.
+message GetActionResponse {
+  // At most 40 KiB including original signed parameters and effect view.
+  bytes action_binding_json = 1;
+}
+
+// AuthorizeActionRequest cannot supply parameters, expiry or operation identity.
+message AuthorizeActionRequest {
+  // Current execution identity.
+  ExecutionIdentity execution = 1;
+  // Exact server-selected action step.
+  StepIdentity step = 2;
+}
+
+// AuthorizeActionResponse carries the first immutable authorization.
+message AuthorizeActionResponse {
+  // Closed ActionBinding JSON, at most 40 KiB.
+  bytes action_binding_json = 1;
+}
+
+// ActionCallKind keeps automatic calls outside the provider ledger.
+enum ActionCallKind {
+  // Missing kind is rejected.
+  ACTION_CALL_KIND_UNSPECIFIED = 0;
+  // One authenticated receipt GET in this attempt.
+  ACTION_CALL_KIND_RECEIPT_QUERY = 1;
+  // One authenticated action POST in this attempt.
+  ACTION_CALL_KIND_ACTION_WRITE = 2;
+}
+
+// ActionCallReservation is one physical send permit, never a replay permission.
+message ActionCallReservation {
+  // Random physical UUID, different from the stable operation UUID.
+  string physical_call_id = 1;
+  // Original approved business operation UUID.
+  string operation_id = 2;
+  // Complete original authorization SHA-256.
+  string authorization_hash = 3;
+  // Automatic query or write.
+  ActionCallKind kind = 4;
+  // Fresh database reservation time.
+  google.protobuf.Timestamp reserved_at = 5;
+  // The request must begin strictly before this expiry.
+  google.protobuf.Timestamp dispatch_expires_at = 6;
+  // Bounded original physical request deadline, at most ten seconds.
+  google.protobuf.Timestamp call_deadline = 7;
+}
+
+// ReserveActionCallRequest binds one UUID to current execution and content.
+message ReserveActionCallRequest {
+  // Current execution identity.
+  ExecutionIdentity execution = 1;
+  // Exact server-selected action step.
+  StepIdentity step = 2;
+  // New physical UUID.
+  string physical_call_id = 3;
+  // Automatic query or write.
+  ActionCallKind kind = 4;
+  // Stable operation UUID.
+  string operation_id = 5;
+  // Original authorization SHA-256.
+  string authorization_hash = 6;
+}
+
+// ReserveActionCallResponse grants send only for a new accepted physical UUID.
+message ReserveActionCallResponse {
+  // Original accepted physical permission.
+  ActionCallReservation reservation = 1;
+  // False means the caller must never resend this physical UUID.
+  bool newly_reserved = 2;
+}
+
+// ObserveActionCallRequest preserves one original physical response or failure.
+message ObserveActionCallRequest {
+  // Original execution identity, including expired original attempts.
+  ExecutionIdentity execution = 1;
+  // Accepted original physical UUID.
+  string physical_call_id = 2;
+  // Closed response, timeout or network_error classification.
+  string transport_outcome = 3;
+  // Content-free original observation SHA-256.
+  string observation_hash = 4;
+}
+
+// ObserveActionCallResponse acknowledges only stored transport facts.
+message ObserveActionCallResponse {
+  // Original physical UUID.
+  string physical_call_id = 1;
+}
+
+// CompleteActionRequest cannot create or modify an authorization.
+message CompleteActionRequest {
+  // Current fenced execution identity.
+  ExecutionIdentity execution = 1;
+  // Current action cursor.
+  StepIdentity step = 2;
+  // Closed business ActionReceipt JSON, at most 4 KiB.
+  bytes receipt_json = 3;
+  // Original observed automatic call UUID; empty only for a persisted applied view.
+  string physical_call_id = 4;
+}
+
+// CompleteActionResponse is the immutable first applied checkpoint.
+message CompleteActionResponse {
+  // Complete accepted action step identity and result.
+  AcceptedStep accepted_step = 1;
+  // Advanced cursor version.
+  int64 cursor_version = 2;
+  // Terminal succeeded state with applied business outcome.
+  RunState state = 3;
+  // True after atomically releasing attempt and capacity.
+  bool attempt_closed = 4;
 }
 
 // SnapshotBinding carries protected admitted facts, never model-supplied identity.

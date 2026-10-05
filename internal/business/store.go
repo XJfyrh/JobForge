@@ -54,7 +54,7 @@ func (s *Store) CheckReady(ctx context.Context) error {
 	err := s.pool.QueryRow(ctx, `select
  (select purpose = 'jobforge-business-v1' and database_name = current_database()
   from business_meta.database_identity where singleton)
- and (select max(version) = 2 from business_meta.business_schema_migrations)
+ and (select max(version) = 3 from business_meta.business_schema_migrations)
  and exists (select 1 from pg_catalog.pg_extension e
  join pg_catalog.pg_namespace n on n.oid = e.extnamespace
  where e.extname = 'vector' and e.extversion = '0.8.6' and n.nspname = 'extensions')`).Scan(&ready)

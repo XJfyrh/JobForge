@@ -275,7 +275,7 @@ func (h *service) CommitStep(ctx context.Context, request *agentv1.CommitStepReq
 
 func (h *service) FailAttempt(ctx context.Context, request *agentv1.FailAttemptRequest) (*agentv1.FailAttemptResponse, error) {
 	if request == nil || !slices.Contains([]string{"INVALID_ARGUMENT", "PROFILE_UNAVAILABLE", "BUDGET_EXHAUSTED", "DEPENDENCY_UNAVAILABLE",
-		"EXECUTOR_PROTOCOL_ERROR", "MODEL_PROTOCOL_ERROR", "MODEL_UNSUPPORTED", "CHECKPOINT_TOO_LARGE", "TIMEOUT"}, request.ErrorCode) {
+		"EXECUTOR_PROTOCOL_ERROR", "MODEL_PROTOCOL_ERROR", "MODEL_UNSUPPORTED", "CHECKPOINT_TOO_LARGE", "TIMEOUT", "ACTION_CONFLICT", "ACTION_AUTHORIZATION_EXPIRED", "ACTION_OUTCOME_UNKNOWN"}, request.ErrorCode) {
 		return nil, run.ErrInvalidArgument
 	}
 	principal := authenticated(ctx)

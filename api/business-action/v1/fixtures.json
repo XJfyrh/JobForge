@@ -1,0 +1,100 @@
+{
+  "action": {
+    "authorization": {
+      "schema_version": 1,
+      "key_id": "fixture-key",
+      "operation": "apply_ticket_resolution",
+      "tenant_id": "tenant-north",
+      "business_request_id": "00000000-0000-4000-8000-000000000001",
+      "business_request_created_at": 1791158399000000,
+      "operation_id": "00000000-0000-4000-8000-000000000001",
+      "run_id": "00000000-0000-4000-8000-000000000001",
+      "approval_id": "00000000-0000-4000-8000-000000000001",
+      "actor_id": "approver-1",
+      "decided_at": 1791158399900000,
+      "proposal_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parameters_hash": "763213ce723b5e1d7fe13d87348dec7a1de4927667500db22a64b231a42f991c",
+      "snapshot_id": "00000000-0000-4000-8000-000000000001",
+      "snapshot_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "version_vector": {
+        "schema_version": 1,
+        "ticket": {
+          "id": "ticket-1",
+          "revision": 1
+        },
+        "order": {
+          "id": null,
+          "exists": false,
+          "revision": null
+        },
+        "delivery": {
+          "id": null,
+          "exists": false,
+          "aggregate_revision": null
+        },
+        "policy": {
+          "version": "policy-v1",
+          "revision": 1,
+          "corpus_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "index": {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "profile_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "content_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      },
+      "authorized_at": 1791158400000000,
+      "permission_expires_at": 1791162000000000,
+      "authorization_expires_at": 1791162000000000,
+      "run_deadline": 1791165600000000
+    },
+    "parameters": {
+      "ticket_id": "ticket-1",
+      "decision": "proposal",
+      "action": "record_conclusion",
+      "conclusion": "on_time",
+      "requested_fields": [],
+      "target_ticket_status": "escalated",
+      "summary": "Synthetic \u003cresolution\u003e \u0026 Unicode 例子\u2028",
+      "claims": [
+        {
+          "kind": "ticket_status",
+          "mode": "preserve_escalated",
+          "refs": [
+            {
+              "evidence_ref": "business-evidence:fixture:ticket",
+              "source_pointer": "/ticket/status"
+            }
+          ]
+        }
+      ],
+      "evidence_refs": [
+        "business-evidence:fixture:ticket"
+      ]
+    },
+    "signature": "MJkNvq5cY63UPQFylBL4zuofZqkeRMIjs9AUtErkHSaGK9W1uSDSSvyupFZ8Z9JJBXEM0QX0UTxavX2gs8BEAQ"
+  },
+  "authorization_hash": "51996a29dd83cdcd4eec10a21cb2f1db4744b9149ad2439d04d71028c3d44112",
+  "evidence_origin": "synthetic_test",
+  "parameters_hash": "763213ce723b5e1d7fe13d87348dec7a1de4927667500db22a64b231a42f991c",
+  "public_key": "O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik",
+  "public_key_sha256": "139e3940e64b5491722088d9a0d741628fc826e09475d341a780acde3c4b8070",
+  "receipt": {
+    "schema_version": 1,
+    "tenant_id": "tenant-north",
+    "operation_id": "00000000-0000-4000-8000-000000000001",
+    "business_request_id": "00000000-0000-4000-8000-000000000001",
+    "authorization_hash": "51996a29dd83cdcd4eec10a21cb2f1db4744b9149ad2439d04d71028c3d44112",
+    "proposal_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "parameters_hash": "763213ce723b5e1d7fe13d87348dec7a1de4927667500db22a64b231a42f991c",
+    "approval_id": "00000000-0000-4000-8000-000000000001",
+    "ticket_id": "ticket-1",
+    "before_revision": 1,
+    "after_revision": 2,
+    "ticket_status": "escalated",
+    "applied_at": 1791158400000001,
+    "retain_until": 1793750400000001,
+    "receipt_hash": "49c661f16ef83c72b351e9440ad6872bb78582d71bcc74113127ddb2ca1c3651"
+  },
+  "schema_version": 1
+}

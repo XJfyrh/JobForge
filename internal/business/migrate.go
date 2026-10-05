@@ -76,7 +76,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 		return err
 	}
 	var version int
-	if err := tx.QueryRow(ctx, `select coalesce(max(version), 0) from business_meta.business_schema_migrations`).Scan(&version); err != nil || version < 1 || version > 2 {
+	if err := tx.QueryRow(ctx, `select coalesce(max(version), 0) from business_meta.business_schema_migrations`).Scan(&version); err != nil || version < 1 || version > 3 {
 		return ErrWrongDatabase
 	}
 	if version == 1 {
@@ -84,6 +84,15 @@ func (m *Migrator) Up(ctx context.Context) error {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `insert into business_meta.business_schema_migrations (version) values (2)`); err != nil {
+			return ErrInternal
+		}
+		version = 2
+	}
+	if version == 2 {
+		if err := applyBusinessSQL(ctx, tx, "0003_ticket_resolution.up.sql"); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `insert into business_meta.business_schema_migrations (version) values (3)`); err != nil {
 			return ErrInternal
 		}
 	}
@@ -112,8 +121,17 @@ func (m *Migrator) Down(ctx context.Context) error {
 		return err
 	}
 	var version int
-	if err := tx.QueryRow(ctx, `select coalesce(max(version), 0) from business_meta.business_schema_migrations`).Scan(&version); err != nil || version < 1 || version > 2 {
+	if err := tx.QueryRow(ctx, `select coalesce(max(version), 0) from business_meta.business_schema_migrations`).Scan(&version); err != nil || version < 1 || version > 3 {
 		return ErrWrongDatabase
+	}
+	if version == 3 {
+		if err := applyBusinessSQL(ctx, tx, "0003_ticket_resolution.down.sql"); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `delete from business_meta.business_schema_migrations where version=3`); err != nil {
+			return ErrInternal
+		}
+		version = 2
 	}
 	if version == 2 {
 		if err := applyBusinessSQL(ctx, tx, "0002_business_facts.down.sql"); err != nil {

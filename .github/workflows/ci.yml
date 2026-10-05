@@ -134,6 +134,8 @@ jobs:
         run: python -m pytest tools/support_evaluation
       - name: S3 frozen list and failure export (offline, no model calls)
         run: PYTHONPATH=python:sdk/python python -m pytest tools/support_recovery
+      - name: S4 source bindings and approval evidence (offline, no model calls)
+        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_approval
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations
@@ -152,6 +154,8 @@ jobs:
         run: MYPYPATH=python:sdk/python mypy --explicit-package-bases tools/support_evaluation
       - name: S3 experiment types (Linux process interfaces)
         run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
+      - name: S4 experiment types
+        run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_approval
 
   business-contract:
     name: Agent S1 business (real pgvector, HTTP, race)
@@ -213,7 +217,7 @@ jobs:
         run: buf lint
 
   agent-runtime-contract:
-    name: Agent S1 runtime (real processes, PostgreSQL, race)
+    name: Agent S1-S4 runtime (real processes, PostgreSQL, race)
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -230,6 +234,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      business-postgres:
+        image: pgvector/pgvector:0.8.6-pg16-bookworm@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+        env:
+          POSTGRES_USER: jobforge_business_bootstrap
+          POSTGRES_PASSWORD: jobforge_business_bootstrap
+          POSTGRES_DB: jobforge_business
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U jobforge_business_bootstrap -d jobforge_business"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - name: Build fixed installed process checks
@@ -240,15 +257,28 @@ jobs:
         run: docker build --target integration-check -f tools/agentruntimecheck/Dockerfile -t jobforge-agent-runtime:integration .
       - name: Coordinator ordering with the real Linux clock
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
-      - name: Real PostgreSQL, gRPC, provider report confirmation and process faults
+      - name: Real PostgreSQL, business actions, gRPC and process faults
         run: >-
           docker run --rm --init --network host --add-host control:127.0.0.1 --cpus 2 --memory 512m --pids-limit 96
           -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable
+          -e JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@127.0.0.1:5434/jobforge_business?sslmode=disable
           jobforge-agent-runtime:integration
       - name: Build production image and reject fixture registration
         run: |
           docker build -f deploy/Dockerfile.agent-worker -t jobforge-agent-worker:production .
           docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; from importlib.util import find_spec; assert set(REGISTRY) == {"support-fixed-v1", "support-agent-v1"}; assert REGISTRY["support-fixed-v1"].__class__.__module__ == "jobforge_agent.support_adapter"; assert REGISTRY["support-agent-v1"].__class__.__module__ == "jobforge_agent.support_agent"; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert find_spec("jobforge_agent.runtime_recovery_faults") is None; assert not Path("/tmp/runtime_recovery_faults.py").exists(); assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists(); assert not Path("/checks").exists(); assert not Path("/src/examples/support-agent/evaluation").exists()'
+
+      - name: Verify external approval image has every frozen operator source
+        run: |
+          docker build --build-arg WORKER_IMAGE=jobforge-agent-worker:production -f deploy/Dockerfile.support-approval -t jobforge-support-approval:acceptance .
+          python - "$RUNNER_TEMP/support-approval-sources.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          files = [path for folder in ("tools/support_approval", "tools/support_evaluation") for path in Path(folder).iterdir() if path.suffix in {".py", ".sql"} and not path.name.startswith("test_") and path.name != "fixtures.py"]
+          files += [Path("tools/support_recovery") / name for name in ("driver.py", "plan.py", "continuation.py")]
+          Path(sys.argv[1]).write_text(json.dumps({path.as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}), encoding="utf-8")
+          PY
+          docker run --rm --init --network none --entrypoint python --mount "type=bind,source=$RUNNER_TEMP/support-approval-sources.json,target=/tmp/expected.json,readonly" jobforge-support-approval:acceptance -I -c 'import hashlib,json,sys; from pathlib import Path; sys.path.insert(0,"/app"); from tools.support_approval.driver import verify_release; from tools.support_approval.report import report; expected=json.loads(Path("/tmp/expected.json").read_bytes()); assert expected; assert all(hashlib.sha256((Path("/app")/path).read_bytes()).hexdigest()==digest for path,digest in expected.items()); print("Frozen operator sources verified:",len(expected))'
 
   observability-config:
     name: Prometheus rules & generated dashboard

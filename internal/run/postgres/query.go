@@ -247,7 +247,14 @@ func (s *Store) Result(ctx context.Context, tenant, id string) (agentrun.Result,
 	if !validUUID(id) {
 		return result, agentrun.ErrInvalidArgument
 	}
-	err := s.pool.QueryRow(ctx, "select result_kind,result_ref from runs where tenant_id=$1 and run_id=$2", tenant, id).Scan(&result.Kind, &result.Ref)
+	err := s.pool.QueryRow(ctx, `select result_kind,result_ref,case
+		when state in ('failed','cancelled','succeeded') then coalesce(terminal_disposition,
+			case when outcome='applied' then 'applied' when outcome='rejected' then 'rejected'
+			when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end)
+		when outcome='applied' then 'applied' when outcome='rejected' then 'rejected' when outcome='no_action' then 'no_action'
+		when next_step_kind='apply_ticket_resolution' then 'approved'
+		when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end
+		from runs where tenant_id=$1 and run_id=$2`, tenant, id).Scan(&result.Kind, &result.Ref, &result.Disposition)
 	result.Available = err == nil && result.Ref != nil
 	return result, dbError(err)
 }

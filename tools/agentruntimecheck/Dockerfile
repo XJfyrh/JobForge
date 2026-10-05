@@ -52,6 +52,7 @@ COPY --from=integration-build /out/supportrecoveryproxy /usr/local/bin/
 COPY sdk/python /tmp/sdk
 RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/sdk
 COPY sdk/python/tests/run_recovery_http_contract.py /src/sdk/python/tests/run_recovery_http_contract.py
+COPY sdk/python/tests/run_approval_http_contract.py /src/sdk/python/tests/run_approval_http_contract.py
 COPY tools/support_evaluation/launcher.py tools/support_evaluation/driver.py tools/support_evaluation/export.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_evaluation/assemble.py tools/support_evaluation/evidence.py tools/support_evaluation/validate_data.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_recovery /usr/local/lib/python3.12/site-packages/tools/support_recovery/
@@ -70,4 +71,4 @@ WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
 ENV JOBFORGE_TEST_PYTHON=/usr/local/bin/python
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery)", "-test.timeout=1200s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor)", "-test.timeout=1200s"]

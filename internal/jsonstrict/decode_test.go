@@ -1,9 +1,25 @@
 package jsonstrict
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
+
+func TestRawMessageKeepsOuterShapeAndRecursiveAmbiguityChecks(t *testing.T) {
+	var value struct {
+		Name    string          `json:"name"`
+		Content json.RawMessage `json:"content"`
+	}
+	if Decode([]byte(`{"name":"valid","content":[{"kind":"x"}]}`), &value) != nil {
+		t.Fatal("raw structured JSON rejected")
+	}
+	for _, raw := range []string{`{"name":null,"content":{}}`, `{"NAME":"x","content":{}}`, `{"name":"x","content":{"key":1,"key":2}}`, `{"name":"x","content":[],"unknown":1}`} {
+		if Decode([]byte(raw), &value) == nil {
+			t.Fatal("raw JSON loosened typed or recursive checks")
+		}
+	}
+}
 
 func TestDecodeRejectsAmbiguityAndLimits(t *testing.T) {
 	for _, raw := range []string{

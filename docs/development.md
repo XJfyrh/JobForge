@@ -50,7 +50,7 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 | `python/jobforge_agent` | 固定 guardian/step、HTTP adapter 与 Agent 策略 |
 | `cmd/support-business`、`internal/business` | 独立业务事实、快照和检索 |
 | `api`、`proto`、`sdk/python` | 源契约、生成代码与 Python 客户端 |
-| `tools/support_evaluation`、`tools/support_recovery` | 离线评分、有界实验与导出 |
+| `tools/support_evaluation`、`tools/support_recovery`、`tools/support_approval` | 离线评分、有界实验与导出 |
 | `cmd/jobforge`、`internal/worker` | 既有 Job API/Handler 路径 |
 
 SDK 开发保持在仓库根目录，编辑后重新安装 `./sdk/python`；运行测试/lint 无需 `cd sdk/python`。Proto 修改后使用 `.tools/bin/buf.exe generate`（Linux/macOS 为 `.tools/bin/buf generate`），不手改生成代码。规范见[编码要求](code-standards.md)。

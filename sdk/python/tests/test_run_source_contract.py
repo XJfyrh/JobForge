@@ -104,14 +104,17 @@ def test_all_sdk_wire_fields_match_the_source_exactly() -> None:
         assert set(schema["required"]) == set(schema["properties"])
 
 
-def test_source_exposes_no_worker_or_approval_write_api() -> None:
-    """ADR-0020 adds one read route and no execution or approval mutation."""
-    assert len(OPENAPI["paths"]) == 8
-    assert sum(len(path) for path in OPENAPI["paths"].values()) == 9
+def test_source_exposes_only_registered_public_operations() -> None:
+    """ADR-0026 adds approval decisions and receipt-only reconciliation."""
+    assert len(OPENAPI["paths"]) == 12
+    assert sum(len(path) for path in OPENAPI["paths"].values()) == 14
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/calls"]) == {"get"}
+    assert set(OPENAPI["paths"]["/v2/runs/{run_id}/approval"]) == {"get", "post"}
+    assert set(OPENAPI["paths"]["/v2/runs/{run_id}/reconcile"]) == {"post"}
     for path in OPENAPI["paths"]:
         assert all(
-            word not in path for word in ("approval", "reserve", "settle", "worker")
+            word not in path
+            for word in ("apply_ticket_resolution", "reserve", "settle", "worker")
         )
     for entry in FIXTURES["errors"]:
         check_schema(entry["body"], OPENAPI["components"]["schemas"]["ErrorEnvelope"])

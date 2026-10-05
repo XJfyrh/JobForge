@@ -8,7 +8,7 @@ python -m pip install './sdk/python[dev]'
 
 ## Run v2
 
-`RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 [Run 指南](../../docs/agent-v3/runs.md)；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；默认不启用收费模型，当前没有批准/业务写入接口。
+`RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 [Run 指南](../../docs/agent-v3/runs.md)；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；默认不启用收费模型。schema 4 的审批与结论记录见[审批指南](../../docs/agent-v3/approval.md)。
 
 ```python
 import os
@@ -30,7 +30,9 @@ with RunClient(
     print(result.available, result.kind, result.ref)
 ```
 
-公开方法为 `submit/get/list/steps/events/result/calls/cancel/retry`。`list` 返回 `items/next_cursor`，`steps/events` 接受 `after/limit` 并返回 `items/next_after`；默认20条、最多100条，SDK不自动翻页或轮询。`steps` 显式读取受保护结果，事件仅含元数据。未有结果时 `available=False`、`kind/ref=None`；`proposal` 只表示待审批方案。
+公开方法为 `submit/get/list/steps/events/result/calls/cancel/retry/approval/decide_approval/effect/reconcile/action_calls`。`list` 返回 `items/next_cursor`，`steps/events` 接受 `after/limit` 并返回 `items/next_after`；默认20条、最多100条，SDK不自动翻页或轮询。`steps` 显式读取受保护结果，事件仅含元数据。未有结果时 `available=False`、`kind/ref=None`、`disposition=none`；result 的 disposition 与后续 effect 分开，终态结果不因核对改写。
+
+`approval()` 读取原方案与 hash；独立 approver 可用 `decide_approval(run_id, "approve"|"reject", proposal_hash, idempotency_key=...)` 决定，不上传编辑内容。`effect()` 查询 none/unknown/applied；operator 的终态 `reconcile()` 只核对一次原回执。`action_calls()` 最多8条独立动作许可，不占44条模型账本或生成provider费用。新增异常包括 ApprovalConflictError、ApprovalExpiredError、ActionConflictError、ActionAuthorizationExpiredError、ActionOutcomeUnknownError。依赖错误不能当作无回执，unknown 不能当作未写入。
 
 `calls(run_id)` 只发一次GET，返回带 `captured_at` 的 `RunCalls`，最多44条、完整编码≤256KiB，无分页/tenant参数。reader/operator均可读本租户Run；跨租户404。`audit_status`区分历史未采集、免费不适用、新调用缺报告与已记录；缺报告不代表未发送。`observed_usage`保存观测计数，只有 `usage_known` 与 `settled_usage` 表示兼容价格下的已知用量；模型身份不匹配时可以有前者而保留全部hold。reasoning缺省、观测0和不可用分别表示，不返回reasoning正文。共享batch只公开冻结及固定原因，不公开其它租户触发调用。晚到报告可能改变未来查询，保存证据时同时保留抓取时间与报告hash。
 

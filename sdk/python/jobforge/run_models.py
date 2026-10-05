@@ -345,14 +345,27 @@ class RunResult(RunModel):
     available: bool
     kind: str | None
     ref: str | None
+    disposition: str
 
     def __post_init__(self) -> None:
+        if self.disposition not in (
+            "none",
+            "proposal",
+            "approved",
+            "no_action",
+            "rejected",
+            "applied",
+            "unknown",
+        ):
+            raise ValueError("invalid result disposition")
         if self.kind not in (None, "proposal", "no_action", "final"):
             raise ValueError("invalid result kind")
         if self.available != (self.kind is not None and self.ref is not None):
             raise ValueError("invalid result availability")
         if not self.available and (self.kind is not None or self.ref is not None):
             raise ValueError("invalid absent result")
+        if (self.disposition == "none") == self.available:
+            raise ValueError("invalid result disposition availability")
 
 
 def _uuid(value: str) -> None:

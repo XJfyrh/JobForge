@@ -29,9 +29,10 @@ func mapError(err error) error {
 			code, reason = codes.NotFound, string(domain)
 		case run.ErrConflict, run.ErrAlreadyTerminal, run.ErrInvalidTransition, run.ErrStaleLease,
 			run.ErrCancelRequested, run.ErrStopRequested, run.ErrStepConflict, run.ErrCallConflict,
-			run.ErrBudgetExhausted, run.ErrProfileUnavailable, run.ErrCallSettlementExpired:
+			run.ErrBudgetExhausted, run.ErrProfileUnavailable, run.ErrCallSettlementExpired,
+			run.ErrApprovalConflict, run.ErrApprovalExpired, run.ErrActionConflict, run.ErrActionAuthorizationExpired, run.ErrActionOutcomeUnknown:
 			code, reason = codes.FailedPrecondition, string(domain)
-		case run.ErrQueueOverloaded:
+		case run.ErrQueueOverloaded, run.ErrRateLimited:
 			code, reason = codes.ResourceExhausted, string(domain)
 		case run.ErrDependencyUnavailable:
 			code, reason = codes.Unavailable, string(domain)

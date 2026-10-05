@@ -264,6 +264,9 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 // Its ID is not a provider idempotency guarantee; duplicate responses are audit.
 func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.ReserveCallRequest) (agentrun.ReserveCallResponse, error) {
 	var result agentrun.ReserveCallResponse
+	if req.Step.Kind == "apply_ticket_resolution" {
+		return result, agentrun.ErrInvalidTransition
+	}
 	if validateLedgerLease(req.Lease) != nil || !agentrun.ValidUUID(req.PhysicalCallID) ||
 		!agentrun.ValidHash(req.ParameterHash) || !agentrun.ValidHash(req.PriceHash) || agentrun.CallKind(req.Subcall) == "" ||
 		(req.ToolInvocationID != "" && !agentrun.ValidUUID(req.ToolInvocationID)) {
