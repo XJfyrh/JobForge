@@ -22,6 +22,7 @@ RUN python -m pip install --no-cache-dir --no-deps /sdk-wheels/*.whl && apt-get 
 COPY --from=tools-build /out/agent-control /out/supportapprovalproxy /usr/local/bin/
 WORKDIR /app
 COPY tools/support_evaluation/__init__.py tools/support_evaluation/conftest.py tools/support_evaluation/assemble.py tools/support_evaluation/driver.py tools/support_evaluation/evidence.py tools/support_evaluation/export.py tools/support_evaluation/launcher.py tools/support_evaluation/predicates.py tools/support_evaluation/score.py tools/support_evaluation/validate_data.py /app/tools/support_evaluation/
+COPY tools/support_evaluation/business_audit.sql /app/tools/support_evaluation/
 COPY tools/support_recovery/driver.py tools/support_recovery/plan.py tools/support_recovery/continuation.py /app/tools/support_recovery/
 COPY tools/support_approval/driver.py tools/support_approval/plan.py tools/support_approval/quality.py tools/support_approval/report.py tools/support_approval/sources.py tools/support_approval/*.sql /app/tools/support_approval/
 # Frozen development data is a read-only operator mount, never a Worker package.
