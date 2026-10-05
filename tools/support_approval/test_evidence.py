@@ -17,6 +17,46 @@ def write(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value))
 
 
+def test_postgres_uri_is_expanded_in_environment_without_secret_arguments() -> None:
+    """Fixed audits and the single loader change use the intended host/database."""
+    actual = driver.postgres_environment(
+        "postgres://reader:p%40ss@business-postgres:5432/jobforge_s4_business?sslmode=disable"
+    )
+    assert {
+        key: actual[key]
+        for key in (
+            "PGHOST",
+            "PGPORT",
+            "PGUSER",
+            "PGPASSWORD",
+            "PGDATABASE",
+            "PGSSLMODE",
+        )
+    } == {
+        "PGHOST": "business-postgres",
+        "PGPORT": "5432",
+        "PGUSER": "reader",
+        "PGPASSWORD": "p@ss",
+        "PGDATABASE": "jobforge_s4_business",
+        "PGSSLMODE": "disable",
+    }
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        "jobforge_s4_business",
+        "postgres://reader@db/?sslmode=disable",
+        "postgres://reader@db/name?sslmode=disable&host=other",
+        "postgres://reader@db/name#fragment",
+    ],
+)
+def test_invalid_audit_connection_is_a_bounded_error(dsn: str) -> None:
+    """Private connection bytes never become an exception diagnostic."""
+    with pytest.raises(ValueError, match="^INVALID_AUDIT_CONNECTION$"):
+        driver.postgres_environment(dsn)
+
+
 @pytest.mark.parametrize(
     "field", ["run", "result", "steps", "calls", "effect", "action_calls", "approval"]
 )

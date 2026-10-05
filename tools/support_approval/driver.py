@@ -12,6 +12,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from jobforge import RunClient
 
@@ -50,7 +51,7 @@ def sql(
     command.extend(["-f", "/app/tools/support_approval/" + name + ".sql"])
     result = subprocess.run(
         command,
-        env=dict(os.environ, PGDATABASE=settings[credential]),
+        env=postgres_environment(settings[credential]),
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -61,6 +62,37 @@ def sql(
         raise ValueError("AUDIT_TOO_LARGE")
     document: dict[str, Any] = json.loads(result.stdout)
     return document
+
+
+def postgres_environment(dsn: str) -> dict[str, str]:
+    """Expand the private URI into libpq environment fields, without CLI secrets."""
+    try:
+        parts = urlsplit(dsn)
+        query = parse_qs(parts.query, strict_parsing=True)
+        port = parts.port or 5432
+    except ValueError:
+        raise ValueError("INVALID_AUDIT_CONNECTION") from None
+    if (
+        parts.scheme not in {"postgres", "postgresql"}
+        or not parts.hostname
+        or not parts.username
+        or not parts.path.startswith("/")
+        or len(parts.path) < 2
+        or parts.fragment
+        or set(query) != {"sslmode"}
+        or len(query["sslmode"]) != 1
+        or query["sslmode"][0] not in {"disable", "require", "verify-ca", "verify-full"}
+    ):
+        raise ValueError("INVALID_AUDIT_CONNECTION")
+    return dict(
+        os.environ,
+        PGHOST=parts.hostname,
+        PGPORT=str(port),
+        PGUSER=unquote(parts.username),
+        PGPASSWORD=unquote(parts.password or ""),
+        PGDATABASE=unquote(parts.path[1:]),
+        PGSSLMODE=query["sslmode"][0],
+    )
 
 
 def final_audits(
