@@ -1,5 +1,7 @@
 # S1 收尾新批：未知 chat 计量阻塞，保持停止
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 > 历史记录保留当时结果和决策；后续已完成[独立新批40例验收](agent-v3-s1-delivery-2026-09-17.md)，未改写本批失败或释放hold。
 
 实际运行于 **2026-09-17 00:31:12～00:32:13（UTC+8）**。本批没有完成 S1：固定 40 案仅 14 案完成方案、第 15 案中断、25 案未尝试。[机器评分](agent-v3-s1-closeout-2026-09-17.json)与[部署、费用及逐案引用](agent-v3-s1-closeout-receipt-2026-09-17.json)来自实际 SDK 导出、持久账本和出站元数据；`actual_acceptance_evidence_complete=false`。PR #51 保持 Draft，不以工程检查替代真实验收。
@@ -79,6 +81,6 @@ DEV-015 的 chat `dde342ec-fa88-455f-ac41-b73e335ae949`：
 
 独立上下文 Agent 核对全部 316 份 SDK HTTP receipt 的 bytes/SHA256、105 组出站记录、实际 v2 库七张事实表前后行数/hash一致且 reader 写权限均 false；只有 DEV-015 chat 的响应不完整。独立审查确认当前停止收费与保持 Draft 的判断正确。最终文档差异审查及对应 CI 记录在 PR 中，不以收费前 CI 冒充新提交检查。
 
-[运行指南](../agent-v3-cloud-batch.md)覆盖干净库、SDK 安装、密钥注入、固定数据/索引、prepare/register/bootstrap/inspect、具名 launch、只读 export/评分、停止及仅清理独立环境。独立环境实际验证未产生收费模型请求，也未重做真实 embedding。
+[运行指南](../agent-v3/cloud-batch.md)覆盖干净库、SDK 安装、密钥注入、固定数据/索引、prepare/register/bootstrap/inspect、具名 launch、只读 export/评分、停止及仅清理独立环境。独立环境实际验证未产生收费模型请求，也未重做真实 embedding。
 
 本次不宣称 S1 完成或真实云端稳定性通过，不推进 S2～S5。保留历史 W4 性能门禁失败、AT-25 跳过、检索 19/20（RQ-06 未命中）、生产长期留存未验收，以及原 DEV-016 根因未知。秘密与原始正文只在仓库外，公共报告仅发布摘要及工件 hash。

@@ -8,7 +8,7 @@
 > 代码基线：`1b31334`（main，migrations 0001～0017）<br>
 > 实现合并：[PR #24](https://github.com/XJfyrh/JobForge/pull/24) `8da84ab`（持久效果）、[PR #25](https://github.com/XJfyrh/JobForge/pull/25) `d5ecc15`（真实进程崩溃与跨平台 Wait 证据）<br>
 > 前置决策：[ADR-0009](../adr/0009-demo-persistent-effects-and-real-crash-evidence.md)<br>
-> 相关文档：[PRD v0.1](JobForge_PRD_v0.1.md)、[PRD v0.2](JobForge_PRD_v0.2.md)、[架构](../architecture.md)、[故障语义](../failure-semantics.md)、[可靠性报告](../reliability-report.md)、[性能基线](../benchmark.md)
+> 相关文档：[PRD v0.1](JobForge_PRD_v0.1.md)、[PRD v0.2](JobForge_PRD_v0.2.md)、[架构](../architecture.md)、[故障语义](../legacy/failure-semantics.md)、[可靠性报告](../reliability-report.md)、[性能基线](../benchmark.md)
 
 本文档定义 v0.3 之后的最小可靠性证据增量。v0.1～v0.3 已固定的 at-least-once、PostgreSQL 唯一任务事实源、lease/fencing、终态不可变、取消竞争与安全边界继续有效。本增量只把 Demo 业务幂等从进程内状态升级为持久原子效果，并把 AT-02/13/14 从状态级崩溃模拟升级为真实 Worker OS 进程终止证据。
 

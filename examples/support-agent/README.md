@@ -1,4 +1,4 @@
-# S1 English development corpus v2
+# Support development corpus v2
 
 The current registration is `support-dev-2026-09-16-v2` with
 `delivery-policy-dev-v2`. The authoritative import file is `runtime/seed.json`,
@@ -42,13 +42,9 @@ anchors use the actual delivery envelope (`/delivery/events/{index}/note`).
 
 The [offline validator](../../tools/support_evaluation/README.md) checks exact
 registered files, hashes, relationships, source bindings and byte spans. It is
-**not** a model-output scorer. Actual returned Run provenance, complete claim
-coverage/predicates, six-field proposal scoring, safety traces and the final
-scoring freeze still require implementation and independent review. The scoring
-denominator is all 40 registered cases, including failures and unattempted rows;
-there is no new development accuracy threshold. Separate [v2 retrieval evidence](../../docs/evidence/agent-v3-s1-support-retrieval-v2-2026-09-16.json)
-records real embedding, two tenant indexes and all 20 queries: 19/20 Hit@3,
-MRR@3 0.808333, with RQ-06 still missed. No 40-case cloud acceptance is claimed.
+**not** a model-output scorer. Run provenance, claim coverage, proposal predicates and safety are checked by the separate [offline scorer](../../tools/support_evaluation/README.md). The denominator includes failures and unattempted cases. Results are in the [S1/S2/S3 evidence index](../../docs/evidence/README.md); development data does not establish held-out quality.
+
+[Real v2 retrieval evidence](../../docs/evidence/agent-v3-s1-support-retrieval-v2-2026-09-16.json) records all 20 queries: 19/20 Hit@3, MRR@3 0.808333; RQ-06 remains missed.
 
 Only `runtime/` facts and policies belong in business preparation. Never package
 `evaluation/`, the reviewer manifest, this README or `tools/support_evaluation/`

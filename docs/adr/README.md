@@ -1,44 +1,14 @@
-# Architecture Decision Records
+# 架构决策索引
 
-现有v0.6实现的增量：[ADR-0011 通用结果与模型业务适配器](0011-general-task-results-and-model-adapters.md)、[ADR-0012 任务观测与 OTLP](0012-task-observability-and-otlp.md)，随 [PR #33](https://github.com/XJfyrh/JobForge/pull/33) 接受。
+ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决策与完成实现分开：实现/验收见[当前状态](../status.md)，产品边界见[PRD 索引](../product/README.md)。
 
-ADR 用于记录会长期影响 JobForge 架构、公开契约或可靠性语义的决策。PRD 已明确的边界不需要重复创建 ADR；对其补充、取舍或偏离必须记录。
+## 使用与新增
 
-## 文件命名
+按任务阅读下表对应 ADR。新增决策使用 [0000-template](0000-template.md)，编号连续、文件名 `NNNN-short-kebab-title.md`，写明上下文、选择、后果、兼容性和验证。
 
-- 使用 `NNNN-short-kebab-title.md`，编号从 `0001` 递增。
-- `0000-template.md` 仅作为模板，不代表一项决策。
-- 标题与正文以中文为主；代码、协议名、状态和错误码保留英文。
+`Proposed` 待审查，`Accepted` 为有效依据，`Rejected` 保存未采用原因，`Superseded` 指向后继。不静默改已接受历史结论；变化以新 ADR 明确取代范围。可靠性/状态机/租约/幂等、公开契约、事实源/调度、关键依赖、部署/安全边界或偏离 PRD 的选择需要 ADR。
 
-## 状态
-
-- `Proposed`：正在评审，尚不能作为实现依据。
-- `Accepted`：已接受，是当前事实来源。
-- `Rejected`：已评审但未采用，保留决策背景。
-- `Superseded`：已由更新 ADR 取代，并必须链接新 ADR。
-
-## 生命周期
-
-1. 复制模板并分配下一个未使用编号。
-2. 写明上下文、决策、替代方案、后果、兼容性和验证方式。
-3. 在 Pull Request 中完成评审；合并后将状态设为 `Accepted` 或 `Rejected`。
-4. 不修改已接受 ADR 的历史结论。决策变化时新增 ADR，并把旧 ADR 标记为 `Superseded`。
-
-## 必须创建 ADR 的变更
-
-- 投递保证、状态机、lease、fencing、幂等、重试、DLQ 或取消语义；
-- HTTP、gRPC、SDK 或持久化契约的重大变化；
-- 数据库事实源、调度模型、关键依赖和部署边界；
-- 安全模型、租户隔离或兼容性政策；
-- 与 PRD 已固定边界不一致的实现选择。
-
-## 已接受 ADR 索引
-
-路线 v3 的S0详细决策已随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 接受：[ADR-0013 单一 Run 与步骤提交](0013-durable-agent-run-and-step-commit.md)、[ADR-0014 Python 执行器与额度](0014-supervised-python-executor-and-call-budget.md)、[ADR-0015 审批与业务回执](0015-approved-business-actions-and-receipts.md)。接受范围为新版本设计，S1～S5仍未实现；现有v0.6运行代码与验收保持原边界。
-
-当前通用 Agent/RAG 增量对应 [PRD v0.6](../product/JobForge_PRD_v0.6.md)，实际验收范围与保留限制见[审查记录](../agent-rag-review.md)。
-
-S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：[PRD v0.8](../product/JobForge_PRD_v0.8.md)、[ADR-0016 业务快照与政策检索](0016-business-snapshots-and-policy-retrieval.md)。功能实现和验收仍分别记录。
+## 决策列表
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
@@ -61,31 +31,13 @@ S1实现契约随 [PR #37](https://github.com/XJfyrh/JobForge/pull/37) 接受：
 | [ADR-0017](0017-run-admission-and-call-ledger.md) | Run接纳、执行权与物理调用账本 | Accepted | 2026-09-16 |
 | [ADR-0018](0018-deepseek-fixed-flow-and-executor.md) | DeepSeek固定流程与正式受监管执行器 | 部分Superseded by ADR-0019/0020；其余有效 | 2026-09-16 |
 | [ADR-0019](0019-executor-confirmation-and-exit-contract.md) | 执行器观察确认与固定退出合同 | 新审计profile的hash/汇合部分Superseded by ADR-0020；其余有效 | 2026-09-16 |
-| [ADR-0020](0020-provider-audit-and-batch-stop.md) | provider 审计报告、跨 FD 确认与首批停发 | Accepted（PR #47合并生效） | 2026-09-16 |
-| [ADR-0021](0021-first-cloud-batch-admission-and-launcher.md) | 首批收费 profile 的可信登记、快照约束与串行启动器 | 部分 Superseded by ADR-0022（PR #53 合并生效）；其余有效 | 2026-09-16 |
+| [ADR-0020](0020-provider-audit-and-batch-stop.md) | provider 审计报告、跨 FD 确认与首批停发 | Accepted | 2026-09-16 |
+| [ADR-0021](0021-first-cloud-batch-admission-and-launcher.md) | 首批收费 profile 的可信登记、快照约束与串行启动器 | 部分 Superseded by ADR-0022；其余有效 | 2026-09-16 |
+| [ADR-0022](0022-s1-closeout-cumulative-authorization.md) | S1 收尾新批次与累计授权 | 部分由 ADR-0023 取代；其余有效 | 2026-09-17 |
+| [ADR-0023](0023-held-unknown-cross-batch-admission.md) | 保留未知费用后的独立新批准入 | Accepted | 2026-09-17 |
+| [ADR-0024](0024-bounded-support-agent.md) | 有界售后 Agent | Accepted | 2026-09-17 |
+| [ADR-0025](0025-confirmed-step-recovery.md) | 完整审计下的未提交步骤恢复 | Accepted | 2026-10-04 |
 
-ADR-0017 与 [PRD v0.9](../product/JobForge_PRD_v0.9.md) 随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受，细化 S1-B；实现与验收状态单独记录。
+## 增量适用范围
 
-ADR-0018 与 [PRD v0.10](../product/JobForge_PRD_v0.10.md) 随 [PR #41](https://github.com/XJfyrh/JobForge/pull/41) 接受，细化 S1-C；正式执行器与真实云端验收仍需实现和单独验证。
-
-[ADR-0019 执行器观察确认与固定退出合同](0019-executor-confirmation-and-exit-contract.md)与[PRD v0.11](../product/JobForge_PRD_v0.11.md)随[PR #44](https://github.com/XJfyrh/JobForge/pull/44)接受，明确取代ADR-0018普通observation后的继续执行序列。实现与正式进程验收另行记录，不能由合同合并代替。
-
-[ADR-0020](0020-provider-audit-and-batch-stop.md)和[PRD v0.12](../product/JobForge_PRD_v0.12.md)随[PR #47](https://github.com/XJfyrh/JobForge/pull/47)独立审查通过并合并时接受。仅对新审计profile取代ADR-0018 §3的报告/确认形状及ADR-0019 §1的observation hash/汇合字段，并增补首批持久停发；旧ADR正文保留。support业务策略仍沿用ADR-0018，实现及真实模型验收另行报告。
-
-ADR-0021 与 [PRD v0.13](../product/JobForge_PRD_v0.13.md)随 [PR #49](https://github.com/XJfyrh/JobForge/pull/49) 独立审查通过并合并时接受，增补正式收费前的最小接缝，沿用既有5 CNY/6h/40案及停发边界；[实施映射](../plans/agent-v3-first-cloud-batch.md)不表示audit实现已合并或真实云端已通过。
-
-## S1 收尾授权增量
-
-[ADR-0022](0022-s1-closeout-cumulative-authorization.md) / [PRD v0.14](../product/JobForge_PRD_v0.14.md) 随 [PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并合并时 **Accepted**：记录维护者在原批停止后的 S1 收尾新批次及新增累计 5 CNY 授权。仅部分取代 ADR-0021 的首批授权范围与新 batch 费用上限，原批停止、历史事实、持久屏障和其余合同保留。
-
-## 有界未知费用的后续准入
-
-[ADR-0023](0023-held-unknown-cross-batch-admission.md) / [PRD v0.15](../product/JobForge_PRD_v0.15.md) 为 Accepted（随本决策 PR 独立审查通过并合并时生效）：允许已停止、完整 hold 且无合同失效证据的历史传输失败按剩余额度准入独立新批；不释放 hold、不恢复旧批、不放宽成功确认。
-
-## S2 有界 Agent
-
-[ADR-0024](0024-bounded-support-agent.md) / [PRD v0.16](../product/JobForge_PRD_v0.16.md) 为 Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 合并生效）：在复用 S1 执行器和账本的基础上加入 Go 校验的动态只读决定，开发集至少 32/40 业务正确；维护者授权合理预算自主调整。仅对新 S2 profile 部分取代 ADR-0018/0020 的固定图和终结判断及 ADR-0021～0023 的 S1 专属费用范围，其余合同和历史记录保留。契约接受、实现和真实验收分别记录。
-
-## S3 持久步骤与故障恢复
-
-[ADR-0025](0025-confirmed-step-recovery.md) / [PRD v0.17](../product/JobForge_PRD_v0.17.md) 为 **Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）**：按原 call/profile 的完整审计与持久 attempt/步骤恢复证明，限定恢复未提交步骤，并区分纯进程丢失与协议错误。仅对新 S3 profile 部分取代 ADR-0019/0020 的对应保守限定；实现与收费验收另记。具体锁序、自然故障矩阵及预算前提见[实施计划](../plans/agent-v3-s3-recovery.md)，历史 ADR 正文保持。
+ADR-0018/0019 的确认形状按 ADR-0020 升级，仅适用于新审计 profile；其余流程与清理边界仍有效。ADR-0021 的首批授权由 0022/0023 增补；ADR-0024 仅对 S2 profile 调整固定图/终结判断及 S1 专属准入，ADR-0025 仅对 schema 3/S3 profile 增补有限未提交恢复与进程丢失分类。各精确取代条款以原 ADR 为准，历史正文和旧 profile 不升级。

@@ -1,8 +1,10 @@
 # Agent v3 S0 本地模型协议试验
 
-> 2026-09-16后续决策：主线调整为云端chat，本地chat为可选扩展，见[路线修订](../plans/agent-execution-roadmap-v3.md#5-模型安全和费用从第一条链路开始具备)。以下试验记录及当时的本地主模型结论保持历史事实；不再要求本地通过才能推进工程开发。文末云端备选现作为主线候选，尚未实际调用。
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
 
-- 日期：2026-09-16（Asia/Shanghai）；对应[路线 v3](../plans/agent-execution-roadmap-v3.md)。
+> 2026-09-16后续决策：主线调整为云端chat，本地chat为可选扩展，见[路线修订](../archive/plans/agent-execution-roadmap-v3.md#5-模型安全和费用从第一条链路开始具备)。以下试验记录及当时的本地主模型结论保持历史事实；不再要求本地通过才能推进工程开发。文末云端备选现作为主线候选，尚未实际调用。
+
+- 日期：2026-09-16（Asia/Shanghai）；对应[路线 v3](../archive/plans/agent-execution-roadmap-v3.md)。
 - 状态：**试验完成，两个本地候选均未达到本探针要求，主模型尚未选定**；此记录不代表 S1/S2 业务验收通过。简版见[结论摘要](agent-v3-model-probe-2026-09-16-summary.md)。
 - 实际运行：Ollama 0.32.5、Python 3.12.10、已有 httpx 0.28.1，无新增 Python 依赖、无付费调用。
 - 范围：真实模型原生工具调用与结构化输出；工具返回均为[明确标注的合成 fixture](../../tools/agent_probe_data/README.md)，尚无真实业务服务或检索。
@@ -70,7 +72,7 @@ Ollama `/api/ps` 记录模型分配约 3.184GB、`size_vram=0`、实际 context=
 
 ## 可复现命令
 
-以下从仓库根目录执行。当前已存在的 Ollama 测试地址为 `http://127.0.0.1:11435`，镜像为 `ollama/ollama:0.32.5`（实际 image digest 见环境 JSON）。新环境可按现有 [real-tasks.md](../real-tasks.md) 的独立模型 Compose/测试端口方式启动；本次命令不会创建业务服务或执行队列验收。
+以下从仓库根目录执行。当前已存在的 Ollama 测试地址为 `http://127.0.0.1:11435`，镜像为 `ollama/ollama:0.32.5`（实际 image digest 见环境 JSON）。新环境可按现有 [real-tasks.md](../legacy/real-tasks.md) 的独立模型 Compose/测试端口方式启动；本次命令不会创建业务服务或执行队列验收。
 
 ```powershell
 .venv/Scripts/python.exe -m pip install -r tools/requirements-lint.txt

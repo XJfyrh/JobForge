@@ -2,7 +2,7 @@
 
 - 状态：Accepted；随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 于2026-09-16合并接受。设计接受不代表生产Run或步骤恢复已实现。
 - 日期：2026-09-16。
-- 关联：[PRD v0.7](../product/JobForge_PRD_v0.7.md)、[路线 v3](../plans/agent-execution-roadmap-v3.md)。
+- 关联：[PRD v0.7](../product/JobForge_PRD_v0.7.md)、[路线 v3](../archive/plans/agent-execution-roadmap-v3.md)。
 - 拟取代范围：新版本中 ADR-0011 的从头重执行限定、ADR-0001 的基于领取 attempt 耗尽故障预算；旧版本历史记录保持不变。
 
 ## 上下文

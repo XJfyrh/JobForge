@@ -1,5 +1,7 @@
 # S1 support 固定流程与开发数据 v2 验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 基线 `d449bc709b99ad78d3563b2924802e535541a08a`，实施分支 `XJfyrh/s1-support-fixed`。
 本切片落实已接受 ADR-0018 的固定业务流程，未启用收费 profile，未发送 DeepSeek 推理请求。
 provider 持久审计按已合并 PR #47 的 ADR-0020 另行实现；完整评分器、40案真实云端、S2～S5尚未完成。
@@ -52,7 +54,7 @@ Worker SIGKILL测试为已提交步骤复用和未提交步骤重执行；通过
 ## 真实v2索引与检索
 
 新建独立可重建数据库 `jobforge_support_v2_20260916`，保留原v1演示数据库。
-按[业务指南](../agent-v3-business.md)初始化、导入v2、准备和发布索引；本机Compose覆盖仅切换业务数据库名。
+按[业务指南](../agent-v3/business.md)初始化、导入v2、准备和发布索引；本机Compose覆盖仅切换业务数据库名。
 固定Ollama 0.32.5、`all-minilm:22m`，digest
 `1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef`，384维、20段。
 
@@ -91,7 +93,7 @@ v1的19/20结果仍单列，当前同分不表示复用了旧向量或旧报告�
 
 ## 复现与审查边界
 
-完整Windows前置DSN、固定镜像build/run命令见[运行时指南](../agent-v3-runtime.md)。
+完整Windows前置DSN、固定镜像build/run命令见[运行时指南](../agent-v3/runtime.md)。
 同一DSN只运行一个可能清理数据库的测试进程。当前integration镜像默认同时运行
 `^TestRun(Executor|SupportExecutor)`；生产profile仍须后续正式审计合同落地后启用。
 数据校验执行 `python -m pytest tools/support_evaluation`；fixture正常测试逐字节核对生成结果。

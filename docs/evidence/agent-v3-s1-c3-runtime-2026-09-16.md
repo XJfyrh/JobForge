@@ -1,6 +1,8 @@
 # S1-C3b：固定执行器与持久控制确认验证
 
-日期：2026-09-16。实现基线为 PR #45 合并提交 `193623659de8fe41bfc4f5f0cabc048a167148e4`；对应 [PRD v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)。操作与部署说明见 [运行时指南](../agent-v3-runtime.md)。本记录在验收中持续更新；尚未完成的检查明确列出，不以计划代替通过。
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
+日期：2026-09-16。实现基线为 PR #45 合并提交 `193623659de8fe41bfc4f5f0cabc048a167148e4`；对应 [PRD v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)。操作与部署说明见 [运行时指南](../agent-v3/runtime.md)。本记录在验收中持续更新；尚未完成的检查明确列出，不以计划代替通过。
 
 实现 [PR #46](https://github.com/XJfyrh/JobForge/pull/46) 已于 `2026-09-16T12:07:36Z` 合并为 `0829a4c04a3a123a6ffe6c374e326859b79df1a8`。最终审查 head `512f0fc56ca3d1e87e12d3b99bf3328e396d1ca2` 与合并代码树一致；两份独立上下文 Agent 正式复审无剩余 P1/P2，[八项 CI](https://github.com/XJfyrh/JobForge/actions/runs/35093384805) 全部成功。该结论只完成 C3b，S1 整体仍未完成。
 

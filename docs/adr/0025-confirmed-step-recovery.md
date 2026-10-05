@@ -3,7 +3,7 @@
 - 状态：**Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）**。
 - 日期：2026-10-04（Asia/Shanghai）。
 - 决策者：维护者；实施会话编写草案，原规划会话负责方案审查与结果验收。
-- 关联：[PRD v0.17](../product/JobForge_PRD_v0.17.md)、[S3实施计划](../plans/agent-v3-s3-recovery.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[0017](0017-run-admission-and-call-ledger.md)、[0019](0019-executor-confirmation-and-exit-contract.md)、[0020](0020-provider-audit-and-batch-stop.md)、[0024](0024-bounded-support-agent.md)。
+- 关联：[PRD v0.17](../product/JobForge_PRD_v0.17.md)、[S3实施计划](../archive/plans/agent-v3-s3-recovery.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[0017](0017-run-admission-and-call-ledger.md)、[0019](0019-executor-confirmation-and-exit-contract.md)、[0020](0020-provider-audit-and-batch-stop.md)、[0024](0024-bounded-support-agent.md)。
 - 拟部分取代范围：**只对新 S3 profile**，增补 ADR-0020 §8.1 的 chat 结束屏障，取代该节“完整审计但原 step 未提交、原 lease 失效时不能自动重新收费恢复”的限定；增补 ADR-0019 §3/§4 的纯进程丢失分类及 ADR-0020 §8.2/§8.3 的相应本地停发处理。S1/S2 profile、未知/异常停发、ACK/Commit/清理屏障和历史 ADR 正文保持。
 - 起点：`e2b9bad`；ADR编号至0024，migration至0025。本文不更改生产代码、迁移或已接受合同，不发起收费请求；执行预算由主规划会话按自主S3实施范围选定，见实施计划。
 

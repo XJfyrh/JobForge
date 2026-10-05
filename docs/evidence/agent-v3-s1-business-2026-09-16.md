@@ -1,6 +1,8 @@
 # S1-A 真实业务与政策检索验收（2026-09-16）
 
-范围为[PRD v0.8](../product/JobForge_PRD_v0.8.md)的S1-A，基于PR #37合并后的`dc22ac5`实施。代码、数据和命令见[业务指南](../agent-v3-business.md)。S1-B/C和整个S1尚未完成；本报告没有DeepSeek推理、Run账本、Agent决策循环或业务审批写入成功声明。
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
+范围为[PRD v0.8](../product/JobForge_PRD_v0.8.md)的S1-A，基于PR #37合并后的`dc22ac5`实施。代码、数据和命令见[业务指南](../agent-v3/business.md)。S1-B/C和整个S1尚未完成；本报告没有DeepSeek推理、Run账本、Agent决策循环或业务审批写入成功声明。
 
 ## 真实层
 

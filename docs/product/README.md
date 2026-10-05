@@ -1,19 +1,25 @@
-# 当前产品契约
+# 产品契约索引
 
-当前增量为 [PRD v0.6](JobForge_PRD_v0.6.md)，覆盖通用接入、真实 Agent/RAG 任务与可观测闭环。原有 PageWise 集成验收被两个通用真实任务替代；没有旧任务兼容、迁移或弃用安排。
+当前主线为 Agent v3，使用基础 PRD 与已接受增量共同定义合同。后续版本仅取代明确说明的范围，不能把全部旧合同视为失效。实现与验收结果统一见[当前状态](../status.md)。
 
-v0.1～v0.5 保留为历史契约，可靠性不变量仍生效；其中历史 PageWise 示例不再作为当前实现或验收要求。当前执行与未完成事项见[实施记录](../agent-rag-progress.md)。
+| 版本 | 合同范围 |
+|---|---|
+| [v0.1](JobForge_PRD_v0.1.md) | 基础可靠性、状态机与 P0 边界 |
+| [v0.2](JobForge_PRD_v0.2.md) | HA、租户与运维 |
+| [v0.3](JobForge_PRD_v0.3.md) | 耐久事件与并发治理 |
+| [v0.4](JobForge_PRD_v0.4.md) | 持久幂等效果与真实 Worker 崩溃 |
+| [v0.5](JobForge_PRD_v0.5.md) | 任务目录与 Worker 执行契约 |
+| [v0.6](JobForge_PRD_v0.6.md) | 既有 Job Agent/RAG 闭环 |
+| [v0.7](JobForge_PRD_v0.7.md) | v3 Run/恢复/审批总体设计 |
+| [v0.8](JobForge_PRD_v0.8.md) | 业务快照与政策检索 |
+| [v0.9](JobForge_PRD_v0.9.md) | Run 接入、执行身份与账本 |
+| [v0.10](JobForge_PRD_v0.10.md) | 固定模型流程与执行器 |
+| [v0.11](JobForge_PRD_v0.11.md) | 观察确认与退出 |
+| [v0.12](JobForge_PRD_v0.12.md) | 供应商审计与停批 |
+| [v0.13](JobForge_PRD_v0.13.md) | 可信批次登记与启动 |
+| [v0.14](JobForge_PRD_v0.14.md) | S1 收尾累计授权 |
+| [v0.15](JobForge_PRD_v0.15.md) | 保留未知费用的独立新批准入 |
+| [v0.16](JobForge_PRD_v0.16.md) | 有界动态 Agent |
+| [v0.17](JobForge_PRD_v0.17.md) | 已确认步骤恢复 |
 
-## Agent v3 增量
-
-Agent v3 使用独立增量合同；接受设计、完成实现和真实验收分别记录，不能把版本号当作当前实现已通过。
-
-| 版本 | 范围 | 状态 |
-|---|---|---|
-| [v0.7](JobForge_PRD_v0.7.md)～[v0.9](JobForge_PRD_v0.9.md) | v3 路线、业务快照、Run 接纳与调用账本 | 已接受；阶段状态见[实施记录](../agent-v3-progress.md) |
-| [v0.10](JobForge_PRD_v0.10.md) / [v0.11](JobForge_PRD_v0.11.md) | DeepSeek 固定流程、执行器确认与退出 | 已接受；[S1完整40案真实验收已闭合](../evidence/agent-v3-s1-delivery-2026-09-17.md) |
-| [v0.12](JobForge_PRD_v0.12.md) | provider 持久审计与批次停发 | 合同与审计实现已交付；真实S1范围见最新报告 |
-| [v0.13](JobForge_PRD_v0.13.md) | 首批可信 profile、快照约束与40行串行驱动 | Accepted；启动/评分实现与真实40案随PR #51交付 |
-| [v0.14](JobForge_PRD_v0.14.md) | S1 收尾新批次与新增累计 5 CNY 授权 | **Accepted（PR #53 合并生效）；不恢复原批，实施与真实验收另行记录** |
-| [v0.15](JobForge_PRD_v0.15.md) | 保留历史未知费用全额预留后的独立新批准入 | Accepted（PR #54 合并生效）；历史hold保留，完整40案证据见S1报告；后续预算按维护者最新授权记录 |
-| [v0.17](JobForge_PRD_v0.17.md) | S3持久步骤与自然故障恢复 | Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）；[ADR-0025](../adr/0025-confirmed-step-recovery.md)及[实施计划](../plans/agent-v3-s3-recovery.md)，实现/收费验收另记；S2已交付范围继续按[v0.16](JobForge_PRD_v0.16.md)与[S2报告](../evidence/agent-v3-s2-delivery-2026-09-17.md) |
+v0.1–v0.6 的 Job 可靠性与现行通用任务范围继续有效，历史 PageWise 示例的替代范围以 v0.6 为准。v0.7 的审批设计已接受，但对应写入能力尚未实现；不能从契约版本号推断交付。架构补充见[ADR 索引](../adr/README.md)，旧路线过程见[归档](../archive/README.md)。

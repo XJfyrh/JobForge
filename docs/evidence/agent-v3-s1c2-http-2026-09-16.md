@@ -1,5 +1,7 @@
 # Agent v3 S1-C2：授权 HTTP 与 DeepSeek 模块验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16。基线为已合并 C1 `b9ba908cc8434e3b3fc6aaddbbb5e1f4684a8826`。依据 [PRD v0.10](../product/JobForge_PRD_v0.10.md) / [ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)，本切片交付 Python 网络模块，不激活收费 profile。[PR #43](https://github.com/XJfyrh/JobForge/pull/43)已于2026-09-16合并为`5647d7cc991ad994b827fc3c1dcaa4e5989cc145`；最终审查head为`4eed461c110e84e8b4f91621c9c1d9ffef891600`，与合并树一致。
 
 ## 需求与实际证据
@@ -30,7 +32,7 @@
 | 最终PR CI和独立审查 | 初版`bf9ea706`七项CI通过；独立传输审查找到一项P2超时分类并修复；两个作者之外的新上下文均复核最终`4eed461c`无剩余问题，[最终CI](https://github.com/XJfyrh/JobForge/actions/runs/35082022829)七项通过。[审查汇总](https://github.com/XJfyrh/JobForge/pull/43#issuecomment-5695621651)保留初版发现与最终结论 |
 | 真实DeepSeek/40案/正式进程 | 未运行，不能由以上确定性结果代替 |
 
-本切片Linux镜像基础digest为`sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254`；使用现有requirements，未新增第三方依赖，也未新增全传递依赖lockfile。精确复现命令见[模块指南](../agent-v3-authorized-http.md)。Go/真实依赖命令按[开发指南](../development.md)执行，Windows先启动5433 PostgreSQL并设置DSN，且同一DSN不并发运行多个集成进程。
+本切片Linux镜像基础digest为`sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254`；使用现有requirements，未新增第三方依赖，也未新增全传递依赖lockfile。精确复现命令见[模块指南](../agent-v3/authorized-http.md)。Go/真实依赖命令按[开发指南](../development.md)执行，Windows先启动5433 PostgreSQL并设置DSN，且同一DSN不并发运行多个集成进程。
 
 全仓race的5个测试skip为`TestCancelAT25ControlStreamDegradation`、`TestRealTasksLifecycle`、`TestRealTasksSDK`、`TestBusinessWorkerProcessHelper`与`TestWorkerProcessHelper`。前者保持历史未验收；两个真实模型套件本轮未配置，两个Helper只是子进程入口。另11个包无测试文件，不能算作通过。SDK真实HTTP契约和独立业务PG/HTTP契约实际运行，不属于这些skip。
 
@@ -40,6 +42,6 @@
 
 正式IPC仍需解决observe持久确认ACK、终止事实及完整usage的窄通道排空；必须先补增量契约，不能将管道write视为数据库已接收。本模块无持久授权能力，不把测试hooks当作可直接上线的执行器。schema、策略、数据版本、评分和真实云端批次在后续完整C验收中实现。
 
-本切片无Go/SQL热路径修改，未新增性能对比；保留[C1定向比较及限制](agent-v3-s1c1-protocol-2026-09-16.md)。历史[W4性能门禁失败](../worker-capacity-performance.md)、[AT-25跳过及原验收限制](../agent-rag-review.md)、远程模型和生产留存未验收继续明确保留。整体S1、S2～S5尚未完成。
+本切片无Go/SQL热路径修改，未新增性能对比；保留[C1定向比较及限制](agent-v3-s1c1-protocol-2026-09-16.md)。历史[W4性能门禁失败](../archive/worker-capacity-performance.md)、[AT-25跳过及原验收限制](../archive/agent-rag-review.md)、远程模型和生产留存未验收继续明确保留。整体S1、S2～S5尚未完成。
 
 技术选择、独立审查和执行原始证据存于仓库外`E:\JobForge-notes\2026-09-16-agent-v3-s1`，不含秘密或模型/文档正文。

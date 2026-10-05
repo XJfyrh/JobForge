@@ -1,5 +1,7 @@
 # S1-B Run / 调用账本验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 - 日期：2026-09-16；契约：[PRD v0.9](../product/JobForge_PRD_v0.9.md)、[ADR-0017](../adr/0017-run-admission-and-call-ledger.md)，随 [PR #39](https://github.com/XJfyrh/JobForge/pull/39) 接受。
 - 实现分支：`XJfyrh/s1-run-ledger`，基于 `696404e`。本记录对应实现工作树；PR最终head及独立审查结果另行追加，不能将基线提交当作实现已合并。
 - 环境：Windows + Docker Desktop、Go race、真实 PostgreSQL 16、独立业务 pgvector PostgreSQL、AOF Redis、已安装本地 Python SDK。Run测试使用正式migration创建独立可重建数据库；同一集成DSN的进程串行运行。
@@ -44,7 +46,7 @@
 
 ## 复现与剩余范围
 
-命令、服务启动、SDK接入与故障判断见[Run指南](../agent-v3-runs.md)。全仓检查还需要按开发指南启动Redis和业务数据库并配置对应测试环境变量；仅设置控制DSN不足以证明其它依赖层通过。
+命令、服务启动、SDK接入与故障判断见[Run指南](../agent-v3/runs.md)。全仓检查还需要按开发指南启动Redis和业务数据库并配置对应测试环境变量；仅设置控制DSN不足以证明其它依赖层通过。
 
 S1-C正式Go监督/Python执行器、DeepSeek真实调用、40例固定流程与评分仍未交付；S2动态Agent、S3真实checkpoint进程恢复、S4审批写入、S5评测展示/观测/保留仍未完成。已有S0进程探针不能代替这些阶段。取消只停止后续处理，不能撤销已发出的供应商请求；unknown费用不能当作零。
 

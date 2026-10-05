@@ -22,6 +22,12 @@ FIXTURE = json.loads(
         Path(__file__).resolve().parents[2] / "api/support/recovery-v1/fixtures.json"
     ).read_bytes()
 )
+RUNTIME_SCHEMA = json.loads(
+    (
+        Path(__file__).resolve().parents[2]
+        / "api/executor/v2/runtime-input.schema.json"
+    ).read_bytes()
+)
 
 
 def binding(step: dict) -> dict:
@@ -58,11 +64,27 @@ def test_original_recovery_identity_has_the_same_binding_hash() -> None:
 
 @pytest.mark.parametrize("version", [AGENT_EXECUTOR_VERSION, RECOVERY_EXECUTOR_VERSION])
 def test_historical_and_recovery_input_versions_remain_readable(version: str) -> None:
-    """Deployment manifest still selects exactly one fixed version per image."""
+    """Source schema and parser accept both registered agent runtime versions."""
     frame = copy.deepcopy(RUNTIME["valid"][0]["frame"])
     frame["input"]["adapter_id"] = "support-agent-v1"
     frame["input"]["executor_version"] = version
+    Draft202012Validator(RUNTIME_SCHEMA).validate(
+        {"input": frame["input"], "checkpoint": frame["checkpoint"]}
+    )
     assert parse_runtime_input(frame).executor_version == version
+
+
+@pytest.mark.parametrize("version", ["wrong-runtime", "linux-v2-recovery-runtime-2"])
+def test_schema_and_parser_reject_unregistered_runtime_versions(version: str) -> None:
+    """Adding recovery does not admit arbitrary or future runtime versions."""
+    frame = copy.deepcopy(RUNTIME["valid"][0]["frame"])
+    frame["input"]["adapter_id"] = "support-agent-v1"
+    frame["input"]["executor_version"] = version
+    assert not Draft202012Validator(RUNTIME_SCHEMA).is_valid(
+        {"input": frame["input"], "checkpoint": frame["checkpoint"]}
+    )
+    with pytest.raises(RuntimeInputError):
+        parse_runtime_input(frame)
 
 
 @pytest.mark.parametrize("version", ["linux-v2-audit-runtime-1", "wrong-runtime"])
