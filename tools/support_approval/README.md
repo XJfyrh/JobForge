@@ -6,7 +6,7 @@
 
 `sources.py` 从当前源和已核实的官方价格快照生成 schema 4 模板；`prepare-support` 只准备配置，不启用模型。完成业务导入、真实 MiniLM 索引、隔离 S4 控制/业务数据库、独立审批 actor、公钥配置、构建与评分审查后，再生成六小时窗口。使用 `plan.py --config <prepared> --replacement-worker <registered-id> --out <outside-repo>` 冻结配置、源码、数据、价格与名单；准备文件保持原字节，第二 Worker 配置单独派生。
 
-固定名单为 DEV-001/016/011/002/003/004/005/006/007/035，只有 006/007 各有一次回执 retry；不替换失败样本。新增累计上限为规划 chat 选择的 5 元、最多 12 个新 Run，其中 10 个源 Run、2 个后继机会；不是用户口述金额。冻结历史账户和 hold 保持不动。
+固定名单为 DEV-001/016/011/002/003/004/005/006/007/035，只有 006/007 各有一次回执 retry；不替换失败样本。新增累计上限为 5 元、最多 12 个新 Run，其中 10 个源 Run、2 个后继机会。冻结历史账户和 hold 保持不动。
 
 外部 `release.json` 必须明确批准精确 manifest/settings/build/head，独立审阅通过，当前 head 的现有 8 项 CI 全通过，并绑定正式镜像 digest、官方价格及只读账户快照。driver 不签发 release，也不从“过去检查通过”推断当前放行。执行使用 Linux `--init`、私有凭据挂载、固定网络和新的输出目录：
 
