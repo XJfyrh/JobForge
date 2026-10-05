@@ -51,15 +51,16 @@ go vet ./...
 go test -race -count=1 ./...
 .venv/Scripts/python.exe -m pytest sdk/python/tests python/tests tools/agent_probe_data tools/executorprobe tools/support_evaluation
 $env:PYTHONPATH='python;sdk/python'
-.venv/Scripts/python.exe -m pytest tools/support_recovery
+.venv/Scripts/python.exe -m pytest tools/support_recovery tools/support_approval
 .venv/Scripts/ruff.exe check .
 .venv/Scripts/ruff.exe format --check .
 .venv/Scripts/mypy.exe sdk/python
 .venv/Scripts/mypy.exe --platform linux python/jobforge_agent
 .venv/Scripts/mypy.exe --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py
 $env:MYPYPATH='python;sdk/python'
-.venv/Scripts/mypy.exe --explicit-package-bases tools/support_evaluation
+.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_evaluation
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
+.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_approval
 .venv/Scripts/python.exe tools/check_sqlfluff_baseline.py
 .venv/Scripts/sqlfluff.exe lint migrations
 .tools/bin/buf.exe lint
@@ -87,15 +88,15 @@ docker build --target integration-check -f tools/agentruntimecheck/Dockerfile -t
 docker run --rm --init --network none jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
 ```
 
-进程层使用实际 guardian/step、FD、Kill/Wait/EOF/Join/组消失与 race；`python-check` 包含当前授权 HTTP、真实 BOOTTIME、回环 TCP 和 Python 全套所需的 executor/support 源契约。联合层连接真实 PG/TCP gRPC、正式 Worker/SDK，业务、embedding 和供应商 HTTP 为测试替身。
+进程层使用实际 guardian/step、FD、Kill/Wait/EOF/Join/组消失与 race；`python-check` 包含当前授权 HTTP、真实 BOOTTIME、回环 TCP 和 Python 全套所需的 executor/support 源契约。联合层连接真实 PG/TCP gRPC、正式 Worker/SDK。S1–S3 的业务 HTTP 为测试替身；S4 `TestRunApprovalExecutorRealBusinessNaturalRecovery` 另连接独立 pgvector 业务库和实际业务 HTTP，验证真实工单/结论/回执事务、提交后丢响应并杀 Go Worker，再按原30s lease自然恢复。embedding 和模型在免费联合层使用合成响应，真实模型验收另列。
 
 完成 PG 前置后，Windows 联合层连接宿主 5433，不能使用 `--network none`：
 
 ```powershell
-docker run --rm --init --add-host control:127.0.0.1 -e JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1 -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' jobforge-agent-runtime:integration
+docker run --rm --init --add-host control:127.0.0.1 -e JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1 -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' -e 'JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@host.docker.internal:5434/jobforge_business?sslmode=disable' jobforge-agent-runtime:integration
 ```
 
-Linux 使用可达的 PG 地址，必要时在镜像名之前添加 `--add-host host.docker.internal:host-gateway`。Dockerfile 在测试 target 设置专用开关；`control:127.0.0.1` 供容器内 SDK listener 使用。S3 `TestRunRecovery` 保留自然 30s lease、180s attempt 和三次恢复上限，联合测试最长 1200s，不缩短生产计时。
+联合层前先启动上述业务 pgvector 库；未设置业务 DSN 导致的 S4 skip 不算联合层通过。Linux 使用可达的 PG 地址，必要时在镜像名之前添加 `--add-host host.docker.internal:host-gateway`。Dockerfile 在测试 target 设置专用开关；`control:127.0.0.1` 供容器内 SDK listener 使用。S3 `TestRunRecovery` 和 S4 动作故障保留自然 30s lease、180s attempt 和三次恢复上限，联合测试最长 1200s，不缩短生产计时。
 
 审计检查包含共同 audit/report/observation 向量、真实 PG 首报告/重放/冲突/冻结/晚到/批次 guard、`TestRunProviderAuditPythonHTTPContract` 和固定进程 `TestRunProviderAuditExecutor` 确认丢失/停发。恢复层验证关闭证明、原预算、迁移和实际进程接管；细节见[审计](agent-v3/provider-audit.md)与[恢复](agent-v3/recovery.md)。
 
@@ -128,5 +129,5 @@ docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint pr
 | `business-contract` | 独立 pgvector、真实 HTTP/PG/race、业务 runtime 镜像 |
 | `executor-process-probe` | 固定 Linux 进程故障/race及 Go/Python 共享 BOOTTIME |
 | `proto-lint` | Buf lint |
-| `agent-runtime-contract` | 实际进程/PG/gRPC/SDK/恢复/race及生产镜像边界 |
+| `agent-runtime-contract` | 实际进程/PG/gRPC/SDK/恢复/race、S4真实业务HTTP/pgvector事务及生产镜像边界 |
 | `observability-config` | dashboard 生成一致性、promtool 配置/告警规则 |

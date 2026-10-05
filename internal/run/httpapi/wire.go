@@ -137,7 +137,8 @@ func publicError(err error) (run.ErrorCode, int) {
 	case run.ErrNotFound:
 		return code, http.StatusNotFound
 	case run.ErrConflict, run.ErrAlreadyTerminal, run.ErrInvalidTransition,
-		run.ErrProfileUnavailable, run.ErrBudgetExhausted:
+		run.ErrProfileUnavailable, run.ErrBudgetExhausted, run.ErrApprovalConflict, run.ErrApprovalExpired,
+		run.ErrActionConflict, run.ErrActionAuthorizationExpired, run.ErrActionOutcomeUnknown:
 		return code, http.StatusConflict
 	case run.ErrQueueOverloaded, run.ErrorCode("RATE_LIMITED"):
 		return code, http.StatusTooManyRequests

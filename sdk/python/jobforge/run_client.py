@@ -21,6 +21,12 @@ from jobforge.errors import (
     TransportError,
     from_response,
 )
+from jobforge.run_actions import (
+    ActionCallsResponse,
+    ApprovalResponse,
+    ApprovalView,
+    EffectView,
+)
 from jobforge.run_calls import MAX_CALL_RESPONSE_BYTES, RunCalls
 from jobforge.run_models import (
     MAX_SAFE_INTEGER,
@@ -44,11 +50,12 @@ class RunClient:
 
     Each method makes at most one HTTP request, including failures and redirects.
     A timeout can leave acceptance unknown: callers retain their operation key.
-    Budget provisioning, Worker RPCs and approval/write actions are not exposed.
+    Approval accepts only the original proposal hash and a decision. Business
+    writes, budget provisioning and Worker RPCs are not exposed.
 
     Args:
         base_url: Root URL of the Run control service.
-        api_key: Public reader/operator credential; never recorded in tracing.
+        api_key: Public reader/operator/approver credential; never recorded in tracing.
         timeout: Per-exchange timeout in seconds.
         traceparent: Optional explicit W3C parent; otherwise uses current context.
         tracestate: Optional W3C state accompanying the explicit parent.
@@ -174,6 +181,64 @@ class RunClient:
         """
         return self._request(RunCalls, "calls", "GET", _path(run_id) + "/calls")
 
+    def approval(self, run_id: str) -> ApprovalView:
+        """Read the immutable original proposal and first approval decision."""
+        return self._request(
+            ApprovalView, "approval", "GET", _path(run_id) + "/approval"
+        )
+
+    def decide_approval(
+        self, run_id: str, decision: str, proposal_hash: str, *, idempotency_key: str
+    ) -> ApprovalResponse:
+        """Approve/reject exactly the reviewed proposal; requires approver role.
+
+        The server binds its authenticated stable actor. Retain the same key,
+        hash and decision after an uncertain exchange; no content edit is sent.
+        """
+        _key(idempotency_key)
+        if (
+            decision not in ("approve", "reject")
+            or not isinstance(proposal_hash, str)
+            or re.fullmatch(r"[0-9a-f]{64}", proposal_hash) is None
+        ):
+            raise InvalidArgumentError("invalid approval decision or proposal hash")
+        return self._request(
+            ApprovalResponse,
+            "decide_approval",
+            "POST",
+            _path(run_id) + "/approval",
+            key=idempotency_key,
+            body={
+                "schema_version": 1,
+                "decision": decision,
+                "proposal_hash": proposal_hash,
+            },
+        )
+
+    def effect(self, run_id: str) -> EffectView:
+        """Read separately observed business effect without network reconciliation."""
+        return self._request(EffectView, "effect", "GET", _path(run_id) + "/effect")
+
+    def reconcile(self, run_id: str) -> EffectView:
+        """Query a terminal Run's receipt once; requires operator role.
+
+        No write or model replan occurs. This can advance effect to applied,
+        while the original terminal execution and result remain immutable.
+        """
+        return self._request(
+            EffectView,
+            "reconcile",
+            "POST",
+            _path(run_id) + "/reconcile",
+            body={"schema_version": 1},
+        )
+
+    def action_calls(self, run_id: str) -> ActionCallsResponse:
+        """Read independent bounded action permissions without provider fees."""
+        return self._request(
+            ActionCallsResponse, "action_calls", "GET", _path(run_id) + "/action-calls"
+        )
+
     def cancel(self, run_id: str, *, idempotency_key: str) -> RunCancellation:
         """Accept cancellation; running execution first enters stopping.
 
@@ -260,7 +325,15 @@ class RunClient:
                 span.set_status(StatusCode.ERROR, "server rejected request")
             try:
                 if (
-                    operation == "calls"
+                    operation
+                    in (
+                        "calls",
+                        "approval",
+                        "decide_approval",
+                        "effect",
+                        "reconcile",
+                        "action_calls",
+                    )
                     and len(response.content) > MAX_CALL_RESPONSE_BYTES
                 ):
                     raise ValueError("oversized call evidence")

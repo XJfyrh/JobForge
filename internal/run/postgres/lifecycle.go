@@ -100,6 +100,26 @@ func lockAttemptResources(ctx context.Context, tx pgx.Tx, r agentrun.Run, a agen
 			return resources, agentrun.ErrInternal
 		}
 	}
+	// Action calls use their own ledger; lock the original attempt's children
+	// before closing it so a late observation cannot race its unknown marking.
+	if a.NextStepKind == "apply_ticket_resolution" {
+		rows, err := tx.Query(ctx, `select physical_call_id from action_calls where tenant_id=$1 and run_id=$2 and attempt_no=$3 order by physical_call_id for update`, r.TenantID, r.ID, r.AttemptNo)
+		if err != nil {
+			return resources, err
+		}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return resources, err
+			}
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return resources, err
+		}
+	}
 	var worker, session string
 	var token int64
 	var finished *time.Time
@@ -127,6 +147,11 @@ func closeAttemptRecords(ctx context.Context, tx pgx.Tx, r *agentrun.Run, a *age
 		if _, err := tx.Exec(ctx, `update physical_calls set status=case when status='reserved' then 'unknown' else status end
 			where tenant_id=$1 and run_id=$2 and physical_call_id=$3 and attempt_no=$4`, r.TenantID, r.ID,
 			*resources.Authority.ActiveCallID, resources.AttemptNo); err != nil {
+			return err
+		}
+	}
+	if resources.Authority.NextStepKind == "apply_ticket_resolution" {
+		if _, err := tx.Exec(ctx, `update action_calls set status='unknown' where tenant_id=$1 and run_id=$2 and attempt_no=$3 and status='reserved'`, r.TenantID, r.ID, resources.AttemptNo); err != nil {
 			return err
 		}
 	}
@@ -171,9 +196,15 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		return nil, agentrun.ErrInvalidArgument
 	}
 	profiles := make([]string, 0, len(worker.ProfileIDs))
+	actionProfiles := make([]string, 0, len(worker.ProfileIDs))
 	for _, id := range worker.ProfileIDs {
-		if profile, ok := s.profiles[id]; ok && profile.Executable {
-			profiles = append(profiles, id)
+		if profile, ok := s.profiles[id]; ok {
+			if profile.Executable {
+				profiles = append(profiles, id)
+			}
+			if profile.ApprovalEnabled() {
+				actionProfiles = append(actionProfiles, id)
+			}
 		}
 	}
 	var result *agentrun.ClaimedRun
@@ -185,15 +216,16 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		if err := s.checkSession(ctx, tx, principal, principal, sessionID, "", "", now, true); err != nil {
 			return err
 		}
-		if len(profiles) == 0 {
+		if len(profiles) == 0 && len(actionProfiles) == 0 {
 			return nil
 		}
 		r, a, err := readRun(tx.QueryRow(ctx, "select "+runColumns+` from runs
-			where state='ready' and tenant_id=any($1) and profile_id=any($2)
+			where state='ready' and tenant_id=any($1) and (profile_id=any($2)
+			or (next_step_kind='apply_ticket_resolution' and profile_id=any($4)))
 			and not exists(select 1 from execution_slots where resource_kind='worker' and resource_id=$3 and used>=capacity)
 			and not exists(select 1 from execution_slots where resource_kind='tenant' and resource_id=runs.tenant_id and used>=capacity)
 			and not exists(select 1 from execution_slots where resource_kind='profile' and resource_id=runs.profile_id and used>=capacity)
-			order by created_at,run_id limit 1 for update skip locked`, worker.Tenants, profiles, principal))
+			order by created_at,run_id limit 1 for update skip locked`, worker.Tenants, profiles, principal, actionProfiles))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -201,6 +233,7 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 			return err
 		}
 		// The Claim response carries a consistent view of all three budgets.
+		actionStep := a.NextStepKind == "apply_ticket_resolution"
 		accounts, err := loadAccounts(ctx, tx, r.TenantID, r.BusinessRequestID, true)
 		if err != nil {
 			return err
@@ -217,7 +250,7 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 		if err := s.checkSession(ctx, tx, principal, principal, sessionID, r.TenantID, r.ProfileID, now, true); err != nil {
 			return err
 		}
-		profile, err := s.ledgerProfile(ctx, tx, r, true)
+		profile, err := s.ledgerProfile(ctx, tx, r, !actionStep)
 		if err != nil {
 			return err
 		}
@@ -230,11 +263,17 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 			}
 			return saveRun(ctx, tx, &r, &a)
 		}
-		if err := accountsAvailable(accounts, now); err != nil {
-			return err
-		}
-		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
-			return err
+		if actionStep {
+			if !profile.ApprovalEnabled() {
+				return agentrun.ErrProfileUnavailable
+			}
+		} else {
+			if err := accountsAvailable(accounts, now); err != nil {
+				return err
+			}
+			if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
+				return err
+			}
 		}
 		// History reads can consume time even while all mutation locks are
 		// held. Grant the new lease only against a fresh database clock.
@@ -254,8 +293,10 @@ func (s *Store) Claim(ctx context.Context, principal, sessionID string) (*agentr
 			}
 			return saveRun(ctx, tx, &r, &a)
 		}
-		if err := accountsAvailable(accounts, now); err != nil {
-			return err
+		if !actionStep {
+			if err := accountsAvailable(accounts, now); err != nil {
+				return err
+			}
 		}
 		for _, slot := range slots {
 			if slot.Used >= slot.Capacity {

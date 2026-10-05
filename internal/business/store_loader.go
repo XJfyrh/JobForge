@@ -74,6 +74,11 @@ func (s *Store) ImportDataset(ctx context.Context, dataset Dataset) error {
 		return publicDBError(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	// Acquire before dataset/index/source row locks; statement triggers enforce
+	// the same order for other privileged mutations and missing-row insertions.
+	if err := lockActionSources(ctx, tx); err != nil {
+		return publicDBError(err)
+	}
 	hash := fingerprint(dataset)
 	var storedHash string
 	err = tx.QueryRow(ctx, `insert into business.dataset_imports (dataset_version, content_hash)
@@ -215,6 +220,9 @@ func (s *Store) PublishIndex(ctx context.Context, upload IndexUpload) (*Publishe
 		return nil, false, publicDBError(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if err := lockActionSources(ctx, tx); err != nil {
+		return nil, false, publicDBError(err)
+	}
 	var corpus string
 	err = tx.QueryRow(ctx, `select corpus_sha256 from business.policy_versions where tenant_id = $1 and policy_version = $2`, upload.TenantID, upload.Profile.PolicyVersion).Scan(&corpus)
 	if errors.Is(err, pgx.ErrNoRows) {

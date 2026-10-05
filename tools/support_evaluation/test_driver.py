@@ -27,6 +27,9 @@ def test_export_keeps_actual_number_tokens_and_reads_complete_pages(
 ) -> None:
     """The stored hash input survives SDK float parsing and multiple pages."""
     row = case_row(PACKAGE, REGISTRATION, 0)
+    # This mock represents the current HTTP API, whose disposition is required.
+    # Frozen historical exports remain unchanged and use the legacy validator.
+    row["result"] = {**row["result"], "disposition": "proposal"}
     steps = [entry["record"] for entry in row["steps"]]
     steps[0]["output"] = {"score": "number-token"}
     paths: list[str] = []

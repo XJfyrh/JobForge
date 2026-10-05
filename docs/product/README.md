@@ -21,5 +21,6 @@
 | [v0.15](JobForge_PRD_v0.15.md) | 保留未知费用的独立新批准入 |
 | [v0.16](JobForge_PRD_v0.16.md) | 有界动态 Agent |
 | [v0.17](JobForge_PRD_v0.17.md) | 已确认步骤恢复 |
+| [v0.18](JobForge_PRD_v0.18.md) | S4 审批、受控写入与回执恢复 |
 
 v0.1–v0.6 的 Job 可靠性与现行通用任务范围继续有效，历史 PageWise 示例的替代范围以 v0.6 为准。v0.7 的审批设计已接受，但对应写入能力尚未实现；不能从契约版本号推断交付。架构补充见[ADR 索引](../adr/README.md)，旧路线过程见[归档](../archive/README.md)。

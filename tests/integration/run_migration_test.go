@@ -100,13 +100,22 @@ func downRunMigration(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	for _, name := range []string{"0027_approval_actions.down.sql", "0026_attempt_recovery_proof.down.sql", "0025_agent_model_decision.down.sql"} {
+		down, err := migrations.FS.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec(ctx, string(down)); err != nil {
+			t.Fatalf("newer Run migration %s before 0023: %v", name, err)
+		}
+	}
 	if _, err = tx.Exec(ctx, string(auditDown)); err != nil {
 		t.Fatalf("0024 down migration before 0023: %v", err)
 	}
 	if _, err = tx.Exec(ctx, string(content)); err != nil {
 		t.Fatalf("0023 down migration: %v", err)
 	}
-	if _, err = tx.Exec(ctx, "delete from schema_migrations where version in (23,24)"); err != nil {
+	if _, err = tx.Exec(ctx, "delete from schema_migrations where version between 23 and 27"); err != nil {
 		t.Fatal(err)
 	}
 	if err = tx.Commit(ctx); err != nil {

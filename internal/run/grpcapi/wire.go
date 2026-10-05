@@ -1,6 +1,7 @@
 package grpcapi
 
 import (
+	"encoding/json"
 	"slices"
 	"time"
 
@@ -16,7 +17,8 @@ var stepNames = map[agentv1.StepKind]string{
 	agentv1.StepKind_STEP_KIND_GET_DELIVERY: "get_delivery", agentv1.StepKind_STEP_KIND_SEARCH_POLICY: "search_policy",
 	agentv1.StepKind_STEP_KIND_MODEL_DECISION: "model_decision",
 	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL: "model_proposal", agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
-	agentv1.StepKind_STEP_KIND_SUBMIT_PROPOSAL: "submit_proposal",
+	agentv1.StepKind_STEP_KIND_SUBMIT_PROPOSAL:         "submit_proposal",
+	agentv1.StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION: "apply_ticket_resolution",
 }
 
 var subcallNames = map[agentv1.Subcall]run.Subcall{
@@ -189,6 +191,13 @@ func checkpointToWire(value run.Checkpoint) (*agentv1.Checkpoint, error) {
 			SnapshotId: value.Snapshot.ID, SnapshotHash: value.Snapshot.ContentHash,
 			VersionVectorJson: slices.Clone(value.Snapshot.VersionVector), TicketBindingJson: slices.Clone(value.Snapshot.Ticket),
 			IndexId: value.Snapshot.IndexID, IndexProfileHash: value.Snapshot.IndexProfileHash}}
+	if value.Action != nil {
+		raw, err := json.Marshal(value.Action)
+		if err != nil || len(raw) > 40*1024 {
+			return nil, run.ErrInternal
+		}
+		result.ActionBindingJson = raw
+	}
 	if value.Run.State == run.Running {
 		result.NextStep = stepToWire(run.StepIdentity{ID: value.Authority.NextStepID,
 			Sequence: value.Run.CursorVersion + 1, Kind: value.Authority.NextStepKind,

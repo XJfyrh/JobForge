@@ -10,9 +10,9 @@ import (
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
 
-func TestWorkerServiceHasTwelveTypedOperations(t *testing.T) {
+func TestWorkerServiceHasSeventeenTypedOperations(t *testing.T) {
 	service := agentv1.File_jobforge_agent_v1_agent_proto.Services().ByName("AgentService")
-	names := []string{"Register", "Claim", "Heartbeat", "GetCheckpoint", "BeginTool", "ReserveCall", "ObserveCall", "SettleUsage", "CommitStep", "FailAttempt", "AcknowledgeStopped", "GetAcceptedCommit"}
+	names := []string{"Register", "Claim", "Heartbeat", "GetCheckpoint", "BeginTool", "ReserveCall", "ObserveCall", "SettleUsage", "CommitStep", "FailAttempt", "AcknowledgeStopped", "GetAcceptedCommit", "GetAction", "AuthorizeAction", "ReserveActionCall", "ObserveActionCall", "CompleteAction"}
 	if service == nil || service.Methods().Len() != len(names) {
 		t.Fatal("worker RPC contract drifted")
 	}

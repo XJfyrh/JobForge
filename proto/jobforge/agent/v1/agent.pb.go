@@ -48,6 +48,8 @@ const (
 	StepKind_STEP_KIND_SUBMIT_PROPOSAL StepKind = 7
 	// Choose one bound read tool or a final proposal; this grants no dispatch.
 	StepKind_STEP_KIND_MODEL_DECISION StepKind = 8
+	// Execute the approved fixed business action in Go; never starts Python.
+	StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION StepKind = 9
 )
 
 // Enum value maps for StepKind.
@@ -62,17 +64,19 @@ var (
 		6: "STEP_KIND_PROTOCOL_CORRECTION",
 		7: "STEP_KIND_SUBMIT_PROPOSAL",
 		8: "STEP_KIND_MODEL_DECISION",
+		9: "STEP_KIND_APPLY_TICKET_RESOLUTION",
 	}
 	StepKind_value = map[string]int32{
-		"STEP_KIND_UNSPECIFIED":         0,
-		"STEP_KIND_READ_TICKET":         1,
-		"STEP_KIND_GET_ORDER":           2,
-		"STEP_KIND_GET_DELIVERY":        3,
-		"STEP_KIND_SEARCH_POLICY":       4,
-		"STEP_KIND_MODEL_PROPOSAL":      5,
-		"STEP_KIND_PROTOCOL_CORRECTION": 6,
-		"STEP_KIND_SUBMIT_PROPOSAL":     7,
-		"STEP_KIND_MODEL_DECISION":      8,
+		"STEP_KIND_UNSPECIFIED":             0,
+		"STEP_KIND_READ_TICKET":             1,
+		"STEP_KIND_GET_ORDER":               2,
+		"STEP_KIND_GET_DELIVERY":            3,
+		"STEP_KIND_SEARCH_POLICY":           4,
+		"STEP_KIND_MODEL_PROPOSAL":          5,
+		"STEP_KIND_PROTOCOL_CORRECTION":     6,
+		"STEP_KIND_SUBMIT_PROPOSAL":         7,
+		"STEP_KIND_MODEL_DECISION":          8,
+		"STEP_KIND_APPLY_TICKET_RESOLUTION": 9,
 	}
 )
 
@@ -180,6 +184,59 @@ func (RunState) EnumDescriptor() ([]byte, []int) {
 	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{1}
 }
 
+// ActionCallKind keeps automatic calls outside the provider ledger.
+type ActionCallKind int32
+
+const (
+	// Missing kind is rejected.
+	ActionCallKind_ACTION_CALL_KIND_UNSPECIFIED ActionCallKind = 0
+	// One authenticated receipt GET in this attempt.
+	ActionCallKind_ACTION_CALL_KIND_RECEIPT_QUERY ActionCallKind = 1
+	// One authenticated action POST in this attempt.
+	ActionCallKind_ACTION_CALL_KIND_ACTION_WRITE ActionCallKind = 2
+)
+
+// Enum value maps for ActionCallKind.
+var (
+	ActionCallKind_name = map[int32]string{
+		0: "ACTION_CALL_KIND_UNSPECIFIED",
+		1: "ACTION_CALL_KIND_RECEIPT_QUERY",
+		2: "ACTION_CALL_KIND_ACTION_WRITE",
+	}
+	ActionCallKind_value = map[string]int32{
+		"ACTION_CALL_KIND_UNSPECIFIED":   0,
+		"ACTION_CALL_KIND_RECEIPT_QUERY": 1,
+		"ACTION_CALL_KIND_ACTION_WRITE":  2,
+	}
+)
+
+func (x ActionCallKind) Enum() *ActionCallKind {
+	p := new(ActionCallKind)
+	*p = x
+	return p
+}
+
+func (x ActionCallKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ActionCallKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_jobforge_agent_v1_agent_proto_enumTypes[2].Descriptor()
+}
+
+func (ActionCallKind) Type() protoreflect.EnumType {
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[2]
+}
+
+func (x ActionCallKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ActionCallKind.Descriptor instead.
+func (ActionCallKind) EnumDescriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{2}
+}
+
 // ControlSignal controls local execution, not provider-side cancellation.
 type ControlSignal int32
 
@@ -217,11 +274,11 @@ func (x ControlSignal) String() string {
 }
 
 func (ControlSignal) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[2].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[3].Descriptor()
 }
 
 func (ControlSignal) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[2]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[3]
 }
 
 func (x ControlSignal) Number() protoreflect.EnumNumber {
@@ -230,7 +287,7 @@ func (x ControlSignal) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ControlSignal.Descriptor instead.
 func (ControlSignal) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{2}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{3}
 }
 
 // Subcall names one registered HTTP request; endpoint/method/path are trusted.
@@ -290,11 +347,11 @@ func (x Subcall) String() string {
 }
 
 func (Subcall) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[3].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[4].Descriptor()
 }
 
 func (Subcall) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[3]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[4]
 }
 
 func (x Subcall) Number() protoreflect.EnumNumber {
@@ -303,7 +360,7 @@ func (x Subcall) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Subcall.Descriptor instead.
 func (Subcall) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{3}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{4}
 }
 
 // TransportOutcome separates network facts from business/step validity.
@@ -343,11 +400,11 @@ func (x TransportOutcome) String() string {
 }
 
 func (TransportOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[4].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[5].Descriptor()
 }
 
 func (TransportOutcome) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[4]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[5]
 }
 
 func (x TransportOutcome) Number() protoreflect.EnumNumber {
@@ -356,7 +413,7 @@ func (x TransportOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TransportOutcome.Descriptor instead.
 func (TransportOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{4}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{5}
 }
 
 // BusinessOutcome is output validation, independent of transport and usage.
@@ -400,11 +457,11 @@ func (x BusinessOutcome) String() string {
 }
 
 func (BusinessOutcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[5].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[6].Descriptor()
 }
 
 func (BusinessOutcome) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[5]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[6]
 }
 
 func (x BusinessOutcome) Number() protoreflect.EnumNumber {
@@ -413,7 +470,7 @@ func (x BusinessOutcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BusinessOutcome.Descriptor instead.
 func (BusinessOutcome) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{5}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{6}
 }
 
 // ProviderIdentityState separates safe identity from frozen-profile compatibility.
@@ -461,11 +518,11 @@ func (x ProviderIdentityState) String() string {
 }
 
 func (ProviderIdentityState) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[6].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[7].Descriptor()
 }
 
 func (ProviderIdentityState) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[6]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[7]
 }
 
 func (x ProviderIdentityState) Number() protoreflect.EnumNumber {
@@ -474,7 +531,7 @@ func (x ProviderIdentityState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProviderIdentityState.Descriptor instead.
 func (ProviderIdentityState) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{6}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{7}
 }
 
 // ProviderUsageEvidence distinguishes complete observed counters from pricing.
@@ -522,11 +579,11 @@ func (x ProviderUsageEvidence) String() string {
 }
 
 func (ProviderUsageEvidence) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[7].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[8].Descriptor()
 }
 
 func (ProviderUsageEvidence) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[7]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[8]
 }
 
 func (x ProviderUsageEvidence) Number() protoreflect.EnumNumber {
@@ -535,7 +592,7 @@ func (x ProviderUsageEvidence) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProviderUsageEvidence.Descriptor instead.
 func (ProviderUsageEvidence) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{7}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{8}
 }
 
 // ProviderReasoningState preserves absence separately from observed zero.
@@ -583,11 +640,11 @@ func (x ProviderReasoningState) String() string {
 }
 
 func (ProviderReasoningState) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[8].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[9].Descriptor()
 }
 
 func (ProviderReasoningState) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[8]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[9]
 }
 
 func (x ProviderReasoningState) Number() protoreflect.EnumNumber {
@@ -596,7 +653,7 @@ func (x ProviderReasoningState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProviderReasoningState.Descriptor instead.
 func (ProviderReasoningState) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{8}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{9}
 }
 
 // ProviderModeState describes only the fixed no-thinking/no-tools envelope.
@@ -644,11 +701,11 @@ func (x ProviderModeState) String() string {
 }
 
 func (ProviderModeState) Descriptor() protoreflect.EnumDescriptor {
-	return file_jobforge_agent_v1_agent_proto_enumTypes[9].Descriptor()
+	return file_jobforge_agent_v1_agent_proto_enumTypes[10].Descriptor()
 }
 
 func (ProviderModeState) Type() protoreflect.EnumType {
-	return &file_jobforge_agent_v1_agent_proto_enumTypes[9]
+	return &file_jobforge_agent_v1_agent_proto_enumTypes[10]
 }
 
 func (x ProviderModeState) Number() protoreflect.EnumNumber {
@@ -657,7 +714,7 @@ func (x ProviderModeState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProviderModeState.Descriptor instead.
 func (ProviderModeState) EnumDescriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{9}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{10}
 }
 
 // SessionIdentity is correlation, not authentication; principal comes from RPC auth.
@@ -1267,9 +1324,12 @@ type Checkpoint struct {
 	// At most 32 immutable accepted steps in ascending sequence order.
 	Steps []*AcceptedStep `protobuf:"bytes,3,rep,name=steps,proto3" json:"steps,omitempty"`
 	// Immutable admission facts needed by the first step; counted in 256 KiB.
-	Snapshot      *SnapshotBinding `protobuf:"bytes,4,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Snapshot *SnapshotBinding `protobuf:"bytes,4,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// Protected ActionBinding JSON, at most 40 KiB; only present at action cursor.
+	// It carries no endpoint credentials or signing private key.
+	ActionBindingJson []byte `protobuf:"bytes,5,opt,name=action_binding_json,json=actionBindingJson,proto3" json:"action_binding_json,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Checkpoint) Reset() {
@@ -1330,6 +1390,726 @@ func (x *Checkpoint) GetSnapshot() *SnapshotBinding {
 	return nil
 }
 
+func (x *Checkpoint) GetActionBindingJson() []byte {
+	if x != nil {
+		return x.ActionBindingJson
+	}
+	return nil
+}
+
+// GetActionRequest reads a binding at the current action cursor.
+type GetActionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current execution identity.
+	Execution *ExecutionIdentity `protobuf:"bytes,1,opt,name=execution,proto3" json:"execution,omitempty"`
+	// Exact server-selected action step.
+	Step          *StepIdentity `protobuf:"bytes,2,opt,name=step,proto3" json:"step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetActionRequest) Reset() {
+	*x = GetActionRequest{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetActionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetActionRequest) ProtoMessage() {}
+
+func (x *GetActionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetActionRequest.ProtoReflect.Descriptor instead.
+func (*GetActionRequest) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetActionRequest) GetExecution() *ExecutionIdentity {
+	if x != nil {
+		return x.Execution
+	}
+	return nil
+}
+
+func (x *GetActionRequest) GetStep() *StepIdentity {
+	if x != nil {
+		return x.Step
+	}
+	return nil
+}
+
+// GetActionResponse carries the closed Go ActionBinding JSON contract.
+type GetActionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// At most 40 KiB including original signed parameters and effect view.
+	ActionBindingJson []byte `protobuf:"bytes,1,opt,name=action_binding_json,json=actionBindingJson,proto3" json:"action_binding_json,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetActionResponse) Reset() {
+	*x = GetActionResponse{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetActionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetActionResponse) ProtoMessage() {}
+
+func (x *GetActionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetActionResponse.ProtoReflect.Descriptor instead.
+func (*GetActionResponse) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetActionResponse) GetActionBindingJson() []byte {
+	if x != nil {
+		return x.ActionBindingJson
+	}
+	return nil
+}
+
+// AuthorizeActionRequest cannot supply parameters, expiry or operation identity.
+type AuthorizeActionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current execution identity.
+	Execution *ExecutionIdentity `protobuf:"bytes,1,opt,name=execution,proto3" json:"execution,omitempty"`
+	// Exact server-selected action step.
+	Step          *StepIdentity `protobuf:"bytes,2,opt,name=step,proto3" json:"step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthorizeActionRequest) Reset() {
+	*x = AuthorizeActionRequest{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthorizeActionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthorizeActionRequest) ProtoMessage() {}
+
+func (x *AuthorizeActionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthorizeActionRequest.ProtoReflect.Descriptor instead.
+func (*AuthorizeActionRequest) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AuthorizeActionRequest) GetExecution() *ExecutionIdentity {
+	if x != nil {
+		return x.Execution
+	}
+	return nil
+}
+
+func (x *AuthorizeActionRequest) GetStep() *StepIdentity {
+	if x != nil {
+		return x.Step
+	}
+	return nil
+}
+
+// AuthorizeActionResponse carries the first immutable authorization.
+type AuthorizeActionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Closed ActionBinding JSON, at most 40 KiB.
+	ActionBindingJson []byte `protobuf:"bytes,1,opt,name=action_binding_json,json=actionBindingJson,proto3" json:"action_binding_json,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AuthorizeActionResponse) Reset() {
+	*x = AuthorizeActionResponse{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthorizeActionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthorizeActionResponse) ProtoMessage() {}
+
+func (x *AuthorizeActionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthorizeActionResponse.ProtoReflect.Descriptor instead.
+func (*AuthorizeActionResponse) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AuthorizeActionResponse) GetActionBindingJson() []byte {
+	if x != nil {
+		return x.ActionBindingJson
+	}
+	return nil
+}
+
+// ActionCallReservation is one physical send permit, never a replay permission.
+type ActionCallReservation struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Random physical UUID, different from the stable operation UUID.
+	PhysicalCallId string `protobuf:"bytes,1,opt,name=physical_call_id,json=physicalCallId,proto3" json:"physical_call_id,omitempty"`
+	// Original approved business operation UUID.
+	OperationId string `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	// Complete original authorization SHA-256.
+	AuthorizationHash string `protobuf:"bytes,3,opt,name=authorization_hash,json=authorizationHash,proto3" json:"authorization_hash,omitempty"`
+	// Automatic query or write.
+	Kind ActionCallKind `protobuf:"varint,4,opt,name=kind,proto3,enum=jobforge.agent.v1.ActionCallKind" json:"kind,omitempty"`
+	// Fresh database reservation time.
+	ReservedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=reserved_at,json=reservedAt,proto3" json:"reserved_at,omitempty"`
+	// The request must begin strictly before this expiry.
+	DispatchExpiresAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=dispatch_expires_at,json=dispatchExpiresAt,proto3" json:"dispatch_expires_at,omitempty"`
+	// Bounded original physical request deadline, at most ten seconds.
+	CallDeadline  *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActionCallReservation) Reset() {
+	*x = ActionCallReservation{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActionCallReservation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActionCallReservation) ProtoMessage() {}
+
+func (x *ActionCallReservation) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActionCallReservation.ProtoReflect.Descriptor instead.
+func (*ActionCallReservation) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ActionCallReservation) GetPhysicalCallId() string {
+	if x != nil {
+		return x.PhysicalCallId
+	}
+	return ""
+}
+
+func (x *ActionCallReservation) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *ActionCallReservation) GetAuthorizationHash() string {
+	if x != nil {
+		return x.AuthorizationHash
+	}
+	return ""
+}
+
+func (x *ActionCallReservation) GetKind() ActionCallKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ActionCallKind_ACTION_CALL_KIND_UNSPECIFIED
+}
+
+func (x *ActionCallReservation) GetReservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReservedAt
+	}
+	return nil
+}
+
+func (x *ActionCallReservation) GetDispatchExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DispatchExpiresAt
+	}
+	return nil
+}
+
+func (x *ActionCallReservation) GetCallDeadline() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CallDeadline
+	}
+	return nil
+}
+
+// ReserveActionCallRequest binds one UUID to current execution and content.
+type ReserveActionCallRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current execution identity.
+	Execution *ExecutionIdentity `protobuf:"bytes,1,opt,name=execution,proto3" json:"execution,omitempty"`
+	// Exact server-selected action step.
+	Step *StepIdentity `protobuf:"bytes,2,opt,name=step,proto3" json:"step,omitempty"`
+	// New physical UUID.
+	PhysicalCallId string `protobuf:"bytes,3,opt,name=physical_call_id,json=physicalCallId,proto3" json:"physical_call_id,omitempty"`
+	// Automatic query or write.
+	Kind ActionCallKind `protobuf:"varint,4,opt,name=kind,proto3,enum=jobforge.agent.v1.ActionCallKind" json:"kind,omitempty"`
+	// Stable operation UUID.
+	OperationId string `protobuf:"bytes,5,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	// Original authorization SHA-256.
+	AuthorizationHash string `protobuf:"bytes,6,opt,name=authorization_hash,json=authorizationHash,proto3" json:"authorization_hash,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ReserveActionCallRequest) Reset() {
+	*x = ReserveActionCallRequest{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReserveActionCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReserveActionCallRequest) ProtoMessage() {}
+
+func (x *ReserveActionCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReserveActionCallRequest.ProtoReflect.Descriptor instead.
+func (*ReserveActionCallRequest) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ReserveActionCallRequest) GetExecution() *ExecutionIdentity {
+	if x != nil {
+		return x.Execution
+	}
+	return nil
+}
+
+func (x *ReserveActionCallRequest) GetStep() *StepIdentity {
+	if x != nil {
+		return x.Step
+	}
+	return nil
+}
+
+func (x *ReserveActionCallRequest) GetPhysicalCallId() string {
+	if x != nil {
+		return x.PhysicalCallId
+	}
+	return ""
+}
+
+func (x *ReserveActionCallRequest) GetKind() ActionCallKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ActionCallKind_ACTION_CALL_KIND_UNSPECIFIED
+}
+
+func (x *ReserveActionCallRequest) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *ReserveActionCallRequest) GetAuthorizationHash() string {
+	if x != nil {
+		return x.AuthorizationHash
+	}
+	return ""
+}
+
+// ReserveActionCallResponse grants send only for a new accepted physical UUID.
+type ReserveActionCallResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Original accepted physical permission.
+	Reservation *ActionCallReservation `protobuf:"bytes,1,opt,name=reservation,proto3" json:"reservation,omitempty"`
+	// False means the caller must never resend this physical UUID.
+	NewlyReserved bool `protobuf:"varint,2,opt,name=newly_reserved,json=newlyReserved,proto3" json:"newly_reserved,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReserveActionCallResponse) Reset() {
+	*x = ReserveActionCallResponse{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReserveActionCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReserveActionCallResponse) ProtoMessage() {}
+
+func (x *ReserveActionCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReserveActionCallResponse.ProtoReflect.Descriptor instead.
+func (*ReserveActionCallResponse) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ReserveActionCallResponse) GetReservation() *ActionCallReservation {
+	if x != nil {
+		return x.Reservation
+	}
+	return nil
+}
+
+func (x *ReserveActionCallResponse) GetNewlyReserved() bool {
+	if x != nil {
+		return x.NewlyReserved
+	}
+	return false
+}
+
+// ObserveActionCallRequest preserves one original physical response or failure.
+type ObserveActionCallRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Original execution identity, including expired original attempts.
+	Execution *ExecutionIdentity `protobuf:"bytes,1,opt,name=execution,proto3" json:"execution,omitempty"`
+	// Accepted original physical UUID.
+	PhysicalCallId string `protobuf:"bytes,2,opt,name=physical_call_id,json=physicalCallId,proto3" json:"physical_call_id,omitempty"`
+	// Closed response, timeout or network_error classification.
+	TransportOutcome string `protobuf:"bytes,3,opt,name=transport_outcome,json=transportOutcome,proto3" json:"transport_outcome,omitempty"`
+	// Content-free original observation SHA-256.
+	ObservationHash string `protobuf:"bytes,4,opt,name=observation_hash,json=observationHash,proto3" json:"observation_hash,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ObserveActionCallRequest) Reset() {
+	*x = ObserveActionCallRequest{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ObserveActionCallRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObserveActionCallRequest) ProtoMessage() {}
+
+func (x *ObserveActionCallRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObserveActionCallRequest.ProtoReflect.Descriptor instead.
+func (*ObserveActionCallRequest) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ObserveActionCallRequest) GetExecution() *ExecutionIdentity {
+	if x != nil {
+		return x.Execution
+	}
+	return nil
+}
+
+func (x *ObserveActionCallRequest) GetPhysicalCallId() string {
+	if x != nil {
+		return x.PhysicalCallId
+	}
+	return ""
+}
+
+func (x *ObserveActionCallRequest) GetTransportOutcome() string {
+	if x != nil {
+		return x.TransportOutcome
+	}
+	return ""
+}
+
+func (x *ObserveActionCallRequest) GetObservationHash() string {
+	if x != nil {
+		return x.ObservationHash
+	}
+	return ""
+}
+
+// ObserveActionCallResponse acknowledges only stored transport facts.
+type ObserveActionCallResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Original physical UUID.
+	PhysicalCallId string `protobuf:"bytes,1,opt,name=physical_call_id,json=physicalCallId,proto3" json:"physical_call_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ObserveActionCallResponse) Reset() {
+	*x = ObserveActionCallResponse{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ObserveActionCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObserveActionCallResponse) ProtoMessage() {}
+
+func (x *ObserveActionCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObserveActionCallResponse.ProtoReflect.Descriptor instead.
+func (*ObserveActionCallResponse) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ObserveActionCallResponse) GetPhysicalCallId() string {
+	if x != nil {
+		return x.PhysicalCallId
+	}
+	return ""
+}
+
+// CompleteActionRequest cannot create or modify an authorization.
+type CompleteActionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Current fenced execution identity.
+	Execution *ExecutionIdentity `protobuf:"bytes,1,opt,name=execution,proto3" json:"execution,omitempty"`
+	// Current action cursor.
+	Step *StepIdentity `protobuf:"bytes,2,opt,name=step,proto3" json:"step,omitempty"`
+	// Closed business ActionReceipt JSON, at most 4 KiB.
+	ReceiptJson []byte `protobuf:"bytes,3,opt,name=receipt_json,json=receiptJson,proto3" json:"receipt_json,omitempty"`
+	// Original observed automatic call UUID; empty only for a persisted applied view.
+	PhysicalCallId string `protobuf:"bytes,4,opt,name=physical_call_id,json=physicalCallId,proto3" json:"physical_call_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CompleteActionRequest) Reset() {
+	*x = CompleteActionRequest{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteActionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteActionRequest) ProtoMessage() {}
+
+func (x *CompleteActionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteActionRequest.ProtoReflect.Descriptor instead.
+func (*CompleteActionRequest) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CompleteActionRequest) GetExecution() *ExecutionIdentity {
+	if x != nil {
+		return x.Execution
+	}
+	return nil
+}
+
+func (x *CompleteActionRequest) GetStep() *StepIdentity {
+	if x != nil {
+		return x.Step
+	}
+	return nil
+}
+
+func (x *CompleteActionRequest) GetReceiptJson() []byte {
+	if x != nil {
+		return x.ReceiptJson
+	}
+	return nil
+}
+
+func (x *CompleteActionRequest) GetPhysicalCallId() string {
+	if x != nil {
+		return x.PhysicalCallId
+	}
+	return ""
+}
+
+// CompleteActionResponse is the immutable first applied checkpoint.
+type CompleteActionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Complete accepted action step identity and result.
+	AcceptedStep *AcceptedStep `protobuf:"bytes,1,opt,name=accepted_step,json=acceptedStep,proto3" json:"accepted_step,omitempty"`
+	// Advanced cursor version.
+	CursorVersion int64 `protobuf:"varint,2,opt,name=cursor_version,json=cursorVersion,proto3" json:"cursor_version,omitempty"`
+	// Terminal succeeded state with applied business outcome.
+	State RunState `protobuf:"varint,3,opt,name=state,proto3,enum=jobforge.agent.v1.RunState" json:"state,omitempty"`
+	// True after atomically releasing attempt and capacity.
+	AttemptClosed bool `protobuf:"varint,4,opt,name=attempt_closed,json=attemptClosed,proto3" json:"attempt_closed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteActionResponse) Reset() {
+	*x = CompleteActionResponse{}
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteActionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteActionResponse) ProtoMessage() {}
+
+func (x *CompleteActionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteActionResponse.ProtoReflect.Descriptor instead.
+func (*CompleteActionResponse) Descriptor() ([]byte, []int) {
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CompleteActionResponse) GetAcceptedStep() *AcceptedStep {
+	if x != nil {
+		return x.AcceptedStep
+	}
+	return nil
+}
+
+func (x *CompleteActionResponse) GetCursorVersion() int64 {
+	if x != nil {
+		return x.CursorVersion
+	}
+	return 0
+}
+
+func (x *CompleteActionResponse) GetState() RunState {
+	if x != nil {
+		return x.State
+	}
+	return RunState_RUN_STATE_UNSPECIFIED
+}
+
+func (x *CompleteActionResponse) GetAttemptClosed() bool {
+	if x != nil {
+		return x.AttemptClosed
+	}
+	return false
+}
+
 // SnapshotBinding carries protected admitted facts, never model-supplied identity.
 type SnapshotBinding struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1355,7 +2135,7 @@ type SnapshotBinding struct {
 
 func (x *SnapshotBinding) Reset() {
 	*x = SnapshotBinding{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[9]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1367,7 +2147,7 @@ func (x *SnapshotBinding) String() string {
 func (*SnapshotBinding) ProtoMessage() {}
 
 func (x *SnapshotBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[9]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1380,7 +2160,7 @@ func (x *SnapshotBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnapshotBinding.ProtoReflect.Descriptor instead.
 func (*SnapshotBinding) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{9}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SnapshotBinding) GetTenantId() string {
@@ -1456,7 +2236,7 @@ type AcceptedStep struct {
 
 func (x *AcceptedStep) Reset() {
 	*x = AcceptedStep{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[10]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1468,7 +2248,7 @@ func (x *AcceptedStep) String() string {
 func (*AcceptedStep) ProtoMessage() {}
 
 func (x *AcceptedStep) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[10]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1481,7 +2261,7 @@ func (x *AcceptedStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptedStep.ProtoReflect.Descriptor instead.
 func (*AcceptedStep) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{10}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AcceptedStep) GetStep() *StepIdentity {
@@ -1528,7 +2308,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[11]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1540,7 +2320,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[11]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1553,7 +2333,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{11}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *HeartbeatRequest) GetExecution() *ExecutionIdentity {
@@ -1590,7 +2370,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[12]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1602,7 +2382,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[12]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1615,7 +2395,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{12}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *HeartbeatResponse) GetSignal() ControlSignal {
@@ -1664,7 +2444,7 @@ type GetCheckpointRequest struct {
 
 func (x *GetCheckpointRequest) Reset() {
 	*x = GetCheckpointRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[13]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1676,7 +2456,7 @@ func (x *GetCheckpointRequest) String() string {
 func (*GetCheckpointRequest) ProtoMessage() {}
 
 func (x *GetCheckpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[13]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1689,7 +2469,7 @@ func (x *GetCheckpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCheckpointRequest.ProtoReflect.Descriptor instead.
 func (*GetCheckpointRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{13}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetCheckpointRequest) GetExecution() *ExecutionIdentity {
@@ -1710,7 +2490,7 @@ type GetCheckpointResponse struct {
 
 func (x *GetCheckpointResponse) Reset() {
 	*x = GetCheckpointResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[14]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1722,7 +2502,7 @@ func (x *GetCheckpointResponse) String() string {
 func (*GetCheckpointResponse) ProtoMessage() {}
 
 func (x *GetCheckpointResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[14]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1735,7 +2515,7 @@ func (x *GetCheckpointResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCheckpointResponse.ProtoReflect.Descriptor instead.
 func (*GetCheckpointResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{14}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetCheckpointResponse) GetCheckpoint() *Checkpoint {
@@ -1760,7 +2540,7 @@ type BeginToolRequest struct {
 
 func (x *BeginToolRequest) Reset() {
 	*x = BeginToolRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[15]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1772,7 +2552,7 @@ func (x *BeginToolRequest) String() string {
 func (*BeginToolRequest) ProtoMessage() {}
 
 func (x *BeginToolRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[15]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1785,7 +2565,7 @@ func (x *BeginToolRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeginToolRequest.ProtoReflect.Descriptor instead.
 func (*BeginToolRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{15}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *BeginToolRequest) GetExecution() *ExecutionIdentity {
@@ -1822,7 +2602,7 @@ type BeginToolResponse struct {
 
 func (x *BeginToolResponse) Reset() {
 	*x = BeginToolResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[16]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1834,7 +2614,7 @@ func (x *BeginToolResponse) String() string {
 func (*BeginToolResponse) ProtoMessage() {}
 
 func (x *BeginToolResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[16]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1847,7 +2627,7 @@ func (x *BeginToolResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeginToolResponse.ProtoReflect.Descriptor instead.
 func (*BeginToolResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{16}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *BeginToolResponse) GetToolInvocationId() string {
@@ -1887,7 +2667,7 @@ type ReserveCallRequest struct {
 
 func (x *ReserveCallRequest) Reset() {
 	*x = ReserveCallRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[17]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1899,7 +2679,7 @@ func (x *ReserveCallRequest) String() string {
 func (*ReserveCallRequest) ProtoMessage() {}
 
 func (x *ReserveCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[17]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1912,7 +2692,7 @@ func (x *ReserveCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveCallRequest.ProtoReflect.Descriptor instead.
 func (*ReserveCallRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{17}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ReserveCallRequest) GetExecution() *ExecutionIdentity {
@@ -1981,7 +2761,7 @@ type CallBudget struct {
 
 func (x *CallBudget) Reset() {
 	*x = CallBudget{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[18]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1993,7 +2773,7 @@ func (x *CallBudget) String() string {
 func (*CallBudget) ProtoMessage() {}
 
 func (x *CallBudget) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[18]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2006,7 +2786,7 @@ func (x *CallBudget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallBudget.ProtoReflect.Descriptor instead.
 func (*CallBudget) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{18}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *CallBudget) GetInputTokens() int64 {
@@ -2075,7 +2855,7 @@ type CallReservation struct {
 
 func (x *CallReservation) Reset() {
 	*x = CallReservation{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[19]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2087,7 +2867,7 @@ func (x *CallReservation) String() string {
 func (*CallReservation) ProtoMessage() {}
 
 func (x *CallReservation) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[19]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2100,7 +2880,7 @@ func (x *CallReservation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallReservation.ProtoReflect.Descriptor instead.
 func (*CallReservation) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{19}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CallReservation) GetPhysicalCallId() string {
@@ -2214,7 +2994,7 @@ type ReserveCallResponse struct {
 
 func (x *ReserveCallResponse) Reset() {
 	*x = ReserveCallResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[20]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2226,7 +3006,7 @@ func (x *ReserveCallResponse) String() string {
 func (*ReserveCallResponse) ProtoMessage() {}
 
 func (x *ReserveCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[20]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2239,7 +3019,7 @@ func (x *ReserveCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveCallResponse.ProtoReflect.Descriptor instead.
 func (*ReserveCallResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{20}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ReserveCallResponse) GetReservation() *CallReservation {
@@ -2277,7 +3057,7 @@ type UsageReport struct {
 
 func (x *UsageReport) Reset() {
 	*x = UsageReport{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[21]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2289,7 +3069,7 @@ func (x *UsageReport) String() string {
 func (*UsageReport) ProtoMessage() {}
 
 func (x *UsageReport) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[21]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2302,7 +3082,7 @@ func (x *UsageReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageReport.ProtoReflect.Descriptor instead.
 func (*UsageReport) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{21}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *UsageReport) GetInputTokens() int64 {
@@ -2380,7 +3160,7 @@ type ProviderAudit struct {
 
 func (x *ProviderAudit) Reset() {
 	*x = ProviderAudit{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[22]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2392,7 +3172,7 @@ func (x *ProviderAudit) String() string {
 func (*ProviderAudit) ProtoMessage() {}
 
 func (x *ProviderAudit) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[22]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2405,7 +3185,7 @@ func (x *ProviderAudit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderAudit.ProtoReflect.Descriptor instead.
 func (*ProviderAudit) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{22}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ProviderAudit) GetSchemaVersion() int32 {
@@ -2542,7 +3322,7 @@ type ObserveCallRequest struct {
 
 func (x *ObserveCallRequest) Reset() {
 	*x = ObserveCallRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[23]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2554,7 +3334,7 @@ func (x *ObserveCallRequest) String() string {
 func (*ObserveCallRequest) ProtoMessage() {}
 
 func (x *ObserveCallRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[23]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2567,7 +3347,7 @@ func (x *ObserveCallRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveCallRequest.ProtoReflect.Descriptor instead.
 func (*ObserveCallRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{23}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ObserveCallRequest) GetExecution() *ExecutionIdentity {
@@ -2651,7 +3431,7 @@ type ObserveCallResponse struct {
 
 func (x *ObserveCallResponse) Reset() {
 	*x = ObserveCallResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[24]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2663,7 +3443,7 @@ func (x *ObserveCallResponse) String() string {
 func (*ObserveCallResponse) ProtoMessage() {}
 
 func (x *ObserveCallResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[24]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2676,7 +3456,7 @@ func (x *ObserveCallResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObserveCallResponse.ProtoReflect.Descriptor instead.
 func (*ObserveCallResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{24}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ObserveCallResponse) GetReservation() *CallReservation {
@@ -2705,7 +3485,7 @@ type SettleUsageRequest struct {
 
 func (x *SettleUsageRequest) Reset() {
 	*x = SettleUsageRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[25]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2717,7 +3497,7 @@ func (x *SettleUsageRequest) String() string {
 func (*SettleUsageRequest) ProtoMessage() {}
 
 func (x *SettleUsageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[25]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2730,7 +3510,7 @@ func (x *SettleUsageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleUsageRequest.ProtoReflect.Descriptor instead.
 func (*SettleUsageRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{25}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *SettleUsageRequest) GetExecution() *ExecutionIdentity {
@@ -2791,7 +3571,7 @@ type SettleUsageResponse struct {
 
 func (x *SettleUsageResponse) Reset() {
 	*x = SettleUsageResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[26]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2803,7 +3583,7 @@ func (x *SettleUsageResponse) String() string {
 func (*SettleUsageResponse) ProtoMessage() {}
 
 func (x *SettleUsageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[26]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2816,7 +3596,7 @@ func (x *SettleUsageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettleUsageResponse.ProtoReflect.Descriptor instead.
 func (*SettleUsageResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{26}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SettleUsageResponse) GetNewlySettled() bool {
@@ -2885,7 +3665,7 @@ type CommitStepRequest struct {
 
 func (x *CommitStepRequest) Reset() {
 	*x = CommitStepRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[27]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2897,7 +3677,7 @@ func (x *CommitStepRequest) String() string {
 func (*CommitStepRequest) ProtoMessage() {}
 
 func (x *CommitStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[27]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2910,7 +3690,7 @@ func (x *CommitStepRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitStepRequest.ProtoReflect.Descriptor instead.
 func (*CommitStepRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{27}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CommitStepRequest) GetExecution() *ExecutionIdentity {
@@ -2960,7 +3740,7 @@ type CommitStepResponse struct {
 
 func (x *CommitStepResponse) Reset() {
 	*x = CommitStepResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[28]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2972,7 +3752,7 @@ func (x *CommitStepResponse) String() string {
 func (*CommitStepResponse) ProtoMessage() {}
 
 func (x *CommitStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[28]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2985,7 +3765,7 @@ func (x *CommitStepResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitStepResponse.ProtoReflect.Descriptor instead.
 func (*CommitStepResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{28}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CommitStepResponse) GetAcceptedStep() *AcceptedStep {
@@ -3038,7 +3818,7 @@ type FailAttemptRequest struct {
 
 func (x *FailAttemptRequest) Reset() {
 	*x = FailAttemptRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[29]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3050,7 +3830,7 @@ func (x *FailAttemptRequest) String() string {
 func (*FailAttemptRequest) ProtoMessage() {}
 
 func (x *FailAttemptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[29]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3063,7 +3843,7 @@ func (x *FailAttemptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailAttemptRequest.ProtoReflect.Descriptor instead.
 func (*FailAttemptRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{29}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *FailAttemptRequest) GetExecution() *ExecutionIdentity {
@@ -3102,7 +3882,7 @@ type FailAttemptResponse struct {
 
 func (x *FailAttemptResponse) Reset() {
 	*x = FailAttemptResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[30]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3114,7 +3894,7 @@ func (x *FailAttemptResponse) String() string {
 func (*FailAttemptResponse) ProtoMessage() {}
 
 func (x *FailAttemptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[30]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3127,7 +3907,7 @@ func (x *FailAttemptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FailAttemptResponse.ProtoReflect.Descriptor instead.
 func (*FailAttemptResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{30}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *FailAttemptResponse) GetState() RunState {
@@ -3162,7 +3942,7 @@ type AcknowledgeStoppedRequest struct {
 
 func (x *AcknowledgeStoppedRequest) Reset() {
 	*x = AcknowledgeStoppedRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[31]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3174,7 +3954,7 @@ func (x *AcknowledgeStoppedRequest) String() string {
 func (*AcknowledgeStoppedRequest) ProtoMessage() {}
 
 func (x *AcknowledgeStoppedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[31]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3187,7 +3967,7 @@ func (x *AcknowledgeStoppedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcknowledgeStoppedRequest.ProtoReflect.Descriptor instead.
 func (*AcknowledgeStoppedRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{31}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *AcknowledgeStoppedRequest) GetExecution() *ExecutionIdentity {
@@ -3210,7 +3990,7 @@ type AcknowledgeStoppedResponse struct {
 
 func (x *AcknowledgeStoppedResponse) Reset() {
 	*x = AcknowledgeStoppedResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[32]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3222,7 +4002,7 @@ func (x *AcknowledgeStoppedResponse) String() string {
 func (*AcknowledgeStoppedResponse) ProtoMessage() {}
 
 func (x *AcknowledgeStoppedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[32]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3235,7 +4015,7 @@ func (x *AcknowledgeStoppedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcknowledgeStoppedResponse.ProtoReflect.Descriptor instead.
 func (*AcknowledgeStoppedResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{32}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *AcknowledgeStoppedResponse) GetState() RunState {
@@ -3265,7 +4045,7 @@ type GetAcceptedCommitRequest struct {
 
 func (x *GetAcceptedCommitRequest) Reset() {
 	*x = GetAcceptedCommitRequest{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[33]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3277,7 +4057,7 @@ func (x *GetAcceptedCommitRequest) String() string {
 func (*GetAcceptedCommitRequest) ProtoMessage() {}
 
 func (x *GetAcceptedCommitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[33]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3290,7 +4070,7 @@ func (x *GetAcceptedCommitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAcceptedCommitRequest.ProtoReflect.Descriptor instead.
 func (*GetAcceptedCommitRequest) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{33}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *GetAcceptedCommitRequest) GetExecution() *ExecutionIdentity {
@@ -3324,7 +4104,7 @@ type GetAcceptedCommitResponse struct {
 
 func (x *GetAcceptedCommitResponse) Reset() {
 	*x = GetAcceptedCommitResponse{}
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[34]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3336,7 +4116,7 @@ func (x *GetAcceptedCommitResponse) String() string {
 func (*GetAcceptedCommitResponse) ProtoMessage() {}
 
 func (x *GetAcceptedCommitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[34]
+	mi := &file_jobforge_agent_v1_agent_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3349,7 +4129,7 @@ func (x *GetAcceptedCommitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAcceptedCommitResponse.ProtoReflect.Descriptor instead.
 func (*GetAcceptedCommitResponse) Descriptor() ([]byte, []int) {
-	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{34}
+	return file_jobforge_agent_v1_agent_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *GetAcceptedCommitResponse) GetFound() bool {
@@ -3436,13 +4216,60 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"checkpoint\x18\x05 \x01(\v2\x1d.jobforge.agent.v1.CheckpointR\n" +
 	"checkpoint\x12#\n" +
 	"\rtrace_context\x18\x06 \x01(\tR\ftraceContext\x12N\n" +
-	"\x15authority_observed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\x13authorityObservedAt\"\xe8\x01\n" +
+	"\x15authority_observed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\x13authorityObservedAt\"\x98\x02\n" +
 	"\n" +
 	"Checkpoint\x12%\n" +
 	"\x0ecursor_version\x18\x01 \x01(\x03R\rcursorVersion\x12<\n" +
 	"\tnext_step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.StepIdentityR\bnextStep\x125\n" +
 	"\x05steps\x18\x03 \x03(\v2\x1f.jobforge.agent.v1.AcceptedStepR\x05steps\x12>\n" +
-	"\bsnapshot\x18\x04 \x01(\v2\".jobforge.agent.v1.SnapshotBindingR\bsnapshot\"\xba\x02\n" +
+	"\bsnapshot\x18\x04 \x01(\v2\".jobforge.agent.v1.SnapshotBindingR\bsnapshot\x12.\n" +
+	"\x13action_binding_json\x18\x05 \x01(\fR\x11actionBindingJson\"\x8b\x01\n" +
+	"\x10GetActionRequest\x12B\n" +
+	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x123\n" +
+	"\x04step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.StepIdentityR\x04step\"C\n" +
+	"\x11GetActionResponse\x12.\n" +
+	"\x13action_binding_json\x18\x01 \x01(\fR\x11actionBindingJson\"\x91\x01\n" +
+	"\x16AuthorizeActionRequest\x12B\n" +
+	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x123\n" +
+	"\x04step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.StepIdentityR\x04step\"I\n" +
+	"\x17AuthorizeActionResponse\x12.\n" +
+	"\x13action_binding_json\x18\x01 \x01(\fR\x11actionBindingJson\"\x94\x03\n" +
+	"\x15ActionCallReservation\x12(\n" +
+	"\x10physical_call_id\x18\x01 \x01(\tR\x0ephysicalCallId\x12!\n" +
+	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12-\n" +
+	"\x12authorization_hash\x18\x03 \x01(\tR\x11authorizationHash\x125\n" +
+	"\x04kind\x18\x04 \x01(\x0e2!.jobforge.agent.v1.ActionCallKindR\x04kind\x12;\n" +
+	"\vreserved_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"reservedAt\x12J\n" +
+	"\x13dispatch_expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x11dispatchExpiresAt\x12?\n" +
+	"\rcall_deadline\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\fcallDeadline\"\xc6\x02\n" +
+	"\x18ReserveActionCallRequest\x12B\n" +
+	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x123\n" +
+	"\x04step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.StepIdentityR\x04step\x12(\n" +
+	"\x10physical_call_id\x18\x03 \x01(\tR\x0ephysicalCallId\x125\n" +
+	"\x04kind\x18\x04 \x01(\x0e2!.jobforge.agent.v1.ActionCallKindR\x04kind\x12!\n" +
+	"\foperation_id\x18\x05 \x01(\tR\voperationId\x12-\n" +
+	"\x12authorization_hash\x18\x06 \x01(\tR\x11authorizationHash\"\x8e\x01\n" +
+	"\x19ReserveActionCallResponse\x12J\n" +
+	"\vreservation\x18\x01 \x01(\v2(.jobforge.agent.v1.ActionCallReservationR\vreservation\x12%\n" +
+	"\x0enewly_reserved\x18\x02 \x01(\bR\rnewlyReserved\"\xe0\x01\n" +
+	"\x18ObserveActionCallRequest\x12B\n" +
+	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x12(\n" +
+	"\x10physical_call_id\x18\x02 \x01(\tR\x0ephysicalCallId\x12+\n" +
+	"\x11transport_outcome\x18\x03 \x01(\tR\x10transportOutcome\x12)\n" +
+	"\x10observation_hash\x18\x04 \x01(\tR\x0fobservationHash\"E\n" +
+	"\x19ObserveActionCallResponse\x12(\n" +
+	"\x10physical_call_id\x18\x01 \x01(\tR\x0ephysicalCallId\"\xdd\x01\n" +
+	"\x15CompleteActionRequest\x12B\n" +
+	"\texecution\x18\x01 \x01(\v2$.jobforge.agent.v1.ExecutionIdentityR\texecution\x123\n" +
+	"\x04step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.StepIdentityR\x04step\x12!\n" +
+	"\freceipt_json\x18\x03 \x01(\fR\vreceiptJson\x12(\n" +
+	"\x10physical_call_id\x18\x04 \x01(\tR\x0ephysicalCallId\"\xdf\x01\n" +
+	"\x16CompleteActionResponse\x12D\n" +
+	"\raccepted_step\x18\x01 \x01(\v2\x1f.jobforge.agent.v1.AcceptedStepR\facceptedStep\x12%\n" +
+	"\x0ecursor_version\x18\x02 \x01(\x03R\rcursorVersion\x121\n" +
+	"\x05state\x18\x03 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state\x12%\n" +
+	"\x0eattempt_closed\x18\x04 \x01(\bR\rattemptClosed\"\xba\x02\n" +
 	"\x0fSnapshotBinding\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\tticket_id\x18\x02 \x01(\tR\bticketId\x12\x1f\n" +
@@ -3624,7 +4451,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12D\n" +
 	"\raccepted_step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.AcceptedStepR\facceptedStep\x12'\n" +
 	"\x0fattempt_outcome\x18\x03 \x01(\tR\x0eattemptOutcome\x121\n" +
-	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\x90\x02\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\xb7\x02\n" +
 	"\bStepKind\x12\x19\n" +
 	"\x15STEP_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15STEP_KIND_READ_TICKET\x10\x01\x12\x17\n" +
@@ -3634,7 +4461,8 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x18STEP_KIND_MODEL_PROPOSAL\x10\x05\x12!\n" +
 	"\x1dSTEP_KIND_PROTOCOL_CORRECTION\x10\x06\x12\x1d\n" +
 	"\x19STEP_KIND_SUBMIT_PROPOSAL\x10\a\x12\x1c\n" +
-	"\x18STEP_KIND_MODEL_DECISION\x10\b*\xec\x01\n" +
+	"\x18STEP_KIND_MODEL_DECISION\x10\b\x12%\n" +
+	"!STEP_KIND_APPLY_TICKET_RESOLUTION\x10\t*\xec\x01\n" +
 	"\bRunState\x12\x19\n" +
 	"\x15RUN_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fRUN_STATE_READY\x10\x01\x12\x15\n" +
@@ -3644,7 +4472,11 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x1bRUN_STATE_AWAITING_APPROVAL\x10\x05\x12\x17\n" +
 	"\x13RUN_STATE_SUCCEEDED\x10\x06\x12\x14\n" +
 	"\x10RUN_STATE_FAILED\x10\a\x12\x17\n" +
-	"\x13RUN_STATE_CANCELLED\x10\b*e\n" +
+	"\x13RUN_STATE_CANCELLED\x10\b*y\n" +
+	"\x0eActionCallKind\x12 \n" +
+	"\x1cACTION_CALL_KIND_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eACTION_CALL_KIND_RECEIPT_QUERY\x10\x01\x12!\n" +
+	"\x1dACTION_CALL_KIND_ACTION_WRITE\x10\x02*e\n" +
 	"\rControlSignal\x12\x1e\n" +
 	"\x1aCONTROL_SIGNAL_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CONTROL_SIGNAL_CONTINUE\x10\x01\x12\x17\n" +
@@ -3690,7 +4522,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x1fPROVIDER_MODE_STATE_NONTHINKING\x10\x01\x12\"\n" +
 	"\x1ePROVIDER_MODE_STATE_UNEXPECTED\x10\x02\x12\x1f\n" +
 	"\x1bPROVIDER_MODE_STATE_INVALID\x10\x03\x12#\n" +
-	"\x1fPROVIDER_MODE_STATE_UNAVAILABLE\x10\x042\xf9\b\n" +
+	"\x1fPROVIDER_MODE_STATE_UNAVAILABLE\x10\x042\x82\r\n" +
 	"\fAgentService\x12S\n" +
 	"\bRegister\x12\".jobforge.agent.v1.RegisterRequest\x1a#.jobforge.agent.v1.RegisterResponse\x12J\n" +
 	"\x05Claim\x12\x1f.jobforge.agent.v1.ClaimRequest\x1a .jobforge.agent.v1.ClaimResponse\x12V\n" +
@@ -3704,7 +4536,12 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"CommitStep\x12$.jobforge.agent.v1.CommitStepRequest\x1a%.jobforge.agent.v1.CommitStepResponse\x12\\\n" +
 	"\vFailAttempt\x12%.jobforge.agent.v1.FailAttemptRequest\x1a&.jobforge.agent.v1.FailAttemptResponse\x12q\n" +
 	"\x12AcknowledgeStopped\x12,.jobforge.agent.v1.AcknowledgeStoppedRequest\x1a-.jobforge.agent.v1.AcknowledgeStoppedResponse\x12n\n" +
-	"\x11GetAcceptedCommit\x12+.jobforge.agent.v1.GetAcceptedCommitRequest\x1a,.jobforge.agent.v1.GetAcceptedCommitResponseB<Z:github.com/xjfyrh/jobforge/proto/jobforge/agent/v1;agentv1b\x06proto3"
+	"\x11GetAcceptedCommit\x12+.jobforge.agent.v1.GetAcceptedCommitRequest\x1a,.jobforge.agent.v1.GetAcceptedCommitResponse\x12V\n" +
+	"\tGetAction\x12#.jobforge.agent.v1.GetActionRequest\x1a$.jobforge.agent.v1.GetActionResponse\x12h\n" +
+	"\x0fAuthorizeAction\x12).jobforge.agent.v1.AuthorizeActionRequest\x1a*.jobforge.agent.v1.AuthorizeActionResponse\x12n\n" +
+	"\x11ReserveActionCall\x12+.jobforge.agent.v1.ReserveActionCallRequest\x1a,.jobforge.agent.v1.ReserveActionCallResponse\x12n\n" +
+	"\x11ObserveActionCall\x12+.jobforge.agent.v1.ObserveActionCallRequest\x1a,.jobforge.agent.v1.ObserveActionCallResponse\x12e\n" +
+	"\x0eCompleteAction\x12(.jobforge.agent.v1.CompleteActionRequest\x1a).jobforge.agent.v1.CompleteActionResponseB<Z:github.com/xjfyrh/jobforge/proto/jobforge/agent/v1;agentv1b\x06proto3"
 
 var (
 	file_jobforge_agent_v1_agent_proto_rawDescOnce sync.Once
@@ -3718,152 +4555,191 @@ func file_jobforge_agent_v1_agent_proto_rawDescGZIP() []byte {
 	return file_jobforge_agent_v1_agent_proto_rawDescData
 }
 
-var file_jobforge_agent_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
-var file_jobforge_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_jobforge_agent_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
+var file_jobforge_agent_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_jobforge_agent_v1_agent_proto_goTypes = []any{
 	(StepKind)(0),                      // 0: jobforge.agent.v1.StepKind
 	(RunState)(0),                      // 1: jobforge.agent.v1.RunState
-	(ControlSignal)(0),                 // 2: jobforge.agent.v1.ControlSignal
-	(Subcall)(0),                       // 3: jobforge.agent.v1.Subcall
-	(TransportOutcome)(0),              // 4: jobforge.agent.v1.TransportOutcome
-	(BusinessOutcome)(0),               // 5: jobforge.agent.v1.BusinessOutcome
-	(ProviderIdentityState)(0),         // 6: jobforge.agent.v1.ProviderIdentityState
-	(ProviderUsageEvidence)(0),         // 7: jobforge.agent.v1.ProviderUsageEvidence
-	(ProviderReasoningState)(0),        // 8: jobforge.agent.v1.ProviderReasoningState
-	(ProviderModeState)(0),             // 9: jobforge.agent.v1.ProviderModeState
-	(*SessionIdentity)(nil),            // 10: jobforge.agent.v1.SessionIdentity
-	(*ExecutionIdentity)(nil),          // 11: jobforge.agent.v1.ExecutionIdentity
-	(*StepIdentity)(nil),               // 12: jobforge.agent.v1.StepIdentity
-	(*RegisterRequest)(nil),            // 13: jobforge.agent.v1.RegisterRequest
-	(*RegisterResponse)(nil),           // 14: jobforge.agent.v1.RegisterResponse
-	(*ClaimRequest)(nil),               // 15: jobforge.agent.v1.ClaimRequest
-	(*ClaimResponse)(nil),              // 16: jobforge.agent.v1.ClaimResponse
-	(*RunLease)(nil),                   // 17: jobforge.agent.v1.RunLease
-	(*Checkpoint)(nil),                 // 18: jobforge.agent.v1.Checkpoint
-	(*SnapshotBinding)(nil),            // 19: jobforge.agent.v1.SnapshotBinding
-	(*AcceptedStep)(nil),               // 20: jobforge.agent.v1.AcceptedStep
-	(*HeartbeatRequest)(nil),           // 21: jobforge.agent.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),          // 22: jobforge.agent.v1.HeartbeatResponse
-	(*GetCheckpointRequest)(nil),       // 23: jobforge.agent.v1.GetCheckpointRequest
-	(*GetCheckpointResponse)(nil),      // 24: jobforge.agent.v1.GetCheckpointResponse
-	(*BeginToolRequest)(nil),           // 25: jobforge.agent.v1.BeginToolRequest
-	(*BeginToolResponse)(nil),          // 26: jobforge.agent.v1.BeginToolResponse
-	(*ReserveCallRequest)(nil),         // 27: jobforge.agent.v1.ReserveCallRequest
-	(*CallBudget)(nil),                 // 28: jobforge.agent.v1.CallBudget
-	(*CallReservation)(nil),            // 29: jobforge.agent.v1.CallReservation
-	(*ReserveCallResponse)(nil),        // 30: jobforge.agent.v1.ReserveCallResponse
-	(*UsageReport)(nil),                // 31: jobforge.agent.v1.UsageReport
-	(*ProviderAudit)(nil),              // 32: jobforge.agent.v1.ProviderAudit
-	(*ObserveCallRequest)(nil),         // 33: jobforge.agent.v1.ObserveCallRequest
-	(*ObserveCallResponse)(nil),        // 34: jobforge.agent.v1.ObserveCallResponse
-	(*SettleUsageRequest)(nil),         // 35: jobforge.agent.v1.SettleUsageRequest
-	(*SettleUsageResponse)(nil),        // 36: jobforge.agent.v1.SettleUsageResponse
-	(*CommitStepRequest)(nil),          // 37: jobforge.agent.v1.CommitStepRequest
-	(*CommitStepResponse)(nil),         // 38: jobforge.agent.v1.CommitStepResponse
-	(*FailAttemptRequest)(nil),         // 39: jobforge.agent.v1.FailAttemptRequest
-	(*FailAttemptResponse)(nil),        // 40: jobforge.agent.v1.FailAttemptResponse
-	(*AcknowledgeStoppedRequest)(nil),  // 41: jobforge.agent.v1.AcknowledgeStoppedRequest
-	(*AcknowledgeStoppedResponse)(nil), // 42: jobforge.agent.v1.AcknowledgeStoppedResponse
-	(*GetAcceptedCommitRequest)(nil),   // 43: jobforge.agent.v1.GetAcceptedCommitRequest
-	(*GetAcceptedCommitResponse)(nil),  // 44: jobforge.agent.v1.GetAcceptedCommitResponse
-	(*timestamppb.Timestamp)(nil),      // 45: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),        // 46: google.protobuf.Duration
+	(ActionCallKind)(0),                // 2: jobforge.agent.v1.ActionCallKind
+	(ControlSignal)(0),                 // 3: jobforge.agent.v1.ControlSignal
+	(Subcall)(0),                       // 4: jobforge.agent.v1.Subcall
+	(TransportOutcome)(0),              // 5: jobforge.agent.v1.TransportOutcome
+	(BusinessOutcome)(0),               // 6: jobforge.agent.v1.BusinessOutcome
+	(ProviderIdentityState)(0),         // 7: jobforge.agent.v1.ProviderIdentityState
+	(ProviderUsageEvidence)(0),         // 8: jobforge.agent.v1.ProviderUsageEvidence
+	(ProviderReasoningState)(0),        // 9: jobforge.agent.v1.ProviderReasoningState
+	(ProviderModeState)(0),             // 10: jobforge.agent.v1.ProviderModeState
+	(*SessionIdentity)(nil),            // 11: jobforge.agent.v1.SessionIdentity
+	(*ExecutionIdentity)(nil),          // 12: jobforge.agent.v1.ExecutionIdentity
+	(*StepIdentity)(nil),               // 13: jobforge.agent.v1.StepIdentity
+	(*RegisterRequest)(nil),            // 14: jobforge.agent.v1.RegisterRequest
+	(*RegisterResponse)(nil),           // 15: jobforge.agent.v1.RegisterResponse
+	(*ClaimRequest)(nil),               // 16: jobforge.agent.v1.ClaimRequest
+	(*ClaimResponse)(nil),              // 17: jobforge.agent.v1.ClaimResponse
+	(*RunLease)(nil),                   // 18: jobforge.agent.v1.RunLease
+	(*Checkpoint)(nil),                 // 19: jobforge.agent.v1.Checkpoint
+	(*GetActionRequest)(nil),           // 20: jobforge.agent.v1.GetActionRequest
+	(*GetActionResponse)(nil),          // 21: jobforge.agent.v1.GetActionResponse
+	(*AuthorizeActionRequest)(nil),     // 22: jobforge.agent.v1.AuthorizeActionRequest
+	(*AuthorizeActionResponse)(nil),    // 23: jobforge.agent.v1.AuthorizeActionResponse
+	(*ActionCallReservation)(nil),      // 24: jobforge.agent.v1.ActionCallReservation
+	(*ReserveActionCallRequest)(nil),   // 25: jobforge.agent.v1.ReserveActionCallRequest
+	(*ReserveActionCallResponse)(nil),  // 26: jobforge.agent.v1.ReserveActionCallResponse
+	(*ObserveActionCallRequest)(nil),   // 27: jobforge.agent.v1.ObserveActionCallRequest
+	(*ObserveActionCallResponse)(nil),  // 28: jobforge.agent.v1.ObserveActionCallResponse
+	(*CompleteActionRequest)(nil),      // 29: jobforge.agent.v1.CompleteActionRequest
+	(*CompleteActionResponse)(nil),     // 30: jobforge.agent.v1.CompleteActionResponse
+	(*SnapshotBinding)(nil),            // 31: jobforge.agent.v1.SnapshotBinding
+	(*AcceptedStep)(nil),               // 32: jobforge.agent.v1.AcceptedStep
+	(*HeartbeatRequest)(nil),           // 33: jobforge.agent.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),          // 34: jobforge.agent.v1.HeartbeatResponse
+	(*GetCheckpointRequest)(nil),       // 35: jobforge.agent.v1.GetCheckpointRequest
+	(*GetCheckpointResponse)(nil),      // 36: jobforge.agent.v1.GetCheckpointResponse
+	(*BeginToolRequest)(nil),           // 37: jobforge.agent.v1.BeginToolRequest
+	(*BeginToolResponse)(nil),          // 38: jobforge.agent.v1.BeginToolResponse
+	(*ReserveCallRequest)(nil),         // 39: jobforge.agent.v1.ReserveCallRequest
+	(*CallBudget)(nil),                 // 40: jobforge.agent.v1.CallBudget
+	(*CallReservation)(nil),            // 41: jobforge.agent.v1.CallReservation
+	(*ReserveCallResponse)(nil),        // 42: jobforge.agent.v1.ReserveCallResponse
+	(*UsageReport)(nil),                // 43: jobforge.agent.v1.UsageReport
+	(*ProviderAudit)(nil),              // 44: jobforge.agent.v1.ProviderAudit
+	(*ObserveCallRequest)(nil),         // 45: jobforge.agent.v1.ObserveCallRequest
+	(*ObserveCallResponse)(nil),        // 46: jobforge.agent.v1.ObserveCallResponse
+	(*SettleUsageRequest)(nil),         // 47: jobforge.agent.v1.SettleUsageRequest
+	(*SettleUsageResponse)(nil),        // 48: jobforge.agent.v1.SettleUsageResponse
+	(*CommitStepRequest)(nil),          // 49: jobforge.agent.v1.CommitStepRequest
+	(*CommitStepResponse)(nil),         // 50: jobforge.agent.v1.CommitStepResponse
+	(*FailAttemptRequest)(nil),         // 51: jobforge.agent.v1.FailAttemptRequest
+	(*FailAttemptResponse)(nil),        // 52: jobforge.agent.v1.FailAttemptResponse
+	(*AcknowledgeStoppedRequest)(nil),  // 53: jobforge.agent.v1.AcknowledgeStoppedRequest
+	(*AcknowledgeStoppedResponse)(nil), // 54: jobforge.agent.v1.AcknowledgeStoppedResponse
+	(*GetAcceptedCommitRequest)(nil),   // 55: jobforge.agent.v1.GetAcceptedCommitRequest
+	(*GetAcceptedCommitResponse)(nil),  // 56: jobforge.agent.v1.GetAcceptedCommitResponse
+	(*timestamppb.Timestamp)(nil),      // 57: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),        // 58: google.protobuf.Duration
 }
 var file_jobforge_agent_v1_agent_proto_depIdxs = []int32{
-	10, // 0: jobforge.agent.v1.ExecutionIdentity.session:type_name -> jobforge.agent.v1.SessionIdentity
+	11, // 0: jobforge.agent.v1.ExecutionIdentity.session:type_name -> jobforge.agent.v1.SessionIdentity
 	0,  // 1: jobforge.agent.v1.StepIdentity.kind:type_name -> jobforge.agent.v1.StepKind
-	10, // 2: jobforge.agent.v1.RegisterResponse.session:type_name -> jobforge.agent.v1.SessionIdentity
-	45, // 3: jobforge.agent.v1.RegisterResponse.expires_at:type_name -> google.protobuf.Timestamp
-	46, // 4: jobforge.agent.v1.RegisterResponse.heartbeat_interval:type_name -> google.protobuf.Duration
-	45, // 5: jobforge.agent.v1.RegisterResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
-	10, // 6: jobforge.agent.v1.ClaimRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
-	17, // 7: jobforge.agent.v1.ClaimResponse.lease:type_name -> jobforge.agent.v1.RunLease
-	11, // 8: jobforge.agent.v1.RunLease.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	45, // 9: jobforge.agent.v1.RunLease.lease_until:type_name -> google.protobuf.Timestamp
-	45, // 10: jobforge.agent.v1.RunLease.attempt_deadline:type_name -> google.protobuf.Timestamp
-	45, // 11: jobforge.agent.v1.RunLease.run_deadline:type_name -> google.protobuf.Timestamp
-	18, // 12: jobforge.agent.v1.RunLease.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
-	45, // 13: jobforge.agent.v1.RunLease.authority_observed_at:type_name -> google.protobuf.Timestamp
-	12, // 14: jobforge.agent.v1.Checkpoint.next_step:type_name -> jobforge.agent.v1.StepIdentity
-	20, // 15: jobforge.agent.v1.Checkpoint.steps:type_name -> jobforge.agent.v1.AcceptedStep
-	19, // 16: jobforge.agent.v1.Checkpoint.snapshot:type_name -> jobforge.agent.v1.SnapshotBinding
-	12, // 17: jobforge.agent.v1.AcceptedStep.step:type_name -> jobforge.agent.v1.StepIdentity
-	11, // 18: jobforge.agent.v1.HeartbeatRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	10, // 19: jobforge.agent.v1.HeartbeatRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
-	2,  // 20: jobforge.agent.v1.HeartbeatResponse.signal:type_name -> jobforge.agent.v1.ControlSignal
-	45, // 21: jobforge.agent.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
-	45, // 22: jobforge.agent.v1.HeartbeatResponse.session_expires_at:type_name -> google.protobuf.Timestamp
-	45, // 23: jobforge.agent.v1.HeartbeatResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
-	11, // 24: jobforge.agent.v1.GetCheckpointRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	18, // 25: jobforge.agent.v1.GetCheckpointResponse.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
-	11, // 26: jobforge.agent.v1.BeginToolRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	12, // 27: jobforge.agent.v1.BeginToolRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	11, // 28: jobforge.agent.v1.ReserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	12, // 29: jobforge.agent.v1.ReserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	3,  // 30: jobforge.agent.v1.ReserveCallRequest.subcall:type_name -> jobforge.agent.v1.Subcall
-	3,  // 31: jobforge.agent.v1.CallReservation.subcall:type_name -> jobforge.agent.v1.Subcall
-	45, // 32: jobforge.agent.v1.CallReservation.reserved_at:type_name -> google.protobuf.Timestamp
-	45, // 33: jobforge.agent.v1.CallReservation.dispatch_expires_at:type_name -> google.protobuf.Timestamp
-	45, // 34: jobforge.agent.v1.CallReservation.call_deadline:type_name -> google.protobuf.Timestamp
-	28, // 35: jobforge.agent.v1.CallReservation.budget:type_name -> jobforge.agent.v1.CallBudget
-	29, // 36: jobforge.agent.v1.ReserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	6,  // 37: jobforge.agent.v1.ProviderAudit.identity_state:type_name -> jobforge.agent.v1.ProviderIdentityState
-	7,  // 38: jobforge.agent.v1.ProviderAudit.usage_evidence:type_name -> jobforge.agent.v1.ProviderUsageEvidence
-	8,  // 39: jobforge.agent.v1.ProviderAudit.reasoning_state:type_name -> jobforge.agent.v1.ProviderReasoningState
-	9,  // 40: jobforge.agent.v1.ProviderAudit.mode_state:type_name -> jobforge.agent.v1.ProviderModeState
-	11, // 41: jobforge.agent.v1.ObserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	12, // 42: jobforge.agent.v1.ObserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	4,  // 43: jobforge.agent.v1.ObserveCallRequest.transport_outcome:type_name -> jobforge.agent.v1.TransportOutcome
-	31, // 44: jobforge.agent.v1.ObserveCallRequest.usage:type_name -> jobforge.agent.v1.UsageReport
-	5,  // 45: jobforge.agent.v1.ObserveCallRequest.business_outcome:type_name -> jobforge.agent.v1.BusinessOutcome
-	29, // 46: jobforge.agent.v1.ObserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	11, // 47: jobforge.agent.v1.SettleUsageRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	31, // 48: jobforge.agent.v1.SettleUsageRequest.usage:type_name -> jobforge.agent.v1.UsageReport
-	32, // 49: jobforge.agent.v1.SettleUsageRequest.provider_audit:type_name -> jobforge.agent.v1.ProviderAudit
-	29, // 50: jobforge.agent.v1.SettleUsageResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
-	11, // 51: jobforge.agent.v1.CommitStepRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	12, // 52: jobforge.agent.v1.CommitStepRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	20, // 53: jobforge.agent.v1.CommitStepResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
-	1,  // 54: jobforge.agent.v1.CommitStepResponse.state:type_name -> jobforge.agent.v1.RunState
-	12, // 55: jobforge.agent.v1.CommitStepResponse.next_step:type_name -> jobforge.agent.v1.StepIdentity
-	11, // 56: jobforge.agent.v1.FailAttemptRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	12, // 57: jobforge.agent.v1.FailAttemptRequest.step:type_name -> jobforge.agent.v1.StepIdentity
-	1,  // 58: jobforge.agent.v1.FailAttemptResponse.state:type_name -> jobforge.agent.v1.RunState
-	45, // 59: jobforge.agent.v1.FailAttemptResponse.retry_at:type_name -> google.protobuf.Timestamp
-	11, // 60: jobforge.agent.v1.AcknowledgeStoppedRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	1,  // 61: jobforge.agent.v1.AcknowledgeStoppedResponse.state:type_name -> jobforge.agent.v1.RunState
-	11, // 62: jobforge.agent.v1.GetAcceptedCommitRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
-	20, // 63: jobforge.agent.v1.GetAcceptedCommitResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
-	1,  // 64: jobforge.agent.v1.GetAcceptedCommitResponse.state:type_name -> jobforge.agent.v1.RunState
-	13, // 65: jobforge.agent.v1.AgentService.Register:input_type -> jobforge.agent.v1.RegisterRequest
-	15, // 66: jobforge.agent.v1.AgentService.Claim:input_type -> jobforge.agent.v1.ClaimRequest
-	21, // 67: jobforge.agent.v1.AgentService.Heartbeat:input_type -> jobforge.agent.v1.HeartbeatRequest
-	23, // 68: jobforge.agent.v1.AgentService.GetCheckpoint:input_type -> jobforge.agent.v1.GetCheckpointRequest
-	25, // 69: jobforge.agent.v1.AgentService.BeginTool:input_type -> jobforge.agent.v1.BeginToolRequest
-	27, // 70: jobforge.agent.v1.AgentService.ReserveCall:input_type -> jobforge.agent.v1.ReserveCallRequest
-	33, // 71: jobforge.agent.v1.AgentService.ObserveCall:input_type -> jobforge.agent.v1.ObserveCallRequest
-	35, // 72: jobforge.agent.v1.AgentService.SettleUsage:input_type -> jobforge.agent.v1.SettleUsageRequest
-	37, // 73: jobforge.agent.v1.AgentService.CommitStep:input_type -> jobforge.agent.v1.CommitStepRequest
-	39, // 74: jobforge.agent.v1.AgentService.FailAttempt:input_type -> jobforge.agent.v1.FailAttemptRequest
-	41, // 75: jobforge.agent.v1.AgentService.AcknowledgeStopped:input_type -> jobforge.agent.v1.AcknowledgeStoppedRequest
-	43, // 76: jobforge.agent.v1.AgentService.GetAcceptedCommit:input_type -> jobforge.agent.v1.GetAcceptedCommitRequest
-	14, // 77: jobforge.agent.v1.AgentService.Register:output_type -> jobforge.agent.v1.RegisterResponse
-	16, // 78: jobforge.agent.v1.AgentService.Claim:output_type -> jobforge.agent.v1.ClaimResponse
-	22, // 79: jobforge.agent.v1.AgentService.Heartbeat:output_type -> jobforge.agent.v1.HeartbeatResponse
-	24, // 80: jobforge.agent.v1.AgentService.GetCheckpoint:output_type -> jobforge.agent.v1.GetCheckpointResponse
-	26, // 81: jobforge.agent.v1.AgentService.BeginTool:output_type -> jobforge.agent.v1.BeginToolResponse
-	30, // 82: jobforge.agent.v1.AgentService.ReserveCall:output_type -> jobforge.agent.v1.ReserveCallResponse
-	34, // 83: jobforge.agent.v1.AgentService.ObserveCall:output_type -> jobforge.agent.v1.ObserveCallResponse
-	36, // 84: jobforge.agent.v1.AgentService.SettleUsage:output_type -> jobforge.agent.v1.SettleUsageResponse
-	38, // 85: jobforge.agent.v1.AgentService.CommitStep:output_type -> jobforge.agent.v1.CommitStepResponse
-	40, // 86: jobforge.agent.v1.AgentService.FailAttempt:output_type -> jobforge.agent.v1.FailAttemptResponse
-	42, // 87: jobforge.agent.v1.AgentService.AcknowledgeStopped:output_type -> jobforge.agent.v1.AcknowledgeStoppedResponse
-	44, // 88: jobforge.agent.v1.AgentService.GetAcceptedCommit:output_type -> jobforge.agent.v1.GetAcceptedCommitResponse
-	77, // [77:89] is the sub-list for method output_type
-	65, // [65:77] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	11, // 2: jobforge.agent.v1.RegisterResponse.session:type_name -> jobforge.agent.v1.SessionIdentity
+	57, // 3: jobforge.agent.v1.RegisterResponse.expires_at:type_name -> google.protobuf.Timestamp
+	58, // 4: jobforge.agent.v1.RegisterResponse.heartbeat_interval:type_name -> google.protobuf.Duration
+	57, // 5: jobforge.agent.v1.RegisterResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
+	11, // 6: jobforge.agent.v1.ClaimRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
+	18, // 7: jobforge.agent.v1.ClaimResponse.lease:type_name -> jobforge.agent.v1.RunLease
+	12, // 8: jobforge.agent.v1.RunLease.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	57, // 9: jobforge.agent.v1.RunLease.lease_until:type_name -> google.protobuf.Timestamp
+	57, // 10: jobforge.agent.v1.RunLease.attempt_deadline:type_name -> google.protobuf.Timestamp
+	57, // 11: jobforge.agent.v1.RunLease.run_deadline:type_name -> google.protobuf.Timestamp
+	19, // 12: jobforge.agent.v1.RunLease.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
+	57, // 13: jobforge.agent.v1.RunLease.authority_observed_at:type_name -> google.protobuf.Timestamp
+	13, // 14: jobforge.agent.v1.Checkpoint.next_step:type_name -> jobforge.agent.v1.StepIdentity
+	32, // 15: jobforge.agent.v1.Checkpoint.steps:type_name -> jobforge.agent.v1.AcceptedStep
+	31, // 16: jobforge.agent.v1.Checkpoint.snapshot:type_name -> jobforge.agent.v1.SnapshotBinding
+	12, // 17: jobforge.agent.v1.GetActionRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 18: jobforge.agent.v1.GetActionRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	12, // 19: jobforge.agent.v1.AuthorizeActionRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 20: jobforge.agent.v1.AuthorizeActionRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	2,  // 21: jobforge.agent.v1.ActionCallReservation.kind:type_name -> jobforge.agent.v1.ActionCallKind
+	57, // 22: jobforge.agent.v1.ActionCallReservation.reserved_at:type_name -> google.protobuf.Timestamp
+	57, // 23: jobforge.agent.v1.ActionCallReservation.dispatch_expires_at:type_name -> google.protobuf.Timestamp
+	57, // 24: jobforge.agent.v1.ActionCallReservation.call_deadline:type_name -> google.protobuf.Timestamp
+	12, // 25: jobforge.agent.v1.ReserveActionCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 26: jobforge.agent.v1.ReserveActionCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	2,  // 27: jobforge.agent.v1.ReserveActionCallRequest.kind:type_name -> jobforge.agent.v1.ActionCallKind
+	24, // 28: jobforge.agent.v1.ReserveActionCallResponse.reservation:type_name -> jobforge.agent.v1.ActionCallReservation
+	12, // 29: jobforge.agent.v1.ObserveActionCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	12, // 30: jobforge.agent.v1.CompleteActionRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 31: jobforge.agent.v1.CompleteActionRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	32, // 32: jobforge.agent.v1.CompleteActionResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
+	1,  // 33: jobforge.agent.v1.CompleteActionResponse.state:type_name -> jobforge.agent.v1.RunState
+	13, // 34: jobforge.agent.v1.AcceptedStep.step:type_name -> jobforge.agent.v1.StepIdentity
+	12, // 35: jobforge.agent.v1.HeartbeatRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	11, // 36: jobforge.agent.v1.HeartbeatRequest.session:type_name -> jobforge.agent.v1.SessionIdentity
+	3,  // 37: jobforge.agent.v1.HeartbeatResponse.signal:type_name -> jobforge.agent.v1.ControlSignal
+	57, // 38: jobforge.agent.v1.HeartbeatResponse.lease_until:type_name -> google.protobuf.Timestamp
+	57, // 39: jobforge.agent.v1.HeartbeatResponse.session_expires_at:type_name -> google.protobuf.Timestamp
+	57, // 40: jobforge.agent.v1.HeartbeatResponse.authority_observed_at:type_name -> google.protobuf.Timestamp
+	12, // 41: jobforge.agent.v1.GetCheckpointRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	19, // 42: jobforge.agent.v1.GetCheckpointResponse.checkpoint:type_name -> jobforge.agent.v1.Checkpoint
+	12, // 43: jobforge.agent.v1.BeginToolRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 44: jobforge.agent.v1.BeginToolRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	12, // 45: jobforge.agent.v1.ReserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 46: jobforge.agent.v1.ReserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	4,  // 47: jobforge.agent.v1.ReserveCallRequest.subcall:type_name -> jobforge.agent.v1.Subcall
+	4,  // 48: jobforge.agent.v1.CallReservation.subcall:type_name -> jobforge.agent.v1.Subcall
+	57, // 49: jobforge.agent.v1.CallReservation.reserved_at:type_name -> google.protobuf.Timestamp
+	57, // 50: jobforge.agent.v1.CallReservation.dispatch_expires_at:type_name -> google.protobuf.Timestamp
+	57, // 51: jobforge.agent.v1.CallReservation.call_deadline:type_name -> google.protobuf.Timestamp
+	40, // 52: jobforge.agent.v1.CallReservation.budget:type_name -> jobforge.agent.v1.CallBudget
+	41, // 53: jobforge.agent.v1.ReserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	7,  // 54: jobforge.agent.v1.ProviderAudit.identity_state:type_name -> jobforge.agent.v1.ProviderIdentityState
+	8,  // 55: jobforge.agent.v1.ProviderAudit.usage_evidence:type_name -> jobforge.agent.v1.ProviderUsageEvidence
+	9,  // 56: jobforge.agent.v1.ProviderAudit.reasoning_state:type_name -> jobforge.agent.v1.ProviderReasoningState
+	10, // 57: jobforge.agent.v1.ProviderAudit.mode_state:type_name -> jobforge.agent.v1.ProviderModeState
+	12, // 58: jobforge.agent.v1.ObserveCallRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 59: jobforge.agent.v1.ObserveCallRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	5,  // 60: jobforge.agent.v1.ObserveCallRequest.transport_outcome:type_name -> jobforge.agent.v1.TransportOutcome
+	43, // 61: jobforge.agent.v1.ObserveCallRequest.usage:type_name -> jobforge.agent.v1.UsageReport
+	6,  // 62: jobforge.agent.v1.ObserveCallRequest.business_outcome:type_name -> jobforge.agent.v1.BusinessOutcome
+	41, // 63: jobforge.agent.v1.ObserveCallResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	12, // 64: jobforge.agent.v1.SettleUsageRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	43, // 65: jobforge.agent.v1.SettleUsageRequest.usage:type_name -> jobforge.agent.v1.UsageReport
+	44, // 66: jobforge.agent.v1.SettleUsageRequest.provider_audit:type_name -> jobforge.agent.v1.ProviderAudit
+	41, // 67: jobforge.agent.v1.SettleUsageResponse.reservation:type_name -> jobforge.agent.v1.CallReservation
+	12, // 68: jobforge.agent.v1.CommitStepRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 69: jobforge.agent.v1.CommitStepRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	32, // 70: jobforge.agent.v1.CommitStepResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
+	1,  // 71: jobforge.agent.v1.CommitStepResponse.state:type_name -> jobforge.agent.v1.RunState
+	13, // 72: jobforge.agent.v1.CommitStepResponse.next_step:type_name -> jobforge.agent.v1.StepIdentity
+	12, // 73: jobforge.agent.v1.FailAttemptRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	13, // 74: jobforge.agent.v1.FailAttemptRequest.step:type_name -> jobforge.agent.v1.StepIdentity
+	1,  // 75: jobforge.agent.v1.FailAttemptResponse.state:type_name -> jobforge.agent.v1.RunState
+	57, // 76: jobforge.agent.v1.FailAttemptResponse.retry_at:type_name -> google.protobuf.Timestamp
+	12, // 77: jobforge.agent.v1.AcknowledgeStoppedRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	1,  // 78: jobforge.agent.v1.AcknowledgeStoppedResponse.state:type_name -> jobforge.agent.v1.RunState
+	12, // 79: jobforge.agent.v1.GetAcceptedCommitRequest.execution:type_name -> jobforge.agent.v1.ExecutionIdentity
+	32, // 80: jobforge.agent.v1.GetAcceptedCommitResponse.accepted_step:type_name -> jobforge.agent.v1.AcceptedStep
+	1,  // 81: jobforge.agent.v1.GetAcceptedCommitResponse.state:type_name -> jobforge.agent.v1.RunState
+	14, // 82: jobforge.agent.v1.AgentService.Register:input_type -> jobforge.agent.v1.RegisterRequest
+	16, // 83: jobforge.agent.v1.AgentService.Claim:input_type -> jobforge.agent.v1.ClaimRequest
+	33, // 84: jobforge.agent.v1.AgentService.Heartbeat:input_type -> jobforge.agent.v1.HeartbeatRequest
+	35, // 85: jobforge.agent.v1.AgentService.GetCheckpoint:input_type -> jobforge.agent.v1.GetCheckpointRequest
+	37, // 86: jobforge.agent.v1.AgentService.BeginTool:input_type -> jobforge.agent.v1.BeginToolRequest
+	39, // 87: jobforge.agent.v1.AgentService.ReserveCall:input_type -> jobforge.agent.v1.ReserveCallRequest
+	45, // 88: jobforge.agent.v1.AgentService.ObserveCall:input_type -> jobforge.agent.v1.ObserveCallRequest
+	47, // 89: jobforge.agent.v1.AgentService.SettleUsage:input_type -> jobforge.agent.v1.SettleUsageRequest
+	49, // 90: jobforge.agent.v1.AgentService.CommitStep:input_type -> jobforge.agent.v1.CommitStepRequest
+	51, // 91: jobforge.agent.v1.AgentService.FailAttempt:input_type -> jobforge.agent.v1.FailAttemptRequest
+	53, // 92: jobforge.agent.v1.AgentService.AcknowledgeStopped:input_type -> jobforge.agent.v1.AcknowledgeStoppedRequest
+	55, // 93: jobforge.agent.v1.AgentService.GetAcceptedCommit:input_type -> jobforge.agent.v1.GetAcceptedCommitRequest
+	20, // 94: jobforge.agent.v1.AgentService.GetAction:input_type -> jobforge.agent.v1.GetActionRequest
+	22, // 95: jobforge.agent.v1.AgentService.AuthorizeAction:input_type -> jobforge.agent.v1.AuthorizeActionRequest
+	25, // 96: jobforge.agent.v1.AgentService.ReserveActionCall:input_type -> jobforge.agent.v1.ReserveActionCallRequest
+	27, // 97: jobforge.agent.v1.AgentService.ObserveActionCall:input_type -> jobforge.agent.v1.ObserveActionCallRequest
+	29, // 98: jobforge.agent.v1.AgentService.CompleteAction:input_type -> jobforge.agent.v1.CompleteActionRequest
+	15, // 99: jobforge.agent.v1.AgentService.Register:output_type -> jobforge.agent.v1.RegisterResponse
+	17, // 100: jobforge.agent.v1.AgentService.Claim:output_type -> jobforge.agent.v1.ClaimResponse
+	34, // 101: jobforge.agent.v1.AgentService.Heartbeat:output_type -> jobforge.agent.v1.HeartbeatResponse
+	36, // 102: jobforge.agent.v1.AgentService.GetCheckpoint:output_type -> jobforge.agent.v1.GetCheckpointResponse
+	38, // 103: jobforge.agent.v1.AgentService.BeginTool:output_type -> jobforge.agent.v1.BeginToolResponse
+	42, // 104: jobforge.agent.v1.AgentService.ReserveCall:output_type -> jobforge.agent.v1.ReserveCallResponse
+	46, // 105: jobforge.agent.v1.AgentService.ObserveCall:output_type -> jobforge.agent.v1.ObserveCallResponse
+	48, // 106: jobforge.agent.v1.AgentService.SettleUsage:output_type -> jobforge.agent.v1.SettleUsageResponse
+	50, // 107: jobforge.agent.v1.AgentService.CommitStep:output_type -> jobforge.agent.v1.CommitStepResponse
+	52, // 108: jobforge.agent.v1.AgentService.FailAttempt:output_type -> jobforge.agent.v1.FailAttemptResponse
+	54, // 109: jobforge.agent.v1.AgentService.AcknowledgeStopped:output_type -> jobforge.agent.v1.AcknowledgeStoppedResponse
+	56, // 110: jobforge.agent.v1.AgentService.GetAcceptedCommit:output_type -> jobforge.agent.v1.GetAcceptedCommitResponse
+	21, // 111: jobforge.agent.v1.AgentService.GetAction:output_type -> jobforge.agent.v1.GetActionResponse
+	23, // 112: jobforge.agent.v1.AgentService.AuthorizeAction:output_type -> jobforge.agent.v1.AuthorizeActionResponse
+	26, // 113: jobforge.agent.v1.AgentService.ReserveActionCall:output_type -> jobforge.agent.v1.ReserveActionCallResponse
+	28, // 114: jobforge.agent.v1.AgentService.ObserveActionCall:output_type -> jobforge.agent.v1.ObserveActionCallResponse
+	30, // 115: jobforge.agent.v1.AgentService.CompleteAction:output_type -> jobforge.agent.v1.CompleteActionResponse
+	99, // [99:116] is the sub-list for method output_type
+	82, // [82:99] is the sub-list for method input_type
+	82, // [82:82] is the sub-list for extension type_name
+	82, // [82:82] is the sub-list for extension extendee
+	0,  // [0:82] is the sub-list for field type_name
 }
 
 func init() { file_jobforge_agent_v1_agent_proto_init() }
@@ -3871,14 +4747,14 @@ func file_jobforge_agent_v1_agent_proto_init() {
 	if File_jobforge_agent_v1_agent_proto != nil {
 		return
 	}
-	file_jobforge_agent_v1_agent_proto_msgTypes[22].OneofWrappers = []any{}
+	file_jobforge_agent_v1_agent_proto_msgTypes[33].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_jobforge_agent_v1_agent_proto_rawDesc), len(file_jobforge_agent_v1_agent_proto_rawDesc)),
-			NumEnums:      10,
-			NumMessages:   35,
+			NumEnums:      11,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

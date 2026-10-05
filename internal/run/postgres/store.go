@@ -5,6 +5,7 @@ package postgres
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,6 +28,7 @@ type Store struct {
 	workers         map[string]agentrun.WorkerConfig
 	tenantCapacity  int
 	profileCapacity int
+	signers         map[string]ed25519.PrivateKey
 }
 
 // Options contains trusted deployment configuration, never request payloads.
@@ -35,6 +37,7 @@ type Options struct {
 	Workers         []agentrun.WorkerConfig
 	TenantCapacity  int
 	ProfileCapacity int
+	ActionSigners   map[string]ed25519.PrivateKey
 }
 
 // New constructs a store with explicit bounded capacities.
@@ -52,7 +55,13 @@ func New(pool *pgxpool.Pool, options Options) (*Store, error) {
 		return nil, agentrun.ErrInvalidArgument
 	}
 	s := &Store{pool: pool, profiles: make(map[string]agentrun.Profile), workers: make(map[string]agentrun.WorkerConfig),
-		tenantCapacity: options.TenantCapacity, profileCapacity: options.ProfileCapacity}
+		tenantCapacity: options.TenantCapacity, profileCapacity: options.ProfileCapacity, signers: make(map[string]ed25519.PrivateKey)}
+	for id, key := range options.ActionSigners {
+		if !agentrun.ValidIdentifier(id) || len(key) != ed25519.PrivateKeySize {
+			return nil, agentrun.ErrInvalidArgument
+		}
+		s.signers[id] = slices.Clone(key)
+	}
 	for _, p := range options.Profiles {
 		if err := p.ValidateAuditPolicy(); err != nil {
 			return nil, err
@@ -177,7 +186,12 @@ func saveRun(ctx context.Context, tx pgx.Tx, r *agentrun.Run, a *agentrun.Author
 		next_attempt_at=$12, permission_expires_at=$13, proposal_ref=$14, stop_reason=$15,
 		cancel_requested_at=$16, updated_at=$17, worker_id=nullif($18,''), session_id=nullif($19,'')::uuid,
 		fencing_token=$20, active_call_id=$21, checkpoint_bytes=$22, event_sequence=$23,
-		next_step_id=$24, next_step_kind=$25, next_input_hash=$26 where tenant_id=$1 and run_id=$2`,
+		next_step_id=$24, next_step_kind=$25, next_input_hash=$26,
+		terminal_disposition=case when $3 in ('failed','cancelled','succeeded') then coalesce(terminal_disposition,
+			case when $4='applied' then 'applied' when $4='rejected' then 'rejected' when $4='no_action' then 'no_action'
+			when exists(select 1 from action_authorizations x where x.tenant_id=runs.tenant_id and x.business_request_id=runs.business_request_id) then 'unknown'
+			when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end) else terminal_disposition end
+		where tenant_id=$1 and run_id=$2`,
 		r.TenantID, r.ID, r.State, r.Outcome, code, message, r.AttemptNo, r.RecoveryCount, r.CursorVersion,
 		r.AttemptDeadline, r.LeaseUntil, r.NextAttemptAt, r.PermissionExpiresAt, r.ProposalRef, r.StopReason,
 		r.CancelRequestedAt, r.UpdatedAt, a.WorkerID, a.SessionID, a.FencingToken, a.ActiveCallID,

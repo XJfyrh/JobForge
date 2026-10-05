@@ -36,26 +36,32 @@ type ErrorCode string
 
 // ErrInvalidArgument and the following codes are stable transport classifications.
 const (
-	ErrInvalidArgument       ErrorCode = "INVALID_ARGUMENT"
-	ErrUnauthorized          ErrorCode = "UNAUTHORIZED"
-	ErrForbidden             ErrorCode = "FORBIDDEN"
-	ErrNotFound              ErrorCode = "NOT_FOUND"
-	ErrConflict              ErrorCode = "CONFLICT"
-	ErrAlreadyTerminal       ErrorCode = "ALREADY_TERMINAL"
-	ErrInvalidTransition     ErrorCode = "INVALID_TRANSITION"
-	ErrStaleLease            ErrorCode = "STALE_LEASE"
-	ErrCancelRequested       ErrorCode = "CANCEL_REQUESTED"
-	ErrStopRequested         ErrorCode = "STOP_REQUESTED"
-	ErrStepConflict          ErrorCode = "STEP_CONFLICT"
-	ErrCallConflict          ErrorCode = "CALL_CONFLICT"
-	ErrBudgetExhausted       ErrorCode = "BUDGET_EXHAUSTED"
-	ErrProfileUnavailable    ErrorCode = "PROFILE_UNAVAILABLE"
-	ErrCallSettlementExpired ErrorCode = "CALL_SETTLEMENT_EXPIRED"
-	ErrCheckpointTooLarge    ErrorCode = "CHECKPOINT_TOO_LARGE"
-	ErrModelProtocol         ErrorCode = "MODEL_PROTOCOL_ERROR"
-	ErrQueueOverloaded       ErrorCode = "QUEUE_OVERLOADED"
-	ErrDependencyUnavailable ErrorCode = "DEPENDENCY_UNAVAILABLE"
-	ErrInternal              ErrorCode = "INTERNAL"
+	ErrInvalidArgument            ErrorCode = "INVALID_ARGUMENT"
+	ErrUnauthorized               ErrorCode = "UNAUTHORIZED"
+	ErrForbidden                  ErrorCode = "FORBIDDEN"
+	ErrNotFound                   ErrorCode = "NOT_FOUND"
+	ErrConflict                   ErrorCode = "CONFLICT"
+	ErrAlreadyTerminal            ErrorCode = "ALREADY_TERMINAL"
+	ErrInvalidTransition          ErrorCode = "INVALID_TRANSITION"
+	ErrStaleLease                 ErrorCode = "STALE_LEASE"
+	ErrCancelRequested            ErrorCode = "CANCEL_REQUESTED"
+	ErrStopRequested              ErrorCode = "STOP_REQUESTED"
+	ErrStepConflict               ErrorCode = "STEP_CONFLICT"
+	ErrCallConflict               ErrorCode = "CALL_CONFLICT"
+	ErrBudgetExhausted            ErrorCode = "BUDGET_EXHAUSTED"
+	ErrProfileUnavailable         ErrorCode = "PROFILE_UNAVAILABLE"
+	ErrCallSettlementExpired      ErrorCode = "CALL_SETTLEMENT_EXPIRED"
+	ErrCheckpointTooLarge         ErrorCode = "CHECKPOINT_TOO_LARGE"
+	ErrModelProtocol              ErrorCode = "MODEL_PROTOCOL_ERROR"
+	ErrQueueOverloaded            ErrorCode = "QUEUE_OVERLOADED"
+	ErrDependencyUnavailable      ErrorCode = "DEPENDENCY_UNAVAILABLE"
+	ErrInternal                   ErrorCode = "INTERNAL"
+	ErrApprovalConflict           ErrorCode = "APPROVAL_CONFLICT"
+	ErrApprovalExpired            ErrorCode = "APPROVAL_EXPIRED"
+	ErrActionConflict             ErrorCode = "ACTION_CONFLICT"
+	ErrActionAuthorizationExpired ErrorCode = "ACTION_AUTHORIZATION_EXPIRED"
+	ErrActionOutcomeUnknown       ErrorCode = "ACTION_OUTCOME_UNKNOWN"
+	ErrRateLimited                ErrorCode = "RATE_LIMITED"
 )
 
 func (e ErrorCode) Error() string { return string(e) }
@@ -169,9 +175,10 @@ type CancelResponse struct {
 
 // Result never confuses a proposal with an applied business effect.
 type Result struct {
-	Available bool    `json:"available"`
-	Kind      *string `json:"kind"`
-	Ref       *string `json:"ref"`
+	Available   bool    `json:"available"`
+	Kind        *string `json:"kind"`
+	Ref         *string `json:"ref"`
+	Disposition string  `json:"disposition"`
 }
 
 // Step is protected checkpoint data, not a log or an independently leased job.

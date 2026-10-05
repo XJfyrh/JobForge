@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,6 +65,50 @@ func supportPrepareFixture(t *testing.T) (supportPrepareOptions, supportSource) 
 		t.Fatal(err)
 	}
 	return o, source
+}
+
+func TestPrepareSupportApprovalFrozenActionOrigin(t *testing.T) {
+	o, source := supportPrepareFixture(t)
+	raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var historical supportSource
+	if json.Unmarshal(raw, &historical) != nil {
+		t.Fatal("historical S3 template")
+	}
+	currentAdapter, priceReceipt := source.Definition.Program.AdapterSourceSHA256, source.Definition.Price.SourceSHA256
+	source.Definition = historical.Definition
+	source.Definition.SchemaVersion = 4
+	source.Definition.Program.ApprovalPolicy = "ticket_resolution_v1"
+	source.Definition.Program.AdapterSourceSHA256 = currentAdapter
+	source.Definition.Price.SourceSHA256 = priceReceipt
+	source.Definition.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic-key", PublicKeySHA256: strings.Repeat("b", 64)}
+	o.ValidFrom = "2026-10-05T12:00:00Z"
+	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := runworker.ParseManifest(files["executor.json"])
+	if err != nil || manifest.ExecutorVersion != run.SupportApprovalExecutorVersion {
+		t.Fatal("S4 registered executor version", err)
+	}
+	var worker struct {
+		Tenants map[string]struct {
+			ActionOrigin string `json:"action_origin"`
+		} `json:"tenants"`
+	}
+	if json.Unmarshal(files["worker.json"], &worker) != nil || len(worker.Tenants) != 2 {
+		t.Fatal("S4 worker configuration")
+	}
+	for _, tenant := range worker.Tenants {
+		if tenant.ActionOrigin != source.Definition.Action.Origin {
+			t.Fatal("S4 action origin differs from frozen profile")
+		}
+	}
 }
 
 func TestPrepareSupportFixedArtifactsAndDisabledRegistration(t *testing.T) {
@@ -351,11 +396,18 @@ func TestPrepareSupportRecoveryVersionAndSourceBinding(t *testing.T) {
 		t.Fatal(err)
 	}
 	var example supportSource
-	if json.Unmarshal(raw, &example) != nil || verifySupportSources(o.Repo, example.Definition) != nil {
-		t.Fatal("S3 source template differs from the reviewed source tree")
+	if json.Unmarshal(raw, &example) != nil || supportSHA256(raw) != "6b4f958346f5d80fa77fa54bef35e3a472b0b9d53e195f916e4df95f6977d292" {
+		t.Fatal("historical S3 source template identity changed")
 	}
+	if _, err := run.BuildSupportProfile("historical-s3", example.Definition); err != nil {
+		t.Fatal("historical S3 definition is invalid", err)
+	}
+	// New preparations bind the current package; the historical template retains
+	// the reviewed digest of its original runtime rather than claiming a rebuild.
+	currentAdapter := source.Definition.Program.AdapterSourceSHA256
 	priceReceipt := source.Definition.Price.SourceSHA256
 	source.Definition = example.Definition
+	source.Definition.Program.AdapterSourceSHA256 = currentAdapter
 	source.Definition.Price.SourceSHA256 = priceReceipt
 	o.ValidFrom = "2026-10-04T12:00:00Z"
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {

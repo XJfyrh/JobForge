@@ -8,7 +8,7 @@
 
 业务 `support-business` 继续使用独立数据库。提交先在控制事务外请求幂等快照，然后在控制库保存业务意图、Run、固定版本向量、预算关系和操作键。捕获后控制事务失败可能留下未引用快照；相同操作显式重发复用快照，控制层没有跨库事务或隐式 HTTP 重试。
 
-公开身份与内部 Worker 凭据分开。API 身份决定 tenant/reader/operator；Worker 身份只能领取部署配置的 tenant/profile。请求不能提供模型 URL、费用、工具定义、命令或代码。`bootstrap` 拒绝带业务数据库标记的 DSN；业务权限、生产控制库最小权限部署和长期保留仍需相应运维验收。
+公开身份与内部 Worker 凭据分开。API 身份决定 tenant/reader/operator/approver，审批者还绑定稳定 actor_id；Worker 身份只能领取部署配置的 tenant/profile。请求不能提供模型 URL、费用、工具定义、命令或代码。`bootstrap` 拒绝带业务数据库标记的 DSN；业务权限、生产控制库最小权限部署和长期保留仍需相应运维验收。
 
 ## 启动控制服务
 
@@ -35,7 +35,7 @@ Invoke-RestMethod http://127.0.0.1:8093/v2/runs `
 | JOBFORGE_AGENT_HTTP_ADDR / GRPC_ADDR | 默认127.0.0.1:8093 / :9093 |
 | JOBFORGE_AGENT_BUSINESS_URL | 受信业务服务地址，不能来自任务 payload |
 | JOBFORGE_AGENT_BUSINESS_KEYS | tenant→业务 operator token 的 JSON，仅从进程环境读取 |
-| JOBFORGE_AGENT_API_KEYS | token→{tenant_id,role} 的 JSON |
+| JOBFORGE_AGENT_API_KEYS | token→{tenant_id,role,actor_id?} 的 JSON；approver必填稳定actor |
 | JOBFORGE_AGENT_WORKER_KEYS | 固定 Worker principal→token 的 JSON |
 
 `profiles` 保存不可变定义；`enabled_profiles` 表示当前部署可执行集合。不同内容不得覆盖同 profile ID。预算开户只接受固定 UUID、scope/key、有效期、整数上限；重复 `bootstrap` 不清零计数或提高额度。人工 retry 与自动恢复均不能绕过原 family/tenant/batch 的费用和调用上限。
@@ -60,15 +60,15 @@ with RunClient("http://127.0.0.1:8093", "dev-agent-north-operator") as client:
         print(run.run_id, run.state, run.budget.run_usage)
 ```
 
-提交、取消、retry 都使用独立 Idempotency-Key。相同业务键和规范内容返回首次根 Run；不同内容冲突。一个失败/取消 Run 只能有一个直接 retry 后继，后继继承预算家族、创建新 Run/快照并从空游标执行。对已受理结果的重发不依赖 profile 仍在线、预算批次仍有效或业务捕获服务可用。
+提交、取消、retry 都使用独立 Idempotency-Key。相同业务键和规范内容返回首次根 Run；不同内容冲突。一个失败/取消 Run 只能有一个直接 retry 后继并继承预算家族。首次动作授权前，新后继捕获新快照并从空游标执行；已有授权时仅走[回执优先路径](approval.md)，无重新规划/写入。对已受理结果的重发不依赖 profile 仍在线、预算批次仍有效或业务捕获服务可用。
 
 源契约位于 [OpenAPI](../../api/run/v2/openapi.yaml)、[Proto](../../proto/jobforge/agent/v1/agent.proto)、[执行器帧](../../api/executor/v2/schema.json)及其共同 fixture。SDK API 见[SDK说明](../../sdk/python/README.md)。Worker RPC 必须带 deadline 和内部 Bearer token；稳定错误使用 `google.rpc.ErrorInfo.reason`，不能解析英文消息判断重试。
 
 CommitStep拒绝过大结果或无法验证的模型方案时，RPC状态为 `INVALID_ARGUMENT`，reason分别保留 `CHECKPOINT_TOO_LARGE`、`MODEL_PROTOCOL_ERROR`。这两类结果错误不能被当作临时内部故障无限重试；Worker只可按登记策略使用一次协议纠正，或以同名永久错误结束attempt。未知服务端错误仍统一脱敏为 `INTERNAL`。
 
-步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；仅 `no_action` 可以直接成功。当前没有批准或业务写入接口。
+步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；`no_action` 可以直接成功。新 schema 4 的[审批路径](approval.md)可拒绝完成或批准后继续原 Run 的登记动作；旧方案不获得写权限。
 
-重复中间CommitStep仍须当前有效lease；最终提交丢ACK后使用只读GetAcceptedCommit。自动恢复读取原Run已提交步骤，未提交步骤可能重做；人工retry为空游标。恢复规则、runtime 版本和未提交模型步骤的条件见[恢复指南](recovery.md)，不恢复模型内部推理进度。
+重复中间CommitStep仍须当前有效lease；最终提交丢ACK后使用只读GetAcceptedCommit。自动恢复读取原Run已提交步骤，未提交步骤可能重做；首次授权前的人工retry为空游标。恢复规则、runtime 版本和未提交模型步骤的条件见[恢复指南](recovery.md)，不恢复模型内部推理进度。
 
 ## 只读调用审计
 

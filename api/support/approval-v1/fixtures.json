@@ -1,0 +1,102 @@
+{
+  "evidence_origin": "synthetic_test",
+  "profile": {
+    "profile_id": "approval-shared-profile",
+    "profile_hash": "4971eb0e0ca797b678881feba5dff50a12de074ce2396b253e674b19ebf4b395",
+    "strategy": "support_agent_v1",
+    "executor_version": "linux-v2-approval-runtime-1",
+    "provider_audit_policy": "deepseek-audit-v1",
+    "expected_response_model": "deepseek-flash",
+    "max_input_tokens": 1048576,
+    "max_output_tokens": 1024,
+    "family_token_limit": 12595200,
+    "family_cost_microyuan": 5000000,
+    "pricing": {
+      "hash": "81da838350cf5d8dc258dc602d68382511ce09ffa3cbcb7c310914ba055a9df9",
+      "denominator": 1000000,
+      "input_miss_microyuan": 2000000,
+      "input_hit_microyuan": 40000,
+      "output_microyuan": 8000000
+    },
+    "definition": {
+      "action": {
+        "key_id": "fixture-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8090",
+        "public_key_sha256": "139e3940e64b5491722088d9a0d741628fc826e09475d341a780acde3c4b8070"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-04",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-04",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 4
+    }
+  },
+  "schema_version": 1
+}

@@ -40,16 +40,17 @@ type Capturer interface {
 // Its bounded per-tenant map comes from deployment, never untrusted requests.
 type Service struct {
 	PublicStore
-	store    AdmissionStore
-	capturer Capturer
-	total    chan struct{}
-	tenants  map[string]chan struct{}
-	newID    func() string
+	store         AdmissionStore
+	capturer      Capturer
+	total         chan struct{}
+	tenants       map[string]chan struct{}
+	newID         func() string
+	receiptReader ReceiptReader
 }
 
 // NewService creates the fixed admission limits: two captures per configured
 // tenant and eight per process, without an unbounded waiting queue.
-func NewService(store AdmissionStore, capturer Capturer, tenants []string) (*Service, error) {
+func NewService(store AdmissionStore, capturer Capturer, tenants []string, options ...ServiceOption) (*Service, error) {
 	if store == nil || capturer == nil || len(tenants) == 0 {
 		return nil, ErrInvalidArgument
 	}
@@ -60,6 +61,11 @@ func NewService(store AdmissionStore, capturer Capturer, tenants []string) (*Ser
 			return nil, ErrInvalidArgument
 		}
 		s.tenants[tenant] = make(chan struct{}, 2)
+	}
+	for _, option := range options {
+		if option != nil {
+			option(s)
+		}
 	}
 	return s, nil
 }
@@ -116,8 +122,15 @@ func (s *Service) Retry(ctx context.Context, tenant, sourceID, key string, reque
 	if reused != nil {
 		return *reused, nil
 	}
-	return s.create(ctx, Admission{TenantID: tenant, OperationKey: key, RequestHash: hash,
-		SourceRunID: sourceID, Retry: request})
+	input := Admission{TenantID: tenant, OperationKey: key, RequestHash: hash, SourceRunID: sourceID, Retry: request}
+	result, err := s.retryAction(ctx, input)
+	if err != nil {
+		return SubmitResponse{}, err
+	}
+	if result != nil {
+		return *result, nil
+	}
+	return s.create(ctx, input)
 }
 
 func (s *Service) create(ctx context.Context, input Admission) (SubmitResponse, error) {

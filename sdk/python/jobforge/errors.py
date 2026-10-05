@@ -154,6 +154,41 @@ class BudgetExhaustedError(JobForgeError):
         super().__init__("BUDGET_EXHAUSTED", message)
 
 
+class ApprovalConflictError(JobForgeError):
+    """The immutable first actor, decision or proposal conflicts (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("APPROVAL_CONFLICT", message)
+
+
+class ApprovalExpiredError(JobForgeError):
+    """The original approval permission expired (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("APPROVAL_EXPIRED", message)
+
+
+class ActionConflictError(JobForgeError):
+    """A business action identity or captured dependency conflicts (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("ACTION_CONFLICT", message)
+
+
+class ActionAuthorizationExpiredError(JobForgeError):
+    """The original business-write authorization expired (HTTP 409)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("ACTION_AUTHORIZATION_EXPIRED", message)
+
+
+class ActionOutcomeUnknownError(JobForgeError):
+    """No receipt was found; the SDK never resends the business write."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("ACTION_OUTCOME_UNKNOWN", message)
+
+
 # Mapping from error code to exception factory. Mapped subclasses accept a
 # single message argument and pin their own code, so the map is typed as a
 # callable instead of type[JobForgeError].
@@ -173,6 +208,11 @@ _ERROR_MAP: dict[str, Callable[[str], JobForgeError]] = {
     "DEPENDENCY_UNAVAILABLE": DependencyUnavailableError,
     "PROFILE_UNAVAILABLE": ProfileUnavailableError,
     "BUDGET_EXHAUSTED": BudgetExhaustedError,
+    "APPROVAL_CONFLICT": ApprovalConflictError,
+    "APPROVAL_EXPIRED": ApprovalExpiredError,
+    "ACTION_CONFLICT": ActionConflictError,
+    "ACTION_AUTHORIZATION_EXPIRED": ActionAuthorizationExpiredError,
+    "ACTION_OUTCOME_UNKNOWN": ActionOutcomeUnknownError,
 }
 
 

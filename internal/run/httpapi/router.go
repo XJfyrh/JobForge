@@ -33,6 +33,7 @@ type API interface {
 type Identity struct {
 	TenantID string
 	Role     string
+	ActorID  string
 }
 
 type identityKey struct{}
@@ -43,8 +44,9 @@ type handler struct {
 }
 
 // NewRouter validates and copies credential configuration before serving.
-// A reader may query; only an operator may submit, cancel or retry. There are no
-// approval, Worker, budget-administration or arbitrary-code transport routes.
+// A reader may query; an operator submits/cancels/retries/reconciles, and a
+// separately configured approver decides the original proposal. Worker and
+// budget-administration operations remain on their trusted boundaries.
 func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 	if api == nil || len(keys) == 0 {
 		return nil, run.ErrInvalidArgument
@@ -52,7 +54,8 @@ func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 	h := &handler{api: api, keys: make(map[string]Identity, len(keys))}
 	for key, identity := range keys {
 		if !validCredential(key) || !run.ValidIdentifier(identity.TenantID) ||
-			(identity.Role != "reader" && identity.Role != "operator") {
+			(identity.Role != "reader" && identity.Role != "operator" && identity.Role != "approver") ||
+			(identity.ActorID != "" && !run.ValidIdentifier(identity.ActorID)) || (identity.Role == "approver" && !run.ValidIdentifier(identity.ActorID)) {
 			return nil, run.ErrInvalidArgument
 		}
 		h.keys[key] = identity
@@ -70,6 +73,11 @@ func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 	router.Get("/v2/runs/{run_id}/calls", h.calls)
 	router.Post("/v2/runs/{run_id}/cancel", h.cancel)
 	router.Post("/v2/runs/{run_id}/retry", h.retry)
+	router.Get("/v2/runs/{run_id}/approval", h.approval)
+	router.Post("/v2/runs/{run_id}/approval", h.decideApproval)
+	router.Get("/v2/runs/{run_id}/effect", h.effect)
+	router.Post("/v2/runs/{run_id}/reconcile", h.reconcile)
+	router.Get("/v2/runs/{run_id}/action-calls", h.actionCalls)
 	return router, nil
 }
 

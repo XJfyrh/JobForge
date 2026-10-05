@@ -34,6 +34,11 @@ const (
 	AgentService_FailAttempt_FullMethodName        = "/jobforge.agent.v1.AgentService/FailAttempt"
 	AgentService_AcknowledgeStopped_FullMethodName = "/jobforge.agent.v1.AgentService/AcknowledgeStopped"
 	AgentService_GetAcceptedCommit_FullMethodName  = "/jobforge.agent.v1.AgentService/GetAcceptedCommit"
+	AgentService_GetAction_FullMethodName          = "/jobforge.agent.v1.AgentService/GetAction"
+	AgentService_AuthorizeAction_FullMethodName    = "/jobforge.agent.v1.AgentService/AuthorizeAction"
+	AgentService_ReserveActionCall_FullMethodName  = "/jobforge.agent.v1.AgentService/ReserveActionCall"
+	AgentService_ObserveActionCall_FullMethodName  = "/jobforge.agent.v1.AgentService/ObserveActionCall"
+	AgentService_CompleteAction_FullMethodName     = "/jobforge.agent.v1.AgentService/CompleteAction"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -68,6 +73,16 @@ type AgentServiceClient interface {
 	AcknowledgeStopped(ctx context.Context, in *AcknowledgeStoppedRequest, opts ...grpc.CallOption) (*AcknowledgeStoppedResponse, error)
 	// GetAcceptedCommit confirms lost ACKs read-only, including released leases.
 	GetAcceptedCommit(ctx context.Context, in *GetAcceptedCommitRequest, opts ...grpc.CallOption) (*GetAcceptedCommitResponse, error)
+	// GetAction reads the original binding under current fenced execution.
+	GetAction(ctx context.Context, in *GetActionRequest, opts ...grpc.CallOption) (*GetActionResponse, error)
+	// AuthorizeAction signs one immutable approved operation on its original Run.
+	AuthorizeAction(ctx context.Context, in *AuthorizeActionRequest, opts ...grpc.CallOption) (*AuthorizeActionResponse, error)
+	// ReserveActionCall permits one automatic query or write outside model usage.
+	ReserveActionCall(ctx context.Context, in *ReserveActionCallRequest, opts ...grpc.CallOption) (*ReserveActionCallResponse, error)
+	// ObserveActionCall preserves original physical facts without changing Run state.
+	ObserveActionCall(ctx context.Context, in *ObserveActionCallRequest, opts ...grpc.CallOption) (*ObserveActionCallResponse, error)
+	// CompleteAction atomically accepts a validated receipt and closes the attempt.
+	CompleteAction(ctx context.Context, in *CompleteActionRequest, opts ...grpc.CallOption) (*CompleteActionResponse, error)
 }
 
 type agentServiceClient struct {
@@ -198,6 +213,56 @@ func (c *agentServiceClient) GetAcceptedCommit(ctx context.Context, in *GetAccep
 	return out, nil
 }
 
+func (c *agentServiceClient) GetAction(ctx context.Context, in *GetActionRequest, opts ...grpc.CallOption) (*GetActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetActionResponse)
+	err := c.cc.Invoke(ctx, AgentService_GetAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) AuthorizeAction(ctx context.Context, in *AuthorizeActionRequest, opts ...grpc.CallOption) (*AuthorizeActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AuthorizeActionResponse)
+	err := c.cc.Invoke(ctx, AgentService_AuthorizeAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) ReserveActionCall(ctx context.Context, in *ReserveActionCallRequest, opts ...grpc.CallOption) (*ReserveActionCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReserveActionCallResponse)
+	err := c.cc.Invoke(ctx, AgentService_ReserveActionCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) ObserveActionCall(ctx context.Context, in *ObserveActionCallRequest, opts ...grpc.CallOption) (*ObserveActionCallResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ObserveActionCallResponse)
+	err := c.cc.Invoke(ctx, AgentService_ObserveActionCall_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) CompleteAction(ctx context.Context, in *CompleteActionRequest, opts ...grpc.CallOption) (*CompleteActionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CompleteActionResponse)
+	err := c.cc.Invoke(ctx, AgentService_CompleteAction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -230,6 +295,16 @@ type AgentServiceServer interface {
 	AcknowledgeStopped(context.Context, *AcknowledgeStoppedRequest) (*AcknowledgeStoppedResponse, error)
 	// GetAcceptedCommit confirms lost ACKs read-only, including released leases.
 	GetAcceptedCommit(context.Context, *GetAcceptedCommitRequest) (*GetAcceptedCommitResponse, error)
+	// GetAction reads the original binding under current fenced execution.
+	GetAction(context.Context, *GetActionRequest) (*GetActionResponse, error)
+	// AuthorizeAction signs one immutable approved operation on its original Run.
+	AuthorizeAction(context.Context, *AuthorizeActionRequest) (*AuthorizeActionResponse, error)
+	// ReserveActionCall permits one automatic query or write outside model usage.
+	ReserveActionCall(context.Context, *ReserveActionCallRequest) (*ReserveActionCallResponse, error)
+	// ObserveActionCall preserves original physical facts without changing Run state.
+	ObserveActionCall(context.Context, *ObserveActionCallRequest) (*ObserveActionCallResponse, error)
+	// CompleteAction atomically accepts a validated receipt and closes the attempt.
+	CompleteAction(context.Context, *CompleteActionRequest) (*CompleteActionResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -275,6 +350,21 @@ func (UnimplementedAgentServiceServer) AcknowledgeStopped(context.Context, *Ackn
 }
 func (UnimplementedAgentServiceServer) GetAcceptedCommit(context.Context, *GetAcceptedCommitRequest) (*GetAcceptedCommitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAcceptedCommit not implemented")
+}
+func (UnimplementedAgentServiceServer) GetAction(context.Context, *GetActionRequest) (*GetActionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAction not implemented")
+}
+func (UnimplementedAgentServiceServer) AuthorizeAction(context.Context, *AuthorizeActionRequest) (*AuthorizeActionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AuthorizeAction not implemented")
+}
+func (UnimplementedAgentServiceServer) ReserveActionCall(context.Context, *ReserveActionCallRequest) (*ReserveActionCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReserveActionCall not implemented")
+}
+func (UnimplementedAgentServiceServer) ObserveActionCall(context.Context, *ObserveActionCallRequest) (*ObserveActionCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ObserveActionCall not implemented")
+}
+func (UnimplementedAgentServiceServer) CompleteAction(context.Context, *CompleteActionRequest) (*CompleteActionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CompleteAction not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -513,6 +603,96 @@ func _AgentService_GetAcceptedCommit_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_GetAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).GetAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_GetAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).GetAction(ctx, req.(*GetActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_AuthorizeAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizeActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).AuthorizeAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_AuthorizeAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).AuthorizeAction(ctx, req.(*AuthorizeActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ReserveActionCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReserveActionCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ReserveActionCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ReserveActionCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ReserveActionCall(ctx, req.(*ReserveActionCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ObserveActionCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ObserveActionCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ObserveActionCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ObserveActionCall_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ObserveActionCall(ctx, req.(*ObserveActionCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_CompleteAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompleteActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).CompleteAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_CompleteAction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).CompleteAction(ctx, req.(*CompleteActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -567,6 +747,26 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAcceptedCommit",
 			Handler:    _AgentService_GetAcceptedCommit_Handler,
+		},
+		{
+			MethodName: "GetAction",
+			Handler:    _AgentService_GetAction_Handler,
+		},
+		{
+			MethodName: "AuthorizeAction",
+			Handler:    _AgentService_AuthorizeAction_Handler,
+		},
+		{
+			MethodName: "ReserveActionCall",
+			Handler:    _AgentService_ReserveActionCall_Handler,
+		},
+		{
+			MethodName: "ObserveActionCall",
+			Handler:    _AgentService_ObserveActionCall_Handler,
+		},
+		{
+			MethodName: "CompleteAction",
+			Handler:    _AgentService_CompleteAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

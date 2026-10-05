@@ -61,6 +61,7 @@ type Checkpoint struct {
 	Authority Authority
 	Snapshot  SnapshotBinding
 	Steps     []Step
+	Action    *ActionBinding
 }
 
 // ClaimedRun combines one fenced lease with its frozen resources and cursor.

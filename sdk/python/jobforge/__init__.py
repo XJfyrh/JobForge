@@ -12,7 +12,12 @@ Usage:
 
 from jobforge.client import JobForgeClient
 from jobforge.errors import (
+    ActionAuthorizationExpiredError,
+    ActionConflictError,
+    ActionOutcomeUnknownError,
     AlreadyTerminalError,
+    ApprovalConflictError,
+    ApprovalExpiredError,
     BudgetExhaustedError,
     CancelRequestedError,
     ConflictError,
@@ -32,6 +37,15 @@ from jobforge.errors import (
     UnauthorizedError,
 )
 from jobforge.models import Job, JobState
+from jobforge.run_actions import (
+    ActionCall,
+    ActionCallsResponse,
+    ActionReceipt,
+    ApprovalProposal,
+    ApprovalResponse,
+    ApprovalView,
+    EffectView,
+)
 from jobforge.run_calls import CallBudget, CallUsage, ProviderAudit, RunCall, RunCalls
 from jobforge.run_client import RunClient
 from jobforge.run_models import (
@@ -53,6 +67,18 @@ from jobforge.run_models import (
 )
 
 __all__ = [
+    "ActionConflictError",
+    "ActionOutcomeUnknownError",
+    "ApprovalConflictError",
+    "ApprovalExpiredError",
+    "ActionAuthorizationExpiredError",
+    "ActionCall",
+    "ActionCallsResponse",
+    "ActionReceipt",
+    "ApprovalProposal",
+    "ApprovalResponse",
+    "ApprovalView",
+    "EffectView",
     "JobForgeClient",
     "Job",
     "JobState",

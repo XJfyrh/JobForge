@@ -161,13 +161,20 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	type endpoints struct {
 		BusinessOrigin string `json:"business_origin"`
 		OllamaOrigin   string `json:"ollama_origin"`
+		ActionOrigin   string `json:"action_origin,omitempty"`
 	}
 	worker := struct {
 		SchemaVersion int                  `json:"schema_version"`
 		Profiles      []run.Profile        `json:"profiles"`
 		Tenants       map[string]endpoints `json:"tenants"`
 	}{
-		1, []run.Profile{profile}, map[string]endpoints{tenants[0]: {"http://business:8092", "http://ollama:11434"}, tenants[1]: {"http://business:8092", "http://ollama:11434"}}}
+		1, []run.Profile{profile}, map[string]endpoints{tenants[0]: {BusinessOrigin: "http://business:8092", OllamaOrigin: "http://ollama:11434"}, tenants[1]: {BusinessOrigin: "http://business:8092", OllamaOrigin: "http://ollama:11434"}}}
+	if d.Action != nil {
+		for tenant, endpoint := range worker.Tenants {
+			endpoint.ActionOrigin = d.Action.Origin
+			worker.Tenants[tenant] = endpoint
+		}
+	}
 	files["worker.json"] = supportJSON(worker)
 	files["executor.json"] = supportJSON(runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
 		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}})

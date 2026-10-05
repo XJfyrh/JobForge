@@ -271,7 +271,8 @@ func validCloseReason(reason string) bool {
 	return reason == StopCancel || reason == StopRunDeadline || recoverableReason(reason) ||
 		reason == string(ErrInvalidArgument) || reason == string(ErrProfileUnavailable) || reason == string(ErrBudgetExhausted) ||
 		reason == "EXECUTOR_PROTOCOL_ERROR" || reason == "MODEL_PROTOCOL_ERROR" ||
-		reason == "MODEL_UNSUPPORTED" || reason == "CHECKPOINT_TOO_LARGE"
+		reason == "MODEL_UNSUPPORTED" || reason == "CHECKPOINT_TOO_LARGE" ||
+		reason == string(ErrActionConflict) || reason == string(ErrActionAuthorizationExpired) || reason == string(ErrActionOutcomeUnknown)
 }
 
 func recoverableReason(reason string) bool {

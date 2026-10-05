@@ -134,6 +134,8 @@ jobs:
         run: python -m pytest tools/support_evaluation
       - name: S3 frozen list and failure export (offline, no model calls)
         run: PYTHONPATH=python:sdk/python python -m pytest tools/support_recovery
+      - name: S4 source bindings and approval evidence (offline, no model calls)
+        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_approval
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations
@@ -152,6 +154,8 @@ jobs:
         run: MYPYPATH=python:sdk/python mypy --explicit-package-bases tools/support_evaluation
       - name: S3 experiment types (Linux process interfaces)
         run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
+      - name: S4 experiment types
+        run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_approval
 
   business-contract:
     name: Agent S1 business (real pgvector, HTTP, race)
@@ -213,7 +217,7 @@ jobs:
         run: buf lint
 
   agent-runtime-contract:
-    name: Agent S1 runtime (real processes, PostgreSQL, race)
+    name: Agent S1-S4 runtime (real processes, PostgreSQL, race)
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -230,6 +234,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      business-postgres:
+        image: pgvector/pgvector:0.8.6-pg16-bookworm@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+        env:
+          POSTGRES_USER: jobforge_business_bootstrap
+          POSTGRES_PASSWORD: jobforge_business_bootstrap
+          POSTGRES_DB: jobforge_business
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U jobforge_business_bootstrap -d jobforge_business"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - name: Build fixed installed process checks
@@ -240,10 +257,11 @@ jobs:
         run: docker build --target integration-check -f tools/agentruntimecheck/Dockerfile -t jobforge-agent-runtime:integration .
       - name: Coordinator ordering with the real Linux clock
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
-      - name: Real PostgreSQL, gRPC, provider report confirmation and process faults
+      - name: Real PostgreSQL, business actions, gRPC and process faults
         run: >-
           docker run --rm --init --network host --add-host control:127.0.0.1 --cpus 2 --memory 512m --pids-limit 96
           -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable
+          -e JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@127.0.0.1:5434/jobforge_business?sslmode=disable
           jobforge-agent-runtime:integration
       - name: Build production image and reject fixture registration
         run: |

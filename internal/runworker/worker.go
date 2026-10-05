@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/xjfyrh/jobforge/internal/run"
+	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
@@ -23,6 +24,7 @@ var (
 type Config struct {
 	Profiles     []run.Profile
 	Environments map[string]runexecutor.Environment // Tenant-scoped read/provider keys.
+	Actions      map[string]businessclient.ActionCredentials
 }
 
 // Worker holds capacity one; all scheduling decisions come from AgentService.
@@ -31,6 +33,7 @@ type Worker struct {
 	manifest     Manifest
 	profiles     map[string]run.Profile
 	environments map[string]runexecutor.Environment
+	actions      *businessclient.ActionClient
 }
 
 // New validates the immutable profile/manifest relation before registration.
@@ -61,6 +64,35 @@ func New(client agentv1.AgentServiceClient, manifest Manifest, config Config) (*
 		}
 		w.environments[tenant] = environment
 	}
+	if len(config.Actions) > 0 {
+		for _, identity := range config.Actions {
+			for _, environment := range config.Environments {
+				if identity.ReaderKey != "" && (identity.ReaderKey == environment.BusinessReadKey || identity.ReaderKey == environment.DeepSeekKey) ||
+					identity.WriterKey != "" && (identity.WriterKey == environment.BusinessReadKey || identity.WriterKey == environment.DeepSeekKey) {
+					return nil, run.ErrInvalidArgument
+				}
+			}
+		}
+		var err error
+		w.actions, err = businessclient.NewActionClient(config.Actions)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for _, p := range config.Profiles {
+		if p.ApprovalEnabled() && w.actions == nil {
+			return nil, run.ErrProfileUnavailable
+		}
+		if p.ApprovalEnabled() {
+			d, _ := run.DecodeSupportDefinition(p.Definition)
+			for tenant := range config.Environments {
+				i, ok := config.Actions[tenant]
+				if !ok || i.WriterKey == "" || i.Origin != d.Action.Origin {
+					return nil, run.ErrProfileUnavailable
+				}
+			}
+		}
+	}
 	return w, nil
 }
 
@@ -84,5 +116,8 @@ type stepOutcome struct {
 // runStep owns one real guardian and original Conversation. Context cancellation
 // revokes ordinary work; narrow captured metering has its own bounded cleanup.
 func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoint *agentv1.Checkpoint, authority executionAuthority) stepOutcome {
+	if checkpoint != nil && checkpoint.NextStep != nil && checkpoint.NextStep.Kind == agentv1.StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION {
+		return w.runAction(ctx, lease, checkpoint, authority)
+	}
 	return w.coordinateStep(ctx, lease, checkpoint, authority)
 }

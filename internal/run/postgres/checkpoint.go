@@ -72,6 +72,17 @@ func loadCheckpoint(ctx context.Context, tx pgx.Tx, r agentrun.Run, a agentrun.A
 		return checkpoint, err
 	}
 	rows.Close()
+	if a.NextStepKind == "apply_ticket_resolution" {
+		action, err := readAction(ctx, tx, r.TenantID, r.BusinessRequestID, false)
+		if err != nil {
+			return checkpoint, err
+		}
+		effect, err := readEffect(ctx, tx, action)
+		if err != nil {
+			return checkpoint, err
+		}
+		checkpoint.Action = &agentrun.ActionBinding{Action: action, Effect: effect}
+	}
 	return checkpoint, fillBudget(ctx, tx, &checkpoint.Run)
 }
 

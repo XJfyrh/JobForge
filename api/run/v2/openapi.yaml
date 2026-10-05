@@ -6,7 +6,7 @@ info:
     idempotency. Public operator can submit/cancel/retry; reader can only query. Cross-tenant resources
     return 404; missing role in own tenant returns 403. No model endpoint, fees, tenant, lease or arbitrary
     code can be supplied. SDK performs no hidden retry, redirect, polling or protected-reference fetch.
-    No approval/write endpoints exist in this slice.
+    ADR-0026 adds separate approver decisions, receipt-only reconciliation and effect/action-call views. No public business-write endpoint exists.
 security:
 - BearerAuth: []
 paths:
@@ -619,6 +619,335 @@ paths:
             schema:
               $ref: '#/components/schemas/RetryRun'
         description: At most 4096 bytes. Strict UTF-8 JSON with no duplicate fields or trailing values.
+  /v2/runs/{run_id}/approval:
+    get:
+      operationId: getApproval
+      summary: Read the original protected proposal and stable decision
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalView'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / APPROVAL_CONFLICT / APPROVAL_EXPIRED / ACTION_CONFLICT / INVALID_TRANSITION / PROFILE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    post:
+      operationId: decideApproval
+      summary: 'Approver only: decide the original proposal hash with authenticated stable actor'
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalResponse'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / APPROVAL_CONFLICT / APPROVAL_EXPIRED / ACTION_CONFLICT / INVALID_TRANSITION / PROFILE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+        description: Strict closed JSON <=4096 UTF-8 bytes. Approval never accepts edited content, actor or credentials.
+  /v2/runs/{run_id}/effect:
+    get:
+      operationId: getEffect
+      summary: 'Read independent effect: none, unknown, applied; never mutate terminal Run'
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectView'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / APPROVAL_CONFLICT / APPROVAL_EXPIRED / ACTION_CONFLICT / INVALID_TRANSITION / PROFILE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /v2/runs/{run_id}/reconcile:
+    post:
+      operationId: reconcileEffect
+      summary: 'Operator only: terminal receipt lookup once, at most 10s; tenant rate 1/s and one in-flight query'
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EffectView'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / APPROVAL_CONFLICT / APPROVAL_EXPIRED / ACTION_CONFLICT / INVALID_TRANSITION / PROFILE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelRun'
+        description: Strict closed JSON <=4096 UTF-8 bytes. Approval never accepts edited content, actor or credentials.
+  /v2/runs/{run_id}/action-calls:
+    get:
+      operationId: getActionCalls
+      summary: Read separate four-write/four-query permissions; provider metering not applicable
+      parameters:
+      - $ref: '#/components/parameters/RunID'
+      - $ref: '#/components/parameters/Traceparent'
+      - $ref: '#/components/parameters/Tracestate'
+      responses:
+        '200':
+          description: Accepted/reused operation or successful query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionCallsResponse'
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: CONFLICT / APPROVAL_CONFLICT / APPROVAL_EXPIRED / ACTION_CONFLICT / INVALID_TRANSITION / PROFILE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: INTERNAL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: DEPENDENCY_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   securitySchemes:
     BearerAuth:
@@ -1382,6 +1711,7 @@ components:
       - available
       - kind
       - ref
+      - disposition
       properties:
         available:
           type: boolean
@@ -1397,7 +1727,11 @@ components:
           anyOf:
           - type: string
           - type: 'null'
-      description: Unavailable means available=false and kind/ref=null. Available means kind and ref are
+        disposition:
+          type: string
+          enum: [none, proposal, approved, applied, rejected, unknown, no_action]
+      description: Disposition is an execution/result view. available=false with none means no accepted result,
+        not a model decision. Terminal result stays fixed when effect advances. Unavailable means available=false and kind/ref=null. Available means kind and ref are
         non-null. awaiting_approval exposes a proposal, never an applied action. References require current
         tenant authorization and are not fetched automatically.
     ProviderAudit:
@@ -1789,3 +2123,255 @@ components:
       description: Repeatable-read captured view, ascending unique ordinal, at most 44 rows and encoded response
         including LF <=256KiB. Late reports may change future captures. Batch reason may be shared but no
         foreign triggering identifiers are returned.
+    ApprovalRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - decision
+      - proposal_hash
+      properties:
+        schema_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          const: 1
+        decision:
+          type: string
+          enum:
+          - approve
+          - reject
+        proposal_hash: &id001
+          type: string
+          pattern: ^[0-9a-f]{64}$
+    ApprovalProposal:
+      $ref: ../../support/v1/schema.json#/$defs/persistedProposal
+    ApprovalView:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - status
+      - proposal_hash
+      - proposal_ref
+      - proposal
+      - permission_expires_at
+      - approval_id
+      - actor_id
+      - decided_at
+      - available
+      properties:
+        run_id: &id002
+          type: string
+          format: uuid
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+        status:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+        proposal_hash: *id001
+        proposal_ref:
+          type: string
+        proposal:
+          $ref: '#/components/schemas/ApprovalProposal'
+        permission_expires_at: &id003
+          type: string
+          format: date-time
+        approval_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        actor_id:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          - type: 'null'
+        decided_at:
+          anyOf:
+          - *id003
+          - type: 'null'
+        available:
+          type: boolean
+    ApprovalResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - approval
+      - run
+      - reused
+      properties:
+        approval:
+          $ref: '#/components/schemas/ApprovalView'
+        run:
+          $ref: '#/components/schemas/Run'
+        reused:
+          type: boolean
+    ActionReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - tenant_id
+      - operation_id
+      - business_request_id
+      - authorization_hash
+      - proposal_hash
+      - parameters_hash
+      - approval_id
+      - ticket_id
+      - before_revision
+      - after_revision
+      - ticket_status
+      - applied_at
+      - retain_until
+      - receipt_hash
+      properties:
+        schema_version:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          const: 1
+        tenant_id:
+          type: string
+        operation_id: *id002
+        business_request_id: *id002
+        authorization_hash: *id001
+        proposal_hash: *id001
+        parameters_hash: *id001
+        approval_id: *id002
+        ticket_id:
+          type: string
+        before_revision: &id004
+          type: integer
+          minimum: 1
+          maximum: 9007199254740991
+        after_revision: *id004
+        ticket_status:
+          type: string
+          enum:
+          - open
+          - awaiting_information
+          - escalated
+          - informational_only
+        applied_at: *id004
+        retain_until: *id004
+        receipt_hash: *id001
+    EffectView:
+      type: object
+      additionalProperties: false
+      required:
+      - state
+      - operation_id
+      - authorization_hash
+      - effect_version
+      - receipt_ref
+      - receipt
+      - source
+      - observed_at
+      properties:
+        state:
+          type: string
+          enum:
+          - none
+          - unknown
+          - applied
+        operation_id:
+          anyOf:
+          - *id002
+          - type: 'null'
+        authorization_hash:
+          anyOf:
+          - *id001
+          - type: 'null'
+        effect_version:
+          type: integer
+          minimum: 0
+          maximum: 1
+        receipt_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+        receipt:
+          anyOf:
+          - $ref: '#/components/schemas/ActionReceipt'
+          - type: 'null'
+        source:
+          anyOf:
+          - type: string
+            enum:
+            - action_response
+            - worker_query
+            - reconcile
+            - retry
+          - type: 'null'
+        observed_at:
+          anyOf:
+          - *id003
+          - type: 'null'
+    ActionCall:
+      type: object
+      additionalProperties: false
+      required:
+      - physical_call_id
+      - operation_id
+      - authorization_hash
+      - kind
+      - status
+      - reserved_at
+      - dispatch_expires_at
+      - call_deadline
+      - transport_outcome
+      - observation_hash
+      - observed_at
+      - provider_metering
+      properties:
+        physical_call_id: *id002
+        operation_id: *id002
+        authorization_hash: *id001
+        kind:
+          type: string
+          enum:
+          - action_write
+          - receipt_query
+        status:
+          type: string
+          enum:
+          - reserved
+          - observed
+          - unknown
+        reserved_at: *id003
+        dispatch_expires_at: *id003
+        call_deadline: *id003
+        transport_outcome:
+          anyOf:
+          - type: string
+            enum:
+            - response
+            - timeout
+            - network_error
+          - type: 'null'
+        observation_hash:
+          anyOf:
+          - *id001
+          - type: 'null'
+        observed_at:
+          anyOf:
+          - *id003
+          - type: 'null'
+        provider_metering:
+          type: string
+          enum:
+          - not_applicable
+    ActionCallsResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          maxItems: 8
+          items:
+            $ref: '#/components/schemas/ActionCall'
