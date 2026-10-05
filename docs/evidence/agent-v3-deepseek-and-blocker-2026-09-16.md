@@ -1,5 +1,7 @@
 # DeepSeek 接入调查、独立复审与环境阻塞
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16（Asia/Shanghai）。工作分支：`XJfyrh/agent-v3-s0`；入口：[草稿 PR #35](https://github.com/XJfyrh/JobForge/pull/35)。本记录追加于 e6b0038 之后，不覆盖旧提交证据。
 
 本文件保留阻塞发生时的状态快照。维护者同日重启Docker后已成功复验并合并PR #35，后续状态见[恢复验收记录](agent-v3-docker-recovery-2026-09-16.md)，下文的“未合并/无法运行”不代表最新状态。

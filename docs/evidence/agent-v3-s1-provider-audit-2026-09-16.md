@@ -1,5 +1,7 @@
 # S1 供应商持久审计：实现与验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16。基线 `bffe5665f266f0510de94d7bf13a3f8dbc963df2`（PR #48）。合同为 [PRD v0.12](../product/JobForge_PRD_v0.12.md) / [ADR-0020](../adr/0020-provider-audit-and-batch-stop.md)。本切片覆盖 typed report、PG 原子记录、跨 FD 确认、批次 guard 和只读 HTTP/SDK；完整评分器、收费 profile 登记、首批启动器和真实 40 案仍在后续切片。没有 DeepSeek 推理调用，不宣称整个 ADR-0020 或 S1 完成。
 
 ## 需求与证据映射
@@ -16,7 +18,7 @@
 | API/SDK 隔离 | reader/operator 与跨租户 404；最多 44 行、256 KiB、无分页查询参数；installed SDK 查询五类真实 PG 记录；observed/settled、missing/unavailable、null/0 分开 |
 | 生产边界 | 生产镜像仅 support-fixed-v1、固定官方 origin/新 executor version；无 fixture registry、测试安装器、gold 或默认收费 manifest |
 
-`query_embedding` 未知计量仍沿用原 full hold + ordinary ACK；它不伪造报告，也不触发 chat unknown 停批。完整 embedding usage 则需新的 usage-only report 确认。两端有专门继续/错误 ACK 回归。运行限制见[审计指南](../agent-v3-provider-audit.md)。
+`query_embedding` 未知计量仍沿用原 full hold + ordinary ACK；它不伪造报告，也不触发 chat unknown 停批。完整 embedding usage 则需新的 usage-only report 确认。两端有专门继续/错误 ACK 回归。运行限制见[审计指南](../agent-v3/provider-audit.md)。
 
 ## 实际检查
 
@@ -53,7 +55,7 @@ Linux 确认窗口测试覆盖 Reserve、report、Observe、Commit 四处各两�
 
 ## 复现与限制
 
-安装 SDK 后设置 `JOBFORGE_TEST_PYTHON`，执行 `go test -race -count=1 ./...`；固定容器完整构建/运行命令见[运行时指南](../agent-v3-runtime.md)。共同向量可分别使用 `go test ./internal/run -update-provider-audit-fixture`、`go test ./internal/runprotocol/v2 -update-audit-wire-fixtures` 和 `go test ./internal/run/httpapi -update-call-fixtures` 重新生成，普通测试只核对一致性。
+安装 SDK 后设置 `JOBFORGE_TEST_PYTHON`，执行 `go test -race -count=1 ./...`；固定容器完整构建/运行命令见[运行时指南](../agent-v3/runtime.md)。共同向量可分别使用 `go test ./internal/run -update-provider-audit-fixture`、`go test ./internal/runprotocol/v2 -update-audit-wire-fixtures` 和 `go test ./internal/run/httpapi -update-call-fixtures` 重新生成，普通测试只核对一致性。
 
 首次 SDK 安装禁用 build isolation 时因环境缺 hatchling 失败；按标准 `pip install --no-deps ./sdk/python` 的隔离构建成功，之后真实 HTTP 验证通过。原日志与镜像构建/测试输出保存在仓库外 `E:\JobForge-notes\2026-09-16-agent-v3-s1\audit-*`，决策记录不包含秘密或模型正文。
 

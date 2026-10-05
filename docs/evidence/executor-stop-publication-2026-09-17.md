@@ -1,5 +1,7 @@
 # 执行器停止通知竞态修复
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 这是对[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)既有非阻塞Stop和有界清理合同的修复，不改变公开接口、任务状态、期限、调度或数据库语义。
 
 ## 缺陷与最小改动
@@ -16,7 +18,7 @@
 - **修复后绿灯**：新增回归0.26秒通过；受影响的固定Linux进程套件19个顶层测试全部通过，0失败、0跳过、0race warning。实际使用`--init --network none --cpus 1 --memory 384m --pids-limit 64`。
 - 独立上下文Agent只读审查该条件、真实时序及回归测试，无P1/P2；完整仓库强制检查由修复PR的CI执行。
 
-复现：按[运行时指南](../agent-v3-runtime.md)构建`process-check`镜像，执行`/app/process.test -test.run=^TestContextCancellationDuringStopPublicationCleansProcess$ -test.v -test.timeout=15s`；去掉`-test.run`运行该包全部进程检查。生产镜像不包含test peer。
+复现：按[运行时指南](../agent-v3/runtime.md)构建`process-check`镜像，执行`/app/process.test -test.run=^TestContextCancellationDuringStopPublicationCleansProcess$ -test.v -test.timeout=15s`；去掉`-test.run`运行该包全部进程检查。生产镜像不包含test peer。
 
 ## 证据边界
 

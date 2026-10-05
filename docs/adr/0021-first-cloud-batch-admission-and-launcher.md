@@ -152,6 +152,6 @@ API 仍 at-least-once，不承诺 exactly-once 或一次供应商扣费。新的
 
 不采用仅 SDK 事后检查（收费竞态）、向 execute_step 加评测/资源选择字段（扩大执行输入）、任意 JSON profile 只验 hash 形状（没有约束内容）、自动重启/Retry/new batch（绕过首批停止）、第二 scheduler/持久恢复器（已有 Run 与 PG guard 足够）。不为首批新建远程 attestation、来源证明服务或通用 profile DSL。
 
-验收按 [L-01～L-08 映射](../plans/agent-v3-first-cloud-batch.md)分层执行：先纯生成器/hash/反例，再真实 PG 接纳/Retry/并发/不重置，再实际 SDK/HTTP 和固定 Linux 正式进程/停发，最后在既有额度内真实云端。缺依赖或 skip 明确披露；文档与确定性服务不能替代模型层。任一资源/身份/预算/停止测试失败均不得启用正式 profile。
+验收按 [L-01～L-08 映射](../archive/plans/agent-v3-first-cloud-batch.md)分层执行：先纯生成器/hash/反例，再真实 PG 接纳/Retry/并发/不重置，再实际 SDK/HTTP 和固定 Linux 正式进程/停发，最后在既有额度内真实云端。缺依赖或 skip 明确披露；文档与确定性服务不能替代模型层。任一资源/身份/预算/停止测试失败均不得启用正式 profile。
 
 后续工作：独立审查本 Proposed 合同；接受后交付最小配置/接纳切片及驱动/部署切片；并行完成 ADR-0020 实现和完整 scorer 冻结；全部前置通过后执行原批次并归档。S2～S5、完整生产保留和审批写入另行验收。

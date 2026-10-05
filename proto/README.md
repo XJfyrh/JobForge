@@ -1,23 +1,19 @@
-# Protobuf schema root
+# Protobuf 源契约
 
-JobForge Protobuf 契约位于此目录。当前已实现 Worker 协议：
+| 服务 | 源文件 | 用途 |
+|---|---|---|
+| `jobforge.agent.v1.AgentService` | [agent.proto](jobforge/agent/v1/agent.proto) | 当前 Run Worker 的执行身份、步骤、工具/物理调用、审计确认 |
+| `jobforge.worker.v1.WorkerService` | [worker.proto](jobforge/worker/v1/worker.proto) | 既有 Job Worker Register/Poll/Heartbeat/Complete/Fail |
 
-- 路径：`jobforge/worker/v1/worker.proto`
-- Package：`jobforge.worker.v1`
-- 服务：`WorkerService`（Register、Poll、Heartbeat、Complete、Fail）
+只做兼容新增；删除字段保留 `reserved` 编号/名称，不复用。service/RPC/message/field/enum 注释使用英文。生成代码输出到源文件同目录，禁止手改。
 
-## 要求
-
-- 使用 `buf format`、`buf lint` 和 `buf breaking --against '.git#branch=main'`。
-- service、RPC、message、field、enum 与 enum value 均使用英文契约注释。
-- 只做向后兼容新增；删除字段时 `reserved` 原编号和名称，禁止复用。
-
-## 生成代码
-
-生成代码输出到 Proto 源文件同目录，禁止手工编辑：
+在仓库根目录执行（Windows 使用对应 `.exe`）：
 
 ```sh
+.tools/bin/buf format
+.tools/bin/buf lint
+.tools/bin/buf breaking --against '.git#branch=main'
 .tools/bin/buf generate
 ```
 
-生成配置见仓库根目录 `buf.gen.yaml`。
+配置见 [buf.gen.yaml](../buf.gen.yaml)，运行与验证见[测试指南](../docs/tests.md)。

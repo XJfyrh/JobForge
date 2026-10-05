@@ -1,7 +1,7 @@
 # 受监管执行器源协议 v1
 
 [`schema.json`](schema.json) 是帧字段与边界的事实源；Go 显式 codec 位于
-[`internal/runprotocol`](../../../internal/runprotocol/)，Python 对应
+[`internal/runprotocol`](../../../internal/runprotocol)，Python 对应
 [`protocol.py`](../../../python/jobforge_agent/protocol.py)。
 [`fixtures/frames.json`](fixtures/frames.json) 由两端测试共同读取，不是生产模型注册。
 

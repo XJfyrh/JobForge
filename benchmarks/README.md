@@ -24,6 +24,8 @@ benchmarks/
 
 ## 快速开始
 
+命令均从仓库根目录执行，数据库连接使用下方环境变量。脚本需要 Bash，Windows 可使用 WSL/Git Bash。
+
 ### 1. 启动 PostgreSQL
 
 ```sh
@@ -33,15 +35,13 @@ docker compose -f deploy/compose.yaml up -d postgres
 ### 2. 运行微基准
 
 ```sh
-cd benchmarks/micro
-go test -bench=. -benchmem -benchtime=10s
+go test ./benchmarks/micro -bench=. -benchmem -benchtime=10s
 ```
 
 ### 3. 运行端到端基准
 
 ```sh
-cd benchmarks/e2e
-go run . -jobs=10000 -workers=4
+go run ./benchmarks/e2e -jobs=10000 -workers=4
 ```
 
 ### 4. 使用一键脚本
@@ -125,4 +125,4 @@ go test ./tests/integration -run '^$' `
   -bench '^BenchmarkWorkerRuntimeThroughput$' -benchtime=32x -count=5 -benchmem
 ```
 
-该命令由集成测试 TestMain 重建测试库 schema。fixture 创建不计时，注册及完整处理计时；每轮核对全部任务成功且 attempt 总数正确。五轮前后对照、分配开销和测试边界见 [Worker 容量释放唤醒报告](../docs/worker-capacity-performance.md)，[原始输出](results/worker-capacity-2026-09-12.txt) 已归档。
+该命令由集成测试 TestMain 重建测试库 schema。fixture 创建不计时，注册及完整处理计时；每轮核对全部任务成功且 attempt 总数正确。五轮前后对照、分配开销和测试边界见 [Worker 容量释放唤醒报告](../docs/archive/worker-capacity-performance.md)，[原始输出](results/worker-capacity-2026-09-12.txt) 已归档。

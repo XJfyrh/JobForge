@@ -1,5 +1,7 @@
 # Agent v3 S1-C1：协议、时间与计量验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16。基线`01177e9726b601e7210df0c9a758f4cfdb356916`；[PRD v0.10](../product/JobForge_PRD_v0.10.md)/[ADR-0018](../adr/0018-deepseek-fixed-flow-and-executor.md)已随PR #41接受。当前切片仅实现C-02/C-03/C-08的协议/RPC前置部分，不把它们标成完整C验收。
 
 [PR #42](https://github.com/XJfyrh/JobForge/pull/42)于2026-09-16合并为`b9ba908cc8434e3b3fc6aaddbbb5e1f4684a8826`。两份独立上下文审查均复核最终head `6ecba884bc67f01ee664a474107681d110c216da`，两项P2已修复，无剩余actionable finding；[最终七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35078269258)全部通过。合并树与审查树完全相同。
@@ -41,7 +43,7 @@
 
 两轮均通过既有计数断言。仅各一轮、固定顺序、未清缓存且存在共享主机背景噪声，约0.5%差异不作性能提升或无回归门禁结论。测试通过生产Store直接调用、合成capture/工具/模型结果；不测gRPC编码、v2 IPC、模型/业务HTTP或真实执行器时延。
 
-自然EXPLAIN的稀疏ready计划也保留差异：base为`runs_ready_claim_idx` Index Scan（0.231ms、shared hit=29），candidate为`runs_deadline_idx` Bitmap Index/Heap Scan（0.382ms、shared hit=124）。密集分布均Seq Scan；SQL/索引未修改，不能把单轮小表/并发更新/统计与缓存差异归因为代码改进或退化。旧[W4失败](../worker-capacity-performance.md)和AT-25跳过仍保留；本报告不替代历史门禁。
+自然EXPLAIN的稀疏ready计划也保留差异：base为`runs_ready_claim_idx` Index Scan（0.231ms、shared hit=29），candidate为`runs_deadline_idx` Bitmap Index/Heap Scan（0.382ms、shared hit=124）。密集分布均Seq Scan；SQL/索引未修改，不能把单轮小表/并发更新/统计与缓存差异归因为代码改进或退化。旧[W4失败](../archive/worker-capacity-performance.md)和AT-25跳过仍保留；本报告不替代历史门禁。
 
 原始Windows JSONL、两轮性能输出/版本hash及外部决策记录保存于仓库外`E:\JobForge-notes\2026-09-16-agent-v3-s1`。性能测试源SHA256为`7cf875c7fc7949943abeb2631d7b42d11f1a64d76338320925b3c3fe1bd6533a`，两侧相同且测前后candidate受测输入未变。
 

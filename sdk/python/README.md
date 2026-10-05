@@ -8,7 +8,7 @@ python -m pip install './sdk/python[dev]'
 
 ## Run v2
 
-`RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 ADR-0017；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；S1-B 没有默认收费模型或批准/写入接口。
+`RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 [Run 指南](../../docs/agent-v3/runs.md)；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；默认不启用收费模型，当前没有批准/业务写入接口。
 
 ```python
 import os
@@ -18,11 +18,11 @@ with RunClient(
     os.environ["JOBFORGE_API_URL"], os.environ["JOBFORGE_API_KEY"]
 ) as client:
     accepted = client.submit(
-        ticket_id="T01",
-        business_request_key="ticket-T01-review-v1",
+        ticket_id="ticket-01",
+        business_request_key="ticket-01-review-v1",
         profile_id=os.environ["JOBFORGE_RUN_PROFILE"],
         budget_batch_id=os.environ["JOBFORGE_RUN_BUDGET_BATCH"],
-        idempotency_key="submit-ticket-T01-v1",
+        idempotency_key="submit-ticket-01-v1",
     )
     run = client.get(accepted.run.run_id)
     print(run.state, run.error, run.budget.family.held_cost_microyuan)
@@ -73,4 +73,4 @@ HTTP 2xx 也会校验已知结果字段：错误的 ID/标量类型、状态、�
 
 安装 `opentelemetry-sdk` 并配置自己的 TracerProvider 后，SDK 自动创建 `sdk.submit/get/cancel/retry` span 并传播当前 W3C context。也可通过 `traceparent=` 接入外部上下文；旧 `trace_id=` 继续写 X-Trace-ID，仅作兼容关联。SDK 不配置 exporter、不输出 payload/密钥。
 
-快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。上述 get 可能仍返回执行中状态；安装 `[demo]` extra 后运行 `examples/agent_rag.py` 可等待两个真实任务并验证产物。启动和清理见[真实任务指南](../../docs/real-tasks.md)，Trace/故障演练见[可观测性指南](../../docs/observability.md)。
+快速测试：`python -m pytest sdk/python/tests`。真实跨语言契约：设置 `JOBFORGE_TEST_PYTHON` 为安装了本 SDK 的解释器，再运行 `go test -run TestPythonHTTPContract -count=1 ./tests/integration`（Windows 先启动 Compose PostgreSQL 并设置 JOBFORGE_TEST_DSN，详见仓库开发指南）。上述 get 可能仍返回执行中状态；安装 `[demo]` extra 后运行 `examples/agent_rag.py` 可等待两个真实任务并验证产物。启动和清理见[真实任务指南](../../docs/legacy/real-tasks.md)，Trace/故障演练见[可观测性指南](../../docs/legacy/observability.md)。

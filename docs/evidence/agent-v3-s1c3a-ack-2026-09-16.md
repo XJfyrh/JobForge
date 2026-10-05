@@ -1,5 +1,7 @@
 # Agent v3 S1-C3a：普通观察 ACK 验证
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16；基线为PR #44合并提交`d11dd2fcdc737c92ce7d11e30665ce3ab6c455e4`。[PRD v0.11](../product/JobForge_PRD_v0.11.md)与[ADR-0019](../adr/0019-executor-confirmation-and-exit-contract.md)已通过独立审查接受。本次同步尚未正式部署的内部v2，公开HTTP/SDK/gRPC、v1及数据库合同不变；没有migration、依赖升级或收费调用。
 
 合并状态：[PR #45](https://github.com/XJfyrh/JobForge/pull/45)最终`118ca82d`通过两份独立最终复审与[七项CI](https://github.com/XJfyrh/JobForge/actions/runs/35087095197)，合并提交`193623659de8fe41bfc4f5f0cabc048a167148e4`与审查代码树一致。以下保持C3a当时的验收范围，后续正式进程单列[C3b证据](agent-v3-s1-c3-runtime-2026-09-16.md)。
@@ -68,4 +70,4 @@ Linux镜像基础digest沿用C2的`sha256:782412e85d0f0984994c290652577d4018aff0
 
 测试协调者、模型及业务向量是替身，loopback TCP是真实传输；未访问DeepSeek、未消费云端费用，未运行40案业务评分。正式Go Worker、guardian/固定step、PG持久确认/提交窗口、provider身份持久审计、跨队列TraceContext与S2～S5继续待实现。
 
-历史[W4性能门禁失败](../worker-capacity-performance.md)、[AT-25跳过](../agent-rag-review.md)、远程模型与生产长期留存未验收原样保留。本地协议微基准和新增模块通过均不能改变这些结论。原始检查、决策和审查另存仓库外`E:\JobForge-notes\2026-09-16-agent-v3-s1`，不包含秘密或完整模型输入输出。
+历史[W4性能门禁失败](../archive/worker-capacity-performance.md)、[AT-25跳过](../archive/agent-rag-review.md)、远程模型与生产长期留存未验收原样保留。本地协议微基准和新增模块通过均不能改变这些结论。原始检查、决策和审查另存仓库外`E:\JobForge-notes\2026-09-16-agent-v3-s1`，不包含秘密或完整模型输入输出。

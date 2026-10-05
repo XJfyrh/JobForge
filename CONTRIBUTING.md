@@ -1,106 +1,33 @@
 # 贡献指南
 
-感谢关注 JobForge。项目已交付 [PRD v0.1](docs/product/JobForge_PRD_v0.1.md)～[PRD v0.3](docs/product/JobForge_PRD_v0.3.md) 的已实现范围，并以 [PRD v0.4](docs/product/JobForge_PRD_v0.4.md) 补齐持久业务幂等与真实 Worker 崩溃证据；明确标为 P1/未实现的条目不在完成声明内。任何实现都必须先服从 PRD 中已经冻结的可靠性边界。
+开始前阅读[文档导航](docs/README.md)、[当前状态](docs/status.md)、相关[产品契约](docs/product/README.md)与[ADR](docs/adr/README.md)。可靠性不变量以契约为准。
 
-## 工作流
+## 工作流与提交
 
-1. 从最新 `main` 创建短生命周期分支。
-2. 分支使用 `<type>/<short-kebab-description>`，例如 `feat/lease-claim`、`fix/stale-complete`、`docs/retry-semantics`。
-3. 保持提交聚焦且可独立审查；不要把无关格式化或重构混入功能提交。
-4. 发起 Pull Request，关联 Issue 或 ADR，说明风险、兼容性影响和验证证据。
-5. 所有评审意见和必需检查通过后，使用 squash merge；合并后的提交仍须符合 Conventional Commits。
+从最新 `main` 创建短分支，名称用 `XJfyrh/<type>/<short-description>`。保持提交聚焦，不混入无关格式化/重构；发起 PR，说明问题、结果、相关影响和实际验证。评审与必需检查通过后 squash merge，日常不直接推送 `main`。
 
-初始化仓库的 root commit 是直接提交到 `main` 的唯一历史例外。`main` 应保持受保护状态，禁止日常直接推送。
+提交使用 Conventional Commits：`type(scope): 简短描述`，scope 按需。type 为 `feat/fix/docs/refactor/test/perf/build/ci/chore/style/revert`，小写英文；描述默认简体中文，PR 内语言一致，尽量不超过 72 字符且末尾无句号。不兼容变更用 `!` 和 `BREAKING CHANGE:` 说明影响。
 
-## 提交规范
+## 代码与契约
 
-格式：
+遵守[编码规范](docs/code-standards.md)与 [AGENTS 不变量](AGENTS.md#事实来源与不变量)。状态转换属于 domain/service，goroutine 有明确所有者与取消/退出路径。数据库新增 migration，不改已应用历史；生成代码通过源生成；日志不记录秘密、Authorization 或完整敏感 payload。
 
-```text
-<type>(<optional-scope>): <description>
-```
-
-允许的 type：`feat`、`fix`、`docs`、`refactor`、`test`、`perf`、`build`、`ci`、`chore`、`revert`。
-
-- type 与 scope 必须使用小写英文。
-- description 可以使用中文或英文，但同一个 Pull Request 内保持一致。
-- 使用祈使语气，不以句号结尾，首行尽量不超过 72 个字符。
-- 不兼容变更使用 `!` 并在正文写 `BREAKING CHANGE:`；公开 API/Proto 的不兼容变更通常不应直接接受。
-
-示例：
-
-```text
-feat(worker): reject stale fencing tokens
-docs(adr): 记录 dead 任务人工重试决策
-```
-
-## 代码与架构要求
-
-- 遵守 [代码与注释规范](docs/code-standards.md)。
-- PostgreSQL 是 P0 唯一事实源；不得把 JetStream 或进程内状态变成核心任务状态来源。
-- 状态转换集中在 domain/service 层，HTTP 与 gRPC handler 只负责传输、鉴权、校验和错误映射。
-- 数据库变更只能通过新增 versioned migration；已应用 migration 不得改写。
-- 任何 goroutine 都必须有明确所有者、取消路径和退出条件。
-- 时间、随机数、重试策略和外部副作用应可注入，以支持确定性测试。
-- 不得记录 API key、Authorization header、完整敏感 payload 或其他秘密。
-
-## ADR 与文档同步
-
-以下变更必须先创建或更新 ADR：
-
-- 任务状态机、投递保证、租约、fencing、幂等、取消或重试语义；
-- 公开 HTTP/gRPC/SDK 契约或兼容性政策；
-- 数据库事实源、调度模型、关键依赖或部署边界；
-- 偏离 PRD 已固定边界的实现选择。
-
-新增状态、错误码、指标、migration 或公开接口时，要在同一 Pull Request 中更新对应文档。
+可靠性语义、公开契约、事实源、调度、安全边界和关键依赖的决策须由 ADR 记录。新 ADR 可取代旧决策，不能静默改历史结论。新增状态/错误码/指标/API/Proto 时同 PR 同步契约、指南与相关正常/失败路径测试。
 
 ## 验证要求
 
-仅运行与当前改动范围相关的检查，不伪造通过结果。提交前至少执行：
+权威命令和 8 项 PR CI 清单见[测试指南](docs/tests.md)。本地执行与本次改动相关的检查；并发修改必须全仓 race，可靠性使用真实 PG，API 变更验证契约/兼容性。所有必需 CI 在最新 head 通过后才能合并。
 
-```text
-go test -race ./...
-go vet ./...
-.tools/bin/golangci-lint run
-.venv/bin/ruff check .
-.venv/bin/ruff format --check .
-.venv/bin/mypy sdk/python
-.venv/bin/python -m pytest sdk/python/tests
-.venv/bin/python tools/generate_task_dashboard.py
-# 检查生成后的 dashboard diff；CI 另通过固定 Prometheus 镜像运行 promtool。
-docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
-.venv/bin/python tools/check_sqlfluff_baseline.py
-.venv/bin/sqlfluff lint migrations
-.tools/bin/buf lint
-```
+安装 SDK 并设置跨语言解释器；Windows 先启测试 PG/DSN，Linux 进程套件用固定镜像、`--init` 和专用环境开关。同 DSN 清理测试串行；skip、合成响应、未启动依赖不能冒充验收通过。说明已运行/失败/未运行及原因，不为文档重复云端收费。
 
-上述 golangci-lint、`go test -race ./...`、ruff（check + format）、mypy、SQLFluff 历史基线校验、`sqlfluff lint migrations` 和 buf lint 均由 [CI 工作流](.github/workflows/ci.yml) 在每个 Pull Request 上强制执行（见 [开发环境](docs/development.md) 的 “CI 质量门禁” 一节），本地清单与 PR 门禁保持一致。`.sqlfluffignore` 只冻结已应用 migration 的既有格式债务；禁止用新增 ignore 条目绕过新 migration 的检查。
+`.sqlfluffignore` 只保存冻结历史格式基线，不把新 migration 加入 ignore。运行时/审计/故障、真实模型与观测配置各按测试指南路由，不用较低层结果替代更高层证据。
 
-Windows 对应的 Python 可执行文件位于 `.venv\Scripts`，Go/Buf 工具位于 `.tools\bin`。可靠性集成测试必须使用真实 PostgreSQL，核心行为不能只由 mock 验证。
+## 文档维护
 
-SDK 安装：`python -m pip install ./sdk/python`；Go/Python 跨语言契约需设置 `JOBFORGE_TEST_PYTHON` 为安装该 SDK 的解释器路径（CI 显式安装并启用）。本地未设置时该用例 skip，不代表契约通过。
+简洁、清晰且必要，服务当前主线。先写结论/最短操作，再给按需细节；一个主题维护一个主要来源，入口用链接。当前状态只更新[状态页](docs/status.md)，指南讲概念和操作，过程记录放归档。报告展开影响本轮结论的范围、失败、费用和证据，避免在每页重复无关历史限制。
 
-Agent v3 的 S0 探针另运行 `python -m pytest tools/agent_probe_data tools/executorprobe`、`mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py`；真实执行器生命周期与 Linux race 使用 `tools/executorprobe/Dockerfile` 构建镜像，按 CI 的 `docker run --init --network none` 命令执行。常规 Go 测试跳过受平台约束的进程套件不代表通过；专门 CI job 实际执行。模型 guardrail 测试不调用模型，真实模型协议试验与业务验收分别报告。
-
-Pull Request 至少应包含正常路径和一个相关失败路径的测试；并发相关变更必须通过 race 检测，接口变更必须包含契约或兼容性验证。
-
-Agent v3 S1-A另运行`python -m pytest python/tests`、`mypy python/jobforge_agent`；独立业务库启动、`JOBFORGE_BUSINESS_TEST_DSN`和跨语言解释器配置见[业务开发指南](docs/agent-v3-business.md)。CI专门使用固定pgvector镜像运行真实HTTP/PG/race，不以普通Go测试中的依赖skip代替。真实模型层保留20条查询的全部结果和未命中，不能用合成向量证明检索质量。
-
-Agent v3 S1-B新增的 `TestRun*` 使用真实控制PostgreSQL，并通过独立数据库隔离各用例；实际HTTP故障服务与模型替身的边界见 [Run指南](docs/agent-v3-runs.md)。生产 `agent-control` 只启动Run扫描，不并行运行旧jobs调度器。新Proto生成仍使用 `buf generate`，执行器Go/Python共同fixture与已安装SDK真实HTTP均为门禁。Run定向性能只记录新基线，不改变历史W4失败或AT-25跳过结论。
-
-S1-C1的v2执行器codec/计量顺序使用共同fixture，随`go test -race ./...`与`pytest python/tests`执行。Linux共享BOOTTIME验证还需构建上述S0镜像后运行`docker run --rm --init --network none jobforge-executor-probe:s0 ./clock.test '-test.v' '-test.timeout=30s'`；CI明确执行，不能拿Windows非Linux分支测试替代。它只验证时钟域，不代表正式执行器进程或真实DeepSeek已验收，见[协议指南](docs/agent-v3-executor-protocol.md)。
-
-S1-C2受控HTTP/DeepSeek适配随`pytest python/tests`和Python类型检查执行；CI在Linux运行真实BOOTTIME分支。本地Windows还应按[受控HTTP指南](docs/agent-v3-authorized-http.md)构建并执行`tools/agenthttpcheck/Dockerfile`，验证固定Linux时钟和实际loopback TCP。测试的模型、向量、协调者均为替身，不代表云端推理或持久授权已验收。
-
-S1-C3b按[固定运行时指南](docs/agent-v3-runtime.md)构建`tools/agentruntimecheck/Dockerfile`：`process-check`验证真实进程/race/FD清理，`integration-check`验证真实PostgreSQL/TCP gRPC/正式Worker与合成业务HTTP，`python-check`复现Python全套。CI的`agent-runtime-contract`运行进程/联合检查并构建生产镜像核对registry边界；`python-lint`继续运行Python测试。Windows同样使用Linux容器和`--init`；先`docker compose -f deploy/compose.yaml up -d postgres`并设置`JOBFORGE_TEST_DSN`，容器使用可达的宿主5433地址。同一DSN不能并行运行会清理数据库的测试进程。普通Go测试中的平台/专用环境skip不计正式进程通过。
-
-供应商审计增量还需验证 Go/Python 的 typed report 和 observation.v2 共同向量；真实 PG 首份/重放/冲突/晚到、批次 guard 和迁移往返；`TestRunProviderAuditPythonHTTPContract` 使用安装 SDK 查询真实控制库。`integration-check` 默认包含 `TestRunProviderAuditExecutor`，在实际 guardian/FD/gRPC/PG 中注入 Reserve/report/Observe/Commit 提交前阻塞和提交后 ACK 丢失。合成供应商证明执行机制，不能替代 DeepSeek、40 案评分或生产留存。
-
-运行时变更还需核对源码schema/共同fixture、全部profile的固定executor_version、只读manifest、秘密与FD白名单，以及Commit前真实Wait/EOF/Join/组消失。生产registry仅登记support-fixed-v1与support-agent-v1；测试adapter、测试origin安装器和gold不得进入`deploy/Dockerfile.agent-worker`。support模型/持久方案schema与Go/Python共同fixture随既有测试执行，标准JSON Schema校验使用固定开发依赖jsonschema；离线开发数据与语义锚另运行`python -m pytest tools/support_evaluation`，由CI强制执行，不读取保留集。该层合成供应商只验证机制，不能标记真实DeepSeek、检索质量、40案或整体S1完成。
-
-S3 增量使用 schema3 共同 recovery fixture、真实PG原关闭证明/guard/预算/迁移和安装SDK HTTP，并进入现有固定Linux `integration-check` 的 `TestRunRecovery`。自然30s lease、180s attempt、最多三次恢复及外部代理/Supervisor逐项验证；平台/环境skip不计通过。新增实验准备合同另运行 `pytest tools/support_recovery`、Linux平台mypy，均进入PR CI。生产镜像拒绝测试fault模块/安装器/manifest，详见[恢复指南](docs/agent-v3-recovery.md)。
+版本化 PRD/ADR、数据语料/fixture/gold 和机器证据保持合同/原始事实；改路径同步引用并检查锚点/Linux 大小写。不要为每个移动文件制造空跳转页，不复制两份同等权威正文。
 
 ## 安全问题
 
-不要在公开 Issue 或 Pull Request 中提交未公开漏洞、凭据或敏感数据。请遵循 [SECURITY.md](SECURITY.md) 的私密报告流程。
+未公开漏洞或凭据按 [SECURITY.md](SECURITY.md) 私密报告，不提交到公开 Issue/PR。

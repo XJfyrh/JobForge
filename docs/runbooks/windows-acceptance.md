@@ -1,6 +1,6 @@
 # Windows 验收：时钟与 Worker 启动诊断
 
-适用 Windows 原生 Go/Python + Docker Desktop WSL2 PostgreSQL。测试数据库必须可重建；禁止对演示或生产 DSN 执行 integration，禁止两个测试进程同时重建同一个数据库。
+适用 Windows 原生 Go/Python 快速检查与旧 Job 真实模型层。Run 专用 Linux 执行器/恢复验收见[测试指南](../tests.md#固定-linux-进程与联合检查)。测试数据库必须可重建；禁止对演示或生产 DSN 执行 integration，禁止两个测试进程同时重建同一个数据库。
 
 ## 一次复现
 
@@ -10,7 +10,7 @@
 pwsh -NoProfile -File tools/test-windows.ps1
 ```
 
-真实模型层先按[开发指南](../development.md)启动固定 CPU Ollama、Collector、Jaeger 并准备两个模型，再执行（11435 对应 Compose CPU 测试模型端口）：
+真实模型层先按[旧模型任务](../legacy/real-tasks.md)与[观测指南](../legacy/observability.md)启动固定 CPU Ollama、Collector、Jaeger 并准备两个模型，再执行（11435 对应 Compose CPU 测试模型端口）：
 
 ```powershell
 $env:JOBFORGE_REAL_MODEL_URL = 'http://localhost:11435'
@@ -67,4 +67,4 @@ AT-24 保留 Worker 注册、Poll 错误、慢 Claim 耗时/领取数及提前�
 
 修复仅让 AT-24 使用 Runtime 已有默认 30s Poll RPC 预算，15s readiness、5s 心跳、6s signal 断言全部不变。新增 400ms 有界慢领取回归，旧配置实际以 0/20 启动失败；新配置必须启动并继续通过完整取消、指标与 Trace 断言。没有缩短 lease、绕过 fencing 或把状态改成直接成功。AT-22 另记录 Claim/Complete 耗时，便于把排队积压与数据库往返成本区分。
 
-时钟稳定后仍需按原门槛跑 AT-22/AT-24 以及完整 race；定向通过不覆盖先前整组失败。历史 W4 性能失败、AT-25 P1 跳过、远程模型与生产留存未验收继续见[合并审查记录](../agent-rag-review.md)。
+时钟稳定后仍需按原门槛跑 AT-22/AT-24 以及完整 race；定向通过不覆盖先前整组失败。项目未结事项见[当前限制](../status.md#限制与未结事项)。

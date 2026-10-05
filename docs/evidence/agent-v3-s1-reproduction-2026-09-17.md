@@ -1,8 +1,10 @@
 # S1 收尾：独立环境最小复现记录
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-17（UTC+8）；执行时间约 00:18～00:25。独立 Codex Agent 从 `s1-cloud-launch` 工作树构建，开始时源码 HEAD 为 `3790da9083e5a99277f74aa737e03f801ddefef9`。本记录只证明干净部署、安装 SDK、业务读取和停止/清理步骤；收费模型请求 **0**，本次新 embedding 请求 **0**，不作为新的 40 案云端验收。
 
-操作路线见[云端运行指南](../agent-v3-cloud-batch.md)，业务初始化详细命令见[业务指南](../agent-v3-business.md)。未改 seed、gold、scorer 或保留集；未重跑无关全量测试。
+操作路线见[云端运行指南](../agent-v3/cloud-batch.md)，业务初始化详细命令见[业务指南](../agent-v3/business.md)。未改 seed、gold、scorer 或保留集；未重跑无关全量测试。
 
 ## 环境与构建
 

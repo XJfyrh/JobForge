@@ -1,5 +1,7 @@
 # S1 连续短任务心跳饥饿修复
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 ## 已证实的问题
 
 正式 Worker 在每个 Run 返回后，把下一次 idle heartbeat 推迟到当前时刻后5秒；该 Run 内的 lease heartbeat 同样从新的5秒 ticker开始。连续短于5秒的 Run会先结束并取消该ticker，又不断推迟idle heartbeat。Claim只验证会话，不续约；执行成功不能替代心跳。因此Worker仍工作时，原60秒会话会到期并撤销执行权。

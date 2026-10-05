@@ -1,7 +1,7 @@
 # JobForge PRD v0.6：通用 Agent/RAG 真实执行闭环
 
 - 日期：2026-09-14
-- 状态：当前范围已验收并交付；2026-09-15 Windows 补修后全量分层验收和六项最终 CI 通过，[PR #33](https://github.com/XJfyrh/JobForge/pull/33) squash 合并为 `f30b95a`，ADR-0011/0012 在合并后接受；失败历史及未验收边界见[实施记录](../agent-rag-progress.md)与[合并审查](../agent-rag-review.md)
+- 状态：当前范围已验收并交付；2026-09-15 Windows 补修后全量分层验收和六项最终 CI 通过，[PR #33](https://github.com/XJfyrh/JobForge/pull/33) squash 合并为 `f30b95a`，ADR-0011/0012 在合并后接受；失败历史及未验收边界见[实施记录](../archive/agent-rag-progress.md)与[合并审查](../archive/agent-rag-review.md)
 - 上游：本轮维护者明确授权的三个阶段；v0.1～v0.5 可靠性不变量继续有效
 
 ## 1. 范围与优先级
@@ -53,4 +53,4 @@ Attempt outcome 使用 succeeded / failed_retry / failed_dead / cancelled / leas
 
 ## 6. 完成门禁
 
-完整快速确定性检查、真实 PostgreSQL/race、Python 契约、真实模型、真实进程恢复、观测后端验证均实际运行，报告通过/失败/跳过/无法运行。修改热路径前后同环境定向性能比较，继续披露历史 W4 Claim 绝对门禁。交付可复现 Compose、SDK 安装、启动/清理命令、架构/故障/扩展指南、三分钟演示及产物检查方法。任何未完成项保留在[实施记录](../agent-rag-progress.md)，不标记整体完成。
+完整快速确定性检查、真实 PostgreSQL/race、Python 契约、真实模型、真实进程恢复、观测后端验证均实际运行，报告通过/失败/跳过/无法运行。修改热路径前后同环境定向性能比较，继续披露历史 W4 Claim 绝对门禁。交付可复现 Compose、SDK 安装、启动/清理命令、架构/故障/扩展指南、三分钟演示及产物检查方法。任何未完成项保留在[实施记录](../archive/agent-rag-progress.md)，不标记整体完成。

@@ -1,9 +1,9 @@
 # JobForge PRD v0.7：可恢复业务 Agent
 
 - 日期：2026-09-16。
-- 状态：本详细契约随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 于2026-09-16通过S0评审；[路线 v3](../plans/agent-execution-roadmap-v3.md)的S1～S5功能尚未实现或验收。
+- 状态：本详细契约随 [PR #35](https://github.com/XJfyrh/JobForge/pull/35) 于2026-09-16通过S0评审；[路线 v3](../archive/plans/agent-execution-roadmap-v3.md)的S1～S5功能尚未实现或验收。
 - 决策记录：[ADR-0013](../adr/0013-durable-agent-run-and-step-commit.md)、[ADR-0014](../adr/0014-supervised-python-executor-and-call-budget.md)、[ADR-0015](../adr/0015-approved-business-actions-and-receipts.md)。
-- 实施与验证：[S0 记录](../agent-v3-progress.md)。旧版本验收保持历史事实，不构成本版通过证据。
+- 实施与验证：[S0 记录](../archive/agent-v3-progress.md)。旧版本验收保持历史事实，不构成本版通过证据。
 - 2026-09-16 模型主线修订：按维护者反馈采用云端主chat，本地chat为可选扩展；该调整发生于S0评审期间，不改写此前已接受ADR或本地试验历史。
 
 ## 1. 产品范围
@@ -110,7 +110,7 @@ ACTION_CONFLICT 终止旧方案，重新核查需新 Run 和新批准。重新�
 
 已授权的物理请求次数不随 usage 结算退回；结算只调整 token/费用。physical_call_id 穿透 Go/Python 消息，同一执行器重复帧不能再次发请求；无法确认命令已执行时保留 unknown，重发需新调用 ID 和新额度。“一个在途步骤”限定当前有效本地执行器，故障后远端旧计算可能与新 attempt 重叠，不能解释为供应商全局并发保证。
 
-云端主线已确定，首选候选与费用方案见[路线v3](../plans/agent-execution-roadmap-v3.md#5-模型安全和费用从第一条链路开始具备)，具体可用账号、凭据和预算B仍待落实。在任何收费请求（包括探测）前必须确认B、计价版本和可保守上界的模式；本轮方向调整不等于费用授权。上述缺口只阻挡实际收费调用，不阻挡云端适配、持久调用账本、真实业务工具和确定性测试的实现。
+云端主线已确定，首选候选与费用方案见[路线v3](../archive/plans/agent-execution-roadmap-v3.md#5-模型安全和费用从第一条链路开始具备)，具体可用账号、凭据和预算B仍待落实。在任何收费请求（包括探测）前必须确认B、计价版本和可保守上界的模式；本轮方向调整不等于费用授权。上述缺口只阻挡实际收费调用，不阻挡云端适配、持久调用账本、真实业务工具和确定性测试的实现。
 
 profile固定供应商/部署地域、服务端配置的HTTPS endpoint、模型快照或可取得的版本标识、参数、执行器及工具Schema；不要求云端供应商提供权重digest。客户端payload或模型不能决定endpoint和凭据，不自动跨供应商切换。embedding独立固定模型身份、维度与索引版本；无论本地或云端均需真实检索验收，收费embedding也纳入额度。
 

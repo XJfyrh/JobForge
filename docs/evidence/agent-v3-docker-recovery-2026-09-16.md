@@ -1,5 +1,7 @@
 # Docker 恢复后 S0 复验与合并
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 - 日期：2026-09-16，Asia/Shanghai。
 - 被测源码：`ace6b74520de4bc7baff08a8cb2a91f3ae9b842a`。
 - [PR #35](https://github.com/XJfyrh/JobForge/pull/35)于 `2026-09-16T04:19:10Z` squash合并，提交 `1bf92c2f936c9011f8fc571b880ff2373305e6fc`；两者代码树相同。

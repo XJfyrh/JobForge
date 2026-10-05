@@ -1,5 +1,7 @@
 # Agent v3 S1-B：Run Claim 与调用账本定向基线
 
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
 日期：2026-09-16。对应 [PRD v0.9 B-10](../product/JobForge_PRD_v0.9.md) 与 [ADR-0017](../adr/0017-run-admission-and-call-ledger.md)。
 
 本次完成真实 PostgreSQL 上的新 Run 查询计划与定向测量。**这是新路径自身的 candidate 基线，不是性能门禁通过，也不是相对旧 Run 的提升结论。此前没有同契约的 Run 基线；旧 W4 性能门禁失败、AT-25 跳过、真实模型与生产留存未验收继续保留。**

@@ -5,7 +5,7 @@
 > 创建日期：2026-08-04  
 > 基线版本：PRD v0.1（S0–W7 已全部交付）  
 > 计划周期：约 4 周；可裁剪为 3 周  
-> 前置文档：[PRD v0.1](JobForge_PRD_v0.1.md)、[架构](../architecture.md)、[故障语义](../failure-semantics.md)、[性能基线](../benchmark.md)、[ADR 索引](../adr/README.md)
+> 前置文档：[PRD v0.1](JobForge_PRD_v0.1.md)、[架构](../architecture.md)、[故障语义](../legacy/failure-semantics.md)、[性能基线](../benchmark.md)、[ADR 索引](../adr/README.md)
 
 本文档不重写 v0.1 已固定的产品边界。v0.1 中的状态机、并发规则、交付语义、错误分类和性能门禁在本版本中**全部沿用**，本文仅在其上叠加下一阶段的增量需求。凡与 v0.1 冲突的语义变更，必须先通过 ADR，不在本文档中擅自引入。
 

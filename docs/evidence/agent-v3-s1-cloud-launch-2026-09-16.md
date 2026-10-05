@@ -1,6 +1,8 @@
 # S1 云端运行与评分入口
 
-日期：2026-09-16。基线为 [PR #50](https://github.com/XJfyrh/JobForge/pull/50)；按已接受 [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 实现。运行命令见[云端批次指南](../agent-v3-cloud-batch.md)。以下确定性检查与[真实DeepSeek首批结果](agent-v3-s1-first-cloud-2026-09-16.md)分开：真实批次未通过，PR #51暂不合并。
+> 历史快照：以下状态、失败或待实施事项属于文件日期，不是当前阶段结论。最终结果见[证据索引](README.md)，当前实现见[状态页](../status.md)。
+
+日期：2026-09-16。基线为 [PR #50](https://github.com/XJfyrh/JobForge/pull/50)；按已接受 [ADR-0021](../adr/0021-first-cloud-batch-admission-and-launcher.md) 实现。运行命令见[云端批次指南](../agent-v3/cloud-batch.md)。以下确定性检查与[真实DeepSeek首批结果](agent-v3-s1-first-cloud-2026-09-16.md)分开：真实批次未通过，PR #51暂不合并。
 
 ## 需求与实现
 

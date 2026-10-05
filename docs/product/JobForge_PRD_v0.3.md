@@ -7,7 +7,7 @@
 > 基线版本：[PRD v0.2](JobForge_PRD_v0.2.md)（已全部交付；后续加固项见 §1.2）<br>
 > 代码基线：`e6b2ef3`（migrations 0001~0012）<br>
 > 计划周期：5 周核心版；第 6 周为可裁剪的低延迟控制流扩展<br>
-> 前置文档：[PRD v0.2](JobForge_PRD_v0.2.md)、[PRD v0.1](JobForge_PRD_v0.1.md)、[架构](../architecture.md)、[故障语义](../failure-semantics.md)、[可靠性报告](../reliability-report.md)、[性能基线](../benchmark.md)、[ADR 索引](../adr/README.md)
+> 前置文档：[PRD v0.2](JobForge_PRD_v0.2.md)、[PRD v0.1](JobForge_PRD_v0.1.md)、[架构](../architecture.md)、[故障语义](../legacy/failure-semantics.md)、[可靠性报告](../reliability-report.md)、[性能基线](../benchmark.md)、[ADR 索引](../adr/README.md)
 
 本文档是 v0.2 完成后下一阶段的产品范围定稿。v0.1/v0.2 已固定的状态机、lease、fencing、at-least-once、终态不可变、PostgreSQL 唯一事实源和安全边界继续有效。D1–D4 只确认产品范围与验收口径；本文中的关键依赖、并发语义与 Worker 通道调整在编码前仍必须先通过 §11 的新 ADR。本 PRD 不替代 ADR，也不授权改写已接受 ADR 的历史结论。
 

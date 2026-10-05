@@ -1,6 +1,6 @@
 # 正式运行时的输入投影
 
-依据 [ADR-0018](../../../docs/adr/0018-deepseek-fixed-flow-and-executor.md)、[ADR-0019](../../../docs/adr/0019-executor-confirmation-and-exit-contract.md)及 [ADR-0020](../../../docs/adr/0020-provider-audit-and-batch-stop.md)。这是内部 v2 `execute_step` 的登记输入，审计版本协调升级源合同与固定镜像；不引入新的存储 checkpoint 或调度语义。
+依据 [ADR-0018](../../../docs/adr/0018-deepseek-fixed-flow-and-executor.md)、[ADR-0019](../../../docs/adr/0019-executor-confirmation-and-exit-contract.md)、[ADR-0020](../../../docs/adr/0020-provider-audit-and-batch-stop.md)、[ADR-0024](../../../docs/adr/0024-bounded-support-agent.md)及[ADR-0025](../../../docs/adr/0025-confirmed-step-recovery.md)。这是内部 v2 `execute_step` 的登记输入，审计版本协调升级源合同与固定镜像；不引入新的存储 checkpoint 或调度语义。
 
 [源码 schema](runtime-input.schema.json) 的根对象恰为 `{"input": execute_step.input, "checkpoint": execute_step.checkpoint}`。它描述字段形状；字节上限、原始 JSON 严格性、资源绑定、提交链及部署 allowlist 仍由代码验证。JSON Schema 的 `integer` 不区分数字词法 `1` 与 `1.0`，运行时只接受整数词法。
 
@@ -11,9 +11,9 @@
 | 字段 | 合同 |
 | --- | --- |
 | `schema_version` | 整数 `1` |
-| `executor_version` | 固定 `linux-v2-audit-runtime-1` |
+| `executor_version` | 登记的 audit / agent / recovery runtime，完整对应表见[运行时](../../../docs/agent-v3/runtime.md) |
 | `adapter_id` | 现有 `ValidIdentifier` ASCII 1～128 字符规则；来自可信部署 manifest |
-| `tool_invocation_id` | `get_order/get_delivery/search_policy` 为 Go 已确认 BeginTool 的 UUID；其余四种步骤恰为 `""` |
+| `tool_invocation_id` | `get_order/get_delivery/search_policy` 为 Go 已确认 BeginTool 的 UUID；其余非工具步骤恰为 `""` |
 | `expected_response_model` | `deepseek-flash`；来自不可变 profile，不能由请求 payload 指定 |
 | `provider_audit_policy` | `deepseek-audit-v1`；来自同份 profile |
 

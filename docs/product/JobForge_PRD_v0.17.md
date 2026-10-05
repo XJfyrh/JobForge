@@ -1,7 +1,7 @@
 # JobForge PRD v0.17：S3 持久步骤与故障恢复
 
 - 日期：2026-10-04（Asia/Shanghai）；状态：**Accepted（独立方案审查通过，随本决策 PR 合并生效）；实现与验收另行记录**。
-- 对应：[ADR-0025](../adr/0025-confirmed-step-recovery.md)、[实施与验收计划](../plans/agent-v3-s3-recovery.md)。
+- 对应：[ADR-0025](../adr/0025-confirmed-step-recovery.md)、[实施与验收计划](../archive/plans/agent-v3-s3-recovery.md)。
 - 起点：`main@e2b9bad`（[PR #56](https://github.com/XJfyrh/JobForge/pull/56)）。S2 冻结40案业务37/40、安全40/40完整且硬失败0；不重做S1/S2。
 
 ## 产品结果

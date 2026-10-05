@@ -1,18 +1,18 @@
 # Support batch evidence and offline scoring
 
-The fixed cloud batch now has a single [reproducible runbook](../../docs/agent-v3-cloud-batch.md): offline `agent-control prepare-support`, pre-Submit `assemble register`, disabled bootstrap/read-only inspection, one Linux launcher/Worker/SDK driver, then append-only export, `assemble collect` and offline scoring. The shared limit remains 5 CNY over six hours for the registered 40 cases. This implementation is not evidence that the real cloud batch has run or passed.
+Use the [batch runbook](../../docs/agent-v3/cloud-batch.md) for prepare/register, disabled bootstrap/inspection, one launcher/Worker/SDK driver and append-only export. This tool validates evidence and scores offline; current results are in the [evidence index](../../docs/evidence/README.md). Batch limits are frozen per authorized deployment and profile, with all prior known/held exposure retained.
 
 `launcher.py`, `driver.py` and `export.py` are the only modules copied into the batch image. They keep case state and use the public SDK; the fixed Go Worker retains execution authority. `assemble.py` and `business_audit.sql` join actual protected exports, outbound metadata and separately sampled read-only business facts. Data, gold, predicates, scoring and synthetic fixtures stay outside that image. Local MiniLM supplies embeddings; DeepSeek supplies the main proposal inference.
 
 ## Offline data validation
 
-Run from the repository root:
+Run from the repository root after the [development setup](../../docs/development.md). The final type-check command uses POSIX environment syntax; Windows equivalents are in the [test guide](../../docs/tests.md):
 
-```text
+```sh
 python -m tools.support_evaluation.validate_data
 python -m tools.support_evaluation.score --registration registration.json --evidence evidence.json
 python -m pytest tools/support_evaluation
-mypy --explicit-package-bases tools/support_evaluation
+MYPYPATH=python:sdk/python mypy --explicit-package-bases tools/support_evaluation
 ```
 
 The data validator reads only its literal allowlist under `examples/support-agent`.
@@ -44,10 +44,10 @@ The validator's seed-derived document shapes are data QA fixtures. They do not
 prove that a source was returned to a Run. The scorer requires separate actual
 Run/steps/result/calls exports and independently recorded safety evidence.
 The complete scorer and its actual deployment registration must be reviewed and frozen before the first Submit;
-these offline checks do not complete C-05, C-06, C-07 or S1. The v2 policy wording and
+offline validation alone does not establish actual Run provenance or model quality. The v2 policy wording and
 anchors passed independent Agent review. Real v2 indexing/retrieval was run
 separately, with [recorded results](../../docs/evidence/agent-v3-s1-support-retrieval-v2-2026-09-16.json).
-Cloud execution remains unaccepted; validation, assembly and scoring make no model calls.
+Validation, assembly and scoring make no model calls; actual cloud results are linked from the evidence index.
 
 ## Scorer inputs and execution
 
@@ -79,7 +79,9 @@ in the evidence file. It contains:
   `anchors_sha256`, `corpus_sha256`, exactly matching the validated package.
 - `profile`: `profile_id`, `profile_hash`, `strategy: "support_fixed_v1"` or `"support_agent_v1"`,
   `proposal_schema: "support-proposal-v1"`,
-  `executor_version: "linux-v2-audit-runtime-1"` for fixed or `"linux-v2-agent-runtime-1"` for agent,
+  `executor_version: "linux-v2-audit-runtime-1"` for fixed, or
+  `"linux-v2-agent-runtime-1"` / `"linux-v2-recovery-runtime-1"` for agent;
+  see the [runtime version table](../../docs/agent-v3/runtime.md),
   `expected_response_model: "deepseek-flash"`,
   `provider_audit_policy: "deepseek-audit-v1"`, `price_hash`, `budget_batch_id`,
   `max_input_tokens`, `max_output_tokens: 1024`, `pricing`, and `origins`.
