@@ -11,7 +11,7 @@
 | S4 | 人工审批、Go结论记录、独立动作许可、终态效果核对与回执优先retry | [固定 10 个源样本及 2 个后继](evidence/agent-v3-s4-cloud-2026-10-05.md)，原方案业务质量 10/10、机制 10/10，7 条唯一业务回执；真实层获独立接受 |
 | S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [免费机制证据](evidence/agent-v3-s5-free-2026-10-07.md)；收费前审查、开发回归与正式20案仍待执行，未见集未创建/未打开 |
 
-`awaiting_approval` 表示持久方案可供审阅。旧 schema 1–3 保持只读；新 S4 profile 的批准/动作语义见[审批指南](agent-v3/approval.md)。applied 只证明结论记录/工单标记已提交，不表示客户问题已解决。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
+任务页面支持审阅方案，批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
 
 S5 的剩余范围和门槛见[验收矩阵](agent-v3/s5-acceptance.md)。免费机制通过不替代真实 DeepSeek 方案质量、恢复成本对照及正式20案验收。
 
