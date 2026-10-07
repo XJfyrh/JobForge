@@ -10,6 +10,34 @@ info:
 security:
 - BearerAuth: []
 paths:
+  /v2/identity:
+    get:
+      operationId: getIdentity
+      summary: Read the current authenticated tenant, role and stable actor
+      description: Identity comes only from server configuration. This response grants no permission.
+      responses:
+        '200':
+          description: Current identity
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tenant_id, role, actor_id]
+                properties:
+                  tenant_id: {type: string}
+                  role: {type: string, enum: [reader, operator, approver]}
+                  actor_id: {type: string}
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
   /v2/runs:
     post:
       operationId: submitRun
@@ -57,6 +85,12 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '410':
+          description: "REQUEST_EXPIRED: protected content was actually purged; original keys never recreate a Run"
           content:
             application/json:
               schema:
@@ -266,6 +300,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+        '410':
+          description: "RESULT_EXPIRED: checkpoint content was purged"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '500':
           description: INTERNAL
           content:
@@ -390,6 +430,12 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '410':
+          description: "RESULT_EXPIRED: result content was purged"
           content:
             application/json:
               schema:
@@ -670,6 +716,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+        '410':
+          description: "RESULT_EXPIRED: proposal content was purged"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '500':
           description: INTERNAL
           content:
@@ -729,6 +781,12 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
         '429':
           description: QUEUE_OVERLOADED / RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '410':
+          description: "RESULT_EXPIRED: proposal content was purged"
           content:
             application/json:
               schema:
@@ -1398,6 +1456,8 @@ components:
       - cancel_requested_at
       - created_at
       - updated_at
+      - terminal_at
+      - content_purged_at
       - budget
       properties:
         run_id:
@@ -1524,6 +1584,18 @@ components:
         updated_at:
           type: string
           format: date-time
+        terminal_at:
+          description: First terminal transition; legacy rows conservatively start at migration time.
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        content_purged_at:
+          description: Protected checkpoint/approval/result content is unavailable after cleanup; identities and budget facts remain.
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         budget:
           $ref: '#/components/schemas/RunBudget'
       description: Only Run is schedulable. S1-B can produce no_action; applied/rejected remain reserved

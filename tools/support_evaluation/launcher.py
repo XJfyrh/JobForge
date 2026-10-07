@@ -61,7 +61,7 @@ def prepare_state(manifest: dict[str, Any], raw: bytes) -> None:
     (directory / "lock").touch(mode=0o600, exist_ok=False)
 
 
-def child_environment(worker: bool) -> dict[str, str]:
+def child_environment(worker: bool, *, s5: bool = False) -> dict[str, str]:
     """Pass control credentials/config only to the fixed Go process."""
     environment = {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
@@ -74,6 +74,14 @@ def child_environment(worker: bool) -> dict[str, str]:
             "JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE",
             "JOBFORGE_AGENT_GATEWAY",
             "JOBFORGE_AGENT_GRPC_TLS",
+        ):
+            if key in os.environ:
+                environment[key] = os.environ[key]
+    if s5:
+        for key in (
+            "JOBFORGE_OTEL_EXPORTER",
+            "OTEL_EXPORTER_OTLP_ENDPOINT",
+            "JOBFORGE_OTEL_SAMPLE_RATIO",
         ):
             if key in os.environ:
                 environment[key] = os.environ[key]
@@ -93,7 +101,7 @@ def finish(process: subprocess.Popen[bytes]) -> bool:
         return False
 
 
-def launch(manifest: dict[str, Any], raw: bytes) -> int:
+def launch(manifest: dict[str, Any], raw: bytes, *, s5: bool = False) -> int:
     """Hold one local startup lock while owning both fixed child lifecycles."""
     import fcntl
 
@@ -139,7 +147,7 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
         try:
             worker = subprocess.Popen(
                 [WORKER],
-                env=child_environment(True),
+                env=child_environment(True, s5=s5),
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 # Worker emits only fixed error categories and process facts.
@@ -147,8 +155,15 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
             )
             children.append(worker)
             driver = subprocess.Popen(
-                [sys.executable, "-m", "tools.support_evaluation.driver", "launch"],
-                env=child_environment(False),
+                [
+                    sys.executable,
+                    "-m",
+                    "tools.support_s5.driver"
+                    if s5
+                    else "tools.support_evaluation.driver",
+                    "launch",
+                ],
+                env=child_environment(False, s5=s5),
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -197,7 +212,7 @@ def launch(manifest: dict[str, Any], raw: bytes) -> int:
         return 0 if successful and clean else 1
 
 
-def main() -> int:
+def main(*, s5: bool = False) -> int:
     """Use only installed fixed commands and paths; launch is Linux-only."""
     try:
         raw = (CONFIG / "launch.json").read_bytes()
@@ -207,7 +222,7 @@ def main() -> int:
             return 0
         if sys.argv[1:]:
             raise ValueError("INVALID_COMMAND")
-        return launch(manifest, raw)
+        return launch(manifest, raw, s5=s5)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         print("support batch stopped; inspect private evidence", file=sys.stderr)
         return 1

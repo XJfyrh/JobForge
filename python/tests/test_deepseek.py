@@ -41,6 +41,26 @@ from jobforge_agent.dispatch import (
 from jobforge_agent.errors import ToolError
 from jobforge_agent.protocol_v2 import MAX_INTEGER, observation_hash, usage_hash
 
+
+def test_fixed_comparison_and_agent_share_exact_input_envelope() -> None:
+    """A new frozen fixed runtime gets the same request cap, without truncation."""
+    messages = [{"role": "user", "content": "x" * 20000}]
+    old = RunCallContext("a" * 64, "b" * 64, "")
+    fixed = RunCallContext("a" * 64, "b" * 64, "", wide_context=True)
+    agent = RunCallContext("a" * 64, "b" * 64, "", agent=True)
+    with pytest.raises(DispatchError):
+        prepare_chat_request(messages, context=old)
+    assert (
+        prepare_chat_request(messages, context=fixed).body
+        == prepare_chat_request(messages, context=agent).body
+    )
+    for context in (fixed, agent):
+        with pytest.raises(DispatchError):
+            prepare_chat_request(
+                [{"role": "user", "content": "x" * 65537}], context=context
+            )
+
+
 CALL_ID = "00000000-0000-4000-8000-000000000006"
 CONTEXT = RunCallContext("a" * 64, "b" * 64, "")
 MESSAGES = [{"role": "user", "content": "Return a synthetic JSON object."}]

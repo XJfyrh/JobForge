@@ -24,6 +24,7 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/jsonstrict"
 	"github.com/xjfyrh/jobforge/internal/migrate"
+	"github.com/xjfyrh/jobforge/internal/observability"
 	agentrun "github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/run/grpcapi"
@@ -89,6 +90,9 @@ func main() {
 }
 
 func command(ctx context.Context, args []string) error {
+	if len(args) > 0 && args[0] == "cleanup-terminal" {
+		return cleanupTerminal(ctx, args[1:])
+	}
 	if len(args) > 0 && args[0] == "prepare-support" {
 		return prepareSupport(args[1:])
 	}
@@ -317,6 +321,16 @@ func loadCredentials(workers []agentrun.WorkerConfig, tenants []string) (credent
 }
 
 func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, options runpostgres.Options, tenants []string) error {
+	shutdownTracing, err := observability.SetupRunTracing(ctx, "jobforge-agent-control")
+	if err != nil {
+		return err
+	}
+	defer shutdownTracing()
+	go func() {
+		if observability.ServeRunMetrics(ctx, address("JOBFORGE_METRICS_ADDR", "127.0.0.1:6063"), pool) != nil && ctx.Err() == nil {
+			slog.Warn("Run metrics listener unavailable")
+		}
+	}()
 	configured, err := loadCredentials(options.Workers, tenants)
 	if err != nil {
 		return err
@@ -387,6 +401,8 @@ func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, op
 func checkControlReady(ctx context.Context, pool *pgxpool.Pool) error {
 	var ready bool
 	err := pool.QueryRow(ctx, `select to_regclass('public.runs') is not null
+		and exists(select 1 from information_schema.columns where table_schema='public' and table_name='runs' and column_name='content_purged_at')
+		and exists(select 1 from information_schema.columns where table_schema='public' and table_name='runs' and column_name='trace_context')
 		and to_regclass('public.physical_calls') is not null
 		and to_regclass('public.run_steps') is not null
 		and to_regclass('public.action_authorizations') is not null

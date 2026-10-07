@@ -113,16 +113,25 @@ class Driver:
     """Own only case bookkeeping and single-exchange SDK calls."""
 
     def __init__(
-        self, manifest: dict[str, Any], output: Path, keys: dict[str, str]
+        self,
+        manifest: dict[str, Any],
+        output: Path,
+        keys: dict[str, str],
+        *,
+        case_count: int = 40,
     ) -> None:
         """Bind the fixed manifest and fresh private output directory."""
         self.manifest, self.output, self.keys = manifest, output, keys
         self.stopped = False
         self.deadline = instant(manifest["valid_until"])
         cases = manifest["cases"]
-        if len(cases) != 40 or len({row["case_id"] for row in cases}) != 40:
+        if (
+            case_count not in {20, 40}
+            or len(cases) != case_count
+            or len({row["case_id"] for row in cases}) != case_count
+        ):
             raise BatchStopped("CASE_REGISTRATION_INVALID")
-        if [row["ordinal"] for row in cases] != list(range(1, 41)):
+        if [row["ordinal"] for row in cases] != list(range(1, case_count + 1)):
             raise BatchStopped("CASE_ORDER_INVALID")
         self.rows = [
             dict(row, status="unattempted", run_id=None, error_code="") for row in cases
@@ -237,7 +246,7 @@ def export_known(
     atomic_json(target / "rows.json", {"schema_version": 1, "cases": rows})
 
 
-def main() -> int:
+def main(*, s5: bool = False) -> int:
     """The launch mode is invoked only by the fixed parent supervisor."""
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("launch", "export"))
@@ -262,7 +271,12 @@ def main() -> int:
                 raise BatchStopped("ORIGINAL_EXPORT_REQUIRED")
             export_known(manifest, args.original, output, keys)
         else:
-            driver = Driver(manifest, output, keys)
+            driver = Driver(
+                manifest,
+                output,
+                keys,
+                case_count=(20 if s5 and len(manifest["cases"]) == 20 else 40),
+            )
             signal.signal(signal.SIGTERM, driver.stop)
             signal.signal(signal.SIGINT, driver.stop)
             driver.run()

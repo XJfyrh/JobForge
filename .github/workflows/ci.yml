@@ -136,6 +136,8 @@ jobs:
         run: PYTHONPATH=python:sdk/python python -m pytest tools/support_recovery
       - name: S4 source bindings and approval evidence (offline, no model calls)
         run: PYTHONPATH=python:sdk/python python -m pytest tools/support_approval
+      - name: S5 comparison and stopped backup evidence (offline, no model calls)
+        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_s5 tools/support_lifecycle
       - name: Validate SQLFluff historical baseline
         run: python tools/check_sqlfluff_baseline.py
       - name: SQLFluff migrations
@@ -156,6 +158,8 @@ jobs:
         run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
       - name: S4 experiment types
         run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_approval
+      - name: S5 experiment and retention tool types
+        run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_s5 tools/support_lifecycle
 
   business-contract:
     name: Agent S1 business (real pgvector, HTTP, race)
@@ -280,6 +284,17 @@ jobs:
           PY
           docker run --rm --init --network none --entrypoint python --mount "type=bind,source=$RUNNER_TEMP/support-approval-sources.json,target=/tmp/expected.json,readonly" jobforge-support-approval:acceptance -I -c 'import hashlib,json,sys; from pathlib import Path; sys.path.insert(0,"/app"); from tools.support_approval.driver import verify_release; from tools.support_approval.report import report; expected=json.loads(Path("/tmp/expected.json").read_bytes()); assert expected; assert all(hashlib.sha256((Path("/app")/path).read_bytes()).hexdigest()==digest for path,digest in expected.items()); print("Frozen operator sources verified:",len(expected))'
 
+      - name: Verify S5 external operator sources and scorer imports
+        run: |
+          docker build --build-arg OPERATOR_IMAGE=jobforge-support-approval:acceptance -f deploy/Dockerfile.support-s5 -t jobforge-support-s5:acceptance .
+          python - "$RUNNER_TEMP/support-s5-sources.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          files = [path for path in Path("tools/support_s5").iterdir() if path.suffix == ".py" and not path.name.startswith("test_")]
+          Path(sys.argv[1]).write_text(json.dumps({path.as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}), encoding="utf-8")
+          PY
+          docker run --rm --init --network none --entrypoint python --mount "type=bind,source=$RUNNER_TEMP/support-s5-sources.json,target=/tmp/expected.json,readonly" jobforge-support-s5:acceptance -I -c 'import hashlib,json,sys; from pathlib import Path; sys.path.insert(0,"/app"); from tools.support_s5.driver import main; from tools.support_s5.freeze import validate; from tools.support_s5.score import score_export; expected=json.loads(Path("/tmp/expected.json").read_bytes()); assert expected; assert all(hashlib.sha256((Path("/app")/path).read_bytes()).hexdigest()==digest for path,digest in expected.items()); assert not Path("/app/examples/support-agent/evaluation").exists(); print("S5 operator sources verified:",len(expected))'
+
   observability-config:
     name: Prometheus rules & generated dashboard
     runs-on: ubuntu-latest
@@ -290,7 +305,11 @@ jobs:
         run: |
           python tools/generate_task_dashboard.py
           git diff --exit-code -- deploy/grafana/dashboards/jobforge-tasks.json
+          python tools/generate_run_dashboard.py
+          git diff --exit-code -- deploy/grafana/run-dashboards/jobforge-runs.json
       - name: Validate and test alert rules
         run: |
           docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
           docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/run.yml
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/run-alerts.test.yml

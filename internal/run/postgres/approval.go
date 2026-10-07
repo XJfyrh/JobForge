@@ -13,6 +13,9 @@ import (
 
 func approvalView(ctx context.Context, tx pgx.Tx, r agentrun.Run, now time.Time) (agentrun.ApprovalView, string, error) {
 	v := agentrun.ApprovalView{RunID: r.ID}
+	if r.ContentPurgedAt != nil {
+		return v, "", agentrun.ErrResultExpired
+	}
 	err := tx.QueryRow(ctx, `select status,proposal_hash,proposal_ref,permission_expires_at,
 		decision_operation_id,actor_id,decided_at from run_approvals where tenant_id=$1 and run_id=$2`, r.TenantID, r.ID).
 		Scan(&v.Status, &v.ProposalHash, &v.ProposalRef, &v.PermissionExpiresAt, &v.ApprovalID, &v.ActorID, &v.DecidedAt)
@@ -80,6 +83,9 @@ func (s *Store) DecideApproval(ctx context.Context, tenant, id, actor, key strin
 		r, a, err := lockRun(ctx, tx, tenant, id)
 		if err != nil {
 			return err
+		}
+		if r.ContentPurgedAt != nil {
+			return agentrun.ErrResultExpired
 		}
 		prior, err := findOperation(ctx, tx, tenant, "approval", id, key)
 		if err == nil {

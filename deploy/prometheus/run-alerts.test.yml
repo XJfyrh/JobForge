@@ -1,0 +1,49 @@
+rule_files: [run-alerts.yml]
+evaluation_interval: 5s
+tests:
+  - interval: 5s
+    input_series:
+      - series: 'jobforge_run_budget_frozen{scope="batch"}'
+        values: '1 1 1'
+      - series: 'jobforge_run_budget_max_ratio{scope="batch"}'
+        values: '0.89 0.9 0.95'
+      - series: 'jobforge_run_action_calls{kind="action_write",status="unknown"}'
+        values: '1 1 1'
+    alert_rule_test:
+      - eval_time: 10s
+        alertname: JobForgeRunBudgetFrozen
+        exp_alerts:
+          - exp_labels: {severity: critical, scope: batch}
+            exp_annotations: {summary: "Budget frozen; inspect unknown exposure before any continuation"}
+      - eval_time: 0s
+        alertname: JobForgeRunBudgetNearLimit
+        exp_alerts: []
+      - eval_time: 5s
+        alertname: JobForgeRunBudgetNearLimit
+        exp_alerts:
+          - exp_labels: {severity: warning, scope: batch}
+            exp_annotations: {summary: "One account has at least 90 percent known plus held exposure"}
+      - eval_time: 10s
+        alertname: JobForgeRunUnknownAction
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations: {summary: "Action write outcome is unknown; query the original receipt"}
+  - interval: 5s
+    input_series:
+      - series: 'jobforge_run_current{state="ready"}'
+        values: '1+0x10'
+      - series: 'jobforge_run_workers_live'
+        values: '0+0x10'
+      - series: 'jobforge_run_snapshot_success'
+        values: '0+0x10'
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: JobForgeRunWithoutWorkers
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations: {summary: Ready Runs have no live Worker}
+      - eval_time: 15s
+        alertname: JobForgeRunSnapshotUnavailable
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations: {summary: Run state snapshot unavailable}

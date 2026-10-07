@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "kind": "s5-free-mechanism-and-local-retrieval",
+  "recorded_at": "2026-10-07T08:30:05.479454+00:00",
+  "branch": "XJfyrh/feat/agent-v3-s5",
+  "base_commit": "bf941b6f3754c5aec2410c7ee640d3d783d76d19",
+  "source_dirty_at_free_checks": true,
+  "real_cloud_calls": 0,
+  "formal_package_created": false,
+  "candidate_freeze_created": false,
+  "quality_acceptance": "pending_real_development_and_formal_runs",
+  "ui": {
+    "approve": "passed_applied_unique_receipt",
+    "reject": "passed_rejected_no_effect",
+    "version_conflict": "passed_ACTION_CONFLICT_unknown",
+    "cancel": "passed",
+    "roles_origin_text_safety": "passed",
+    "final_minor_copy": "independent_source_review"
+  },
+  "tracing": {
+    "original_sdk_submit_links": 5,
+    "attempts": 5,
+    "human_wait_in_attempt": false,
+    "python_call_timing": "verified_ipc_go_bridge_permit_to_observation",
+    "initial_missing_links": "failed_before_flags_fix_preserved"
+  },
+  "observability": {
+    "grafana": "passed_actual_page",
+    "promql_queries_passed": 14,
+    "alert_rule_cases_passed": 7,
+    "collector_outage_to_approval_seconds": 9.703
+  },
+  "retention": {
+    "real_pg_race": "passed",
+    "terminal_days": 7,
+    "active_and_pending_preserved": true,
+    "unknown_hold_and_freeze_preserved": true,
+    "accepted_get_post_approval_expired_410": "passed",
+    "business_content": "fully_retained_no_deletion_entrypoint"
+  },
+  "backup_restore": {
+    "passed": true,
+    "hba_restored": true,
+    "control_tables_equal": 31,
+    "business_tables_equal": 11,
+    "network": "none",
+    "application_roles": "NOLOGIN",
+    "enabled_profiles": [],
+    "workers": [],
+    "installed_sdk_replay": "passed",
+    "receipt_only_replay": "passed",
+    "relational_31_day_aging": "passed_after_dump_equality_check",
+    "original_signed_action_and_receipt_json_hashes": "unchanged"
+  },
+  "local_retrieval": {
+    "queries": 20,
+    "returned": 20,
+    "hits_at_3": 19,
+    "mrr_at_3": 0.8083333333333333,
+    "misses": [
+      "RQ-06"
+    ],
+    "embedding_model": "all-minilm:22m",
+    "dimensions": 384,
+    "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef"
+  },
+  "finite_performance": {
+    "host": "Windows 11, Docker Desktop Linux containers",
+    "cpu": "AMD Ryzen 7 7840HS",
+    "logical_cpus": 16,
+    "physical_memory_bytes": 33585242112,
+    "concurrency": 1,
+    "read_api_count": 100,
+    "read_api_p95_ms": 17.184,
+    "read_budget_unchanged": true,
+    "checkpoint_commit_rpc_count": 33,
+    "checkpoint_commit_rpc_p95_ms": 151.262,
+    "checkpoint_scope": "five corrected attempts from three SDK Runs; includes network and ACK",
+    "natural_action_recovery": {
+      "elapsed_ms": 31015,
+      "attempts": 3,
+      "receipt_queries": 2,
+      "new_model_calls": 0,
+      "business_writes": 1,
+      "scope": "real committed business response loss + Worker process death through natural 30s lease/backoff to receipt-first terminal completion",
+      "test": "TestRunApprovalExecutorRealBusinessNaturalRecovery/commit_loss",
+      "log_sha256": "8c2e3787f7590c36a3e26c9b7847a0c9c2e89d838ed1acb9d79926e0d96d146d",
+      "samples": 1
+    }
+  },
+  "engineering": {
+    "go_race_real_pg_redis_aof": "passed",
+    "windows_integration_seconds": 411.819,
+    "linux_s5_fixed_comparison": "passed_5.47_seconds",
+    "linux_natural_recovery": "passed_41.14_seconds",
+    "python_sdk_tools": {
+      "passed": 1853,
+      "skipped": 13
+    },
+    "subsequent_launcher_related": {
+      "passed": 205,
+      "skipped": 4
+    },
+    "go_build_vet_lint": "passed",
+    "buf": "passed",
+    "sqlfluff": "passed",
+    "ruff_mypy": "passed",
+    "latest_head_ci": "pending"
+  },
+  "images": {
+    "production_worker": "sha256:89e133f5a6afa7c5a7abc87d71f338252cd4acee6affc459ef9f019ac2b7fe59",
+    "linux_checks": "sha256:b1966cd31cb03b3585567f6a06384fefabb5424b63e917130aaad5d69562f216",
+    "s5_operator": "sha256:dbf613ebe2a06e96a19ad1d0d2310280ac870c5b21f0ba3965ac6a6404e377b5"
+  },
+  "private_evidence_root": "E:/JobForgeEvidence/s5-2026-10-07",
+  "artifacts": {
+    "free-review-fixed/root-acceptance-fixed.json": "1c973ffa84eba013e5f4613e5d02ba33282651af87a56a0614ef8364b5f1852a",
+    "free-review-fixed/root-acceptance-observability.json": "87839b3731344019e39a8cb68aa824917bd96a62674e3cf96632e36425a3ecd1",
+    "free-review-fixed/worker-traces-final.json": "85b4fa2d70941b2190c0d37a77231de9c12f54b5ee0e0d127fd1917da961da9f",
+    "free-review-fixed/finite-performance.json": "afcf80a3daae8c2095b004fbb076325e4d83744c08f5298498175129761dfa51",
+    "free-review-fixed/collector-outage.json": "e870ea2c208a0824753649d5df1749a73bba7181b56df054e27148ff971e8e55",
+    "backup-restore-fixed/manifest.json": "600c3837e6d3b87f6282781f0f64cd2a7d3b4aea1184de3f0ab32c897e63ef92",
+    "local-retrieval/receipt.json": "70847edaca84e6c67ba06ee9734603285f99ffcc9d9134b2a491a0b5ae7419f7",
+    "free-linux-joint.log": "652accbd02ed5b45b93bf0a3d43f344ba5984f4ae3f5cfe104fc979fb4f70aaf",
+    "free-natural-recovery.log": "8c2e3787f7590c36a3e26c9b7847a0c9c2e89d838ed1acb9d79926e0d96d146d",
+    "operator-expected-sources.json": "1f43ba21977c1b430007a6e74a2990ecfdf70cdf179ef3abbabeb2be086e0caf",
+    "sdk-telemetry-healthy.log": "bfaabdb44f06d3ae2b5d402ed8048d10282641f8fe4d2ed40c9cbe187f1c569a",
+    "sdk-telemetry-outage.log": "a4d78d9200ff44d7843e39354cde6c86b5e4927f442e97bfd13444c329c34e2d"
+  }
+}

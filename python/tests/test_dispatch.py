@@ -222,6 +222,29 @@ async def good_response(
     await respond(writer, body=chat_body())
 
 
+@run_async
+async def test_forged_wide_context_stops_before_permit_or_http(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A caller flag cannot widen the original fixed runtime capability."""
+    clock, call = Clock(), replace(context(), wide_context=True)
+    hooks = Hooks(clock)
+    request = prepare_request(
+        context=call,
+        endpoint="deepseek",
+        subcall="chat",
+        method="POST",
+        path="/chat/completions",
+        body={"value": "x" * 20000},
+        max_response_bytes=65536,
+    )
+    async with HTTPFaultServer(good_response) as server:
+        dispatcher = make_dispatcher(monkeypatch, server, clock, hooks)
+        with pytest.raises(DispatchError, match="INPUT_INVALID"):
+            await dispatcher.execute(request, context=call, validate=valid)
+        assert not hooks.intents and not server.requests
+
+
 def chat_body(input_tokens: int = 20, output_tokens: int = 10) -> bytes:
     """Build a synthetic complete chat response with independently counted usage."""
     return json.dumps(

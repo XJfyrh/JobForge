@@ -20,7 +20,7 @@ func (p Profile) ConfirmedStepRecovery() bool {
 		return false
 	}
 	d, err := DecodeSupportDefinition(p.Definition)
-	if err != nil || (d.SchemaVersion != 3 && d.SchemaVersion != 4) || d.Program.RecoveryPolicy != ConfirmedUncommittedRecovery {
+	if err != nil || (d.SchemaVersion != 3 && d.SchemaVersion != 4 && d.SchemaVersion != 6) || d.Program.RecoveryPolicy != ConfirmedUncommittedRecovery {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

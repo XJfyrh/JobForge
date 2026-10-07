@@ -7,10 +7,11 @@ Agent v3 以 PostgreSQL 保存 Run、attempt、步骤、许可和预算事实。
 | 组件 | 职责 | 入口 |
 |---|---|---|
 | `agent-control` | `/v2/runs`、AgentService RPC、恢复扫描；提交步骤和审计/预算事务 | [Run 指南](agent-v3/runs.md) |
+| 同源 `/ui/` | 调用现有 API；凭据仅内存保存，服务端判定租户及 operator/approver 权限 | [页面与运维](agent-v3/operations.md) |
 | 控制 PostgreSQL | Run/attempt/session/fence、checkpoint、物理调用、三层预算和审计报告 | [ADR-0017](adr/0017-run-admission-and-call-ledger.md)、[ADR-0020](adr/0020-provider-audit-and-batch-stop.md) |
 | `agent-worker` | 固定容量领取与续租、严格 checkpoint 投影、IPC/HTTP 许可确认、实际进程清理 | [运行时](agent-v3/runtime.md) |
 | Python guardian/step | 固定 registry 单步执行，双通道报告；不 Claim、不续租、不调度 Run | [协议](agent-v3/executor-protocol.md)、[受控 HTTP](agent-v3/authorized-http.md) |
-| `support-business` / 业务 PostgreSQL | 独立快照、订单/物流与 pgvector 政策检索，reader 只读 | [业务指南](agent-v3/business.md) |
+| `support-business` / 业务 PostgreSQL | 独立快照、订单/物流与 pgvector 检索；独立 writer 原子记录结论/工单标记及首次回执 | [业务](agent-v3/business.md)、[审批](agent-v3/approval.md) |
 | Ollama / DeepSeek | 本地 MiniLM embedding / 主线方案推理，使用登记身份、固定端点和有界请求 | [批次部署](agent-v3/cloud-batch.md) |
 
 提交先在控制事务外捕获幂等业务快照，再保存 Run 和固定版本向量；两库之间没有跨库事务或隐式 HTTP 重试。执行器只得到当前步骤需要的凭据，control token 由 Go 持有。gold、评分器和测试 adapter 不进入生产镜像。
@@ -21,7 +22,9 @@ Agent v3 以 PostgreSQL 保存 Run、attempt、步骤、许可和预算事实。
 
 Run 的下一游标由控制面 CommitStep 计算；Worker 必须等待持久报告/观察确认、当前执行权和 Wait/EOF/Join/组消失后提交。S3 从已提交前缀恢复，未提交步骤可能重做并产生新调用/费用；不恢复模型内部推理。详见[恢复合同](agent-v3/recovery.md)。
 
-每个 HTTP 先持久 Reserve，只有首次许可可发送。family/tenant/batch 累计次数和 known+held 暴露不因 retry 或恢复重置；缺失计量不退款。最终方案停在 `awaiting_approval`，审批写入尚未实施。
+每个 HTTP 先持久 Reserve，只有首次许可可发送。family/tenant/batch 累计次数和 known+held 暴露不因 retry 或恢复重置；缺失计量不退款。方案停在 `awaiting_approval`；独立 approver 冻结批准身份，Go 按原方案生成签名动作，业务库原子记录唯一回执。效果不明确时保留 unknown，通过独立读取核对。
+
+S5 的每个 attempt 以有限 root span link 到原接纳；Go 记录真实 Python 进程区间，已核验 IPC 桥接调用许可至观察区间。观测队列有界且不参与业务状态。终态内容可过窗，身份、预算、签名/回执与业务快照保留；停写双库备份只恢复到禁用执行的新库。详见[ADR-0027](adr/0027-s5-observability-and-data-lifecycle.md)。
 
 ## 既有 Job API
 

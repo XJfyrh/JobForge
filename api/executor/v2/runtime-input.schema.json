@@ -60,7 +60,7 @@
         },
         "executor_version": {
           "type": "string",
-          "enum": ["linux-v2-audit-runtime-1", "linux-v2-agent-runtime-1", "linux-v2-recovery-runtime-1", "linux-v2-approval-runtime-1"]
+          "enum": ["linux-v2-audit-runtime-1", "linux-v2-agent-runtime-1", "linux-v2-recovery-runtime-1", "linux-v2-approval-runtime-1", "linux-v2-fixed-comparison-runtime-1"]
         },
         "adapter_id": {
           "$ref": "#/$defs/identifier"

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -65,6 +66,84 @@ func supportPrepareFixture(t *testing.T) (supportPrepareOptions, supportSource) 
 		t.Fatal(err)
 	}
 	return o, source
+}
+
+func TestPrepareS5ExternalReviewedDataDoesNotReplaceDevelopment(t *testing.T) {
+	o, source := supportPrepareFixture(t)
+	source.SchemaVersion = 2
+	source.Definition.SchemaVersion = 5
+	source.Definition.Model.ObservedOn, source.Definition.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	source.Definition.Model.MessageContentBytes, source.Definition.Model.RequestBodyBytes = 65536, 131072
+	source.Definition.Resources.DatasetID = run.SupportS5DatasetID
+	root := filepath.Dir(o.Source)
+	developmentPath := filepath.Join(o.Repo, "examples", "support-agent", "runtime", "seed.json")
+	original, err := os.ReadFile(developmentPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Clearly synthetic structural fixtures only: no formal unseen cases, gold
+	// or new business scenarios are authored by this unit test.
+	seed, manifest := []byte(`{"synthetic_unit_seed":true}`), []byte(`{"synthetic_unit_manifest":true}`)
+	if err := os.WriteFile(filepath.Join(root, "unit-seed.json"), seed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "unit-manifest.json"), manifest, 0600); err != nil {
+		t.Fatal(err)
+	}
+	source.Definition.Resources.SeedSHA256, source.Definition.Resources.RuntimeManifestSHA256 = supportSHA256(seed), supportSHA256(manifest)
+	source.RuntimeData = &supportRuntimeData{Seed: supportReceipt{"unit-seed.json", supportSHA256(seed)}, Manifest: supportReceipt{"unit-manifest.json", supportSHA256(manifest)}}
+	var rows bytes.Buffer
+	for i := 1; i <= 20; i++ {
+		tenant := "tenant-north"
+		if i > 10 {
+			tenant = "tenant-south"
+		}
+		row := map[string]any{"case_id": fmt.Sprintf("UNIT-%02d", i), "tenant_id": tenant, "ticket_id": fmt.Sprintf("unit-ticket-%02d", i), "as_of": run.SupportObservedAt, "dataset_version": run.SupportS5DatasetID, "policy_version": run.SupportPolicyVersion, "template_family": "synthetic-structural-unit-only"}
+		raw, _ := json.Marshal(row)
+		rows.Write(raw)
+		rows.WriteByte('\n')
+	}
+	if err := os.WriteFile(filepath.Join(root, "unit-cases.jsonl"), rows.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	source.CaseMap = &supportReceipt{"unit-cases.jsonl", supportSHA256(rows.Bytes())}
+	write := func() {
+		t.Helper()
+		if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write()
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal("separately reviewed data rejected", err)
+	}
+	var launch supportLaunch
+	if json.Unmarshal(files["launch.json"], &launch) != nil || len(launch.Cases) != 20 {
+		t.Fatal("S5 registered list mismatch")
+	}
+	unchanged, _ := os.ReadFile(developmentPath)
+	if !bytes.Equal(original, unchanged) {
+		t.Fatal("historical development seed changed")
+	}
+	old := source.RuntimeData.Seed
+	source.RuntimeData.Seed.Path = developmentPath
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("repo data accepted as S5 external seed")
+	}
+	source.RuntimeData.Seed = old
+	source.RuntimeData.Seed.SHA256 = strings.Repeat("f", 64)
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("tampered S5 external seed digest accepted")
+	}
+	source.RuntimeData.Seed = old
+	source.CaseMap.SHA256 = strings.Repeat("f", 64)
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("tampered S5 case map accepted")
+	}
 }
 
 func TestPrepareSupportApprovalFrozenActionOrigin(t *testing.T) {

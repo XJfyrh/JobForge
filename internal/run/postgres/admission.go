@@ -82,6 +82,9 @@ func resolveAdmission(ctx context.Context, tx pgx.Tx, tenant, key, sourceID, has
 		if err != nil {
 			return nil, err
 		}
+		if kind == "submit" && r.ContentPurgedAt != nil {
+			return nil, agentrun.ErrRequestExpired
+		}
 		return &agentrun.SubmitResponse{Run: r, Reused: true}, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -122,6 +125,13 @@ func resolveAdmission(ctx context.Context, tx pgx.Tx, tenant, key, sourceID, has
 	if acceptedHash != hash {
 		return nil, agentrun.ErrConflict
 	}
+	r, err := getView(ctx, tx, tenant, resultID)
+	if err != nil {
+		return nil, err
+	}
+	if kind == "submit" && r.ContentPurgedAt != nil {
+		return nil, agentrun.ErrRequestExpired
+	}
 	now, err := databaseTime(ctx, tx)
 	if err != nil {
 		return nil, err
@@ -131,7 +141,7 @@ func resolveAdmission(ctx context.Context, tx pgx.Tx, tenant, key, sourceID, has
 	if err != nil {
 		return nil, err
 	}
-	r, err := getView(ctx, tx, tenant, resultID)
+	r, err = getView(ctx, tx, tenant, resultID)
 	if err != nil {
 		return nil, err
 	}

@@ -9,5 +9,7 @@
 5. [动态 Agent](support-agent.md)：只读工具选择与方案。
 6. [恢复](recovery.md)：已提交前缀、自然接管和有限实验工具。
 7. [人工审批](approval.md)：稳定审批身份、结论记录、独立效果与回执优先恢复。
+8. [页面与运维](operations.md)：任务页面、有限 Trace、指标/告警、内容过窗与双库停写恢复。
+9. [S5 验收矩阵](s5-acceptance.md)：免费证据、收费审查、冻结及正式20案的独立门槛。
 
 修改内部接缝时再看[协议与时钟](executor-protocol.md)、[受控 HTTP](authorized-http.md)和[供应商审计](provider-audit.md)。验证命令集中在[测试指南](../tests.md)，结果进入[证据索引](../evidence/README.md)。

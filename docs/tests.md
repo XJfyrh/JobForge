@@ -52,6 +52,7 @@ go test -race -count=1 ./...
 .venv/Scripts/python.exe -m pytest sdk/python/tests python/tests tools/agent_probe_data tools/executorprobe tools/support_evaluation
 $env:PYTHONPATH='python;sdk/python'
 .venv/Scripts/python.exe -m pytest tools/support_recovery tools/support_approval
+.venv/Scripts/python.exe -m pytest tools/support_s5 tools/support_lifecycle
 .venv/Scripts/ruff.exe check .
 .venv/Scripts/ruff.exe format --check .
 .venv/Scripts/mypy.exe sdk/python
@@ -61,6 +62,7 @@ $env:MYPYPATH='python;sdk/python'
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_evaluation
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_approval
+.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_s5 tools/support_lifecycle
 .venv/Scripts/python.exe tools/check_sqlfluff_baseline.py
 .venv/Scripts/sqlfluff.exe lint migrations
 .tools/bin/buf.exe lint
@@ -111,6 +113,9 @@ docker run --rm --init --add-host control:127.0.0.1 -e JOBFORGE_RUNEXECUTOR_INTE
 git diff --exit-code -- deploy/grafana/dashboards/jobforge-tasks.json
 docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
 docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
+.venv/Scripts/python.exe tools/generate_run_dashboard.py
+docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/run.yml
+docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/run-alerts.test.yml
 ```
 
 旧 Job scale 套件使用 `go test -race -tags scale -count=1 ./tests/scale/...`，数据库/Redis 前置相同；性能比较按[基准说明](benchmark.md)，不改写历史门槛。
@@ -119,7 +124,7 @@ docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint pr
 
 ## CI 质量门禁
 
-权威执行配置为 [ci.yml](../.github/workflows/ci.yml)，本页解释本地等价检查；不修改 CI 行为。8 项 job 全部强制执行：
+权威执行配置为 [ci.yml](../.github/workflows/ci.yml)，本页解释本地等价检查，不取代实际执行结果。8 项 job 全部强制执行：
 
 | Job ID | 检查 |
 |---|---|

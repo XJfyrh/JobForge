@@ -11,6 +11,7 @@
 | 部署执行器 | [运行时](agent-v3/runtime.md) | [受控 HTTP](agent-v3/authorized-http.md)、[执行器协议](agent-v3/executor-protocol.md) |
 | 运行有界模型批次 | [批次操作](agent-v3/cloud-batch.md) | [动态 Agent](agent-v3/support-agent.md)、[恢复](agent-v3/recovery.md) |
 | 排查调用与费用 | [供应商审计](agent-v3/provider-audit.md) | [Run 故障判断](agent-v3/runs.md#调用预算与故障判断) |
+| 使用任务页面、观测及恢复数据 | [页面与运维](agent-v3/operations.md) | [S5 验收](agent-v3/s5-acceptance.md)、[公平对照工具](../tools/support_s5/README.md) |
 | 验证改动 | [测试指南](tests.md) | [Windows 手册](runbooks/windows-acceptance.md)、[基准](benchmark.md) |
 | 核对验收 | [证据索引](evidence/README.md) | [可靠性证据](reliability-report.md)、[离线评分工具](../tools/support_evaluation/README.md) |
 | 使用既有 Job API | [旧 Job 指南](legacy/README.md) | 启动、扩展 Handler、事件与可观测性 |

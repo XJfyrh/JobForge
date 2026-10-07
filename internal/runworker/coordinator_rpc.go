@@ -255,6 +255,7 @@ func (c *coordinator) reserved(ctx context.Context, call *callRecord, done compl
 		return
 	}
 	call.reservation, call.deadlineMS = r, deadline
+	beginCallTrace(ctx, call)
 	c.send(ctx, permit, false)
 }
 

@@ -33,6 +33,7 @@ from jobforge.run_models import (
     Run,
     RunCancellation,
     RunEventPage,
+    RunIdentity,
     RunModel,
     RunPage,
     RunResult,
@@ -88,6 +89,10 @@ class RunClient:
             },
             transport=transport,
         )
+
+    def identity(self) -> RunIdentity:
+        """Read the configured tenant/role/actor without invoking execution."""
+        return self._request(RunIdentity, "identity", "GET", "/v2/identity")
 
     def submit(
         self,

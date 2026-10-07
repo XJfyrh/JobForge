@@ -71,4 +71,4 @@ WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
 ENV JOBFORGE_TEST_PYTHON=/usr/local/bin/python
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor)", "-test.timeout=1200s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportS5|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor)", "-test.timeout=1200s"]

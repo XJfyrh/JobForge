@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.support_evaluation.driver import instant
-from tools.support_evaluation.evidence import load_package, registration
+from tools.support_evaluation.evidence import Package, load_package, registration
 from tools.support_evaluation.export import json_bytes
 from tools.support_evaluation.validate_data import DATASET_VERSION, POLICY_VERSION
 
@@ -60,7 +60,9 @@ def save_new(path: Path, value: dict[str, Any]) -> None:
     path.chmod(0o600)
 
 
-def register(config: Path) -> dict[str, Any]:
+def register(
+    config: Path, *, package: Package | None = None, s5: bool = False
+) -> dict[str, Any]:
     """Build a real registration from prepared deployment, never test fixtures."""
     manifest = read(config / "launch.json")
     for name, digest in manifest["config_sha256"].items():
@@ -73,7 +75,7 @@ def register(config: Path) -> dict[str, Any]:
     tenants = {row["tenant_id"]: row for row in resources["tenants"]}
     accounts = {row["account_id"]: row for row in control["budgets"]}
     bindings = {row["tenant_id"]: row for row in control["bindings"]}
-    package = load_package()
+    package = package or load_package()
     family = {
         "chat": 12,
         "logical_tools": 8,
@@ -88,9 +90,9 @@ def register(config: Path) -> dict[str, Any]:
     endpoints = worker["tenants"]["tenant-north"]
     result = {
         "schema_version": 1,
-        "scorer_version": "support-offline-v1",
+        "scorer_version": "support-s5-quality-v1" if s5 else "support-offline-v1",
         "evidence_origin": "run_api_export",
-        "dataset_version": DATASET_VERSION,
+        "dataset_version": resources["dataset_id"] if s5 else DATASET_VERSION,
         "policy_version": POLICY_VERSION,
         "gold_sha256": package.hashes["evaluation/dev_gold.jsonl"],
         "scoring_sha256": package.hashes["evaluation/scoring-proposal.json"],
@@ -146,7 +148,16 @@ def register(config: Path) -> dict[str, Any]:
             for row in manifest["cases"]
         ],
     }
-    registration(result, package)
+    if s5:
+        from tools.support_s5.freeze import blueprint
+
+        result["strategy_blueprint"] = blueprint(profile["definition"])
+        result["comparison"] = {
+            "model": profile["definition"]["model"],
+            "resources": resources,
+            "family_limits": family,
+        }
+    registration(result, package, s5=s5)
     return result
 
 
@@ -249,11 +260,14 @@ def assemble(
     metadata: Path,
     before_path: Path,
     after_path: Path,
+    *,
+    package: Package | None = None,
+    s5: bool = False,
 ) -> dict[str, Any]:
     """Join original case rows to SDK evidence without constructing missing results."""
     registration_raw = registered.read_bytes()
     registered_value = json.loads(registration_raw)
-    registration(registered_value, load_package())
+    registration(registered_value, package or load_package(), s5=s5)
     rows = read(archive / "rows.json")["cases"]
     if [row["case_id"] for row in rows] != [
         row["case_id"] for row in registered_value["bindings"]

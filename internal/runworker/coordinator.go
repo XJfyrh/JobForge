@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runclock"
@@ -17,6 +21,7 @@ import (
 )
 
 type callRecord struct {
+	span                trace.Span
 	intent              v2.Frame
 	id                  string
 	reservation         *agentv1.CallReservation
@@ -81,6 +86,9 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Abandoned: true}
 	}
 	s := checkpoint.NextStep
+	ctx, stepSpan := otel.Tracer("jobforge/runworker").Start(ctx, "run.step")
+	defer stepSpan.End()
+	stepSpan.SetAttributes(attribute.String("jobforge.step_kind", s.Kind.String()), attribute.String("jobforge.step_id", s.StepId))
 	profile, ok := w.profiles[s.ProfileId]
 	selected, err := w.manifest.profile(s.ProfileId, s.ProfileHash)
 	if !ok || err != nil || profile.Hash != s.ProfileHash {
@@ -121,12 +129,24 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 	}
 	stepCtx, cancel := context.WithTimeout(ctx, time.Duration(frame.RemainingMS)*time.Millisecond)
 	defer cancel()
+	stepCtx, pythonSpan := otel.Tracer("jobforge/runworker").Start(stepCtx, "run.python.execute")
+	defer pythonSpan.End()
+	pythonSpan.SetAttributes(attribute.String("jobforge.observation.source", "go_guardian"),
+		attribute.String("jobforge.adapter_id", selected.AdapterID))
+	carrier := propagation.MapCarrier{}
+	propagation.TraceContext{}.Inject(stepCtx, carrier)
+	frame.TraceContext = carrier["traceparent"]
 	process, err := runexecutor.Start(stepCtx, runexecutor.Spec{Environment: stepEnvironment(environment, s.Kind)})
 	if err != nil {
 		return stepOutcome{Failure: "DEPENDENCY_UNAVAILABLE"}
 	}
 	c := &coordinator{worker: w, lease: lease, checkpoint: checkpoint, authority: authority, process: process, execute: frame,
 		priceHash: profile.Pricing.Hash, profile: profile, calls: make(map[string]*callRecord), completed: make(chan completion, 4)}
+	defer func() {
+		for _, call := range c.calls {
+			endCallTrace(call)
+		}
+	}()
 	if c.conversation.Accept(frame, now) != nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 	} else {
@@ -134,6 +154,7 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 	}
 	c.loop(stepCtx)
 	receipt := process.Wait()
+	pythonSpan.End()
 	return c.finish(ctx, receipt)
 }
 
@@ -362,6 +383,7 @@ func (c *coordinator) event(ctx context.Context, event runexecutor.Event) {
 			return
 		}
 		call.observation = &f
+		endCallTrace(call)
 		if c.conversation.Closed() {
 			c.stop("")
 			return

@@ -182,6 +182,20 @@ class ActionAuthorizationExpiredError(JobForgeError):
         super().__init__("ACTION_AUTHORIZATION_EXPIRED", message)
 
 
+class ResultExpiredError(JobForgeError):
+    """Protected content was purged; execution and budget facts remain (410)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("RESULT_EXPIRED", message)
+
+
+class RequestExpiredError(JobForgeError):
+    """An expired original intent cannot be captured or executed again (410)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__("REQUEST_EXPIRED", message)
+
+
 class ActionOutcomeUnknownError(JobForgeError):
     """No receipt was found; the SDK never resends the business write."""
 
@@ -213,6 +227,8 @@ _ERROR_MAP: dict[str, Callable[[str], JobForgeError]] = {
     "ACTION_CONFLICT": ActionConflictError,
     "ACTION_AUTHORIZATION_EXPIRED": ActionAuthorizationExpiredError,
     "ACTION_OUTCOME_UNKNOWN": ActionOutcomeUnknownError,
+    "RESULT_EXPIRED": ResultExpiredError,
+    "REQUEST_EXPIRED": RequestExpiredError,
 }
 
 

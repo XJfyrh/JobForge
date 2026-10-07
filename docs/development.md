@@ -37,6 +37,8 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 
 默认控制配置有租户和 Worker 身份，零模型/预算；它用于查询和开发接缝，提交未登记 profile 会失败。`bootstrap` 需要迁移权限，重复执行不清零预算。原生命令和鉴权变量见[Run 指南](agent-v3/runs.md)。
 
+控制启动后打开 `http://127.0.0.1:8093/ui/`，使用服务端配置的独立 operator/approver 凭据。页面、v3 `obs` profile、内容清理与停写恢复命令见[操作指南](agent-v3/operations.md)。默认配置仍不启用收费执行。
+
 业务快照/真实 embedding 使用[业务准备](agent-v3/business.md)，正式 Python Worker 使用[固定运行时](agent-v3/runtime.md)，有界收费部署使用[批次指南](agent-v3/cloud-batch.md)。收费执行需独立登记与明确预算；复制示例不构成运行授权。
 
 本地端口彼此独立：旧 Job/测试库 5433，业务库/HTTP/Ollama 5434/8092/11436，v3 控制库/HTTP/RPC 5435/8093/9093。停止控制组件用 `docker compose -f deploy/compose.agent.yaml --profile control stop control control-postgres`，保留数据时不删 volumes。
@@ -50,7 +52,8 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 | `python/jobforge_agent` | 固定 guardian/step、HTTP adapter 与 Agent 策略 |
 | `cmd/support-business`、`internal/business` | 独立业务事实、快照和检索 |
 | `api`、`proto`、`sdk/python` | 源契约、生成代码与 Python 客户端 |
-| `tools/support_evaluation`、`tools/support_recovery`、`tools/support_approval` | 离线评分、有界实验与导出 |
+| `tools/support_evaluation`、`tools/support_recovery`、`tools/support_approval`、`tools/support_s5` | 离线评分、有界实验、冻结与导出 |
+| `tools/support_lifecycle` | 明确拥有的免费审查库停写、备份、新库恢复及逐表核验 |
 | `cmd/jobforge`、`internal/worker` | 既有 Job API/Handler 路径 |
 
 SDK 开发保持在仓库根目录，编辑后重新安装 `./sdk/python`；运行测试/lint 无需 `cd sdk/python`。Proto 修改后使用 `.tools/bin/buf.exe generate`（Linux/macOS 为 `.tools/bin/buf generate`），不手改生成代码。规范见[编码要求](code-standards.md)。

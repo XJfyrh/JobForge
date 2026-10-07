@@ -19,6 +19,8 @@
 
 以下记录保留当时的探针、独立层检查、中断和修复；不是多份当前阶段台账。最终报告链接相关历史，未结事项统一在状态页维护。
 
+- [S5 免费机制、观测、恢复与本地检索](agent-v3-s5-free-2026-10-07.md)：[机器摘要](agent-v3-s5-free-2026-10-07.json)，收费开发回归和正式20案待运行。
+
 - [DeepSeek 接入调查、独立复审与环境阻塞](agent-v3-deepseek-and-blocker-2026-09-16.md)
 - [Docker 恢复后 S0 复验与合并](agent-v3-docker-recovery-2026-09-16.md)
 - [S0 本地主模型试验结论](agent-v3-model-probe-2026-09-16-summary.md)

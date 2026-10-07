@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
@@ -115,7 +117,26 @@ type stepOutcome struct {
 
 // runStep owns one real guardian and original Conversation. Context cancellation
 // revokes ordinary work; narrow captured metering has its own bounded cleanup.
-func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoint *agentv1.Checkpoint, authority executionAuthority) stepOutcome {
+func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoint *agentv1.Checkpoint, authority executionAuthority) (outcome stepOutcome) {
+	started := time.Now()
+	defer func() {
+		kind := "unknown"
+		if checkpoint != nil && checkpoint.NextStep != nil {
+			if name, exists := agentv1.StepKind_name[int32(checkpoint.NextStep.Kind)]; exists {
+				kind = name
+			}
+		}
+		result := "accepted"
+		switch {
+		case outcome.Fatal != nil:
+			result = "fatal"
+		case outcome.Abandoned:
+			result = "abandoned"
+		case outcome.Failure != "" || outcome.Commit == nil:
+			result = "failed"
+		}
+		observability.RunStepDuration.WithLabelValues(kind, result).Observe(time.Since(started).Seconds())
+	}()
 	if checkpoint != nil && checkpoint.NextStep != nil && checkpoint.NextStep.Kind == agentv1.StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION {
 		return w.runAction(ctx, lease, checkpoint, authority)
 	}
