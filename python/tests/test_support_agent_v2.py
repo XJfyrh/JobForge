@@ -13,7 +13,7 @@ from jobforge_agent.runtime_input import APPROVAL_EXECUTOR_VERSION
 from jobforge_agent.support_agent import SupportAgentAdapter
 from jobforge_agent.support_agent_v2 import POLICY_ROLES, SupportAgentV2Adapter
 from test_runtime_adapters import manifest
-from test_support_agent import agent_checkpoint, decision_step
+from test_support_agent import FIXTURE, agent_checkpoint, decision_step
 
 
 def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
@@ -71,6 +71,28 @@ def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
             ]
         )
     )
+
+
+@pytest.mark.parametrize(
+    "outer_type", ["proposal", "no_action", "record_conclusion", None, {}]
+)
+def test_candidate_rejects_other_outer_types_without_normalizing(
+    outer_type: object,
+) -> None:
+    """Inner validity cannot turn another outer type into a final proposal."""
+    protected = agent_checkpoint()
+    proposal = json.loads(FIXTURE["valid"][0]["model_json"])
+    before = copy.deepcopy(protected)
+    adapter = SupportAgentV2Adapter()
+    assert (
+        adapter.validate_proposal({"type": "final", "proposal": proposal}, protected)[
+            "proposal"
+        ]
+        == FIXTURE["valid"][0]["expected"]
+    )
+    with pytest.raises(DispatchError, match="OUTPUT_INVALID"):
+        adapter.validate_proposal({"type": outer_type, "proposal": proposal}, protected)
+    assert protected == before
 
 
 @pytest.mark.parametrize(
