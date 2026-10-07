@@ -64,13 +64,24 @@ def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
         not {"expected", "gold", "action", "conclusion", "required_claims"}
         & body.keys()
     )
-    assert len(str(messages[0]["content"])) < len(
-        str(
-            SupportAgentAdapter().proposal_messages(protected, correction=False)[0][
-                "content"
-            ]
-        )
+    assert (
+        sum(len(str(message["content"]).encode("utf-8")) for message in messages)
+        <= 65536
     )
+
+
+def test_candidate_keeps_the_nested_proposal_field_set_closed() -> None:
+    """Complete contract wording still rejects rather than drops an extra field."""
+    protected = agent_checkpoint()
+    before = copy.deepcopy(protected)
+    proposal = json.loads(FIXTURE["valid"][0]["model_json"])
+    proposal["extra_comment"] = "synthetic unknown field"
+    with pytest.raises(DispatchError, match="OUTPUT_INVALID"):
+        SupportAgentV2Adapter().validate_proposal(
+            {"type": "final", "proposal": proposal}, protected
+        )
+    assert proposal["extra_comment"] == "synthetic unknown field"
+    assert protected == before
 
 
 @pytest.mark.parametrize(

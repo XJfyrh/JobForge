@@ -8,6 +8,7 @@ from typing import Any
 
 from jobforge_agent.dispatch import DispatchError
 from jobforge_agent.runtime_input import RuntimeCheckpoint
+from jobforge_agent.support_adapter import SYSTEM_INSTRUCTIONS
 from jobforge_agent.support_agent import SupportAgentAdapter, tool_decision
 
 PROMPT_VERSION = "support-agent-prompt-v2"
@@ -106,6 +107,16 @@ TIMING: For completed delivery use the earliest active delivered event. For outs
 CITATIONS: Timing always cites E1#/order/promised_delivery_at and timing policy; outstanding ALSO cites T#/observed_at and E2#/delivery/events proving no active delivery. Critical cites actual exception plus critical policy. Dispute cites T#/description and dispute policy. Missing cites the relevant missing flag/field; event absence cites E2#/delivery/events, missing delivered event also E2#/delivery/status. Conflict cites actual contradictory facts and the conflict definition; same_time also cites E2#/delivery/events, order_delivery cites both aggregate statuses. Correction names actual corrected/recovery event IDs in its variant fields and cites correction policy; host code attaches the event facts. Ticket_status cites T#/status and the applicable informational/preservation paragraph, only when captured status changes action.
 BEFORE FINAL: Set the outer type to the exact literal "final" and keep exactly the two outer keys type and proposal. Check each claim is true, its event is the correct active source, and its refs cover its fact and applicable policy. Correction/priority/timing paragraphs are not interchangeable. Check all necessary missing fields and captured-status effects. If a needed policy is absent, search a new focused query within remaining_tools. Model chooses every tool and final conclusion; no automatic answer is supplied. Keep the JSON within 1024 output tokens.
 """
+
+# Preserve v1's complete nested proposal contract alongside v2 navigation.
+INSTRUCTIONS += (
+    "\nThe following exact contract applies ONLY to nested final.proposal, never "
+    "to the outer decision or a tool object. The proposal has exactly six "
+    "non-null fields: decision, action, conclusion, requested_fields, "
+    "target_ticket_status, claims. decision:"
+    + SYSTEM_INSTRUCTIONS.split("decision:", 1)[1]
+)
+INSTRUCTIONS += '\nOutput exactly one outer {"type":"tool",...} or {"type":"final","proposal":{...}} object. Never emit the nested proposal alone. The outer type is the literal tool or final; proposal.decision is proposal or no_action. No reasoning text.'
 
 
 class SupportAgentV2Adapter(SupportAgentAdapter):
