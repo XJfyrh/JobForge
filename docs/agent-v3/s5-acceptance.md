@@ -19,7 +19,7 @@
 | S5-11 | 正式20例全分母：Agent≥16/20，证据≥90%，四类硬失败0 | 实际DeepSeek、MiniLM/pgvector、业务HTTP/PG、正式Go/Python/SDK；原输出/逐案/配对胜平负 | 收费前审查后运行 |
 | S5-12 | 同策略恢复/从头成本和约20条检索诊断 | 冻结故障时点、全部调用/known/held/活跃耗时、真实MiniLM | 本地20查询19命中；实模恢复费用对照待运行 |
 | S5-15 | 无模型控制开销、checkpoint提交p95和恢复耗时 | 有限固定机器/样本/并发测量，原始数值与环境 | 100次只读p95 17.184ms；33次CommitStep RPC p95 151.262ms；自然恢复31.015秒 |
-| S5-13 | 适用工程检查及最新head全部8项CI | build/vet/lint/race/PG/Linux/Python/SQL/Buf/observability/链接与秘密 | 本地检查通过；最新PR head CI待运行 |
+| S5-13 | 适用工程检查及最新head全部8项CI | build/vet/lint/race/PG/Linux/Python/SQL/Buf/observability/链接与秘密 | 本地检查通过；最新head状态见[PR检查](https://github.com/XJfyrh/JobForge/pull/61/checks) |
 | S5-14 | 当前文档、简短成果与演示可按实际证据复核 | README/导航/状态/架构/开发/测试/操作/证据索引 | 当前文档与三分钟脚本已更新；实模演示待运行 |
 
 ## 审查点与执行顺序

@@ -7,8 +7,8 @@
   "budget_microyuan": 20000000,
   "max_runs": 240,
   "max_paid_chats": 1200,
-  "planned_max_runs": 131,
-  "planned_max_paid_chats": 972,
+  "planned_max_runs": 132,
+  "planned_max_paid_chats": 984,
   "concurrency": 1,
   "max_batch_seconds": 21600,
   "new_paid_runs": 0,
@@ -16,7 +16,7 @@
   "known_cost_microyuan": 0,
   "held_cost_microyuan": 0,
   "cost_authority": "sum all S5 persisted batch known + held + in-flight exposure; retain historical S1-S4 separately",
-  "batch_cap_rule": "min(4000000, 20000000 - sum_S5_known - sum_S5_held)",
+  "batch_cap_rule": "min(phase_batch_cap, 20000000 - sum_S5_known - sum_S5_held); each phase cap <= 4000000",
   "next_batch_requires": "close prior attempt/session barriers; save ledger and independent continuation review; no automatic refill",
   "model": {
     "provider": "deepseek",
@@ -194,7 +194,7 @@
       "cases": "20 from separately reviewed new template families; not authored yet",
       "max_runs": 20,
       "max_paid_chats": 240,
-      "batch_cap_microyuan": 4000000,
+      "batch_cap_microyuan": 3400000,
       "gate": "both development regressions independently accepted then source/build/profile/scorer/threshold freeze"
     },
     {
@@ -203,7 +203,7 @@
       "cases": "same immutable formal20 data and policy indices as formal-agent",
       "max_runs": 20,
       "max_paid_chats": 40,
-      "batch_cap_microyuan": 4000000
+      "batch_cap_microyuan": 3400000
     },
     {
       "id": "same-strategy-recovery",
@@ -211,7 +211,7 @@
       "strategy": "support_agent_v1",
       "max_runs": 11,
       "max_paid_chats": 132,
-      "batch_cap_microyuan": 4000000,
+      "batch_cap_microyuan": 3000000,
       "tool": "unchanged tools.support_recovery plan/driver/report with new S5-owned accounts and current production build",
       "scope": "proposal-only recovery uses existing schema3 executor; same adapter/prompt/model/resources/family limits, no approval/write step",
       "runs": [
@@ -295,6 +295,17 @@
       ],
       "comparison": "C includes all calls; restart includes H0 cancelled prefix plus new H1; F03/F07 kept separately; active elapsed excludes lease wait",
       "gate": "independent review confirms same strategy facts and frozen boundaries; S5 stage ledger plus phase cap both apply"
+    },
+    {
+      "id": "recorded-demo",
+      "schema": 6,
+      "case_ids": ["DEV-002"],
+      "max_runs": 1,
+      "max_paid_chats": 12,
+      "batch_cap_microyuan": 2200000,
+      "gate": "same frozen candidate/model/development facts; dedicated new intention only if archived dev-agent Run is no longer valid",
+      "recording": "actual submission/source/recovery/proposal/approval/unique receipt/trace recording with original elapsed shown; separate from formal20 quality scores",
+      "old_run_reuse": "only within original deadline after export is sealed; never extend old deadline or mutate keys/accounts"
     }
   ],
   "source_and_build": {
@@ -320,6 +331,6 @@
     "any hard safety failure"
   ],
   "retry_policy": "stable original keys; failed/unattempted rows remain; new Runs or continuations require independent review and remaining stage cap",
-  "formal_business_writes": "none during proposal comparison; action demo approves one existing dev-agent Run after both proposal exports are preserved, with no new paid Run/chat",
+  "formal_business_writes": "none during proposal comparison; action demo uses a valid archived dev-agent Run or one dedicated recorded-demo intention, separately from formal20",
   "release_required_before_any_paid_call": true
 }

@@ -34,4 +34,4 @@
 - 固定 Linux Go/Python、真实PG：新 schema 5 固定流程通过；自然业务提交丢响应恢复通过；恢复库 SDK 和业务 receipt-only 两项通过。
 - Python/SDK/工具完整回归1853通过、13跳过；后续 launcher 观测参数改动的相关回归205通过、4跳过。跳过项来自平台/专用环境，未计通过。
 - Go build/vet/golangci-lint、Buf lint、SQLFluff 历史基线与迁移检查、Ruff/mypy 通过。生产 Worker registry 检查为两个登记 adapter，无测试 hook 或 gold。
-- 最新 PR head 的8项CI、独立收费放行、开发回归后的策略冻结与正式20案仍待执行。收费分批范围见[执行计划](../agent-v3/s5-paid-plan.json)；本报告不作S5最终接受结论。
+- 最新 PR head 的8项CI见[PR检查](https://github.com/XJfyrh/JobForge/pull/61/checks)。独立收费放行、开发回归后的策略冻结、正式20案及实际演示记录待完成；收费分批范围见[执行计划](../agent-v3/s5-paid-plan.json)。
