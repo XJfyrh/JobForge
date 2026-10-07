@@ -90,6 +90,57 @@ func TestSupportS5AgentProfileKeepsApprovalAndRecovery(t *testing.T) {
 	}
 }
 
+func TestSupportS5CandidateVersionsKeepHistoricalPromptBoundary(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "deploy", "support-recovery.source.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source struct {
+		Definition SupportDefinition `json:"definition"`
+	}
+	if json.Unmarshal(raw, &source) != nil {
+		t.Fatal("source template")
+	}
+	d := source.Definition
+	d.SchemaVersion = 7
+	d.Program.ApprovalPolicy = TicketResolutionApprovalPolicy
+	d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "synthetic-key", PublicKeySHA256: strings.Repeat("a", 64)}
+	d.Program.PromptVersion = SupportAgentPromptV2
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	d.Resources.DatasetID = SupportS5V2DatasetID
+	p, err := BuildSupportProfile("candidate-v2", d)
+	if err != nil || !p.ApprovalEnabled() || !p.ConfirmedStepRecovery() || p.ExecutorVersion != SupportApprovalExecutorVersion {
+		t.Fatal("new candidate lost capabilities", err)
+	}
+	for _, mutate := range []func(*SupportDefinition){
+		func(d *SupportDefinition) { d.SchemaVersion = 6 },
+		func(d *SupportDefinition) { d.Program.PromptVersion = SupportAgentPromptVersion },
+		func(d *SupportDefinition) { d.Resources.DatasetID = "unknown-cohort" },
+	} {
+		changed := d
+		mutate(&changed)
+		if _, err := BuildSupportProfile("mixed", changed); err == nil {
+			t.Fatal("mixed candidate accepted")
+		}
+	}
+	d.SchemaVersion, d.Program.PromptVersion, d.Resources.DatasetID = 6, SupportAgentPromptVersion, SupportS5DatasetID
+	if _, err := BuildSupportProfile("historical", d); err != nil {
+		t.Fatal("historical profile changed", err)
+	}
+	fixed := supportDefinitionFixture()
+	fixed.SchemaVersion = 8
+	fixed.Model.ObservedOn, fixed.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	fixed.Model.MessageContentBytes, fixed.Model.RequestBodyBytes = 65536, 131072
+	fixed.Resources.DatasetID = SupportS5V2DatasetID
+	if _, err := BuildSupportProfile("fixed-v2", fixed); err != nil {
+		t.Fatal(err)
+	}
+	fixed.SchemaVersion = 5
+	if _, err := BuildSupportProfile("old-mixed", fixed); err == nil {
+		t.Fatal("historical schema5 silently widened")
+	}
+}
+
 func TestSupportProfileFixture(t *testing.T) {
 	d := supportDefinitionFixture()
 	p, err := BuildSupportProfile("support-cloud-vector-v1", d)

@@ -43,7 +43,7 @@ type supportRuntimeData struct {
 
 type supportPrepareOptions struct {
 	Source, Repo, ProfileID, WorkerID, BatchID, BatchKey, NorthID, SouthID, ValidFrom, Out string
-	BatchCostMicroyuan                                                                     int64
+	BatchCostMicroyuan, BatchChatLimit                                                     int64
 }
 
 type supportCase struct {
@@ -79,6 +79,7 @@ func prepareSupport(args []string) error {
 	flags := flag.NewFlagSet("prepare-support", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.Int64Var(&o.BatchCostMicroyuan, "batch-cost-microyuan", 5000000, "shared batch cost limit within the remaining authorization")
+	flags.Int64Var(&o.BatchChatLimit, "batch-chat-limit", 0, "optional shared chat limit; zero preserves 12 per registered case")
 	for name, target := range map[string]*string{"source": &o.Source, "repo": &o.Repo, "profile-id": &o.ProfileID,
 		"worker-id": &o.WorkerID, "batch-id": &o.BatchID, "batch-key": &o.BatchKey,
 		"north-account-id": &o.NorthID, "south-account-id": &o.SouthID, "valid-from": &o.ValidFrom, "out": &o.Out} {
@@ -129,7 +130,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	if err != nil || d.SchemaVersion == 1 && o.BatchCostMicroyuan > 5000000 {
 		return nil, errors.New("invalid fixed support definition or S1 cost limit")
 	}
-	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID
+	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID
 	if newDataset != (source.SchemaVersion == 2 && source.CaseMap != nil && source.RuntimeData != nil) ||
 		!newDataset && (source.SchemaVersion != 1 || source.CaseMap != nil || source.RuntimeData != nil) {
 		return nil, errors.New("S5 registration requires its separately reviewed case map")
@@ -151,9 +152,12 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	if err != nil {
 		return nil, errors.New("fixed support profile could not be built")
 	}
-	cases, err := readSupportCases(o.Repo, o.BatchID, o.Source, source.CaseMap)
+	cases, err := readSupportCases(o.Repo, o.BatchID, o.Source, source.CaseMap, d.Resources.DatasetID)
 	if err != nil {
 		return nil, err
+	}
+	if o.BatchChatLimit < 0 || o.BatchChatLimit > 12*int64(len(cases)) {
+		return nil, errors.New("batch chat limit must be within the registered family total")
 	}
 	tenants := []string{"tenant-north", "tenant-south"}
 	counts := map[string]int64{}
@@ -171,6 +175,9 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(counts[tenants[1]])}},
 		Bindings: []budgetBinding{{TenantID: tenants[0], BatchAccountID: o.BatchID, TenantAccountID: o.NorthID}, {TenantID: tenants[1], BatchAccountID: o.BatchID, TenantAccountID: o.SouthID}}}
 	config.Budgets[0].Limits.CostMicroyuan = o.BatchCostMicroyuan
+	if o.BatchChatLimit > 0 {
+		config.Budgets[0].Limits.Chat = o.BatchChatLimit
+	}
 	if d.SchemaVersion >= 2 {
 		for i := range config.Budgets {
 			config.Budgets[i].Limits.CostMicroyuan = o.BatchCostMicroyuan
@@ -198,8 +205,13 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 		}
 	}
 	files["worker.json"] = supportJSON(worker)
-	files["executor.json"] = supportJSON(runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
-		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}})
+	manifest := runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
+		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}}
+	if d.SchemaVersion == 7 || d.SchemaVersion == 8 {
+		manifest.SchemaVersion = 2
+		manifest.Profiles[0].PromptVersion = d.Program.PromptVersion
+	}
+	files["executor.json"] = supportJSON(manifest)
 	launch := supportLaunch{SchemaVersion: 1, BatchAccountID: o.BatchID, BatchKey: o.BatchKey, WorkerID: o.WorkerID, ProfileID: profile.ID,
 		ProfileHash: profile.Hash, PriceHash: profile.Pricing.Hash, ValidFrom: from, ValidUntil: until, SourceManifestSHA256: supportSHA256(raw),
 		BuildReceiptSHA256: source.BuildReceipt.SHA256, DataReviewSHA256: source.DataReview.SHA256, ScoringReviewSHA256: source.ScoringReview.SHA256,
@@ -263,6 +275,9 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 	promptPath := "python/jobforge_agent/support_adapter.py"
 	if d.Program.Strategy == run.SupportAgentStrategy {
 		promptPath = "python/jobforge_agent/support_agent.py"
+		if d.Program.PromptVersion == run.SupportAgentPromptV2 {
+			promptPath = "python/jobforge_agent/support_agent_v2.py"
+		}
 	}
 	sources := map[string]string{
 		"api/support/v1/schema.json": d.Program.ProposalSchemaSHA256,
@@ -324,11 +339,14 @@ func supportAdapterSHA256(repo string) (string, error) {
 	return run.Fingerprint(parts[0], parts[1:]...), nil
 }
 
-func readSupportCases(repo, batchID, sourcePath string, receipt *supportReceipt) ([]supportCase, error) {
+func readSupportCases(repo, batchID, sourcePath string, receipt *supportReceipt, datasetID ...string) ([]supportCase, error) {
 	path := filepath.Join(repo, "examples", "support-agent", "evaluation", "case-map.jsonl")
 	digest, count, dataset := "b07c6c56fe1cfc4a39b73c7f0063b055b6b9b4a43d0cb4ebc58dda295c698ce7", 40, run.SupportDatasetID
 	if receipt != nil {
 		path, digest, count, dataset = receipt.Path, receipt.SHA256, 20, run.SupportS5DatasetID
+		if len(datasetID) == 1 {
+			dataset = datasetID[0]
+		}
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(filepath.Dir(sourcePath), path)
 		}

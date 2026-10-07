@@ -30,6 +30,8 @@ def source_hashes() -> dict[str, str]:
         "cmd/agent-control",
         "api/support/s5-fixed-v1",
         "api/support/s5-agent-v1",
+        "api/support/s5-agent-v2",
+        "api/support/s5-fixed-v2",
     ):
         for file in (ROOT / directory).rglob("*"):
             if (
@@ -85,6 +87,7 @@ def create(
     fixed_config: Path,
     development_review: Path,
     build_receipt: Path,
+    seen_formal_manifest: Path | None = None,
 ) -> dict[str, Any]:
     """No formal cases are read, generated or executed by candidate freeze."""
     status = subprocess.run(
@@ -129,13 +132,36 @@ def create(
         read(p)["profiles"][0]["definition"] for p in (agent_config, fixed_config)
     )
     need(
-        agent["schema_version"] == 6
-        and fixed["schema_version"] == 5
+        (agent["schema_version"], fixed["schema_version"]) in {(6, 5), (7, 8)}
         and agent["model"] == fixed["model"]
         and agent["resources"] == fixed["resources"],
         "COMPARISON_PROFILE_MISMATCH",
     )
-    return {
+    seen = {}
+    if agent["schema_version"] == 7:
+        need(seen_formal_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
+        assert seen_formal_manifest is not None
+        manifest_raw = seen_formal_manifest.read_bytes()
+        manifest = json.loads(manifest_raw)
+        review_raw = (
+            seen_formal_manifest.parent / "evaluation/family-review.json"
+        ).read_bytes()
+        prior_review = json.loads(review_raw)
+        need(
+            manifest["dataset_id"] == "support-s5-2026-10-07-v1"
+            and sha(review_raw)
+            == manifest["artifact_sha256"]["evaluation/family-review.json"]
+            and prior_review["status"] == "independently_accepted",
+            "SEEN_FORMAL_PROVENANCE",
+        )
+        seen = {
+            "dataset_id": manifest["dataset_id"],
+            "manifest_sha256": sha(manifest_raw),
+            "template_families": sorted(
+                {c["template_family"] for c in prior_review["cases"]}
+            ),
+        }
+    result = {
         "schema_version": 1,
         "status": "frozen_before_unseen_creation",
         "frozen_at": datetime.now(UTC).isoformat(),
@@ -150,6 +176,9 @@ def create(
         "images": build["images"],
         "model": agent["model"],
     }
+    if seen:
+        result["seen_formal_package"] = seen
+    return result
 
 
 def main() -> None:
@@ -163,6 +192,7 @@ def main() -> None:
         "out",
     ):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument("--seen-formal-manifest", type=Path)
     args = parser.parse_args()
     save_new(
         args.out,
@@ -171,6 +201,7 @@ def main() -> None:
             args.fixed_config,
             args.development_review,
             args.build_receipt,
+            args.seen_formal_manifest,
         ),
     )
 

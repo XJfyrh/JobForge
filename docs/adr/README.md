@@ -39,6 +39,7 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0025](0025-confirmed-step-recovery.md) | 完整审计下的未提交步骤恢复 | Accepted | 2026-10-04 |
 | [ADR-0026](0026-approval-actions-and-receipt-recovery.md) | 人工审批、签名动作与回执优先恢复 | Accepted（随本 PR 合并生效） | 2026-10-05 |
 | [ADR-0027](0027-s5-observability-and-data-lifecycle.md) | S5 观测关联、内容留存与停写恢复 | Accepted（随本PR合并生效） | 2026-10-07 |
+| [ADR-0028](0028-versioned-support-evidence-navigation.md) | 售后 Agent 证据导航的独立候选版本 | Accepted（随本PR合并生效） | 2026-10-07 |
 
 ## 增量适用范围
 

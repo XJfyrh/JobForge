@@ -55,6 +55,25 @@ def frozen() -> dict[str, Any]:
     }
 
 
+def test_s5_plan_version_binds_new_prompt_and_saved_proposal_boundary() -> None:
+    """S5 gets a distinct plan while preserving the eleven historical faults."""
+    value = frozen()
+    value["schema_version"] = 2
+    value["max_cost_microyuan"] = 3_000_000
+    value["definition"]["schema_version"] = 7
+    value["definition"]["program"]["prompt_version"] = "support-agent-prompt-v2"
+    value["profile"]["executor_version"] = "linux-v2-approval-runtime-1"
+    plan.validate(value, check_sources=False)
+    for path, changed in [("plan", 1), ("definition", 3)]:
+        mixed = copy.deepcopy(value)
+        if path == "plan":
+            mixed["schema_version"] = changed
+        else:
+            mixed["definition"]["schema_version"] = changed
+        with pytest.raises(ValueError, match="S3_PLAN_CHANGED"):
+            plan.validate(mixed, check_sources=False)
+
+
 def test_worker_signal_and_wait_times_keep_no_child_window_explicit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

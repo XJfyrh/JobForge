@@ -24,6 +24,10 @@ const (
 	SupportObservedAt = "2026-09-16T12:00:00Z"
 	// SupportS5DatasetID binds the separately frozen S5 scenario package.
 	SupportS5DatasetID = "support-s5-2026-10-07-v1"
+	// SupportS5V2DatasetID identifies the independently reviewed second cohort.
+	SupportS5V2DatasetID = "support-s5-2026-10-07-v2"
+	// SupportAgentPromptV2 selects source-only evidence navigation in schema 7.
+	SupportAgentPromptV2 = "support-agent-prompt-v2"
 	// SupportFixedComparisonExecutorVersion grants the same bounded chat input
 	// envelope as Agent, using the existing registered fixed adapter.
 	SupportFixedComparisonExecutorVersion = "linux-v2-fixed-comparison-runtime-1"
@@ -164,10 +168,10 @@ func supportDigest(value string) bool {
 
 func (d SupportDefinition) validate() error {
 	m, p, r, price := d.Model, d.Program, d.Resources, d.Price
-	if d.SchemaVersion != 4 && d.SchemaVersion != 6 && (d.Action != nil || p.ApprovalPolicy != "") {
+	if d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && (d.Action != nil || p.ApprovalPolicy != "") {
 		return ErrProfileUnavailable
 	}
-	if d.SchemaVersion == 4 || d.SchemaVersion == 6 {
+	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 {
 		if d.Action == nil || p.ApprovalPolicy != TicketResolutionApprovalPolicy ||
 			d.Action.Operation != business.ResolutionOperation || !ValidIdentifier(d.Action.KeyID) || !supportDigest(d.Action.PublicKeySHA256) {
 			return ErrProfileUnavailable
@@ -189,7 +193,7 @@ func (d SupportDefinition) validate() error {
 			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != "2026-09-16" {
 			return ErrProfileUnavailable
 		}
-	case 5:
+	case 5, 8:
 		if p.Strategy != SupportFixedStrategy || p.Adapter != "support-fixed-v1" || p.PromptVersion != SupportPromptVersion ||
 			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != m.ObservedOn {
 			return ErrProfileUnavailable
@@ -200,16 +204,20 @@ func (d SupportDefinition) validate() error {
 		}
 		expected.ObservedOn = m.ObservedOn
 		expected.MessageContentBytes, expected.RequestBodyBytes = 65536, 131072
-	case 2, 3, 4, 6:
+	case 2, 3, 4, 6, 7:
 		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion >= 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
 			return ErrProfileUnavailable
 		}
-		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != SupportAgentPromptVersion ||
+		promptVersion := SupportAgentPromptVersion
+		if d.SchemaVersion == 7 {
+			promptVersion = SupportAgentPromptV2
+		}
+		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != promptVersion ||
 			p.DecisionSchema != SupportAgentDecisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
 			return ErrProfileUnavailable
 		}
 		date, err := time.Parse("2006-01-02", m.ObservedOn)
-		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-09-17" || d.SchemaVersion == 6 && m.ObservedOn < "2026-10-07" {
+		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-09-17" || (d.SchemaVersion == 6 || d.SchemaVersion == 7) && m.ObservedOn < "2026-10-07" {
 			return ErrProfileUnavailable
 		}
 		expected.ObservedOn = m.ObservedOn
@@ -218,6 +226,9 @@ func (d SupportDefinition) validate() error {
 		return ErrProfileUnavailable
 	}
 	validDataset := r.DatasetID == SupportDatasetID || (d.SchemaVersion == 5 || d.SchemaVersion == 6) && r.DatasetID == SupportS5DatasetID
+	if d.SchemaVersion == 7 || d.SchemaVersion == 8 {
+		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID
+	}
 	if m != expected || p.ProposalSchema != SupportProposalSchema || !validDataset ||
 		r.PolicyVersion != SupportPolicyVersion || r.ObservedAt != SupportObservedAt ||
 		price.Currency != "CNY" || price.Denominator != 1000000 || price.InputMissMicroyuan != 2000000 ||
@@ -282,10 +293,10 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 	if definition.SchemaVersion == 3 {
 		p.ExecutorVersion = SupportRecoveryExecutorVersion
 	}
-	if definition.SchemaVersion == 4 || definition.SchemaVersion == 6 {
+	if definition.SchemaVersion == 4 || definition.SchemaVersion == 6 || definition.SchemaVersion == 7 {
 		p.ExecutorVersion = SupportApprovalExecutorVersion
 	}
-	if definition.SchemaVersion == 5 {
+	if definition.SchemaVersion == 5 || definition.SchemaVersion == 8 {
 		p.ExecutorVersion = SupportFixedComparisonExecutorVersion
 	}
 	p.Hash, err = SupportProfileHash(p)
@@ -302,10 +313,10 @@ func SupportProfileHash(p Profile) (string, error) {
 	if d.SchemaVersion == 3 {
 		expectedExecutor = SupportRecoveryExecutorVersion
 	}
-	if d.SchemaVersion == 4 || d.SchemaVersion == 6 {
+	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 {
 		expectedExecutor = SupportApprovalExecutorVersion
 	}
-	if d.SchemaVersion == 5 {
+	if d.SchemaVersion == 5 || d.SchemaVersion == 8 {
 		expectedExecutor = SupportFixedComparisonExecutorVersion
 	}
 	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||

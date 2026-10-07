@@ -1,5 +1,7 @@
 # S2 有界客服 Agent
 
+S5 的独立候选使用 schema 7 / `support-agent-prompt-v2` 和部署 manifest 2：准备器绑定真实新提示源码，Worker 核验与 profile 一致。新提示只细分政策导航及展示已提交工具，旧版本行为保留；模型仍选择所有工具与结论。冻结、已见诊断和新正式集的顺序见 [ADR-0028](../adr/0028-versioned-support-evidence-navigation.md) 与 [S5 工具](../../tools/support_s5/README.md)。
+
 契约为[PRD v0.16](../product/JobForge_PRD_v0.16.md)与[ADR-0024](../adr/0024-bounded-support-agent.md)。`support_agent_v1`/`support-agent-v1`使用独立`linux-v2-agent-runtime-1`，S1历史profile与结果保留。模型可在读取订单、物流、不同政策检索之间选择下一步，最后提交既有结构化方案；Go保有调度、预算、来源和状态转换的决定权。
 
 ## 部署与预算

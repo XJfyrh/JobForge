@@ -25,7 +25,7 @@ from tools.support_evaluation.evidence import (
 )
 from tools.support_evaluation.score import CASE_FIELDS, ZERO_USAGE, evaluate_case
 from tools.support_evaluation.validate_data import parse_json, sha256
-from tools.support_s5.package import DATASET, load_package
+from tools.support_s5.package import DATASETS, load_package
 
 SCORER = "support-s5-quality-v1"
 # Pretty-printed comparison bindings can exceed the semantic 64 KiB ceiling.
@@ -103,12 +103,13 @@ def score_export(
     *,
     package: Package,
     freeze: dict[str, Any] | None = None,
+    seen_diagnostic: bool = False,
 ) -> dict[str, Any]:
     """Retain the original protected exports and the exact predeclared list."""
     bounded(registered, MAX_REGISTRATION)
     bounded(evidence, MAX_EVIDENCE)
     bindings = registration(registered, package, s5=True)
-    if registered["dataset_version"] == DATASET:
+    if registered["dataset_version"] in DATASETS and not seen_diagnostic:
         from tools.support_s5.freeze import validate_blueprint
 
         need(freeze is not None, "FORMAL_FREEZE_REQUIRED")
@@ -133,7 +134,12 @@ def score_export(
         and digest(registration_hash),
         "REGISTRATION_BINDING",
     )
-    count = 20 if registered["dataset_version"] == DATASET else 40
+    count = 20 if registered["dataset_version"] in DATASETS else 40
+    need(
+        not seen_diagnostic
+        or registered["dataset_version"] == "support-s5-2026-10-07-v1",
+        "SEEN_DIAGNOSTIC_SCOPE",
+    )
     need(
         type(evidence["cases"]) is list and len(evidence["cases"]) == count,
         "CASE_COVERAGE",
@@ -211,7 +217,11 @@ def score_export(
     return {
         "schema_version": 1,
         "scorer_version": SCORER,
-        "kind": "s5-unseen-quality" if count == 20 else "s5-development-regression",
+        "kind": "s5-seen-diagnostic"
+        if seen_diagnostic
+        else "s5-unseen-quality"
+        if count == 20
+        else "s5-development-regression",
         "dataset_version": registered["dataset_version"],
         "registration_sha256": registration_hash,
         "gold_sha256": registered["gold_sha256"],
@@ -224,7 +234,8 @@ def score_export(
         "hard_failure_cases": dict(hard),
         "proposal_audit_complete": complete,
         "duplicate_effect_scope": "original_receipt_reader_before_after_audit; approved_action_mechanisms_also_required",
-        "thresholds_met": count == 20
+        "thresholds_met": not seen_diagnostic
+        and count == 20
         and complete
         and correct >= 16
         and full >= 18
@@ -292,15 +303,22 @@ def main() -> None:
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--package", type=Path)
     parser.add_argument("--freeze", type=Path)
+    parser.add_argument(
+        "--seen-diagnostic",
+        action="store_true",
+        help="historical v1 data only; never counts as unseen acceptance",
+    )
     args = parser.parse_args()
     registered, digest_value = read_json(args.registration, MAX_REGISTRATION_FILE)
     evidence, _ = read_json(args.evidence, MAX_EVIDENCE)
-    if registered["dataset_version"] == DATASET:
+    if registered["dataset_version"] in DATASETS:
         if args.package is None or args.freeze is None:
             parser.error(
                 "formal 20 requires explicit reviewed package and prior freeze"
             )
-        package = load_package(args.package, args.freeze)
+        package = load_package(
+            args.package, args.freeze, historical=args.seen_diagnostic
+        )
     else:
         package = development_package()
     print(
@@ -311,6 +329,7 @@ def main() -> None:
                 digest_value,
                 package=package,
                 freeze=json.loads(args.freeze.read_bytes()) if args.freeze else None,
+                seen_diagnostic=args.seen_diagnostic,
             ),
             ensure_ascii=False,
         )

@@ -22,6 +22,8 @@ from tools.support_evaluation.validate_data import (
 )
 
 DATASET = "support-s5-2026-10-07-v1"
+DATASET_V2 = "support-s5-2026-10-07-v2"
+DATASETS = {DATASET, DATASET_V2}
 ARTIFACT_NAMES = (ARTIFACTS - {"evaluation/dev_gold.jsonl"}) | {
     "evaluation/gold.jsonl",
     "evaluation/family-review.json",
@@ -39,7 +41,7 @@ def read(root: Path, path: str) -> bytes:
     return raw
 
 
-def load_package(root: Path, freeze_path: Path) -> Package:
+def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> Package:
     """Require unchanged code/threshold freeze, independent review and real facts.
 
     Family descriptions are reviewed data, like semantic anchors. Hash and set
@@ -51,7 +53,12 @@ def load_package(root: Path, freeze_path: Path) -> Package:
     need(freeze["status"] == "frozen_before_unseen_creation", "CANDIDATE_NOT_FROZEN")
     from tools.support_s5.freeze import validate
 
-    validate(freeze)
+    if not historical:
+        validate(freeze)
+    else:
+        from tools.support_s5.score import THRESHOLDS
+
+        need(freeze["thresholds"] == THRESHOLDS, "HISTORICAL_FREEZE_THRESHOLDS")
     manifest = parse_json(read(root, "manifest.json"))
     fields(
         manifest,
@@ -67,10 +74,12 @@ def load_package(root: Path, freeze_path: Path) -> Package:
     )
     need(
         manifest["schema_version"] == 1
-        and manifest["dataset_id"] == DATASET
+        and manifest["dataset_id"] in DATASETS
         and manifest["case_count"] == 20,
         "PACKAGE_VERSION",
     )
+    dataset = manifest["dataset_id"]
+    need(not historical or dataset == DATASET, "HISTORICAL_DIAGNOSTIC_ONLY")
     need(
         manifest["freeze_sha256"] == sha256(freeze_raw)
         and instant(manifest["authored_at"]) > instant(freeze["frozen_at"]),
@@ -90,16 +99,19 @@ def load_package(root: Path, freeze_path: Path) -> Package:
         if not name.endswith(".md")
     }
     review = parsed["evaluation/family-review.json"]
-    fields(
-        review,
-        {
-            "status",
-            "reviewed_at",
-            "development_manifest_sha256",
-            "scenario_template_novelty_confirmed",
-            "cases",
-        },
-    )
+    review_fields = {
+        "status",
+        "reviewed_at",
+        "development_manifest_sha256",
+        "scenario_template_novelty_confirmed",
+        "cases",
+    }
+    if dataset == DATASET_V2:
+        review_fields |= {
+            "seen_formal_manifest_sha256",
+            "novelty_against_seen_formal_confirmed",
+        }
+    fields(review, review_fields)
     development_raw = (ROOT / "manifest.json").read_bytes()
     development = parse_json(development_raw)
     need(
@@ -115,6 +127,15 @@ def load_package(root: Path, freeze_path: Path) -> Package:
         "FAMILY_REVIEW_ORDER",
     )
     previous = {row["family"] for row in development["variants"]}
+    if dataset == DATASET_V2:
+        prior = freeze.get("seen_formal_package", {})
+        need(
+            prior.get("dataset_id") == DATASET
+            and review["seen_formal_manifest_sha256"] == prior.get("manifest_sha256")
+            and review["novelty_against_seen_formal_confirmed"] is True,
+            "SEEN_FORMAL_NOVELTY_REVIEW",
+        )
+        previous.update(prior["template_families"])
     families = keyed(review["cases"], ("case_id",))
     seed = parsed["runtime/seed.json"]
     maps = keyed(parsed["evaluation/case-map.jsonl"], ("case_id",))
@@ -135,7 +156,7 @@ def load_package(root: Path, freeze_path: Path) -> Package:
     need(
         seed["dataset_version"]
         == parsed["runtime/dataset-manifest.json"]["dataset_version"]
-        == DATASET,
+        == dataset,
         "PACKAGE_VERSION",
     )
     need(
@@ -174,7 +195,7 @@ def load_package(root: Path, freeze_path: Path) -> Package:
             "FAMILY_OVERLAP",
         )
         need(
-            row["dataset_version"] == DATASET
+            row["dataset_version"] == dataset
             and row["policy_version"] == POLICY_VERSION,
             "PACKAGE_VERSION",
         )
@@ -205,7 +226,7 @@ def load_package(root: Path, freeze_path: Path) -> Package:
             "PACKAGE_OBSERVATION",
         )
         need(
-            gold["dataset_version"] == DATASET
+            gold["dataset_version"] == dataset
             and gold["tenant_id"] == ticket["tenant_id"],
             "PACKAGE_VERSION",
         )

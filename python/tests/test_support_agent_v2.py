@@ -1,0 +1,125 @@
+"""Version selection and source-only navigation never manufacture evidence."""
+
+from __future__ import annotations
+
+import copy
+import json
+from pathlib import Path
+
+import pytest
+from jobforge_agent import runtime_adapters, runtime_registry
+from jobforge_agent.dispatch import DispatchError
+from jobforge_agent.runtime_input import APPROVAL_EXECUTOR_VERSION
+from jobforge_agent.support_agent import SupportAgentAdapter
+from jobforge_agent.support_agent_v2 import POLICY_ROLES, SupportAgentV2Adapter
+from test_runtime_adapters import manifest
+from test_support_agent import agent_checkpoint, decision_step
+
+
+def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
+    """Pending decisions grant neither completed requests nor citation evidence."""
+    protected = agent_checkpoint()
+    query = POLICY_ROLES["critical_exception"][1]
+    protected["steps"][-2]["result_json"]["content"]["arguments"]["query"] = query
+    pending = {
+        "type": "tool",
+        "name": "search_policy",
+        "arguments": {"query": "new pending query"},
+    }
+    protected["steps"].append(decision_step(pending))
+    before = copy.deepcopy(protected)
+    old = json.loads(
+        str(
+            SupportAgentAdapter().proposal_messages(protected, correction=False)[1][
+                "content"
+            ]
+        )
+    )
+    messages = SupportAgentV2Adapter().proposal_messages(protected, correction=False)
+    body = json.loads(str(messages[1]["content"]))
+    assert protected == before
+    for field in (
+        "T",
+        "E1",
+        "E2",
+        "policies",
+        "available_refs",
+        "time_differences",
+        "remaining_tools",
+        "allowed_ticket_status_modes",
+    ):
+        assert body[field] == old[field]
+    assert body["completed_requests"][-1]["arguments"]["query"] == query
+    assert pending["arguments"] not in [
+        r["arguments"] for r in body["completed_requests"]
+    ]
+    assert "suggested_query" not in body["policy_roles"]["critical_exception"]
+    assert "suggested_query" in body["policy_roles"]["timing_definition"]
+    assert not body["policy_roles"]["conflict_definition"]["retrieved"]
+    for role in body["policy_roles"].values():
+        assert set(role["retrieved"]) <= set(body["available_refs"])
+        if role["retrieved"]:
+            assert "suggested_query" not in role
+    assert (
+        not {"expected", "gold", "action", "conclusion", "required_claims"}
+        & body.keys()
+    )
+    assert len(str(messages[0]["content"])) < len(
+        str(
+            SupportAgentAdapter().proposal_messages(protected, correction=False)[0][
+                "content"
+            ]
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "schema,prompt,valid",
+    [
+        (1, None, True),
+        (2, "support-agent-prompt-v2", True),
+        (1, "support-agent-prompt-v2", False),
+        (2, None, False),
+        (2, "arbitrary-module", False),
+        (2, "support-agent-prompt-v1", False),
+    ],
+)
+def test_manifest_selects_only_the_explicit_installed_variant(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    schema: int,
+    prompt: str | None,
+    valid: bool,
+) -> None:
+    """Historical manifests cannot select the new or a dynamic implementation."""
+    entry = {
+        "profile_id": "candidate",
+        "profile_hash": "a" * 64,
+        "adapter_id": "support-agent-v1",
+    }
+    if prompt is not None:
+        entry["prompt_version"] = prompt
+    manifest(
+        monkeypatch,
+        tmp_path,
+        {
+            "schema_version": schema,
+            "executor_version": APPROVAL_EXECUTOR_VERSION,
+            "profiles": [entry],
+        },
+    )
+    args = (
+        entry["adapter_id"],
+        entry["profile_id"],
+        entry["profile_hash"],
+        APPROVAL_EXECUTOR_VERSION,
+    )
+    if valid:
+        selected = runtime_adapters.resolve_adapter(*args)
+        assert type(selected) is (
+            SupportAgentV2Adapter if schema == 2 else SupportAgentAdapter
+        )
+    else:
+        with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
+            runtime_adapters.resolve_adapter(*args)
+    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1", "support-agent-v1"}

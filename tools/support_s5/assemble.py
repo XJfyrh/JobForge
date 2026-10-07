@@ -17,6 +17,11 @@ def main() -> None:
     parser.add_argument("mode", choices=("register", "assemble"))
     parser.add_argument("--package", type=Path)
     parser.add_argument("--freeze", type=Path)
+    parser.add_argument(
+        "--seen-diagnostic",
+        action="store_true",
+        help="historical v1 package; excluded from unseen acceptance",
+    )
     parser.add_argument("--out", required=True, type=Path)
     for name in (
         "config",
@@ -32,8 +37,10 @@ def main() -> None:
     args = parser.parse_args()
     if (args.package is None) != (args.freeze is None):
         parser.error("formal package and prior freeze must be supplied together")
+    if args.seen_diagnostic and args.package is None:
+        parser.error("seen diagnostic requires its original v1 package and freeze")
     package = (
-        load_package(args.package, args.freeze)
+        load_package(args.package, args.freeze, historical=args.seen_diagnostic)
         if args.package is not None
         else development_package()
     )
@@ -41,7 +48,7 @@ def main() -> None:
         if args.config is None:
             parser.error("registration requires prepared config")
         result = register(args.config, package=package, s5=True)
-        if args.freeze is not None:
+        if args.freeze is not None and not args.seen_diagnostic:
             validate_blueprint(
                 read(args.freeze),
                 result["profile"]["strategy"],

@@ -328,7 +328,9 @@ def report(
                 row["score"]["errors"].append("UNBOUND_OUTBOUND_SNAPSHOT")
     return {
         "schema_version": 1,
-        "kind": "support-s3-eleven-run-experiment",
+        "kind": "support-s5-eleven-run-experiment"
+        if plan["schema_version"] == 2
+        else "support-s3-eleven-run-experiment",
         "execution_list_sha256": plan_hash,
         "control_audit_sha256": control_hash,
         "unbound_control_run_ids": sorted(set(control_runs) - run_ids),

@@ -233,7 +233,11 @@ def registration(
     )
     need(
         value["dataset_version"]
-        in ({DATASET_VERSION, "support-s5-2026-10-07-v1"} if s5 else {DATASET_VERSION})
+        in (
+            {DATASET_VERSION, "support-s5-2026-10-07-v1", "support-s5-2026-10-07-v2"}
+            if s5
+            else {DATASET_VERSION}
+        )
         and value["policy_version"] == POLICY_VERSION
         and value["corpus_sha256"] == package.corpus_hash,
         "DATA_VERSION",

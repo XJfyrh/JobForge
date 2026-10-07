@@ -49,3 +49,21 @@ func TestManifestRejectsMixedDeploymentAndUntrustedFields(t *testing.T) {
 		}
 	}
 }
+
+func TestManifestPromptSelectorCannotUpgradeHistoricalProfiles(t *testing.T) {
+	valid := `{"schema_version":2,"executor_version":"` + run.SupportApprovalExecutorVersion + `","profiles":[{"profile_id":"candidate-v2","profile_hash":"` + strings.Repeat("a", 64) + `","adapter_id":"support-agent-v1","prompt_version":"` + run.SupportAgentPromptV2 + `"}]}`
+	if _, err := ParseManifest([]byte(valid)); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{
+		strings.Replace(valid, `"schema_version":2`, `"schema_version":1`, 1),
+		strings.Replace(valid, run.SupportAgentPromptV2, run.SupportAgentPromptVersion, 1),
+		strings.Replace(valid, `,"prompt_version":"`+run.SupportAgentPromptV2+`"`, "", 1),
+		strings.Replace(valid, `"prompt_version":"`+run.SupportAgentPromptV2+`"`, `"prompt_version":null`, 1),
+		strings.Replace(valid, run.SupportAgentPromptV2, "unregistered-module", 1),
+	} {
+		if _, err := ParseManifest([]byte(invalid)); !errors.Is(err, run.ErrProfileUnavailable) {
+			t.Fatalf("mixed selector accepted: %v", err)
+		}
+	}
+}
