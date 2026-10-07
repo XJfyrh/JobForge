@@ -24,6 +24,72 @@ if TYPE_CHECKING:
 
 _DIRECTORY = Path("/var/lib/jobforge/outbound")
 _MAX_RECORD_BYTES = 2048
+_PROPOSAL_FIELDS = frozenset(
+    {
+        "decision",
+        "action",
+        "conclusion",
+        "requested_fields",
+        "target_ticket_status",
+        "claims",
+    }
+)
+_OUTER_FIELDS = _PROPOSAL_FIELDS | {"type", "name", "arguments", "proposal"}
+
+
+def model_shape(physical_call_id: str, value: dict[str, Any]) -> None:
+    """Retain only closed field flags/counts after a decoded output is rejected.
+
+    Unknown keys and all payload values stay private. This optional file is
+    neither metering nor execution evidence, and cannot authorize a retry.
+    """
+    try:
+        from uuid import UUID
+
+        if str(UUID(physical_call_id)) != physical_call_id:
+            return
+        outer = sorted(_OUTER_FIELDS.intersection(value))
+        proposal = value.get("proposal")
+        nested = (
+            sorted(_PROPOSAL_FIELDS.intersection(proposal))
+            if isinstance(proposal, dict)
+            else []
+        )
+        outer_type = value.get("type")
+        type_enum = (
+            outer_type
+            if isinstance(outer_type, str) and outer_type in {"tool", "final"}
+            else "other"
+            if "type" in value
+            else "missing"
+        )
+        record = {
+            "schema_version": 1,
+            "physical_call_id": physical_call_id,
+            "outer_key_count": len(value),
+            "known_outer_fields": outer,
+            "unknown_outer_key_count": len(value) - len(outer),
+            "outer_type_enum": type_enum,
+            "has_mapping_proposal": isinstance(proposal, dict),
+            "known_proposal_fields": nested,
+            "nonnull_proposal_fields": [
+                key for key in nested if proposal[key] is not None
+            ]
+            if isinstance(proposal, dict)
+            else [],
+            "unknown_proposal_key_count": len(proposal) - len(nested)
+            if isinstance(proposal, dict)
+            else 0,
+        }
+        raw = json.dumps(record, separators=(",", ":")) + "\n"
+        if len(raw.encode("ascii")) > _MAX_RECORD_BYTES:
+            return
+        path = _DIRECTORY / (physical_call_id + ".model-shape.json")
+        with path.open("x", encoding="ascii") as target:
+            os.chmod(path, 0o600)
+            target.write(raw)
+    except (OSError, ValueError, TypeError):
+        return
 
 
 def model_rejection(physical_call_id: str, error: BaseException) -> None:

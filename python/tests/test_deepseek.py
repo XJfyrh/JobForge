@@ -742,6 +742,74 @@ def test_real_tcp_chat_captures_usage_before_independent_validation(
     asyncio.run(asyncio.wait_for(run(), timeout=5))
 
 
+@pytest.mark.parametrize("write_available", [True, False])
+def test_shape_diagnostic_write_failure_preserves_rejection_and_known_usage(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, write_available: bool
+) -> None:
+    """A real rejected response keeps one send and the same metering barriers."""
+    from jobforge_agent import outbound_audit
+
+    directory = tmp_path
+    if not write_available:
+        directory = tmp_path / "blocked"
+        directory.write_text("synthetic filesystem obstacle", encoding="ascii")
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", directory)
+
+    async def run() -> None:
+        value = _envelope()
+        value["choices"][0]["message"]["content"] = json.dumps(
+            {"decision": "PRIVATE-PAYLOAD", "claims": ["PRIVATE-PAYLOAD"]}
+        )
+
+        async def handler(
+            _reader: asyncio.StreamReader,
+            writer: asyncio.StreamWriter,
+            _request: ReceivedRequest,
+        ) -> None:
+            await respond(writer, body=_wire(value))
+
+        async with HTTPFaultServer(handler) as server:
+            monkeypatch.setattr(dispatch_module, "DEEPSEEK_ORIGIN", server.origin)
+            hooks = _FakeCoordinator()
+            dispatcher = _dispatcher(server, hooks)
+
+            def reject(_proposal: dict[str, Any]) -> str:
+                raise DispatchError("OUTPUT_INVALID")
+
+            try:
+                with pytest.raises(DispatchError, match="OUTPUT_INVALID"):
+                    await DeepSeekChat(dispatcher).propose(
+                        MESSAGES, context=CONTEXT, validate_proposal=reject
+                    )
+                assert len(server.requests) == len(hooks.intents) == 1
+                assert len(hooks.reports) == len(dispatcher.recorded_usage()) == 1
+                assert hooks.reports[0]["usage"]["input_tokens"] == 10
+                assert hooks.reports[0]["usage"]["output_tokens"] == 5
+                assert (
+                    hooks.reports[0]["provider_audit"]["response_sha256"]
+                    == hashlib.sha256(_wire(value)).hexdigest()
+                )
+                assert len(hooks.observations) == 1
+                assert hooks.observations[0]["business_outcome"] == "rejected"
+                assert hooks.observations[0]["usage_disposition"] == "reported"
+                path = directory / (CALL_ID + ".model-shape.json")
+                if write_available:
+                    raw = path.read_bytes()
+                    assert b"PRIVATE" not in raw
+                    assert json.loads(raw)["outer_type_enum"] == "missing"
+                else:
+                    assert not path.exists()
+                with pytest.raises(DispatchError):
+                    await DeepSeekChat(dispatcher).propose(
+                        MESSAGES, context=CONTEXT, validate_proposal=reject
+                    )
+                assert len(server.requests) == len(hooks.reports) == 1
+            finally:
+                await dispatcher.aclose()
+
+    asyncio.run(asyncio.wait_for(run(), timeout=5))
+
+
 def test_cancel_during_settlement_keeps_already_captured_usage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

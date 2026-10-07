@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 from dataclasses import replace
 from datetime import datetime
@@ -265,6 +266,62 @@ def test_model_rejection_contains_code_sites_without_input_or_exception(
     monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path / "missing")
     outbound_audit.model_rejection(CALL, ValueError("PRIVATE"))
     assert not (tmp_path / "missing").exists()
+
+
+@pytest.mark.parametrize("outer_type", ["tool", "final", None, "PRIVATE-TYPE", {}])
+def test_rejected_shape_keeps_only_closed_flags_and_counts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, outer_type: Any
+) -> None:
+    """Hostile names/values cannot enter the bounded structural diagnostic."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    value = {
+        "type": outer_type,
+        "name": "PRIVATE-TOOL",
+        "arguments": {"PRIVATE-CREDENTIAL": "PRIVATE-CUSTOMER-BODY"},
+        "proposal": {
+            "decision": "PRIVATE-DECISION",
+            "claims": None,
+            "PRIVATE-NESTED-NAME": "PRIVATE-NESTED-VALUE",
+        },
+        **{f"PRIVATE-FIELD-{i}": "PRIVATE-VALUE" for i in range(1000)},
+    }
+    original = copy.deepcopy(value)
+    outbound_audit.model_shape(CALL, value)
+    path = tmp_path / (CALL + ".model-shape.json")
+    raw = path.read_bytes()
+    assert len(raw) <= 2048 and b"PRIVATE" not in raw and value == original
+    shape = json.loads(raw)
+    assert shape["known_outer_fields"] == ["arguments", "name", "proposal", "type"]
+    assert shape["unknown_outer_key_count"] == 1000
+    assert shape["outer_type_enum"] == (
+        outer_type
+        if isinstance(outer_type, str) and outer_type in {"tool", "final"}
+        else "other"
+    )
+    assert shape["known_proposal_fields"] == ["claims", "decision"]
+    assert shape["nonnull_proposal_fields"] == ["decision"]
+    assert shape["unknown_proposal_key_count"] == 1
+    outbound_audit.model_shape(CALL, {"type": "tool"})
+    assert path.read_bytes() == raw
+
+
+def test_bare_proposal_is_distinguishable_without_retaining_its_values(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Missing outer type/proposal is observable without guessing model text."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    outbound_audit.model_shape(CALL, {"decision": "PRIVATE", "claims": ["PRIVATE"]})
+    shape = json.loads((tmp_path / (CALL + ".model-shape.json")).read_bytes())
+    assert shape["outer_type_enum"] == "missing"
+    assert shape["known_outer_fields"] == ["claims", "decision"]
+    assert not shape["has_mapping_proposal"]
+    assert shape["known_proposal_fields"] == []
+    assert b"PRIVATE" not in json.dumps(shape).encode()
+    outbound_audit.model_shape("../PRIVATE-CALL", {})
+    assert len(list(tmp_path.iterdir())) == 1
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path / "unmounted")
+    outbound_audit.model_shape(CALL, {})
+    assert not (tmp_path / "unmounted").exists()
 
 
 @run_async

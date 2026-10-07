@@ -377,6 +377,9 @@ class DeepSeekChat:
                 failure = DispatchError(error.code, fact=error.fact, stop=error.stop)
             except (ToolError, ValueError, TypeError):
                 failure = DispatchError("OUTPUT_INVALID")
+            from jobforge_agent.outbound_audit import model_shape
+
+            model_shape(response.physical_call_id, proposal)
             raise failure
 
         return await self._dispatcher.execute(
