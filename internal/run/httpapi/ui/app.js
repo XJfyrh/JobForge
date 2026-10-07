@@ -12,6 +12,18 @@ const json = (id, value) => text(id, value == null ? "" : JSON.stringify(value, 
 const describe = (value) => descriptions[value] ?? `未知状态：${value ?? "未返回"}`;
 const money = (value) => Number.isSafeInteger(value) && value >= 0 ? `${(value / 1000000).toFixed(6)} CNY` : "未知";
 const date = (value) => value != null && Number.isFinite(new Date(value).getTime()) ? new Date(value).toLocaleString() : "未记录";
+const runFailures = { RUN_DEADLINE_EXCEEDED: "已超过处理期限", MODEL_PROTOCOL_ERROR: "模型响应未通过协议检查", BUDGET_EXHAUSTED: "调用额度已用完" };
+
+function processingResult(run) {
+  if (run.state === "failed") {
+    const result = run.proposal_ref ? "方案已保存，处理未完成" : "处理失败";
+    return runFailures[run.error?.code] ? `${result}：${runFailures[run.error.code]}` : result;
+  }
+  if (run.state === "cancelled") return run.proposal_ref ? "已取消后续处理，方案已保存" : "已取消后续处理";
+  if (run.outcome) return describe(run.outcome);
+  if (run.state === "awaiting_approval") return "方案待审批";
+  return stateNames[run.state] ?? "处理状态待确认";
+}
 
 function clearSession() {
   epoch++;
@@ -80,7 +92,7 @@ async function list(append = false) {
       const row = document.createElement("tr"), ticket = cell(row, run.ticket_id), id = document.createElement("small");
       id.textContent = run.run_id; ticket.append(id);
       cell(row, stateNames[run.state] ?? `未知状态：${run.state}`);
-      cell(row, run.outcome ? describe(run.outcome) : run.state === "awaiting_approval" ? "方案待审批" : "待完成"); cell(row, date(run.created_at));
+      cell(row, processingResult(run)); cell(row, date(run.created_at));
       const button = document.createElement("button"); button.className = "secondary"; button.textContent = "查看";
       button.addEventListener("click", () => guard(() => detail(run.run_id))); cell(row, "").append(button);
       el("runs").append(row);

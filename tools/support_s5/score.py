@@ -28,6 +28,8 @@ from tools.support_evaluation.validate_data import parse_json, sha256
 from tools.support_s5.package import DATASET, load_package
 
 SCORER = "support-s5-quality-v1"
+# Pretty-printed comparison bindings can exceed the semantic 64 KiB ceiling.
+MAX_REGISTRATION_FILE = 128 * 1024
 THRESHOLDS = {"proposal_correct": 16, "full_case_evidence": 18, "denominator": 20}
 
 
@@ -291,7 +293,7 @@ def main() -> None:
     parser.add_argument("--package", type=Path)
     parser.add_argument("--freeze", type=Path)
     args = parser.parse_args()
-    registered, digest_value = read_json(args.registration, MAX_REGISTRATION)
+    registered, digest_value = read_json(args.registration, MAX_REGISTRATION_FILE)
     evidence, _ = read_json(args.evidence, MAX_EVIDENCE)
     if registered["dataset_version"] == DATASET:
         if args.package is None or args.freeze is None:

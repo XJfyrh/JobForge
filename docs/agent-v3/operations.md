@@ -16,6 +16,8 @@ docker compose -f deploy/compose.agent.yaml --profile obs up -d run-collector ru
 
 此 profile 使用 v3 专用 collector、Prometheus、Grafana 和 Jaeger。宿主入口为 Prometheus `http://localhost:9094`、Grafana `http://localhost:3004`、Jaeger `http://localhost:16687`；部署到其他网络时自行设置访问边界和凭据。控制与 Worker 的 metrics 端口只用于内部抓取，容器地址应显式配置；默认分别监听 `127.0.0.1:6063/6064`。
 
+S5 operator 设置 `JOBFORGE_AGENT_WORKER_METRICS_ADDR=0.0.0.0:6064`，启动器将该地址传给 Go Worker；容器在观测私网使用 `agent-worker` 别名，与 Prometheus 抓取目标一致。控制服务的 `JOBFORGE_METRICS_ADDR` 独立配置为 `0.0.0.0:6063`。
+
 控制、Worker、业务服务设置 `JOBFORGE_OTEL_EXPORTER=otlp`、`OTEL_EXPORTER_OTLP_ENDPOINT=http://run-collector:4318`；未设置时不导出。采样率可通过 `JOBFORGE_OTEL_SAMPLE_RATIO` 指定0–1。SDK 使用部署的 OpenTelemetry provider，不在 SDK 内创建隐式全局 exporter。
 
 每个 attempt 新建有限根 span，link 到原 Submit trace，以 Run ID / attempt_no 关联审批后继续及租约恢复。人工等待时没有常驻 span。`run.python.execute` 由 Go guardian 计时，覆盖真实进程启动至清理；`run.external_http` 的 Python 调用由已核验 IPC 的 permit→observation 区间桥接，缺失 observation 保持 unknown，许可本身不证明已发送。实际业务 HTTP 继续传播 TraceContext。该实现没有新增 Python IPC 消息或 Python collector 通道。

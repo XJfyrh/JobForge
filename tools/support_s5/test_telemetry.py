@@ -16,11 +16,17 @@ def test_s5_children_get_trace_settings_but_not_credentials(
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
     monkeypatch.setenv("JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE", "/run/secrets/worker")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "synthetic-do-not-inherit")
+    monkeypatch.setenv("JOBFORGE_METRICS_ADDR", "0.0.0.0:6063")
+    monkeypatch.setenv("JOBFORGE_AGENT_WORKER_METRICS_ADDR", "0.0.0.0:6064")
     for worker in (False, True):
         environment = child_environment(worker, s5=True)
         assert environment["JOBFORGE_OTEL_EXPORTER"] == "otlp"
         assert "DEEPSEEK_API_KEY" not in environment
         assert ("JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE" in environment) == worker
+        assert environment.get("JOBFORGE_METRICS_ADDR") == (
+            "0.0.0.0:6064" if worker else None
+        )
+        assert "JOBFORGE_METRICS_ADDR" not in child_environment(worker)
         assert "JOBFORGE_OTEL_EXPORTER" not in child_environment(worker)
     monkeypatch.delenv("JOBFORGE_OTEL_EXPORTER")
     assert telemetry.setup() is None

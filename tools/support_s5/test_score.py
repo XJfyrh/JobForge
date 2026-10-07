@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tools.support_evaluation.evidence import EvidenceError, load_package
+from tools.support_evaluation.export import json_bytes
 from tools.support_evaluation.fixtures import case_row, registered, unattempted
 from tools.support_evaluation.validate_data import sha256
+from tools.support_s5 import score
+from tools.support_s5.freeze import blueprint
 from tools.support_s5.package import load_package as unseen_package
 from tools.support_s5.score import (
     full_case_evidence,
@@ -119,3 +123,65 @@ def test_unseen_package_cannot_open_before_candidate_freeze(tmp_path: Path) -> N
     freeze.write_text(json.dumps({"status": "candidate_not_frozen"}))
     with pytest.raises(EvidenceError, match="CANDIDATE_NOT_FROZEN"):
         unseen_package(tmp_path / "uncreated-unseen", freeze)
+
+
+def test_cli_reads_complete_pretty_development_registration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """All 40 comparison bindings survive the registrar's original formatting."""
+    package = load_package()
+    reg = registered(package)
+    reg["scorer_version"] = score.SCORER
+    reg["profile"]["executor_version"] = "linux-v2-fixed-comparison-runtime-1"
+    definition = json.loads(
+        (
+            Path(__file__).resolve().parents[2] / "api/support/profile-v1/fixtures.json"
+        ).read_bytes()
+    )["profile"]["definition"]
+    definition["schema_version"] = 5
+    definition["model"]["message_content_bytes"] = 65536
+    definition["model"]["request_body_bytes"] = 131072
+    reg["strategy_blueprint"] = blueprint(definition)
+    reg["comparison"] = {
+        "model": definition["model"],
+        "resources": definition["resources"],
+        "family_limits": reg["bindings"][0]["budget_limits"]["family"],
+    }
+    for binding in reg["bindings"]:
+        binding["business_request_key"] = "unit-" + binding["case_id"] + "-" + "a" * 64
+    raw = json_bytes(reg)
+    assert score.MAX_REGISTRATION < len(raw) < score.MAX_REGISTRATION_FILE
+    registration_path, evidence_path = (
+        tmp_path / "registration.json",
+        tmp_path / "evidence.json",
+    )
+    registration_path.write_bytes(raw)
+    evidence_path.write_bytes(
+        json_bytes(
+            {
+                "schema_version": 1,
+                "registration_sha256": sha256(raw),
+                "cases": [unattempted(c) for c in package.cases],
+                "receipt_audit": audit(),
+            }
+        )
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "score",
+            "--registration",
+            str(registration_path),
+            "--evidence",
+            str(evidence_path),
+        ],
+    )
+    score.main()
+    result = json.loads(capsys.readouterr().out)
+    assert result["registration_sha256"] == sha256(raw)
+    assert result["denominator"] == len(result["cases"]) == 40
+    assert not result["proposal_audit_complete"]
+    registration_path.write_bytes(b" " * (score.MAX_REGISTRATION_FILE + 1))
+    with pytest.raises(EvidenceError, match="SIZE_LIMIT"):
+        score.main()

@@ -85,6 +85,10 @@ def child_environment(worker: bool, *, s5: bool = False) -> dict[str, str]:
         ):
             if key in os.environ:
                 environment[key] = os.environ[key]
+        if worker and "JOBFORGE_AGENT_WORKER_METRICS_ADDR" in os.environ:
+            environment["JOBFORGE_METRICS_ADDR"] = os.environ[
+                "JOBFORGE_AGENT_WORKER_METRICS_ADDR"
+            ]
     return environment
 
 
