@@ -2,7 +2,7 @@
 
 S5 的独立候选使用 schema 7 / `support-agent-prompt-v2` 和部署 manifest 2：准备器绑定真实新提示源码，Worker 核验与 profile 一致。新提示只细分政策导航及展示已提交工具，旧版本行为保留；模型仍选择所有工具与结论。冻结、已见诊断和新正式集的顺序见 [ADR-0028](../adr/0028-versioned-support-evidence-navigation.md) 与 [S5 工具](../../tools/support_s5/README.md)。
 
-最终响应的最外层固定为 `{"type":"final","proposal":{...}}`，与内层 `proposal.decision` 的 `proposal` / `no_action` 分开。候选复用旧 Agent 的完整嵌套六字段、claim 变体和引用契约，并在开头、最终检查和唯一纠错提示明确外层格式；校验器拒绝未知字段或其他外层类型，修订源码通过新 profile/hash 和镜像绑定。
+候选以旧 Agent 的完整指令和事实投影为主干，保留 `policy_retrieval` 与 `previous_tools`，只补充已提交请求去重、细分政策导航和缺失项并集、correction 来源、活跃事件选择的澄清。导航只展示实际取回及尚缺的段落别名，不提供主张、结论或自动检索。最终响应为 `{"type":"final","proposal":{...}}`；校验器仍拒绝未知字段或其他外层类型，修订源码通过新 profile/hash 和镜像绑定。
 
 契约为[PRD v0.16](../product/JobForge_PRD_v0.16.md)与[ADR-0024](../adr/0024-bounded-support-agent.md)。`support_agent_v1`/`support-agent-v1`使用独立`linux-v2-agent-runtime-1`，S1历史profile与结果保留。模型可在读取订单、物流、不同政策检索之间选择下一步，最后提交既有结构化方案；Go保有调度、预算、来源和状态转换的决定权。
 

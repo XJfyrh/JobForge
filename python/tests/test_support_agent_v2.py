@@ -16,7 +16,10 @@ from test_runtime_adapters import manifest
 from test_support_agent import FIXTURE, agent_checkpoint, decision_step
 
 
-def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
+@pytest.mark.parametrize("correction", [False, True])
+def test_navigation_uses_committed_tools_and_actual_aliases_only(
+    correction: bool,
+) -> None:
     """Pending decisions grant neither completed requests nor citation evidence."""
     protected = agent_checkpoint()
     query = POLICY_ROLES["critical_exception"][1]
@@ -30,40 +33,58 @@ def test_navigation_uses_committed_tools_and_actual_aliases_only() -> None:
     before = copy.deepcopy(protected)
     old = json.loads(
         str(
-            SupportAgentAdapter().proposal_messages(protected, correction=False)[1][
-                "content"
-            ]
+            SupportAgentAdapter().proposal_messages(protected, correction=correction)[
+                1
+            ]["content"]
         )
     )
-    messages = SupportAgentV2Adapter().proposal_messages(protected, correction=False)
+    original = SupportAgentAdapter().proposal_messages(protected, correction=correction)
+    messages = SupportAgentV2Adapter().proposal_messages(
+        protected, correction=correction
+    )
     body = json.loads(str(messages[1]["content"]))
     assert protected == before
-    for field in (
-        "T",
-        "E1",
-        "E2",
-        "policies",
-        "available_refs",
-        "time_differences",
-        "remaining_tools",
-        "allowed_ticket_status_modes",
-    ):
+    assert str(messages[0]["content"]).startswith(str(original[0]["content"]))
+    for field in old:
         assert body[field] == old[field]
+    assert body.keys() - old.keys() == {"completed_requests", "policy_navigation"}
+    assert "claim_fact_navigation" not in body
     assert body["completed_requests"][-1]["arguments"]["query"] == query
     assert pending["arguments"] not in [
         r["arguments"] for r in body["completed_requests"]
     ]
-    assert "suggested_query" not in body["policy_roles"]["critical_exception"]
-    assert "suggested_query" in body["policy_roles"]["timing_definition"]
-    assert not body["policy_roles"]["conflict_definition"]["retrieved"]
-    for role in body["policy_roles"].values():
+    assert "suggested_query" not in body["policy_navigation"]["critical_exception"]
+    assert "suggested_query" in body["policy_navigation"]["timing_definition"]
+    assert not body["policy_navigation"]["conflict_definition"]["retrieved"]
+    for role in body["policy_navigation"].values():
         assert set(role["retrieved"]) <= set(body["available_refs"])
-        if role["retrieved"]:
+        assert not set(role["missing_aliases"]) & set(body["available_refs"])
+        if not role["missing_aliases"]:
             assert "suggested_query" not in role
     assert (
         not {"expected", "gold", "action", "conclusion", "required_claims"}
         & body.keys()
     )
+
+
+def test_a_retrieved_paragraph_does_not_hide_another_missing_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Partial retrieval remains explicit; navigation cannot invent a citation."""
+    monkeypatch.setitem(
+        POLICY_ROLES,
+        "partial_topic",
+        (("P01.1", "P01.2"), "another focused policy query"),
+    )
+    messages = SupportAgentV2Adapter().proposal_messages(
+        agent_checkpoint(), correction=False
+    )
+    facts = json.loads(str(messages[1]["content"]))
+    partial = facts["policy_navigation"]["partial_topic"]
+    assert partial["retrieved"] == ["P01.1"]
+    assert partial["missing_aliases"] == ["P01.2"]
+    assert partial["suggested_query"] == "another focused policy query"
+    assert "P01.2" not in facts["available_refs"]
     assert (
         sum(len(str(message["content"]).encode("utf-8")) for message in messages)
         <= 65536
