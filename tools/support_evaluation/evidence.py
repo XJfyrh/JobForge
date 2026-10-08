@@ -369,7 +369,11 @@ def registration(
         type(value["bindings"]) is list
         and len(value["bindings"])
         == (
-            20 if s5 and value["dataset_version"] == "support-s5-2026-10-07-v1" else 40
+            20
+            if s5
+            and value["dataset_version"]
+            in {"support-s5-2026-10-07-v1", "support-s5-2026-10-07-v2"}
+            else 40
         ),
         "CASE_COVERAGE",
     )
