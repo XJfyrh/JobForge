@@ -2,6 +2,8 @@
 
 按使用顺序阅读；实现与验收状态统一见[当前状态](../status.md)。
 
+S5正式质量未通过，已恢复诊断与修复工作；进度见[当前状态](../status.md)，原始结果见[正式报告](../evidence/agent-v3-s5-real-2026-10-08.md)。
+
 1. [业务依赖](business.md)：快照、真实 embedding 和政策检索。
 2. [Run 接入](runs.md)：控制服务、SDK、执行权和预算排障。
 3. [运行时](runtime.md)：固定 Linux Worker、manifest、秘密和进程屏障。

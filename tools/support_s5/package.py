@@ -23,7 +23,9 @@ from tools.support_evaluation.validate_data import (
 
 DATASET = "support-s5-2026-10-07-v1"
 DATASET_V2 = "support-s5-2026-10-07-v2"
-DATASETS = {DATASET, DATASET_V2}
+DATASET_V3 = "support-s5-2026-10-08-v3"
+SEEN_DATASETS = {DATASET, DATASET_V2}
+DATASETS = {*SEEN_DATASETS, DATASET_V3}
 ARTIFACT_NAMES = (ARTIFACTS - {"evaluation/dev_gold.jsonl"}) | {
     "evaluation/gold.jsonl",
     "evaluation/family-review.json",
@@ -79,7 +81,7 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
         "PACKAGE_VERSION",
     )
     dataset = manifest["dataset_id"]
-    need(not historical or dataset == DATASET, "HISTORICAL_DIAGNOSTIC_ONLY")
+    need(not historical or dataset in SEEN_DATASETS, "HISTORICAL_DIAGNOSTIC_ONLY")
     need(
         manifest["freeze_sha256"] == sha256(freeze_raw)
         and instant(manifest["authored_at"]) > instant(freeze["frozen_at"]),
@@ -111,6 +113,11 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
             "seen_formal_manifest_sha256",
             "novelty_against_seen_formal_confirmed",
         }
+    elif dataset == DATASET_V3:
+        review_fields |= {
+            "seen_formal_manifest_sha256_by_dataset",
+            "novelty_against_seen_formals_confirmed",
+        }
     fields(review, review_fields)
     development_raw = (ROOT / "manifest.json").read_bytes()
     development = parse_json(development_raw)
@@ -127,15 +134,7 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
         "FAMILY_REVIEW_ORDER",
     )
     previous = {row["family"] for row in development["variants"]}
-    if dataset == DATASET_V2:
-        prior = freeze.get("seen_formal_package", {})
-        need(
-            prior.get("dataset_id") == DATASET
-            and review["seen_formal_manifest_sha256"] == prior.get("manifest_sha256")
-            and review["novelty_against_seen_formal_confirmed"] is True,
-            "SEEN_FORMAL_NOVELTY_REVIEW",
-        )
-        previous.update(prior["template_families"])
+    previous.update(prior_families(dataset, review, freeze))
     families = keyed(review["cases"], ("case_id",))
     seed = parsed["runtime/seed.json"]
     maps = keyed(parsed["evaluation/case-map.jsonl"], ("case_id",))
@@ -280,3 +279,35 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
         anchors,
         paragraphs,
     )
+
+
+def prior_families(
+    dataset: str, review: dict[str, Any], freeze: dict[str, Any]
+) -> set[str]:
+    """Require every seen cohort in both the new freeze and novelty review."""
+    if dataset == DATASET_V2:
+        prior = freeze.get("seen_formal_package", {})
+        need(
+            prior.get("dataset_id") == DATASET
+            and review["seen_formal_manifest_sha256"] == prior.get("manifest_sha256")
+            and review["novelty_against_seen_formal_confirmed"] is True,
+            "SEEN_FORMAL_NOVELTY_REVIEW",
+        )
+        return set(prior["template_families"])
+    if dataset == DATASET_V3:
+        prior_list = freeze.get("seen_formal_packages", [])
+        need(
+            isinstance(prior_list, list)
+            and len(prior_list) == 2
+            and all(isinstance(p, dict) for p in prior_list)
+            and {p.get("dataset_id") for p in prior_list} == SEEN_DATASETS,
+            "SEEN_FORMAL_PROVENANCE_REQUIRED",
+        )
+        expected = {p["dataset_id"]: p["manifest_sha256"] for p in prior_list}
+        need(
+            review["seen_formal_manifest_sha256_by_dataset"] == expected
+            and review["novelty_against_seen_formals_confirmed"] is True,
+            "SEEN_FORMAL_NOVELTY_REVIEW",
+        )
+        return {family for p in prior_list for family in p["template_families"]}
+    return set()

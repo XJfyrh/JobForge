@@ -14,7 +14,11 @@ from tools.support_evaluation.fixtures import registered
 from tools.support_evaluation.validate_data import DATASET_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
-FORMAL = ("support-s5-2026-10-07-v1", "support-s5-2026-10-07-v2")
+FORMAL = (
+    "support-s5-2026-10-07-v1",
+    "support-s5-2026-10-07-v2",
+    "support-s5-2026-10-08-v3",
+)
 STRATEGIES = ("support_agent_v1", "support_fixed_v1")
 
 

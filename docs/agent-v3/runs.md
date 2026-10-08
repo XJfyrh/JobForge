@@ -68,7 +68,7 @@ with RunClient("http://127.0.0.1:8093", "dev-agent-north-operator") as client:
 
 CommitStep拒绝过大结果或无法验证的模型方案时，RPC状态为 `INVALID_ARGUMENT`，reason分别保留 `CHECKPOINT_TOO_LARGE`、`MODEL_PROTOCOL_ERROR`。这两类结果错误不能被当作临时内部故障无限重试；Worker只可按登记策略使用一次协议纠正，或以同名永久错误结束attempt。未知服务端错误仍统一脱敏为 `INTERNAL`。
 
-步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；`no_action` 可以直接成功。新 schema 4 的[审批路径](approval.md)可拒绝完成或批准后继续原 Run 的登记动作；旧方案不获得写权限。
+步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；`no_action` 可以直接成功。schema 4/6/7/9的[审批路径](approval.md)可拒绝完成或批准后继续原Run的登记动作；其余方案不获得写权限。
 
 重复中间CommitStep仍须当前有效lease；最终提交丢ACK后使用只读GetAcceptedCommit。自动恢复读取原Run已提交步骤，未提交步骤可能重做；首次授权前的人工retry为空游标。恢复规则、runtime 版本和未提交模型步骤的条件见[恢复指南](recovery.md)，不恢复模型内部推理进度。
 

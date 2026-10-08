@@ -130,7 +130,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	if err != nil || d.SchemaVersion == 1 && o.BatchCostMicroyuan > 5000000 {
 		return nil, errors.New("invalid fixed support definition or S1 cost limit")
 	}
-	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID
+	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID || d.Resources.DatasetID == run.SupportS5V3DatasetID
 	if newDataset != (source.SchemaVersion == 2 && source.CaseMap != nil && source.RuntimeData != nil) ||
 		!newDataset && (source.SchemaVersion != 1 || source.CaseMap != nil || source.RuntimeData != nil) {
 		return nil, errors.New("S5 registration requires its separately reviewed case map")
@@ -207,7 +207,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	files["worker.json"] = supportJSON(worker)
 	manifest := runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
 		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}}
-	if d.SchemaVersion == 7 || d.SchemaVersion == 8 {
+	if d.SchemaVersion == 7 || d.SchemaVersion == 8 || d.SchemaVersion == 9 || d.SchemaVersion == 10 {
 		manifest.SchemaVersion = 2
 		manifest.Profiles[0].PromptVersion = d.Program.PromptVersion
 	}
@@ -277,6 +277,9 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 		promptPath = "python/jobforge_agent/support_agent.py"
 		if d.Program.PromptVersion == run.SupportAgentPromptV2 {
 			promptPath = "python/jobforge_agent/support_agent_v2.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV3 {
+			promptPath = "python/jobforge_agent/support_agent_v3.py"
 		}
 	}
 	sources := map[string]string{

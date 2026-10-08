@@ -99,6 +99,11 @@ def _manifest_profiles(
                     "linux-v2-approval-runtime-1",
                 ),
                 (
+                    "support-agent-v1",
+                    "support-agent-prompt-v3",
+                    "linux-v2-approval-runtime-1",
+                ),
+                (
                     "support-fixed-v1",
                     "support-fixed-prompt-v1",
                     "linux-v2-fixed-comparison-runtime-1",
@@ -137,6 +142,10 @@ def resolve_adapter(
         from jobforge_agent.support_agent_v2 import SupportAgentV2Adapter
 
         return SupportAgentV2Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v3":
+        from jobforge_agent.support_agent_v3 import SupportAgentV3Adapter
+
+        return SupportAgentV3Adapter()
     return adapter
 
 

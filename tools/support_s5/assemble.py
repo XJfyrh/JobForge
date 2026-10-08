@@ -20,7 +20,7 @@ def main() -> None:
     parser.add_argument(
         "--seen-diagnostic",
         action="store_true",
-        help="historical v1 package; excluded from unseen acceptance",
+        help="historical v1/v2 package; excluded from unseen acceptance",
     )
     parser.add_argument("--out", required=True, type=Path)
     for name in (
@@ -38,7 +38,7 @@ def main() -> None:
     if (args.package is None) != (args.freeze is None):
         parser.error("formal package and prior freeze must be supplied together")
     if args.seen_diagnostic and args.package is None:
-        parser.error("seen diagnostic requires its original v1 package and freeze")
+        parser.error("seen diagnostic requires its original v1/v2 package and freeze")
     package = (
         load_package(args.package, args.freeze, historical=args.seen_diagnostic)
         if args.package is not None

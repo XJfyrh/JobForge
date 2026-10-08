@@ -25,7 +25,7 @@ from tools.support_evaluation.evidence import (
 )
 from tools.support_evaluation.score import CASE_FIELDS, ZERO_USAGE, evaluate_case
 from tools.support_evaluation.validate_data import parse_json, sha256
-from tools.support_s5.package import DATASETS, load_package
+from tools.support_s5.package import DATASETS, SEEN_DATASETS, load_package
 
 SCORER = "support-s5-quality-v1"
 # Pretty-printed comparison bindings can exceed the semantic 64 KiB ceiling.
@@ -136,8 +136,7 @@ def score_export(
     )
     count = 20 if registered["dataset_version"] in DATASETS else 40
     need(
-        not seen_diagnostic
-        or registered["dataset_version"] == "support-s5-2026-10-07-v1",
+        not seen_diagnostic or registered["dataset_version"] in SEEN_DATASETS,
         "SEEN_DIAGNOSTIC_SCOPE",
     )
     need(
@@ -306,7 +305,7 @@ def main() -> None:
     parser.add_argument(
         "--seen-diagnostic",
         action="store_true",
-        help="historical v1 data only; never counts as unseen acceptance",
+        help="historical v1/v2 data only; never counts as unseen acceptance",
     )
     args = parser.parse_args()
     registered, digest_value = read_json(args.registration, MAX_REGISTRATION_FILE)

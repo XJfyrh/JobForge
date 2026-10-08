@@ -1,6 +1,6 @@
 # 当前状态与下一步
 
-更新于 2026-10-07。已接受阶段为 Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5 实施分支正在审查。本页维护实现状态；契约状态见[产品索引](product/README.md)和[ADR 索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
+更新于2026-10-08。已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。用户已恢复工作；[输入诊断](evidence/agent-v3-s5-input-diagnosis-2026-10-08.md)及[ADR-0030](adr/0030-s5-policy-condition-candidate.md)设计已独立接受，schema9/10候选已实现，真实模型验证尚未完成。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|
@@ -9,7 +9,7 @@
 | S2 | 由模型选择只读工具、累计来源、一次纠错 | [40 案真实验收](evidence/agent-v3-s2-delivery-2026-09-17.md)，业务 37/40，安全硬失败 0；另有真实响应截断注入 |
 | S3 | 复用已提交步骤、自然租约接管、未提交步骤有条件重做 | [固定 11 项真实验收](evidence/agent-v3-s3-cloud-2026-10-04.md)，5 个接管机制通过；8 个完整方案中 7 个业务通过，DEV-035-C 失败；3 个按计划取消的对照运行（H0） |
 | S4 | 人工审批、Go结论记录、独立动作许可、终态效果核对与回执优先retry | [固定 10 个源样本及 2 个后继](evidence/agent-v3-s4-cloud-2026-10-05.md)，原方案业务质量 10/10、机制 10/10，7 条唯一业务回执；真实层获独立接受 |
-| S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [免费机制](evidence/agent-v3-s5-free-2026-10-07.md)通过；[Agent开发回归](evidence/agent-v3-s5-dev-agent-2026-10-07.md)方案及完整证据37/40，四类硬失败0；固定对照及正式20案待运行，未见集未创建/未打开 |
+| S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [免费机制](evidence/agent-v3-s5-free-2026-10-07.md)通过；[本轮正式](evidence/agent-v3-s5-real-2026-10-08.md)Agent正确/完整证据10/20、Fixed各1/20，四类硬失败0；未达16/18门槛，已恢复诊断，恢复/演示未执行 |
 
 任务页面支持审阅方案，批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
 

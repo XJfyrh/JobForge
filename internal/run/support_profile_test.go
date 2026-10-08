@@ -139,6 +139,31 @@ func TestSupportS5CandidateVersionsKeepHistoricalPromptBoundary(t *testing.T) {
 	if _, err := BuildSupportProfile("old-mixed", fixed); err == nil {
 		t.Fatal("historical schema5 silently widened")
 	}
+	d.SchemaVersion, d.Program.PromptVersion, d.Resources.DatasetID = 9, SupportAgentPromptV3, SupportS5V3DatasetID
+	p, err = BuildSupportProfile("candidate-v3", d)
+	if err != nil || ValidateSupportProfile(p) != nil || !p.ApprovalEnabled() || !p.ConfirmedStepRecovery() || p.ExecutorVersion != SupportApprovalExecutorVersion {
+		t.Fatal("v3 candidate lost capabilities", err)
+	}
+	for _, mutate := range []func(*SupportDefinition){
+		func(d *SupportDefinition) { d.SchemaVersion = 7 },
+		func(d *SupportDefinition) { d.Program.PromptVersion = SupportAgentPromptV2 },
+		func(d *SupportDefinition) { d.Resources.DatasetID = "unknown-cohort" },
+	} {
+		changed := d
+		mutate(&changed)
+		if _, err := BuildSupportProfile("mixed-v3", changed); err == nil {
+			t.Fatal("mixed v3 candidate accepted")
+		}
+	}
+	fixed.SchemaVersion, fixed.Resources.DatasetID = 10, SupportS5V3DatasetID
+	fixedProfile, err := BuildSupportProfile("fixed-v3", fixed)
+	if err != nil || ValidateSupportProfile(fixedProfile) != nil || fixedProfile.ApprovalEnabled() || fixedProfile.ConfirmedStepRecovery() || fixedProfile.ExecutorVersion != SupportFixedComparisonExecutorVersion {
+		t.Fatal("fixed v3 capability changed", err)
+	}
+	fixed.SchemaVersion = 8
+	if _, err := BuildSupportProfile("old-fixed-v3-data", fixed); err == nil {
+		t.Fatal("historical schema8 silently widened")
+	}
 }
 
 func TestSupportProfileFixture(t *testing.T) {

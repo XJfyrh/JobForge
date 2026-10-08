@@ -234,7 +234,12 @@ def registration(
     need(
         value["dataset_version"]
         in (
-            {DATASET_VERSION, "support-s5-2026-10-07-v1", "support-s5-2026-10-07-v2"}
+            {
+                DATASET_VERSION,
+                "support-s5-2026-10-07-v1",
+                "support-s5-2026-10-07-v2",
+                "support-s5-2026-10-08-v3",
+            }
             if s5
             else {DATASET_VERSION}
         )
@@ -372,7 +377,11 @@ def registration(
             20
             if s5
             and value["dataset_version"]
-            in {"support-s5-2026-10-07-v1", "support-s5-2026-10-07-v2"}
+            in {
+                "support-s5-2026-10-07-v1",
+                "support-s5-2026-10-07-v2",
+                "support-s5-2026-10-08-v3",
+            }
             else 40
         ),
         "CASE_COVERAGE",

@@ -329,7 +329,7 @@ def report(
     return {
         "schema_version": 1,
         "kind": "support-s5-eleven-run-experiment"
-        if plan["schema_version"] == 2
+        if plan["schema_version"] in {2, 3}
         else "support-s3-eleven-run-experiment",
         "execution_list_sha256": plan_hash,
         "control_audit_sha256": control_hash,

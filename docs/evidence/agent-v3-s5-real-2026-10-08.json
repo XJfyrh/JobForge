@@ -1,0 +1,1970 @@
+{
+  "schema_version": 1,
+  "report_date": "2026-10-08",
+  "recorded_at": "2026-10-08T03:08:50.303256+00:00",
+  "status": "S5_formal_quality_failed_user_paused_implementation",
+  "execution_source_commit": "96f096c9e2f3054804c8c146bf72fea201b4ed70",
+  "original_candidate_commit": "27a8f684d3c65c136fa10ea9930a20fd79f41d4d",
+  "candidate_freeze_at": "2026-10-07T13:24:18.585039+00:00",
+  "formal_package_authored_at": "2026-10-07T13:31:08.953528+00:00",
+  "operational_amendment": "ADR-0029; registration v2 count routing only; actual later source/amendment timestamp retained; candidate/model/quality/data unchanged",
+  "dataset": "support-s5-2026-10-07-v2",
+  "model": {
+    "max_tokens": 1024,
+    "message_content_bytes": 65536,
+    "model_content_bytes": 16384,
+    "observed_on": "2026-10-07",
+    "observed_version": "DeepSeek-V4.1-Flash",
+    "origin": "https://api.deepseek.com",
+    "path": "/chat/completions",
+    "provider": "deepseek",
+    "request_body_bytes": 131072,
+    "request_model": "deepseek-flash",
+    "response_body_bytes": 65536,
+    "response_format": "json_object",
+    "stream": false,
+    "temperature": 0,
+    "thinking": "disabled"
+  },
+  "formal_thresholds": {
+    "proposal_correct": 16,
+    "full_case_evidence": 18,
+    "denominator": 20,
+    "all_hard_failure_counts": 0
+  },
+  "development": {
+    "agent": {
+      "kind": "s5-development-regression",
+      "denominator": 40,
+      "correct_count": 39,
+      "full_case_evidence_count": 39,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "usage_total": {
+        "known_tokens": 813169,
+        "known_cost_microyuan": 645908,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 475,
+        "chat_calls": 174,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 1,
+        "query_embedding_calls": 56,
+        "profile_metadata_calls": 112,
+        "business_tool_calls": 133
+      }
+    },
+    "fixed": {
+      "kind": "s5-development-regression",
+      "denominator": 40,
+      "correct_count": 11,
+      "full_case_evidence_count": 14,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "usage_total": {
+        "known_tokens": 86749,
+        "known_cost_microyuan": 138683,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 278,
+        "chat_calls": 40,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 40,
+        "profile_metadata_calls": 80,
+        "business_tool_calls": 118
+      }
+    },
+    "paired": {
+      "denominator": 40,
+      "win": 28,
+      "tie": 12,
+      "loss": 0,
+      "fixed_evidence_carried_without_new_calls": true
+    },
+    "agent_failure": {
+      "case_id": "DEV-020",
+      "status": "failed_business_quality"
+    }
+  },
+  "formal": {
+    "agent": {
+      "kind": "s5-unseen-quality",
+      "denominator": 20,
+      "correct_count": 10,
+      "full_case_evidence_count": 10,
+      "thresholds_met": false,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "proposal_audit_complete": true,
+      "usage_complete": true,
+      "usage_total": {
+        "known_tokens": 413652,
+        "known_cost_microyuan": 334149,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 235,
+        "chat_calls": 87,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 27,
+        "profile_metadata_calls": 54,
+        "business_tool_calls": 67
+      },
+      "execution_outcomes": {
+        "awaiting_approval": 18,
+        "succeeded": 2
+      },
+      "attempts": {
+        "count": 20,
+        "unfinished": 0,
+        "summed_active_seconds": 176.329324,
+        "basis": "actual persisted finished_at minus started_at; includes external request waits; excludes approval wait",
+        "first_started_at": "2026-10-08T02:57:40.154335+00:00",
+        "last_finished_at": "2026-10-08T03:00:57.023616+00:00"
+      },
+      "error_counts": {
+        "REQUIRED_CLAIM_MISSING": 10,
+        "UNSUPPORTED_CLAIM": 10,
+        "WRONG_ACTION": 7,
+        "WRONG_CONCLUSION": 9,
+        "WRONG_TARGET_TICKET_STATUS": 7
+      },
+      "cases": [
+        {
+          "case_id": "S5V2-001",
+          "run_id": "38db2626-863f-4d31-a974-d52bdd91ef5f",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-002",
+          "run_id": "11a9af5c-1849-4d6e-b302-33c175572021",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-003",
+          "run_id": "170a6dbb-6987-493f-907e-b5e4b3d00db6",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-004",
+          "run_id": "801f580e-ee77-4852-af87-fd0b30e9434e",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-005",
+          "run_id": "358e68f4-9847-496b-b4b9-eec5288b3f73",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-006",
+          "run_id": "e7aaaca7-3bf0-4b57-b86b-9f600d1859df",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-007",
+          "run_id": "faf80071-7302-460f-b13a-debf9de1503c",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-008",
+          "run_id": "317c9998-66f0-4188-b2e6-9bcd67259494",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-009",
+          "run_id": "93f07a4d-e871-4c2a-b573-b4136c13e7ab",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-010",
+          "run_id": "5bc0b827-d023-4e17-8894-2a4841637c1c",
+          "tenant_id": "tenant-south",
+          "run_state": "succeeded",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-011",
+          "run_id": "28ae0c1a-2eaa-4dec-b5bd-d114ad2e5185",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-012",
+          "run_id": "96318b92-6955-4f0d-9950-6bba94fda076",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-013",
+          "run_id": "5a4b7fc4-b269-45c4-b7e0-b25d6bc0b6da",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-014",
+          "run_id": "d1583b31-5920-489d-98ef-1afb679c1d80",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-015",
+          "run_id": "81c8347c-97d0-46f9-97e9-385ca802a9d2",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-016",
+          "run_id": "55dc8c04-3018-4dea-bae2-29aadcd15c7c",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "missing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-017",
+          "run_id": "34ac00e9-bd52-4cde-897d-f30f9c2bdbb9",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-018",
+          "run_id": "49723926-a8e6-43f1-b516-7e4304ba4c37",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-019",
+          "run_id": "ace1b3fc-89bc-4ef1-a963-ed215c603ee8",
+          "tenant_id": "tenant-north",
+          "run_state": "succeeded",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-020",
+          "run_id": "1ccee826-9dc3-4e94-9d5f-b576d0920934",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        }
+      ],
+      "launcher_closed": {
+        "detected_at": "2026-10-08T03:00:57.532855+00:00",
+        "wait_completed_at": "2026-10-08T03:00:57.540633+00:00",
+        "children_reaped": true,
+        "graceful": true,
+        "driver_completed": true,
+        "stop_reason": "driver_exited",
+        "worker_returncode": 0,
+        "driver_returncode": 0
+      }
+    },
+    "fixed": {
+      "kind": "s5-unseen-quality",
+      "denominator": 20,
+      "correct_count": 1,
+      "full_case_evidence_count": 1,
+      "thresholds_met": false,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "proposal_audit_complete": true,
+      "usage_complete": true,
+      "usage_total": {
+        "known_tokens": 47086,
+        "known_cost_microyuan": 79194,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 140,
+        "chat_calls": 20,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 20,
+        "profile_metadata_calls": 40,
+        "business_tool_calls": 60
+      },
+      "execution_outcomes": {
+        "awaiting_approval": 20
+      },
+      "attempts": {
+        "count": 20,
+        "unfinished": 0,
+        "summed_active_seconds": 79.544197,
+        "basis": "actual persisted finished_at minus started_at; includes external request waits; excludes approval wait",
+        "first_started_at": "2026-10-08T03:04:32.997476+00:00",
+        "last_finished_at": "2026-10-08T03:06:12.801894+00:00"
+      },
+      "error_counts": {
+        "UNSUPPORTED_CLAIM": 19,
+        "REQUIRED_CLAIM_MISSING": 9,
+        "WRONG_ACTION": 8,
+        "WRONG_CONCLUSION": 11,
+        "WRONG_TARGET_TICKET_STATUS": 6,
+        "WRONG_DECISION": 2,
+        "WRONG_REQUESTED_FIELDS": 1
+      },
+      "cases": [
+        {
+          "case_id": "S5V2-001",
+          "run_id": "69d4de8b-7425-4200-a2f7-cf71e60d83f0",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-002",
+          "run_id": "79cf75bb-4254-4806-9260-c661125b272f",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-003",
+          "run_id": "7956b472-3a15-4b0a-8f10-ef1c7aa9adc4",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "correction",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-004",
+          "run_id": "7a24e804-f937-4067-bb7d-d87418e99d1b",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_full_carrier_key_identity"
+        },
+        {
+          "case_id": "S5V2-005",
+          "run_id": "36a74b43-1cd4-4c34-8da8-1e6d167ebba1",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-006",
+          "run_id": "9dbc5c50-30f6-4878-866d-8b67fe938003",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-007",
+          "run_id": "4d1c2051-4f20-4532-b6f8-49116af63a34",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": false
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-008",
+          "run_id": "4f177547-d935-4f06-9d4e-16c585627129",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_chronology_qualified_recovery_reports"
+        },
+        {
+          "case_id": "S5V2-009",
+          "run_id": "2d6958ad-c32e-4e08-add9-cb0a995b461d",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-010",
+          "run_id": "2fd02eca-08dd-42d6-b78e-763fdc3dd703",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_DECISION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-011",
+          "run_id": "c9b0393d-f939-4c22-a5cd-d55608e63cb9",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-012",
+          "run_id": "64f9f49e-49bf-4ffb-8779-c8db76eaf495",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_latest_cohort_vs_historical_cohort"
+        },
+        {
+          "case_id": "S5V2-013",
+          "run_id": "b635a5d1-3585-483f-9baf-c646866e6c55",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-014",
+          "run_id": "c2e615b7-b271-4641-ab91-2a46a2cc6a6c",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-015",
+          "run_id": "2e27c03c-3ab6-4de5-a3d0-13164878a03d",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "missing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-016",
+          "run_id": "9e80cd3d-d02b-44f3-9b67-17578e40a48b",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM",
+            "WRONG_REQUESTED_FIELDS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "missing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "missing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_cross_entity_completion_proof"
+        },
+        {
+          "case_id": "S5V2-017",
+          "run_id": "f7c27a3c-9711-490e-8d63-1c411c83b9bc",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "full_case_evidence": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-018",
+          "run_id": "8a5d9da8-2eee-4ff8-89fe-ff23e28c6aba",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-019",
+          "run_id": "03087493-48e4-4336-b956-0362f3fa4ad4",
+          "tenant_id": "tenant-north",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_DECISION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        },
+        {
+          "case_id": "S5V2-020",
+          "run_id": "bbe41201-6fe8-4653-908a-73af19de19a5",
+          "tenant_id": "tenant-south",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "template_family": "S5V2_customer_statement_scope_and_authorization"
+        }
+      ],
+      "launcher_closed": {
+        "detected_at": "2026-10-08T03:06:13.289700+00:00",
+        "wait_completed_at": "2026-10-08T03:06:13.297431+00:00",
+        "children_reaped": true,
+        "graceful": true,
+        "driver_completed": true,
+        "stop_reason": "driver_exited",
+        "worker_returncode": 0,
+        "driver_returncode": 0
+      }
+    }
+  },
+  "families": {
+    "S5V2_full_carrier_key_identity": {
+      "denominator": 4,
+      "agent_correct": 2,
+      "agent_full": 2,
+      "fixed_correct": 0,
+      "fixed_full": 0
+    },
+    "S5V2_chronology_qualified_recovery_reports": {
+      "denominator": 4,
+      "agent_correct": 0,
+      "agent_full": 0,
+      "fixed_correct": 0,
+      "fixed_full": 0
+    },
+    "S5V2_latest_cohort_vs_historical_cohort": {
+      "denominator": 4,
+      "agent_correct": 2,
+      "agent_full": 2,
+      "fixed_correct": 0,
+      "fixed_full": 0
+    },
+    "S5V2_cross_entity_completion_proof": {
+      "denominator": 4,
+      "agent_correct": 3,
+      "agent_full": 3,
+      "fixed_correct": 0,
+      "fixed_full": 0
+    },
+    "S5V2_customer_statement_scope_and_authorization": {
+      "denominator": 4,
+      "agent_correct": 3,
+      "agent_full": 3,
+      "fixed_correct": 1,
+      "fixed_full": 1
+    }
+  },
+  "paired": {
+    "denominator": 20,
+    "outcomes": {
+      "win": 9,
+      "tie": 11
+    },
+    "cases": [
+      {
+        "case_id": "S5V2-001",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-002",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-003",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-004",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-005",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-006",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-007",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-008",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-009",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-010",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-011",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-012",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-013",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-014",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-015",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-016",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-017",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-018",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V2-019",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V2-020",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      }
+    ],
+    "baseline_superiority_required": false,
+    "costs": {
+      "agent": {
+        "usage_total": {
+          "known_tokens": 413652,
+          "known_cost_microyuan": 334149,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 235,
+          "chat_calls": 87,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 27,
+          "profile_metadata_calls": 54,
+          "business_tool_calls": 67
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 413652,
+          "known_cost_microyuan": 334149,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 235,
+          "chat_calls": 87,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 27,
+          "profile_metadata_calls": 54,
+          "business_tool_calls": 67
+        },
+        "usage_complete": true
+      },
+      "fixed": {
+        "usage_total": {
+          "known_tokens": 47086,
+          "known_cost_microyuan": 79194,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 20,
+          "profile_metadata_calls": 40,
+          "business_tool_calls": 60
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 47086,
+          "known_cost_microyuan": 79194,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 20,
+          "profile_metadata_calls": 40,
+          "business_tool_calls": 60
+        },
+        "usage_complete": true
+      }
+    }
+  },
+  "stage": {
+    "schema_version": 1,
+    "recorded_at": "2026-10-08T03:07:16.608718+00:00",
+    "status": "closed_at_formal_quality_failure",
+    "phases": [
+      {
+        "phase": "dev-agent",
+        "held": 0,
+        "runs": 40,
+        "known": 422652,
+        "database": "jobforge_s5_dev_agent_76b33e903a8242c5bb19e7d442f15e5b",
+        "inflight": 0,
+        "chat_calls": 174,
+        "sampled_at": "2026-10-08T03:07:12.074693+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "a65c92ef19225ef9ab14e663e4fd37f66500fc13ddc4549fc561033627c6416c"
+      },
+      {
+        "phase": "dev-fixed",
+        "held": 0,
+        "runs": 40,
+        "known": 138683,
+        "database": "jobforge_s5_dev_fixed_429b924f309e4a7580dfdc67d243a8f0",
+        "inflight": 0,
+        "chat_calls": 40,
+        "sampled_at": "2026-10-08T03:07:12.396859+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "6ca01cb6d4863bb1305ea5bc64210c7970cffbf763dc1c9537e0591d46dc7b21"
+      },
+      {
+        "phase": "formal-agent",
+        "held": 0,
+        "runs": 20,
+        "known": 367068,
+        "database": "jobforge_s5_formal_agent_c14b8ad375b34326bd3613aa3259c448",
+        "inflight": 0,
+        "chat_calls": 108,
+        "sampled_at": "2026-10-08T03:07:12.696204+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "dde54e2c3af8743fc0c2a45918f71289aabab0b00e7c107e51f3326180e9f9c6"
+      },
+      {
+        "phase": "formal-fixed",
+        "held": 0,
+        "runs": 20,
+        "known": 85720,
+        "database": "jobforge_s5_formal_fixed_d23255bb56d24c1181f00ec953628d6d",
+        "inflight": 0,
+        "chat_calls": 20,
+        "sampled_at": "2026-10-08T03:07:13.027196+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "725168ab0f7482f4fe8181e53a7812a43fe71d53fe3dc9626865574f71065070"
+      },
+      {
+        "phase": "dev-agent-v2",
+        "held": 0,
+        "runs": 25,
+        "known": 260468,
+        "database": "jobforge_s5_dev_agent_v2_9de8a4a0139e436b80c1f1f403cea92e",
+        "inflight": 0,
+        "chat_calls": 88,
+        "sampled_at": "2026-10-08T03:07:13.326558+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "56086cc08c6fb5222f62d669dd85c6b4b81109abe34a442ce0dd444c6350e3ba"
+      },
+      {
+        "phase": "shape-diagnostic",
+        "held": 0,
+        "runs": 1,
+        "known": 13747,
+        "database": "jobforge_s5_shape_diagnostic_a7e10d21aa3a43478537ca32537f9a90",
+        "inflight": 0,
+        "chat_calls": 5,
+        "sampled_at": "2026-10-08T03:07:13.670271+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "2504aac27d3951bd339fc16c2449bfab00e720b8d71bc3cf39b6a634d4700c81"
+      },
+      {
+        "phase": "dev-agent-format",
+        "held": 0,
+        "runs": 3,
+        "known": 51013,
+        "database": "jobforge_s5_dev_agent_format_d908f18782be4b9ba8659c76fe07ae14",
+        "inflight": 0,
+        "chat_calls": 15,
+        "sampled_at": "2026-10-08T03:07:13.971864+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "d0442a5125c4ec49285c02570010b5cec5b51a9445da08373a63efea27b8c35e"
+      },
+      {
+        "phase": "dev-agent-contract",
+        "held": 0,
+        "runs": 40,
+        "known": 476041,
+        "database": "jobforge_s5_dev_agent_contract_824c9e5e6b654d3e976cbf456d72db9b",
+        "inflight": 0,
+        "chat_calls": 164,
+        "sampled_at": "2026-10-08T03:07:14.311793+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "4727f3b7d1c8f4bf4fb5bc82188fc14e659126fb06f027dcc312e54548b70a36"
+      },
+      {
+        "phase": "dev-agent-narrow",
+        "held": 0,
+        "runs": 40,
+        "known": 645908,
+        "database": "jobforge_s5_dev_agent_narrow_c621864cf376431da137cc49730bffa3",
+        "inflight": 0,
+        "chat_calls": 174,
+        "sampled_at": "2026-10-08T03:07:14.612358+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "804162a1d32505e048494fce38b6a043f443d72ad60ca62d959d1a86c68d333f"
+      },
+      {
+        "phase": "formal-v2-agent",
+        "held": 0,
+        "runs": 0,
+        "known": 0,
+        "database": "jobforge_s5_formal_v2_agent_5d0e03564aa04bccb3ff99723eb42f09",
+        "inflight": 0,
+        "chat_calls": 0,
+        "sampled_at": "2026-10-08T03:07:14.91681+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "65173114569d14be34b39059e59c684afc8a8aff3364439f68b8b6e6c539906d"
+      },
+      {
+        "phase": "formal-v2-fixed",
+        "held": 0,
+        "runs": 0,
+        "known": 0,
+        "database": "jobforge_s5_formal_v2_fixed_318ace2fb5ec47c4ae2edbf78031e6b5",
+        "inflight": 0,
+        "chat_calls": 0,
+        "sampled_at": "2026-10-08T03:07:15.224116+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "794777bb712243d288fa0b1a3f4bd696aefc2644ebe99a40f4b4d977d5740fe0"
+      },
+      {
+        "phase": "formal-v2-agent-resumed-20261008-r1",
+        "held": 0,
+        "runs": 20,
+        "known": 334149,
+        "database": "jobforge_s5_formal_agent_22e99a2a895546d18dd5513a738d8746",
+        "inflight": 0,
+        "chat_calls": 87,
+        "sampled_at": "2026-10-08T03:07:15.526705+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "7aec268926779c2eabccf74083b8938ada94936ca977dfe459a5f0afea980958"
+      },
+      {
+        "phase": "formal-v2-fixed-resumed-20261008-r1",
+        "held": 0,
+        "runs": 20,
+        "known": 79194,
+        "database": "jobforge_s5_formal_fixed_ce167f889d6b4b3388ad4c0c37b38f02",
+        "inflight": 0,
+        "chat_calls": 20,
+        "sampled_at": "2026-10-08T03:07:15.846117+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "72835ea72f78a4a5dc2139e6b101fb6ef7a69aee5491600b5ee551e1c75aca7f"
+      },
+      {
+        "phase": "recovery-narrow-20261008-r1",
+        "held": 0,
+        "runs": 0,
+        "known": 0,
+        "database": "jobforge_s5_recovery_92d366e676f14ddab8c757afcbaef9c6",
+        "inflight": 0,
+        "chat_calls": 0,
+        "sampled_at": "2026-10-08T03:07:16.154577+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "5195bde41d7a13ca51c38379457b566ef25a5e21015a24c50e8807948cd62a0d"
+      },
+      {
+        "phase": "demo-narrow-20261008-r1",
+        "held": 0,
+        "runs": 0,
+        "known": 0,
+        "database": "jobforge_agent",
+        "inflight": 0,
+        "chat_calls": 0,
+        "sampled_at": "2026-10-08T03:07:16.468006+00:00",
+        "unknown_chat_calls": 0,
+        "unfinished_attempts": 0,
+        "audit_sha256": "8f746c0b4e884c7d82d7e191a244dac31234fec186789fb81869dadc14ceed94"
+      }
+    ],
+    "totals": {
+      "runs": 269,
+      "chat_calls": 895,
+      "known": 2874643,
+      "held": 0,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0
+    },
+    "stage_caps": {
+      "runs": 300,
+      "chats": 1600,
+      "cost_microyuan": 20000000
+    },
+    "remaining": {
+      "runs": 31,
+      "chats": 705,
+      "cost_microyuan": 17125357
+    },
+    "counted_cost_scope": "batch only; family/tenant overlap excluded",
+    "known_basis": "observed usage at frozen profile rates; not a settled invoice",
+    "new_paid_calls": 0
+  },
+  "unexecuted": [
+    {
+      "phase": "recovery-narrow-20261008-r1",
+      "status": "not_run_quality_gate",
+      "runs": 0,
+      "chats": 0,
+      "known_microyuan": 0,
+      "held_microyuan": 0,
+      "paid_container_created": false
+    },
+    {
+      "phase": "demo-narrow-20261008-r1",
+      "status": "not_run_quality_gate",
+      "runs": 0,
+      "chats": 0,
+      "known_microyuan": 0,
+      "held_microyuan": 0,
+      "paid_container_created": false
+    }
+  ],
+  "retrieval_diagnostic": {
+    "query_count": 20,
+    "hit_at_3_count": 19,
+    "mrr_at_3": 0.808333,
+    "known_miss": "RQ-06",
+    "report": "agent-v3-s5-free-2026-10-07.json"
+  },
+  "environment": {
+    "host": "Windows Docker Desktop",
+    "runtime": "fixed Linux containers with init",
+    "clean_compose_free_preparation": "accepted; isolated volumes, actual MiniLM/indices, zero model calls",
+    "independent_native_linux_host_reproduction": "not_run",
+    "ci_linux": "GitHub Ubuntu jobs"
+  },
+  "engineering": {
+    "execution_head_ci": {
+      "head": "96f096c9e2f3054804c8c146bf72fea201b4ed70",
+      "run_id": 37717827858,
+      "required": 8,
+      "passed": 8
+    },
+    "final_document_head_ci": "not_run_at_user_request; current documents uncommitted; HEAD remains96f096c",
+    "free_mechanisms_report": "agent-v3-s5-free-2026-10-07.json"
+  },
+  "cost_basis": "observed usage at frozen profile rates; known not a provider settled invoice; all S5 batch exposure counted once including failed historical versions",
+  "private_evidence_root": "E:/JobForgeEvidence/s5-2026-10-07",
+  "artifact_sha256": {
+    "candidate-v2-narrow/freeze.json": "0b28d3e4a76b3d1f1b75cbbdd6a6e859d57d68e6fdc35a4a8bab46f15f2a03e7",
+    "registration-routing-repair/effective-freeze.json": "2e0ff80652fac05419fd01eb8c0adc93a11964629f7a48af2d5df0eece64a20e",
+    "registration-routing-repair/operational-amendment.json": "185b02f211adc5a66b6f3cd32a961a0f26af0c8098f38af6bce40cec21ce612d",
+    "registration-routing-repair/build-source-receipt.json": "f89ea5525383022ad0aa08b91b80c3ae99ea47c6b61910b01938d692beeeda0d",
+    "registration-routing-repair/amended-review-bundle.json": "1f42e629fd1d7f68d4099e56acd0d7ddf19b7c7e0e4cf64c2238c5f690143374",
+    "registration-routing-repair/root-four-phase-release.json": "99ade841146711962fdac351d8c75729cd43ff2699fb8c68cd66189a4db1183c",
+    "formal-package-v2/manifest.json": "ffbe50aadbe975aa350d3da307bb116cbbf9b508fc94b4688a5675a64cccc006",
+    "formal-package-v2/manifest.accepted-before-operational-amendment.json": "5eda81118b18693b018ac7b19b7b2ff8fd8794d127c63ba55df4f99e0656c61c",
+    "formal-package-v2/root-formal-data-review.json": "2d5e4aa4a947ea0f911da95dd890e3b3daeefd900c30cbf2d086b0c4911f318a",
+    "formal-package-v2/runtime/seed.json": "f2049daf065139397d14c415c567175607c3a77acc3186fed950e9ccf150bc54",
+    "formal-package-v2/evaluation/gold.jsonl": "197ea550ed3928450043970922ea156418dc976dd100d1891623644dd0173347",
+    "dev-agent-narrow/score.json": "073e68e3f2a71cac408d85c53b2297483a5e6d48dd7d13b9ea14b20ed658921a",
+    "dev-agent-narrow/root-development-review.json": "5d9fdf00fcfe35e09f26b7459a6170d7fc167e35265220af2f93564447555cb4",
+    "fixed-baseline-carry-narrow/carry-receipt.json": "53de19bec951abd9da3c5531b1682b13b55c4a974b293c93400078aba7675eed",
+    "dev-fixed/score.json": "adb6f5895e8a67b19680e30da2441b057d3ffb9ce9821af1644e426e6d924dd5",
+    "formal-v2-resumed-paired.json": "2249c621f2c0e5a7ca0f370c46fd5dfdd1e6094efcaee8deb56fc1a334c69287",
+    "clean-compose/root-free-preparation-review.json": "113ae2fe9e1aef14082ee7f957263a18e1a47ae8e3b843a95874cd727aab8fb3",
+    "final-20261008/cumulative-stage-ledger.json": "705e81a73b679278837013aa70f22cb0786338ba88f075cdaa24986d6d599760",
+    "final-20261008/quality-gate-stop.json": "7239e0dc0aa78d256b2ae3828338365b51dbb1389335554fa5921939d24a7051",
+    "final-20261008/owned-services-stopped.json": "fe07b90c5d03ad3e5b714a910af7cbe12336c2ab79ecbc0259ac35df167087af",
+    "registration-routing-repair/ci-final.json": "b4f7fefd352e5993d9e281a0cdaceeebc2fd8c6307570fb0a2b4763ade5d724d",
+    "formal-v2-agent-resumed-20261008-r1/registration.json": "a5803864018f25908d3077e65f8d08256dae46feca7c3c0e40c7ed3ed9d3cfe8",
+    "formal-v2-agent-resumed-20261008-r1/score.json": "2d29a7fd6314eed5a074f84415f0382829cb5909e70e30f7eb8f50c4db8177e9",
+    "formal-v2-agent-resumed-20261008-r1/evidence.json": "1787e183bfc656fe28d844a267d81cb461f5ca0ff23b77dbd1c3ef5281113702",
+    "formal-v2-agent-resumed-20261008-r1/control-after.json": "f1211d9e905b98e8c78ddd449e8f21f5bfe3b5d50aa1a10e9660aec6e253a29a",
+    "formal-v2-agent-resumed-20261008-r1/business-before.json": "0a9622e9e6870604269d2fc19e694092d2220a7008192a91bfcdc4644b9ac85e",
+    "formal-v2-agent-resumed-20261008-r1/business-after.json": "ec00239318ef91d96c02429b8e728cac31b2524acf703fdd7d81f47f701b801f",
+    "formal-v2-agent-resumed-20261008-r1/receipts-before.json": "e9197319eaf9e5c605e29e2e571c7dd20c5db3fdc2d317544c5f3b0694cf305d",
+    "formal-v2-agent-resumed-20261008-r1/receipts-after.json": "3ff593555aa566280af149145a1eac901e285a0000f0d69aa3e4d8119bce9883",
+    "formal-v2-agent-resumed-20261008-r1/stage-ledger-after.json": "9ad5c3ad3f1f20faa3aab3b0b8e8eae4f30ebf75baa04e1fb09d8664f2be2d17",
+    "formal-v2-agent-resumed-20261008-r1/actual-container-state.json": "1f5a94a5e2c512487494ea620ce888220154f2d45d83db92c284cb2ca7efe0a1",
+    "formal-v2-agent-resumed-20261008-r1/sealed-artifacts.json": "e08908a63ce12bef3c6302047cbf080947fa89feae3235956cc620f3eb380428",
+    "formal-v2-agent-resumed-20261008-r1/actual-start-preflight.json": "24432371da7ff22e2cfdff0babd76f4c63e1f9e44497db628fba9c03abfd8ef6",
+    "formal-v2-agent-resumed-20261008-r1/exports/20261008T025739.113546Z/finished.json": "ad1ed6243ea081e7d97d9e7bf7443870a40e1ea693c6c7fb4a35354451f1de93",
+    "formal-v2-agent-resumed-20261008-r1/exports/20261008T025739.113546Z/registration-receipt.json": "292404c4987c574c82297f4b2cca8a52cbe2b0eca4af29e8aef2dbe9d2a87638",
+    "formal-v2-agent-resumed-20261008-r1/exports/20261008T025739.113546Z/rows.json": "4d1fd522d4a88cf658d820d0d60dd57aeefd8fac5d542e78c15215a00fc33afe",
+    "formal-v2-fixed-resumed-20261008-r1/registration.json": "0a55c86974c9ccd06e58d9d81c990dbc1a3cf488ba2b9e4897630bf2b316f721",
+    "formal-v2-fixed-resumed-20261008-r1/score.json": "3494e3b19c52e1bef7e9960ff6d11e6b86f5a9f98a65a20962b4b771648eb010",
+    "formal-v2-fixed-resumed-20261008-r1/evidence.json": "b7fb8b4ee83c03a3d650b647aeeb4da4966e8bcd20824bb2a53873d41f8ca5be",
+    "formal-v2-fixed-resumed-20261008-r1/control-after.json": "b9981275492fbe2a1f401b0a6b07da1d9a999b0e48fe3f303b9c2f368659be80",
+    "formal-v2-fixed-resumed-20261008-r1/business-before.json": "4104a96d136e40d082b5074bb1e793671fad85b03e665e98cf9c8664de48068e",
+    "formal-v2-fixed-resumed-20261008-r1/business-after.json": "aeabe65690c259ce3a27fe6534fc5a43a0422a1896f2b4e043cefcd855fe4676",
+    "formal-v2-fixed-resumed-20261008-r1/receipts-before.json": "12e513a5d339510d3439a3d30db5a30942100762b2a74af6e829937b0f5bbde0",
+    "formal-v2-fixed-resumed-20261008-r1/receipts-after.json": "c9946dac09b2e2b67c103c85728407f458b64b8b0062635108fbcd39052e9d6b",
+    "formal-v2-fixed-resumed-20261008-r1/stage-ledger-after.json": "fa1c3fa0530e3dc9123514650cadb0025a07fc49654a273fb55f3c01a5cc3203",
+    "formal-v2-fixed-resumed-20261008-r1/actual-container-state.json": "82140cf28251271b098d2a7c57227686ab2e62498d2db3259576b9b9a3de07be",
+    "formal-v2-fixed-resumed-20261008-r1/sealed-artifacts.json": "c7cb9e51180f1d7a34707b5407db21e836559dcb499d9d9fab390018c3ac7d16",
+    "formal-v2-fixed-resumed-20261008-r1/actual-start-preflight.json": "e6ebe187f4488b6ff656fc81dfdfae90266c68a501f2eb0e87446e6ec7f63921",
+    "formal-v2-fixed-resumed-20261008-r1/exports/20261008T030432.101400Z/finished.json": "ad1ed6243ea081e7d97d9e7bf7443870a40e1ea693c6c7fb4a35354451f1de93",
+    "formal-v2-fixed-resumed-20261008-r1/exports/20261008T030432.101400Z/registration-receipt.json": "bb1d0c11b5732e0ca7d10cf289f2ed67c9c0e0c70e8beb50614af460df3d081a",
+    "formal-v2-fixed-resumed-20261008-r1/exports/20261008T030432.101400Z/rows.json": "2bf38a8e2e3a1843a02ec3e3392d913adcf71ee179792f888619f0c402637d35",
+    "recovery-narrow-20261008-r1/registration.json": "210c2402007d713ecb8e8785dc2bf1409db8f0f024fc157b82017b04462d4193",
+    "recovery-narrow-20261008-r1/first-batch-review.json": "4424ca2b79990704b356d614295f56ee551612ee3678c8582ed5659ad8bb198c",
+    "recovery-narrow-20261008-r1/root-paid-release.json": "002365d0a746d9eb30c506b1afc3f57089b5110cd9a880bb82221f0a17ff1608",
+    "demo-narrow-20261008-r1/registration.json": "992a89654a5a3577f39ad0ce45a9dbd5e1c627212a9716b7dba12ea3a32fe94d",
+    "demo-narrow-20261008-r1/first-batch-review.json": "576cafa3bfc524dac27aa894d32ebe92b89ed6d62489c25584d0c0f58c357c05",
+    "demo-narrow-20261008-r1/root-paid-release.json": "8ffe606040df4782479efcd3645910addeb80964b316d20fcc1d1fa91255e7f4",
+    "root-formal-v2-review.json": "2388eeaf6a924f0a7b7242b72a559de738d959e8ebec46c12e616357b46e4cac",
+    "final-20261008/pause-state.json": "979e318c902d5ececee9cf53c56864b82611d3e52f9f06a985ec57b8dd8805af",
+    "final-20261008/input-reconstruction-r1/receipt.json": "a5b869b800c05b1c5fb36705100a788131ecb267b7445e7c3971dad5dba92583"
+  },
+  "pause": {
+    "paused_by_user": true,
+    "next_steps_are_todos_only": true,
+    "new_paid_calls_after_formal_close": 0,
+    "candidate_changed_after_formal": false,
+    "repair_design": "not_continued_after_pause",
+    "input_reconstruction": "87 actual request parameter hashes verified before pause; independent final-input diagnosis pending"
+  }
+}

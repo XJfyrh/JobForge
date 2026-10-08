@@ -78,7 +78,7 @@ func (m Manifest) Validate() error {
 	}
 	seen := make(map[string]bool, len(m.Profiles))
 	for _, p := range m.Profiles {
-		validPrompt := (p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV2 && m.ExecutorVersion == run.SupportApprovalExecutorVersion) || (p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedComparisonExecutorVersion)
+		validPrompt := (p.AdapterID == "support-agent-v1" && (p.PromptVersion == run.SupportAgentPromptV2 || p.PromptVersion == run.SupportAgentPromptV3) && m.ExecutorVersion == run.SupportApprovalExecutorVersion) || (p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedComparisonExecutorVersion)
 		if m.SchemaVersion == 1 && p.PromptVersion != "" || m.SchemaVersion == 2 && !validPrompt {
 			return run.ErrProfileUnavailable
 		}

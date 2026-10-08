@@ -65,14 +65,17 @@ def freeze(config: Path, replacement: str, *, s5: bool = False) -> dict[str, Any
     control, _ = read_json(config / "control.disabled.json", 1 << 20)
     launch, _ = read_json(config / "launch.json", 1 << 20)
     definition = control["profiles"][0]["definition"]
+    version = definition["schema_version"]
     if (
-        definition["schema_version"] != (7 if s5 else 3)
+        version not in ({7, 9} if s5 else {3})
         or s5
-        and definition["program"]["prompt_version"] != "support-agent-prompt-v2"
+        and definition["program"]["prompt_version"]
+        != ("support-agent-prompt-v3" if version == 9 else "support-agent-prompt-v2")
         or definition["program"]["recovery_policy"] != "confirmed_uncommitted_v1"
         or profile["executor_version"]
         != ("linux-v2-approval-runtime-1" if s5 else "linux-v2-recovery-runtime-1")
         or s5
+        and version == 7
         and next(row for row in control["budgets"] if row["scope"] == "batch")[
             "limits"
         ]["chat"]
@@ -108,7 +111,7 @@ def freeze(config: Path, replacement: str, *, s5: bool = False) -> dict[str, Any
             }
         )
     return {
-        "schema_version": 2 if s5 else 1,
+        "schema_version": (3 if version == 9 else 2) if s5 else 1,
         "max_runs": 11,
         "max_cost_microyuan": next(
             row for row in control["budgets"] if row["scope"] == "batch"
@@ -146,14 +149,14 @@ def freeze(config: Path, replacement: str, *, s5: bool = False) -> dict[str, Any
 def validate(plan: dict[str, Any], *, check_sources: bool = True) -> None:
     """Fail closed on changed source or execution scope before any POST."""
     if (
-        plan["schema_version"] not in {1, 2}
+        plan["schema_version"] not in {1, 2, 3}
         or plan["max_runs"] != 11
         or (
             not (
                 type(plan["max_cost_microyuan"]) is int
                 and 0 < plan["max_cost_microyuan"] <= 4_000_000
             )
-            if plan["schema_version"] == 2
+            if plan["schema_version"] in {2, 3}
             else plan["max_cost_microyuan"] != 5_000_000
         )
         or plan["max_seconds"] != 6 * 3600
@@ -166,13 +169,18 @@ def validate(plan: dict[str, Any], *, check_sources: bool = True) -> None:
         or plan["profile"]["executor_version"]
         != (
             "linux-v2-approval-runtime-1"
-            if plan["schema_version"] == 2
+            if plan["schema_version"] in {2, 3}
             else "linux-v2-recovery-runtime-1"
         )
         or plan["definition"]["schema_version"]
-        != (7 if plan["schema_version"] == 2 else 3)
-        or plan["schema_version"] == 2
-        and plan["definition"]["program"]["prompt_version"] != "support-agent-prompt-v2"
+        != {1: 3, 2: 7, 3: 9}[plan["schema_version"]]
+        or plan["schema_version"] in {2, 3}
+        and plan["definition"]["program"]["prompt_version"]
+        != (
+            "support-agent-prompt-v3"
+            if plan["schema_version"] == 3
+            else "support-agent-prompt-v2"
+        )
         or plan["definition"]["program"]["recovery_policy"]
         != "confirmed_uncommitted_v1"
         or (instant(plan["valid_until"]) - instant(plan["valid_from"])).total_seconds()
@@ -213,7 +221,7 @@ def main() -> None:
     parser.add_argument(
         "--s5",
         action="store_true",
-        help="schema 7 candidate; stop at saved proposal without approving effects",
+        help="schema 7/9 candidate; stop at saved proposal without approving effects",
     )
     args = parser.parse_args()
     if args.out.resolve().is_relative_to(ROOT):

@@ -1,6 +1,6 @@
 # S5 公平对照与冻结
 
-此目录是外部验收工具，不进入生产 Worker。历史40案、schema 1–6 与原评分结果保留。首轮正式失败后的唯一候选修正使用 schema 7 Agent（`support-agent-prompt-v2`）及行为相同的 schema 8 Fixed，版本选择见 [ADR-0028](../../docs/adr/0028-versioned-support-evidence-navigation.md)。
+此目录是外部验收工具，不进入生产 Worker。历史40案、schema 1–8 与原评分结果保留。第二次正式失败后的候选使用 schema 9 Agent（`support-agent-prompt-v3`）及行为相同的 schema 10 Fixed，版本选择见 [ADR-0030](../../docs/adr/0030-s5-policy-condition-candidate.md)。原候选v2见 [ADR-0028](../../docs/adr/0028-versioned-support-evidence-navigation.md)。
 
 两种策略都使用 `deepseek-flash` / DeepSeek-V4.1-Flash、thinking disabled、temperature 0、1024输出token、json_object、消息64KiB/请求128KiB/响应64KiB/内容16KiB。每个family上限12 chat、8逻辑工具、8 query embedding、16 metadata HTTP、8业务HTTP、44物理HTTP、1纠错、12,595,200 token、5,000,000 microyuan；批次持久额度另限制，不能通过新Run绕过。固定图仍只生成原流程所需的1次chat及至多1次纠错；额度不要求把次数耗尽。
 
@@ -22,9 +22,11 @@ $env:PYTHONPATH='python;sdk/python'
 
 ## 登记、执行与评分
 
-第二候选的冻结另传 `--seen-formal-manifest <首轮 manifest.json>`，新正式数据 ID 为 `support-s5-2026-10-07-v2`，family-review 明确绑定首轮摘要并确认对其场景/模板的新颖性。原20案只可用 `assemble/score --seen-diagnostic` 读取原包和原 freeze；报告为 `s5-seen-diagnostic`，`thresholds_met` 始终为 false。`prepare-support --batch-chat-limit <上限>` 可缩小共享聊天额度，默认保留原额度。
+候选v2冻结使用 `--seen-formal-manifest <首轮 manifest.json>`。候选v3同时传原v1的 `--seen-formal-manifest` 与原v2的 `--seen-formal-v2-manifest`，新数据 ID 为 `support-s5-2026-10-08-v3`；family-review 的 `seen_formal_manifest_sha256_by_dataset` 绑定两个摘要，`novelty_against_seen_formals_confirmed=true`确认对两套场景/模板的新颖性。两个已见20案包只可用 `assemble/score --seen-diagnostic` 读取原包和原 freeze；报告为 `s5-seen-diagnostic`，`thresholds_met` 始终为 false。本轮不另设阶段Run/chat/token预算，prepared批次计数沿用登记数量乘以family合同；费用累计不重置。
 
 host在启动前用 `python -m tools.support_s5.assemble register --config <prepared目录> --out <新registration.json>` 登记开发回归；正式集额外传 `--package <新包根> --freeze <freeze.json>`。Go的prepared配置默认disabled。
+
+官方登记对正式v1/v2/v3均要求20案，开发集仍要求40案；数量和未知dataset负例由[`test_registration_routing.py`](../support_evaluation/test_registration_routing.py)覆盖。[ADR-0029](../../docs/adr/0029-s5-registration-routing-amendment.md)记录原v2登记路由的操作修订，保留原冻结时间与后续实际修订时间；ADR-0030新增v3与两套已见诊断的显式版本范围。
 
 固定Linux外部operator沿用原安装SDK单次Submit、原稳定键/窗口、launcher进程回收及停批规则；S5入口仅显式支持20/40名单。构建先使用冻结production Worker构建 `deploy/Dockerfile.support-approval`，再以其不可变image ID为 `OPERATOR_IMAGE` 构建 `deploy/Dockerfile.support-s5`。`prepare-state` 后才可启动；完整命令/秘密挂载规则复用[批次指南](../../docs/agent-v3/cloud-batch.md)。
 

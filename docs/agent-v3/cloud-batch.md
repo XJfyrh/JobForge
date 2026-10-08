@@ -1,8 +1,10 @@
 # 有界模型批次：准备、启动与导出
 
-本页操作基线为 schema 1 / `support-fixed-v1` / `linux-v2-audit-runtime-1`；[动态 Agent](support-agent.md)扩展为 schema 2，[恢复](recovery.md)使用 schema 3。DeepSeek 完成主线推理，本地 MiniLM 只做 embedding。结果见[证据索引](../evidence/README.md)。
+先核对业务数据/索引和只读角色，再prepare、disabled bootstrap、实际inspect、登记与审查，最后启动一次有限批次并导出。DeepSeek完成主线推理，本地MiniLM只做embedding；当前入口与版本见[Agent接入](support-agent.md)，批准后写入见[审批](approval.md)，真实结果见[证据索引](../evidence/README.md)。
 
-两个租户共 40 开发案例共享有限 batch，6 小时窗口、Worker/tenant/profile 容量 1。每案最多一次 Submit 尝试，方案停在 `awaiting_approval`。所有部署必须记录明确累计授权，扣除已启动共享 batch 的 known 与未释放 hold；新身份/库/批次不重置累计额度，停止的 attempted 批次不重启。schema 1 的生成器接受 1–5,000,000 microyuan（默认 5 CNY），S2 上限规则见动态指南。
+案例名单和分母由本次受审登记冻结，窗口最多6小时、Worker/tenant/profile容量1，每案最多一次Submit尝试。需要动作的方案停在`awaiting_approval`，明确无需动作可成功。所有部署记录累计授权，扣除已启动共享batch的known与未释放hold；新身份/库/批次不重置额度，停止的attempted批次不重启。
+
+下面的完整命令为原schema 1固定流程40开发案部署示例；schema 1生成器接受1–5,000,000 microyuan（默认5 CNY）。当前S5的schema 9 Agent / schema 10 Fixed、正式20案、冻结资源、动作回执审计及评分改用[S5工具](../../tools/support_s5/README.md)，沿用本页数据库隔离、预算和进程收口要求。开发40案与正式20案分别登记，不相互替代。
 
 ## 环境、数据库与安装
 
@@ -208,7 +210,7 @@ with RunClient("http://127.0.0.1:8093", keys["tenant-north"]) as client:
 
 业务 SQL 使用只读、repeatable-read 事务记录事实表摘要及该角色的写权限；排除接纳允许创建的 snapshots。前后摘要相同不单独证明从未发生临时写入，须与部署只读角色、固定业务 API 及实际请求记录一起核对。`dispatch_attempt` 记录早于最后许可检查，不能单独证明已经发出 HTTP；缺失、部分记录或无响应保持证据不完整，不以完整 proposal 补证。
 
-报告始终以 40 为分母，保留失败和未尝试；分别报告协议、来源、业务、安全，区分 observed usage、settled known 和 unknown/full hold。评分进程退出 0 只表示生成报告，不表示通过；`actual_acceptance_evidence_complete` 也只是完整性条件。真实 40 案未全部执行或安全硬失败非零时，不宣称 S1 完成。
+本页S1报告以40为分母；S5正式报告以20为分母，均保留失败和未尝试。分别报告协议、来源、业务、安全和完整案例证据；known是按冻结费率计算的observed usage，unknown/full hold保留，不称供应商已结算费用。评分进程退出0只表示生成报告，完整性字段不表示达到质量门槛。
 
 ## 主动停止和隔离清理
 

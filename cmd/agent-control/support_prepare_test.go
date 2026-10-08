@@ -102,7 +102,8 @@ func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T)
 
 func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 	o, source := supportPrepareFixture(t)
-	for _, agent := range []bool{false, true} {
+	for _, schema := range []int{7, 8, 9, 10} {
+		agent := schema == 7 || schema == 9
 		d := source.Definition
 		if agent {
 			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
@@ -114,18 +115,23 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 				t.Fatal("source")
 			}
 			d = historical.Definition
-			d.SchemaVersion = 7
+			d.SchemaVersion = schema
 			d.Program.PromptVersion = run.SupportAgentPromptV2
+			promptFile := "support_agent_v2.py"
+			if schema == 9 {
+				d.Program.PromptVersion = run.SupportAgentPromptV3
+				promptFile = "support_agent_v3.py"
+			}
 			d.Program.ApprovalPolicy = run.TicketResolutionApprovalPolicy
 			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}
-			prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", "support_agent_v2.py"))
+			prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", promptFile))
 			if err != nil {
 				t.Fatal(err)
 			}
 			d.Program.PromptSHA256 = supportSHA256(prompt)
 			d.Program.ProposalSchemaSHA256 = source.Definition.Program.ProposalSchemaSHA256
 		} else {
-			d.SchemaVersion = 8
+			d.SchemaVersion = schema
 		}
 		d.Program.AdapterSourceSHA256 = source.Definition.Program.AdapterSourceSHA256
 		d.Price.SourceSHA256 = source.Definition.Price.SourceSHA256
@@ -157,12 +163,24 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 }
 
 func TestPrepareS5ExternalReviewedDataDoesNotReplaceDevelopment(t *testing.T) {
+	for _, candidate := range []struct {
+		schema  int
+		dataset string
+	}{{5, run.SupportS5DatasetID}, {8, run.SupportS5V2DatasetID}, {10, run.SupportS5V3DatasetID}} {
+		t.Run(candidate.dataset, func(t *testing.T) {
+			testPrepareExternalReviewedData(t, candidate.schema, candidate.dataset)
+		})
+	}
+}
+
+func testPrepareExternalReviewedData(t *testing.T, schema int, dataset string) {
+	t.Helper()
 	o, source := supportPrepareFixture(t)
 	source.SchemaVersion = 2
-	source.Definition.SchemaVersion = 5
+	source.Definition.SchemaVersion = schema
 	source.Definition.Model.ObservedOn, source.Definition.Price.ObservedOn = "2026-10-07", "2026-10-07"
 	source.Definition.Model.MessageContentBytes, source.Definition.Model.RequestBodyBytes = 65536, 131072
-	source.Definition.Resources.DatasetID = run.SupportS5DatasetID
+	source.Definition.Resources.DatasetID = dataset
 	root := filepath.Dir(o.Source)
 	developmentPath := filepath.Join(o.Repo, "examples", "support-agent", "runtime", "seed.json")
 	original, err := os.ReadFile(developmentPath)
@@ -186,7 +204,7 @@ func TestPrepareS5ExternalReviewedDataDoesNotReplaceDevelopment(t *testing.T) {
 		if i > 10 {
 			tenant = "tenant-south"
 		}
-		row := map[string]any{"case_id": fmt.Sprintf("UNIT-%02d", i), "tenant_id": tenant, "ticket_id": fmt.Sprintf("unit-ticket-%02d", i), "as_of": run.SupportObservedAt, "dataset_version": run.SupportS5DatasetID, "policy_version": run.SupportPolicyVersion, "template_family": "synthetic-structural-unit-only"}
+		row := map[string]any{"case_id": fmt.Sprintf("UNIT-%02d", i), "tenant_id": tenant, "ticket_id": fmt.Sprintf("unit-ticket-%02d", i), "as_of": run.SupportObservedAt, "dataset_version": dataset, "policy_version": run.SupportPolicyVersion, "template_family": "synthetic-structural-unit-only"}
 		raw, _ := json.Marshal(row)
 		rows.Write(raw)
 		rows.WriteByte('\n')

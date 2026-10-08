@@ -28,7 +28,7 @@ Windows PG/SDK 前置、固定 Linux `--init`、专用环境开关和同 DSN 串
 
 ## 查询与实验工具
 
-S5 使用 `tools.support_recovery.plan --s5` 生成 plan schema 2，绑定最终 schema 7 候选、原十一项故障/对照意图及持久共享 chat≤132、费用≤¥4的实际批次上限。到方案保存后待审批或 no_action 结束，不批准业务写入；S3 的 plan 1 与历史报告保持原语义。具体版本边界见 [ADR-0028](../adr/0028-versioned-support-evidence-navigation.md)。
+S5 使用 `tools.support_recovery.plan --s5`：schema7/prompt-v2生成历史plan2，schema9/prompt-v3生成plan3。两者都保留原十一项故障/对照意图和费用≤¥4，plan3不另设阶段chat预算，family协议限制保留。到方案保存后待审批或no_action结束，不批准业务写入；S3的plan1与历史报告保持原语义。版本边界见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md)和[ADR-0030](../adr/0030-s5-policy-condition-candidate.md)。
 
 使用 `RunClient.get/steps/events/calls/result` 读取状态、已提交前缀、attempt 与原调用/费用；恢复不创建人工 retry 后继。终态方案导出与后续审批等待到期状态分别保存，不改写评分时点结果。
 

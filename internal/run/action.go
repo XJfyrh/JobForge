@@ -20,7 +20,7 @@ const (
 // ApprovalEnabled checks the complete immutable capability, not a pending state.
 func (p Profile) ApprovalEnabled() bool {
 	d, err := DecodeSupportDefinition(p.Definition)
-	if err != nil || (d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7) || p.ExecutorVersion != SupportApprovalExecutorVersion {
+	if err != nil || (d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9) || p.ExecutorVersion != SupportApprovalExecutorVersion {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

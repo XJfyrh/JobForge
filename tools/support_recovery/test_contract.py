@@ -55,15 +55,22 @@ def frozen() -> dict[str, Any]:
     }
 
 
-def test_s5_plan_version_binds_new_prompt_and_saved_proposal_boundary() -> None:
+@pytest.mark.parametrize("version, schema, prompt", [(2, 7, "v2"), (3, 9, "v3")])
+def test_s5_plan_version_binds_new_prompt_and_saved_proposal_boundary(
+    version: int, schema: int, prompt: str
+) -> None:
     """S5 gets a distinct plan while preserving the eleven historical faults."""
     value = frozen()
-    value["schema_version"] = 2
+    value["schema_version"] = version
     value["max_cost_microyuan"] = 3_000_000
-    value["definition"]["schema_version"] = 7
-    value["definition"]["program"]["prompt_version"] = "support-agent-prompt-v2"
+    value["definition"]["schema_version"] = schema
+    value["definition"]["program"]["prompt_version"] = f"support-agent-prompt-{prompt}"
     value["profile"]["executor_version"] = "linux-v2-approval-runtime-1"
     plan.validate(value, check_sources=False)
+    wrong_prompt = copy.deepcopy(value)
+    wrong_prompt["definition"]["program"]["prompt_version"] = "support-agent-prompt-v1"
+    with pytest.raises(ValueError, match="S3_PLAN_CHANGED"):
+        plan.validate(wrong_prompt, check_sources=False)
     for path, changed in [("plan", 1), ("definition", 3)]:
         mixed = copy.deepcopy(value)
         if path == "plan":

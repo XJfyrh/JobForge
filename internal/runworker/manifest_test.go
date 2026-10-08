@@ -55,6 +55,13 @@ func TestManifestPromptSelectorCannotUpgradeHistoricalProfiles(t *testing.T) {
 	if _, err := ParseManifest([]byte(valid)); err != nil {
 		t.Fatal(err)
 	}
+	v3 := strings.Replace(valid, run.SupportAgentPromptV2, run.SupportAgentPromptV3, 1)
+	if _, err := ParseManifest([]byte(v3)); err != nil {
+		t.Fatal("explicit v3 selector rejected", err)
+	}
+	if _, err := ParseManifest([]byte(strings.Replace(v3, `"schema_version":2`, `"schema_version":1`, 1))); !errors.Is(err, run.ErrProfileUnavailable) {
+		t.Fatal("v3 silently upgraded historical manifest", err)
+	}
 	for _, invalid := range []string{
 		strings.Replace(valid, `"schema_version":2`, `"schema_version":1`, 1),
 		strings.Replace(valid, run.SupportAgentPromptV2, run.SupportAgentPromptVersion, 1),

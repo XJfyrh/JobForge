@@ -32,6 +32,8 @@ def source_hashes() -> dict[str, str]:
         "api/support/s5-agent-v1",
         "api/support/s5-agent-v2",
         "api/support/s5-fixed-v2",
+        "api/support/s5-agent-v3",
+        "api/support/s5-fixed-v3",
     ):
         for file in (ROOT / directory).rglob("*"):
             if (
@@ -88,6 +90,7 @@ def create(
     development_review: Path,
     build_receipt: Path,
     seen_formal_manifest: Path | None = None,
+    seen_formal_v2_manifest: Path | None = None,
 ) -> dict[str, Any]:
     """No formal cases are read, generated or executed by candidate freeze."""
     status = subprocess.run(
@@ -132,35 +135,25 @@ def create(
         read(p)["profiles"][0]["definition"] for p in (agent_config, fixed_config)
     )
     need(
-        (agent["schema_version"], fixed["schema_version"]) in {(6, 5), (7, 8)}
+        (agent["schema_version"], fixed["schema_version"]) in {(6, 5), (7, 8), (9, 10)}
         and agent["model"] == fixed["model"]
         and agent["resources"] == fixed["resources"],
         "COMPARISON_PROFILE_MISMATCH",
     )
     seen = {}
-    if agent["schema_version"] == 7:
+    if agent["schema_version"] in {7, 9}:
         need(seen_formal_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_manifest is not None
-        manifest_raw = seen_formal_manifest.read_bytes()
-        manifest = json.loads(manifest_raw)
-        review_raw = (
-            seen_formal_manifest.parent / "evaluation/family-review.json"
-        ).read_bytes()
-        prior_review = json.loads(review_raw)
-        need(
-            manifest["dataset_id"] == "support-s5-2026-10-07-v1"
-            and sha(review_raw)
-            == manifest["artifact_sha256"]["evaluation/family-review.json"]
-            and prior_review["status"] == "independently_accepted",
-            "SEEN_FORMAL_PROVENANCE",
-        )
-        seen = {
-            "dataset_id": manifest["dataset_id"],
-            "manifest_sha256": sha(manifest_raw),
-            "template_families": sorted(
-                {c["template_family"] for c in prior_review["cases"]}
-            ),
-        }
+        seen = seen_package(seen_formal_manifest, "support-s5-2026-10-07-v1")
+    need(
+        agent["schema_version"] == 9 or seen_formal_v2_manifest is None,
+        "SEEN_FORMAL_PROVENANCE_SCOPE",
+    )
+    seen_v2 = {}
+    if agent["schema_version"] == 9:
+        need(seen_formal_v2_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
+        assert seen_formal_v2_manifest is not None
+        seen_v2 = seen_package(seen_formal_v2_manifest, "support-s5-2026-10-07-v2")
     result = {
         "schema_version": 1,
         "status": "frozen_before_unseen_creation",
@@ -176,9 +169,33 @@ def create(
         "images": build["images"],
         "model": agent["model"],
     }
-    if seen:
+    if seen_v2:
+        result["seen_formal_packages"] = [seen, seen_v2]
+    elif seen:
         result["seen_formal_package"] = seen
     return result
+
+
+def seen_package(path: Path, expected_dataset: str) -> dict[str, Any]:
+    """Bind one actual previously reviewed package, preserving its raw bytes."""
+    manifest_raw = path.read_bytes()
+    manifest = json.loads(manifest_raw)
+    review_raw = (path.parent / "evaluation/family-review.json").read_bytes()
+    prior_review = json.loads(review_raw)
+    need(
+        manifest["dataset_id"] == expected_dataset
+        and sha(review_raw)
+        == manifest["artifact_sha256"]["evaluation/family-review.json"]
+        and prior_review["status"] == "independently_accepted",
+        "SEEN_FORMAL_PROVENANCE",
+    )
+    return {
+        "dataset_id": manifest["dataset_id"],
+        "manifest_sha256": sha(manifest_raw),
+        "template_families": sorted(
+            {c["template_family"] for c in prior_review["cases"]}
+        ),
+    }
 
 
 def main() -> None:
@@ -193,6 +210,7 @@ def main() -> None:
     ):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--seen-formal-manifest", type=Path)
+    parser.add_argument("--seen-formal-v2-manifest", type=Path)
     args = parser.parse_args()
     save_new(
         args.out,
@@ -202,6 +220,7 @@ def main() -> None:
             args.development_review,
             args.build_receipt,
             args.seen_formal_manifest,
+            args.seen_formal_v2_manifest,
         ),
     )
 
