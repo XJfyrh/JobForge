@@ -24,9 +24,10 @@ type Manifest struct {
 
 // ManifestProfile contains no endpoint, credential, or dynamic module name.
 type ManifestProfile struct {
-	ProfileID   string `json:"profile_id"`
-	ProfileHash string `json:"profile_hash"`
-	AdapterID   string `json:"adapter_id"`
+	ProfileID     string `json:"profile_id"`
+	ProfileHash   string `json:"profile_hash"`
+	AdapterID     string `json:"adapter_id"`
+	PromptVersion string `json:"prompt_version,omitempty"`
 }
 
 // LoadManifest reads only the fixed, bounded, deployment-owned file.
@@ -54,16 +55,33 @@ func ParseManifest(data []byte) (Manifest, error) {
 	if decoder.Decode(&manifest) != nil || manifest.Validate() != nil {
 		return Manifest{}, run.ErrProfileUnavailable
 	}
+	var shape struct {
+		Profiles []map[string]json.RawMessage `json:"profiles"`
+	}
+	_ = json.Unmarshal(data, &shape)
+	for _, fields := range shape.Profiles {
+		expected := 3
+		if manifest.SchemaVersion == 2 {
+			expected = 4
+		}
+		if len(fields) != expected {
+			return Manifest{}, run.ErrProfileUnavailable
+		}
+	}
 	return manifest, nil
 }
 
 // Validate rejects mixed versions, missing identities, and duplicate profiles.
 func (m Manifest) Validate() error {
-	if m.SchemaVersion != 1 || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion && m.ExecutorVersion != run.SupportApprovalExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
+	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportFixedComparisonExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion && m.ExecutorVersion != run.SupportApprovalExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
 		return run.ErrProfileUnavailable
 	}
 	seen := make(map[string]bool, len(m.Profiles))
 	for _, p := range m.Profiles {
+		validPrompt := (p.AdapterID == "support-agent-v1" && (p.PromptVersion == run.SupportAgentPromptV2 || p.PromptVersion == run.SupportAgentPromptV3) && m.ExecutorVersion == run.SupportApprovalExecutorVersion) || (p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedComparisonExecutorVersion)
+		if m.SchemaVersion == 1 && p.PromptVersion != "" || m.SchemaVersion == 2 && !validPrompt {
+			return run.ErrProfileUnavailable
+		}
 		if !runinput.ExecutorMatchesAdapter(m.ExecutorVersion, p.AdapterID) || !run.ValidIdentifier(p.ProfileID) || !run.ValidHash(p.ProfileHash) || !run.ValidIdentifier(p.AdapterID) || seen[p.ProfileID] {
 			return run.ErrProfileUnavailable
 		}

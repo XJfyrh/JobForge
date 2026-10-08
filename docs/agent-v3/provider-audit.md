@@ -52,4 +52,6 @@ Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲�
 
 ## S2兼容扩展
 
+显式挂载 `/var/lib/jobforge/outbound` 的操作者可在已解码模型对象被校验器拒绝后读取独立 `.model-shape.json`。每份最多 2KiB，包含原 physical call ID、闭集字段标记/数量、`tool/final/missing/other` 类型枚举和嵌套 proposal 的非 null 标记；未知字段名、其值和响应正文不写出。未挂载、写入失败或文件已存在时忽略诊断，原计量、拒绝和一次纠正规则照常执行。
+
 [ADR-0024](../adr/0024-bounded-support-agent.md)的新`support_agent_v1`使用`linux-v2-agent-runtime-1`与`model_decision`，仍使用相同provider audit和Calls合同。全部已提交工具决定的chat可通过原commit/report/observation屏障；全Run纠错用尽后的新模型失败，仅在相同attempt/fence/当前步骤和持久failed_terminal、完整known审计匹配时允许下一案。重复工具决定本身已提交，拒绝发生在后续BeginTool且不扣工具额度。unknown、异常、身份/模式不兼容、确认丢失仍停止当前批次。

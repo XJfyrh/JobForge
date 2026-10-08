@@ -18,7 +18,7 @@ func (s *Store) Admit(ctx context.Context, input agentrun.Admission) (agentrun.S
 	var response agentrun.SubmitResponse
 	if !agentrun.ValidIdentifier(input.TenantID) || !agentrun.ValidIdentifier(input.OperationKey) ||
 		!validUUID(input.RunID) || !validUUID(input.OperationID) || !validUUID(input.FirstStepID) ||
-		(input.SourceRunID != "" && !validUUID(input.SourceRunID)) {
+		(input.SourceRunID != "" && !validUUID(input.SourceRunID)) || !agentrun.ValidTraceContext(input.TraceContext) {
 		return response, agentrun.ErrInvalidArgument
 	}
 	err := s.transact(ctx, func(tx pgx.Tx) error {
@@ -190,7 +190,7 @@ func admissionRun(input agentrun.Admission, business agentrun.BusinessRequest, s
 		ProfileID: input.Profile.ID, ProfileHash: input.Profile.Hash, BudgetBatchID: input.Submit.BudgetBatchID,
 		SnapshotID: snapshot.ID, SnapshotHash: snapshot.ContentHash, VersionVector: snapshot.VersionVector,
 		State: agentrun.Ready, RunTimeoutSeconds: timeout, RunDeadline: now.Add(time.Duration(timeout) * time.Second),
-		CreatedAt: now, UpdatedAt: now}
+		CreatedAt: now, UpdatedAt: now, TraceContext: input.TraceContext}
 	a := agentrun.Authority{NextStepID: input.FirstStepID, NextStepKind: "read_ticket",
 		CheckpointBytes: int64(len(snapshot.Ticket) + len(snapshot.VersionVector)),
 		NextInputHash:   agentrun.InitialStepInput(input.Profile.Hash, snapshot.ContentHash)}
@@ -204,12 +204,12 @@ func insertRun(ctx context.Context, tx pgx.Tx, input agentrun.Admission, r agent
 	_, err := tx.Exec(ctx, `insert into runs (run_id,tenant_id,business_request_id,business_request_key,ticket_id,
 		retry_of_run_id,admission_hash,profile_id,profile_hash,budget_batch_id,snapshot_id,snapshot_hash,
 		version_vector,ticket_binding,index_id,index_profile_hash,state,run_timeout_seconds,run_deadline,
-		next_step_id,next_step_kind,next_input_hash,created_at,updated_at,checkpoint_bytes)
-		values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$23,$24)`,
+		next_step_id,next_step_kind,next_input_hash,created_at,updated_at,checkpoint_bytes,trace_context)
+		values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$23,$24,$25)`,
 		r.ID, r.TenantID, r.BusinessRequestID, r.BusinessRequestKey, r.TicketID, r.RetryOfRunID, input.RequestHash,
 		r.ProfileID, r.ProfileHash, r.BudgetBatchID, r.SnapshotID, r.SnapshotHash, r.VersionVector,
 		input.Snapshot.Ticket, input.Snapshot.IndexID, input.Snapshot.IndexProfileHash,
-		r.State, r.RunTimeoutSeconds, r.RunDeadline, a.NextStepID, a.NextStepKind, a.NextInputHash, r.CreatedAt, a.CheckpointBytes)
+		r.State, r.RunTimeoutSeconds, r.RunDeadline, a.NextStepID, a.NextStepKind, a.NextInputHash, r.CreatedAt, a.CheckpointBytes, r.TraceContext)
 	return err
 }
 

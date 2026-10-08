@@ -74,6 +74,7 @@ class RunCallContext:
     snapshot_content_hash: str
     tool_invocation_id: str
     agent: bool = False
+    wide_context: bool = False
 
 
 @dataclass(frozen=True)
@@ -269,7 +270,7 @@ def prepare_request(
     request = PreparedRequest(
         endpoint, subcall, method, path, raw, max_response_bytes, ""
     )
-    _shape(request, agent=context.agent)
+    _shape(request, agent=context.agent or context.wide_context)
     return PreparedRequest(
         endpoint,
         subcall,
@@ -775,10 +776,15 @@ class AuthorizedDispatcher:
     ) -> tuple[T | None, DispatchError | None]:
         deadline = self._conversation.deadline
         self._guard(deadline)
-        _shape(request, agent=context.agent)
+        _shape(request, agent=context.agent or context.wide_context)
         binding = self._start["binding"]
         if context.agent != (
             self._start.get("input", {}).get("adapter_id") == "support-agent-v1"
+        ):
+            raise DispatchError("INPUT_INVALID")
+        if context.wide_context != (
+            self._start.get("input", {}).get("executor_version")
+            == "linux-v2-fixed-comparison-runtime-1"
         ):
             raise DispatchError("INPUT_INVALID")
         if (

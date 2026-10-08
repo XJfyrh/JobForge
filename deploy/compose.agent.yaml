@@ -30,6 +30,9 @@ services:
       JOBFORGE_AGENT_HTTP_ADDR: "0.0.0.0:8093"
       JOBFORGE_AGENT_GRPC_ADDR: "0.0.0.0:9093"
       JOBFORGE_AGENT_BUSINESS_URL: http://business:8092
+      JOBFORGE_METRICS_ADDR: "0.0.0.0:6063"
+      JOBFORGE_OTEL_EXPORTER: ${JOBFORGE_OTEL_EXPORTER:-none}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://run-collector:4318
       # Synthetic local identities only; cloud secrets never enter this file.
       JOBFORGE_AGENT_BUSINESS_KEYS: >-
         {"tenant-north":"dev-north-operator-key","tenant-south":"dev-south-operator-key"}
@@ -86,6 +89,8 @@ services:
     environment:
       JOBFORGE_BUSINESS_DSN: postgres://jobforge_business_reader:jobforge_business_reader@business-postgres:5432/jobforge_business?sslmode=disable
       JOBFORGE_BUSINESS_ADDR: "0.0.0.0:8092"
+      JOBFORGE_OTEL_EXPORTER: ${JOBFORGE_OTEL_EXPORTER:-none}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://run-collector:4318
       # Synthetic local development identities only. Never use these in production.
       JOBFORGE_BUSINESS_KEYS: >-
         {"dev-north-operator-key":{"tenant_id":"tenant-north","role":"operator"},
@@ -102,6 +107,46 @@ services:
     security_opt: [no-new-privileges:true]
     pids_limit: 32
     mem_limit: 128m
+
+  run-collector:
+    profiles: [obs]
+    image: otel/opentelemetry-collector-contrib:0.160.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/run-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:14318:4318"
+    mem_limit: 128m
+    depends_on: [run-jaeger]
+
+  run-jaeger:
+    profiles: [obs]
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.20.0
+    ports:
+      - "127.0.0.1:16687:16686"
+    mem_limit: 256m
+
+  run-prometheus:
+    profiles: [obs]
+    image: prom/prometheus:v3.14.0
+    volumes:
+      - ./prometheus/run.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/run-alerts.yml:/etc/prometheus/run-alerts.yml:ro
+    ports:
+      - "127.0.0.1:9094:9090"
+
+  run-grafana:
+    profiles: [obs]
+    image: grafana/grafana:13.2.1
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: jobforge
+    volumes:
+      - ./grafana/run-datasources.yaml:/etc/grafana/provisioning/datasources/jobforge.yaml:ro
+      - ./grafana/run-dashboards.yaml:/etc/grafana/provisioning/dashboards/jobforge.yaml:ro
+      - ./grafana/run-dashboards:/var/lib/grafana/run-dashboards:ro
+    ports:
+      - "127.0.0.1:3004:3000"
+    depends_on: [run-prometheus, run-jaeger]
 
 volumes:
   control-pgdata:

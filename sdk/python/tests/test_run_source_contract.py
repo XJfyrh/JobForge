@@ -105,9 +105,10 @@ def test_all_sdk_wire_fields_match_the_source_exactly() -> None:
 
 
 def test_source_exposes_only_registered_public_operations() -> None:
-    """ADR-0026 adds approval decisions and receipt-only reconciliation."""
-    assert len(OPENAPI["paths"]) == 12
-    assert sum(len(path) for path in OPENAPI["paths"].values()) == 14
+    """S5 adds read-only identity without granting public execution authority."""
+    assert len(OPENAPI["paths"]) == 13
+    assert sum(len(path) for path in OPENAPI["paths"].values()) == 15
+    assert set(OPENAPI["paths"]["/v2/identity"]) == {"get"}
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/calls"]) == {"get"}
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/approval"]) == {"get", "post"}
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/reconcile"]) == {"post"}

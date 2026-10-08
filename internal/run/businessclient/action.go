@@ -12,6 +12,11 @@ import (
 	"slices"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/xjfyrh/jobforge/internal/business"
 	"github.com/xjfyrh/jobforge/internal/jsonstrict"
 	"github.com/xjfyrh/jobforge/internal/run"
@@ -89,12 +94,18 @@ type ActionObservation struct {
 }
 
 func (c *ActionClient) request(ctx context.Context, method, endpoint, key string, body []byte, action business.SignedAction) (ActionObservation, error) {
+	ctx, span := otel.Tracer("jobforge/run").Start(ctx, "run.action_http", trace.WithSpanKind(trace.SpanKindClient))
+	defer span.End()
+	span.SetAttributes(attribute.String("http.request.method", method),
+		attribute.String("jobforge.run_id", action.Authorization.RunID),
+		attribute.String("jobforge.operation_id", action.Authorization.OperationID))
 	observation := ActionObservation{Transport: "network_error"}
 	req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return observation, run.ErrInvalidArgument
 	}
 	req.Header.Set("Authorization", "Bearer "+key)
+	propagation.TraceContext{}.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	if method == http.MethodPost {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -107,6 +118,7 @@ func (c *ActionClient) request(ctx context.Context, method, endpoint, key string
 		return observation, run.ErrDependencyUnavailable
 	}
 	defer func() { _ = response.Body.Close() }()
+	span.SetAttributes(attribute.Int("http.response.status_code", response.StatusCode))
 	observation.Transport = "response"
 	raw, err := io.ReadAll(io.LimitReader(response.Body, 4097))
 	digest := sha256.Sum256(raw)

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
@@ -45,9 +47,16 @@ func New(client agentv1.AgentServiceClient, manifest Manifest, config Config) (*
 	w := &Worker{client: client, manifest: manifest, profiles: make(map[string]run.Profile), environments: make(map[string]runexecutor.Environment)}
 	w.manifest.Profiles = slices.Clone(manifest.Profiles)
 	for _, p := range config.Profiles {
-		if _, err := manifest.profile(p.ID, p.Hash); err != nil || p.ExecutorVersion != manifest.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
+		entry, err := manifest.profile(p.ID, p.Hash)
+		if err != nil || p.ExecutorVersion != manifest.ExecutorVersion || !run.ValidHash(p.Pricing.Hash) ||
 			p.ValidateAuditPolicy() != nil || run.ValidateSupportProfile(p) != nil || !p.AuditEnabled() || p.ExpectedResponseModel != "deepseek-flash" {
 			return nil, run.ErrProfileUnavailable
+		}
+		if manifest.SchemaVersion == 2 || run.IsSupportStrategy(p.Strategy) {
+			definition, err := run.DecodeSupportDefinition(p.Definition)
+			if err != nil || (definition.SchemaVersion >= 7) != (manifest.SchemaVersion == 2) || manifest.SchemaVersion == 2 && entry.PromptVersion != definition.Program.PromptVersion {
+				return nil, run.ErrProfileUnavailable
+			}
 		}
 		if _, exists := w.profiles[p.ID]; exists {
 			return nil, run.ErrProfileUnavailable
@@ -115,7 +124,26 @@ type stepOutcome struct {
 
 // runStep owns one real guardian and original Conversation. Context cancellation
 // revokes ordinary work; narrow captured metering has its own bounded cleanup.
-func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoint *agentv1.Checkpoint, authority executionAuthority) stepOutcome {
+func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoint *agentv1.Checkpoint, authority executionAuthority) (outcome stepOutcome) {
+	started := time.Now()
+	defer func() {
+		kind := "unknown"
+		if checkpoint != nil && checkpoint.NextStep != nil {
+			if name, exists := agentv1.StepKind_name[int32(checkpoint.NextStep.Kind)]; exists {
+				kind = name
+			}
+		}
+		result := "accepted"
+		switch {
+		case outcome.Fatal != nil:
+			result = "fatal"
+		case outcome.Abandoned:
+			result = "abandoned"
+		case outcome.Failure != "" || outcome.Commit == nil:
+			result = "failed"
+		}
+		observability.RunStepDuration.WithLabelValues(kind, result).Observe(time.Since(started).Seconds())
+	}()
 	if checkpoint != nil && checkpoint.NextStep != nil && checkpoint.NextStep.Kind == agentv1.StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION {
 		return w.runAction(ctx, lease, checkpoint, authority)
 	}

@@ -58,7 +58,7 @@ def _manifest_profiles(
             not isinstance(value, dict)
             or set(value) != {"schema_version", "executor_version", "profiles"}
             or type(value["schema_version"]) is not int
-            or value["schema_version"] != 1
+            or value["schema_version"] not in {1, 2}
             or value["executor_version"] != executor_version
             or not isinstance(value["profiles"], list)
             or not 1 <= len(value["profiles"]) <= 32
@@ -67,11 +67,14 @@ def _manifest_profiles(
         seen: set[str] = set()
         profiles: list[dict[str, str]] = []
         for item in value["profiles"]:
-            if not isinstance(item, dict) or set(item) != {
+            expected_fields = {
                 "profile_id",
                 "profile_hash",
                 "adapter_id",
-            }:
+            }
+            if value["schema_version"] == 2:
+                expected_fields.add("prompt_version")
+            if not isinstance(item, dict) or set(item) != expected_fields:
                 raise ValueError()
             for key, pattern in (
                 ("profile_id", IDENTIFIER),
@@ -84,6 +87,28 @@ def _manifest_profiles(
                 ):
                     raise ValueError()
             if item["profile_id"] in seen:
+                raise ValueError()
+            if value["schema_version"] == 2 and (
+                item["adapter_id"],
+                item["prompt_version"],
+                executor_version,
+            ) not in {
+                (
+                    "support-agent-v1",
+                    "support-agent-prompt-v2",
+                    "linux-v2-approval-runtime-1",
+                ),
+                (
+                    "support-agent-v1",
+                    "support-agent-prompt-v3",
+                    "linux-v2-approval-runtime-1",
+                ),
+                (
+                    "support-fixed-v1",
+                    "support-fixed-prompt-v1",
+                    "linux-v2-fixed-comparison-runtime-1",
+                ),
+            }:
                 raise ValueError()
             seen.add(item["profile_id"])
             profiles.append(item)
@@ -103,13 +128,24 @@ def resolve_adapter(
         "profile_hash": profile_hash,
         "adapter_id": adapter_id,
     }
-    if not executor_matches_adapter(
-        executor_version, adapter_id
-    ) or expected not in _manifest_profiles(executor_version):
+    matched = [
+        entry
+        for entry in _manifest_profiles(executor_version)
+        if all(entry.get(key) == value for key, value in expected.items())
+    ]
+    if not executor_matches_adapter(executor_version, adapter_id) or len(matched) != 1:
         raise DispatchError("PROFILE_UNAVAILABLE")
     adapter = REGISTRY.get(adapter_id)
     if adapter is None or adapter.adapter_id != adapter_id:
         raise DispatchError("PROFILE_UNAVAILABLE")
+    if matched[0].get("prompt_version") == "support-agent-prompt-v2":
+        from jobforge_agent.support_agent_v2 import SupportAgentV2Adapter
+
+        return SupportAgentV2Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v3":
+        from jobforge_agent.support_agent_v3 import SupportAgentV3Adapter
+
+        return SupportAgentV3Adapter()
     return adapter
 
 

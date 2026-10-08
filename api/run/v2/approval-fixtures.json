@@ -131,6 +131,8 @@
       "cancel_requested_at": null,
       "created_at": "2026-09-16T08:00:00Z",
       "updated_at": "2026-09-16T08:00:00Z",
+      "terminal_at": null,
+      "content_purged_at": null,
       "budget": {
         "family": {
           "scope": "family",

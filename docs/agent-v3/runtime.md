@@ -7,8 +7,10 @@ Go Worker 持有执行权，固定 Python guardian/step 执行登记单步，通
 | schema 1 / `support_fixed_v1` | `support-fixed-v1` | `linux-v2-audit-runtime-1` |
 | schema 2 / `support_agent_v1` | `support-agent-v1` | `linux-v2-agent-runtime-1` |
 | schema 3 / `support_agent_v1` + `confirmed_uncommitted_v1` | `support-agent-v1` | `linux-v2-recovery-runtime-1` |
+| schema 4 / 6 / 7 / 9 / `support_agent_v1` + 恢复/审批 | `support-agent-v1` | `linux-v2-approval-runtime-1` |
+| schema 5 / 8 / 10 / `support_fixed_v1` | `support-fixed-v1` | `linux-v2-fixed-comparison-runtime-1` |
 
-这三类均使用 `deepseek-audit-v1` / `deepseek-flash`。版本、profile/hash 与 manifest 不可混用；实际验收见[证据索引](../evidence/README.md)。
+这些版本均使用`deepseek-audit-v1` / `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9分别绑定实际`support-agent-prompt-v2/v3`源码，schema 7–10均使用部署manifest 2；schema 1–6使用manifest 1。实际验收见[证据索引](../evidence/README.md)。
 
 ## 执行权与组件
 
@@ -24,7 +26,7 @@ flowchart LR
 
 PostgreSQL 仍是唯一事实源；Go 独占 Worker session、Run lease、心跳和控制 RPC。`internal/runworker` 持有原 v2 Conversation，[runexecutor 包](../../internal/runexecutor/README.md)只管理固定进程和 I/O，不解释调度、预算或下一游标。Python 只执行当前登记单步，不 Claim、不续租、不重试 Run，也没有任务队列。交付仍为 at-least-once，外部副作用仍须业务幂等。
 
-Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 须一致：S1为 `linux-v2-audit-runtime-1`，S2为 `linux-v2-agent-runtime-1`，schema 3 的 S3 为 `linux-v2-recovery-runtime-1`（见[恢复指南](recovery.md)）；控制面在登记及后续 session 校验中拒绝混合版本。全部执行 profile 还须有固定审计 policy 和 expected model。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
+Worker容量固定为1。Register版本、Worker允许的**所有profile**的executor_version、部署manifest和Python runtime须与上表一致；控制面在登记及后续session校验中拒绝混合版本。全部执行profile还须有固定审计policy和expected model。Worker核对注册返回的完整profile集合。Claim后先GetCheckpoint，只有明确成功的CommitStep返回允许继续时，才重新读取服务端checkpoint开始下一步；本地不计算下一游标或恢复次数。
 
 5s Heartbeat 与普通控制 RPC/管道独立运行。RPC 均有截止，普通控制请求最多 2s；20ms 本地 watchdog 独立检查 Linux `CLOCK_BOOTTIME`。Register/Claim/Heartbeat 用 RPC 发起单调时间和服务端锁后观测时间保守映射 session/lease/attempt/Run 截止，扣除整个往返等待；迟到回调不能恢复已失效的旧执行权。Heartbeat 可更新 lease/session，不能延长固定 attempt/Run 或已经授予的物理调用期限。Windows 原生不支持分支测试不能替代同一 Linux 容器验收。
 
@@ -34,7 +36,7 @@ Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile
 
 [运行输入源合同](../../api/executor/v2/runtime-input.md)和 [schema](../../api/executor/v2/runtime-input.schema.json)沿用 RPC 字段名，将 JSON bytes 投影为对象。Go 使用现有领域 canonicalizer 验证 accepted 结果、CommitHash、NextInputHash 全链、序号、资源和 result_ref；最新资源还须与原 Claim 一致。Python 验证形状与字符串链，不重新实现任意 decimal 规范化。原 JSON 与最终编码大小分别校验，超限不裁剪历史。
 
-Go/Python 只读固定 `/etc/jobforge/executor.json`：顶层恰有 `schema_version:1`、`executor_version` 和 `profiles`；1～32 个 profile 项恰有 `profile_id/profile_hash/adapter_id`，profile_id 不重复。manifest 不含 endpoint 或秘密，也不能把未安装 adapter 变成可执行能力。
+Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–10，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
 
 生产入口是 [cmd/agent-worker](../../cmd/agent-worker/main.go)，不接命令行参数。配置由受信部署文件提供：
 

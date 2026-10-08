@@ -11,7 +11,7 @@ import (
 const (
 	// SupportApprovalExecutorVersion adds the Go-owned action step to S3.
 	SupportApprovalExecutorVersion = "linux-v2-approval-runtime-1"
-	// TicketResolutionApprovalPolicy is opt-in only through schema 4.
+	// TicketResolutionApprovalPolicy is opt-in through approval-capable schemas.
 	TicketResolutionApprovalPolicy = "ticket_resolution_v1"
 	// MaxActionCalls is separate from the unchanged model/tool physical ledger.
 	MaxActionCalls = 8
@@ -20,7 +20,7 @@ const (
 // ApprovalEnabled checks the complete immutable capability, not a pending state.
 func (p Profile) ApprovalEnabled() bool {
 	d, err := DecodeSupportDefinition(p.Definition)
-	if err != nil || d.SchemaVersion != 4 || p.ExecutorVersion != SupportApprovalExecutorVersion {
+	if err != nil || (d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9) || p.ExecutorVersion != SupportApprovalExecutorVersion {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

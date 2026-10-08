@@ -199,7 +199,9 @@ def load_package(root: Path = ROOT) -> Package:
     )
 
 
-def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str, Any]]:
+def registration(
+    value: dict[str, Any], package: Package, *, s5: bool = False
+) -> dict[str, dict[str, Any]]:
     """Check all predeclared identities, versions and fixed profile capabilities."""
     fields(
         value,
@@ -215,12 +217,14 @@ def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str,
             "corpus_sha256",
             "profile",
             "bindings",
-        },
+        }
+        | ({"comparison", "strategy_blueprint"} if s5 else set()),
     )
     need(
         type(value["schema_version"]) is int
         and value["schema_version"] == 1
-        and value["scorer_version"] == SCORER_VERSION,
+        and value["scorer_version"]
+        == ("support-s5-quality-v1" if s5 else SCORER_VERSION),
         "SCORER_VERSION",
     )
     need(
@@ -228,7 +232,17 @@ def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str,
         "EVIDENCE_ORIGIN",
     )
     need(
-        value["dataset_version"] == DATASET_VERSION
+        value["dataset_version"]
+        in (
+            {
+                DATASET_VERSION,
+                "support-s5-2026-10-07-v1",
+                "support-s5-2026-10-07-v2",
+                "support-s5-2026-10-08-v3",
+            }
+            if s5
+            else {DATASET_VERSION}
+        )
         and value["policy_version"] == POLICY_VERSION
         and value["corpus_sha256"] == package.corpus_hash,
         "DATA_VERSION",
@@ -312,33 +326,64 @@ def registration(value: dict[str, Any], package: Package) -> dict[str, dict[str,
             profile["expected_response_model"],
             profile["provider_audit_policy"],
         )
-        in {
-            (
-                "support_fixed_v1",
-                "support-proposal-v1",
-                "linux-v2-audit-runtime-1",
-                "deepseek-flash",
-                "deepseek-audit-v1",
-            ),
-            (
-                "support_agent_v1",
-                "support-proposal-v1",
-                "linux-v2-agent-runtime-1",
-                "deepseek-flash",
-                "deepseek-audit-v1",
-            ),
-            (
-                "support_agent_v1",
-                "support-proposal-v1",
-                "linux-v2-recovery-runtime-1",
-                "deepseek-flash",
-                "deepseek-audit-v1",
-            ),
-        },
+        in (
+            {
+                (
+                    "support_fixed_v1",
+                    "support-proposal-v1",
+                    "linux-v2-audit-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v1",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-agent-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v1",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-recovery-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v1",
+                ),
+            }
+            if not s5
+            else {
+                (
+                    "support_fixed_v1",
+                    "support-proposal-v1",
+                    "linux-v2-fixed-comparison-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v1",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-approval-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v1",
+                ),
+            }
+        ),
         "PROFILE_CAPABILITIES",
     )
     need(
-        type(value["bindings"]) is list and len(value["bindings"]) == 40,
+        type(value["bindings"]) is list
+        and len(value["bindings"])
+        == (
+            20
+            if s5
+            and value["dataset_version"]
+            in {
+                "support-s5-2026-10-07-v1",
+                "support-s5-2026-10-07-v2",
+                "support-s5-2026-10-08-v3",
+            }
+            else 40
+        ),
         "CASE_COVERAGE",
     )
     result: dict[str, dict[str, Any]] = {}

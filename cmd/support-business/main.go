@@ -18,6 +18,7 @@ import (
 
 	supportdata "github.com/xjfyrh/jobforge/examples/support-agent/runtime"
 	"github.com/xjfyrh/jobforge/internal/business"
+	"github.com/xjfyrh/jobforge/internal/observability"
 )
 
 func main() {
@@ -143,9 +144,14 @@ func readJSONFile(path string, limit int64, value any) error {
 }
 
 func serve(ctx context.Context, pool *pgxpool.Pool) error {
+	shutdownTracing, err := observability.SetupRunTracing(ctx, "jobforge-support-business")
+	if err != nil {
+		return err
+	}
+	defer shutdownTracing()
 	store := business.NewStore(pool)
 	readyCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	err := store.CheckRuntimeRole(readyCtx)
+	err = store.CheckRuntimeRole(readyCtx)
 	if err == nil {
 		err = store.CheckReady(readyCtx)
 	}

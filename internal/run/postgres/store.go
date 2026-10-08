@@ -150,9 +150,9 @@ const runColumns = `run_id, tenant_id, business_request_id, business_request_key
 	snapshot_id, snapshot_hash, version_vector, state, outcome, error_code, error_message,
 	attempt_no, recovery_count, cursor_version, run_timeout_seconds, run_deadline,
 	attempt_deadline, lease_until, next_attempt_at, permission_expires_at, proposal_ref,
-	stop_reason, cancel_requested_at, created_at, updated_at,
+	stop_reason, cancel_requested_at, created_at, updated_at, terminal_at, content_purged_at,
 	coalesce(worker_id, ''), coalesce(session_id::text, ''), fencing_token, active_call_id,
-	checkpoint_bytes, event_sequence, next_step_id, next_step_kind, next_input_hash`
+	checkpoint_bytes, event_sequence, next_step_id, next_step_kind, next_input_hash, trace_context`
 
 func readRun(row pgx.Row) (agentrun.Run, agentrun.Authority, error) {
 	var r agentrun.Run
@@ -163,9 +163,9 @@ func readRun(row pgx.Row) (agentrun.Run, agentrun.Authority, error) {
 		&r.SnapshotID, &r.SnapshotHash, &r.VersionVector, &r.State, &r.Outcome, &errorCode, &errorMessage,
 		&r.AttemptNo, &r.RecoveryCount, &r.CursorVersion, &r.RunTimeoutSeconds, &r.RunDeadline,
 		&r.AttemptDeadline, &r.LeaseUntil, &r.NextAttemptAt, &r.PermissionExpiresAt, &r.ProposalRef,
-		&r.StopReason, &r.CancelRequestedAt, &r.CreatedAt, &r.UpdatedAt,
+		&r.StopReason, &r.CancelRequestedAt, &r.CreatedAt, &r.UpdatedAt, &r.TerminalAt, &r.ContentPurgedAt,
 		&a.WorkerID, &a.SessionID, &a.FencingToken, &a.ActiveCallID, &a.CheckpointBytes,
-		&a.EventSequence, &a.NextStepID, &a.NextStepKind, &a.NextInputHash)
+		&a.EventSequence, &a.NextStepID, &a.NextStepKind, &a.NextInputHash, &r.TraceContext)
 	if err == nil && errorCode != nil && errorMessage != nil {
 		r.Error = &agentrun.Failure{Code: *errorCode, Message: *errorMessage}
 	}
@@ -181,7 +181,7 @@ func saveRun(ctx context.Context, tx pgx.Tx, r *agentrun.Run, a *agentrun.Author
 	if r.Error != nil {
 		code, message = &r.Error.Code, &r.Error.Message
 	}
-	_, err := tx.Exec(ctx, `update runs set state=$3, outcome=$4, error_code=$5, error_message=$6,
+	err := tx.QueryRow(ctx, `update runs set state=$3, outcome=$4, error_code=$5, error_message=$6,
 		attempt_no=$7, recovery_count=$8, cursor_version=$9, attempt_deadline=$10, lease_until=$11,
 		next_attempt_at=$12, permission_expires_at=$13, proposal_ref=$14, stop_reason=$15,
 		cancel_requested_at=$16, updated_at=$17, worker_id=nullif($18,''), session_id=nullif($19,'')::uuid,
@@ -191,11 +191,11 @@ func saveRun(ctx context.Context, tx pgx.Tx, r *agentrun.Run, a *agentrun.Author
 			case when $4='applied' then 'applied' when $4='rejected' then 'rejected' when $4='no_action' then 'no_action'
 			when exists(select 1 from action_authorizations x where x.tenant_id=runs.tenant_id and x.business_request_id=runs.business_request_id) then 'unknown'
 			when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end) else terminal_disposition end
-		where tenant_id=$1 and run_id=$2`,
+		where tenant_id=$1 and run_id=$2 returning terminal_at`,
 		r.TenantID, r.ID, r.State, r.Outcome, code, message, r.AttemptNo, r.RecoveryCount, r.CursorVersion,
 		r.AttemptDeadline, r.LeaseUntil, r.NextAttemptAt, r.PermissionExpiresAt, r.ProposalRef, r.StopReason,
 		r.CancelRequestedAt, r.UpdatedAt, a.WorkerID, a.SessionID, a.FencingToken, a.ActiveCallID,
-		a.CheckpointBytes, a.EventSequence, a.NextStepID, a.NextStepKind, a.NextInputHash)
+		a.CheckpointBytes, a.EventSequence, a.NextStepID, a.NextStepKind, a.NextInputHash).Scan(&r.TerminalAt)
 	return err
 }
 

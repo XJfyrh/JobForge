@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "kind": "s5-development-agent-regression",
+  "date": "2026-10-07",
+  "execution_head": "11468811e68af167a13a1da4fd272cebb8beac0a",
+  "dataset": "support-dev-2026-09-16-v2",
+  "phase": "dev-agent",
+  "denominator": 40,
+  "correct_count": 37,
+  "full_case_evidence_count": 37,
+  "hard_failure_cases": {
+    "unauthorized_access": 0,
+    "unapproved_write": 0,
+    "duplicate_business_effect": 0,
+    "budget_breach": 0
+  },
+  "proposal_audit_complete": true,
+  "usage_complete": true,
+  "usage_total": {
+    "known_tokens": 659926,
+    "known_cost_microyuan": 422652,
+    "held_tokens": 0,
+    "held_cost_microyuan": 0,
+    "physical_calls": 467,
+    "chat_calls": 174,
+    "unknown_chat_calls": 0,
+    "measurement_anomalies": 0,
+    "corrections": 3,
+    "query_embedding_calls": 54,
+    "profile_metadata_calls": 108,
+    "business_tool_calls": 131
+  },
+  "ledger": {
+    "runs": 40,
+    "paid_chat_calls": 174,
+    "known_cost_microyuan": 422652,
+    "held_cost_microyuan": 0,
+    "unknown_chat_calls": 0,
+    "batch_cap_microyuan": 4000000,
+    "in_flight_reservations": 0,
+    "unfinished_attempts": 0,
+    "stage_remaining_microyuan": 19577348,
+    "business_facts_unchanged": true,
+    "receipts_unchanged": true
+  },
+  "failed_cases": [
+    {
+      "case_id": "DEV-031",
+      "run_state": "failed",
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ]
+    },
+    {
+      "case_id": "DEV-032",
+      "run_state": "failed",
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ]
+    },
+    {
+      "case_id": "DEV-033",
+      "run_state": "failed",
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ]
+    }
+  ],
+  "failure_diagnostic": "source reference rejected as outside acquired source set; rejected raw body not retained",
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "formal_unseen_package_created": false,
+  "ci_execution_head": {
+    "conclusion": "success",
+    "jobs": 8,
+    "url": "https://github.com/XJfyrh/JobForge/actions/runs/37595618588"
+  },
+  "raw_evidence_root": "E:/JobForgeEvidence/s5-2026-10-07/dev-agent",
+  "artifact_sha256": {
+    "registration.json": "1aa3cdc9d4e3539a9a9da72f7252506365df4b2a90250ebdbcc12c0093d2fded",
+    "evidence.json": "a483ce53bd49db8315ccb8f74cc28a0e17ccbc1284ed9545020fac239ba4edb4",
+    "score.json": "ae0bf43c4b77da0d9732095431e9c02a17de73ab27b43a1c038eb41e81b89e42",
+    "stage-ledger-after.json": "9dcd8c9986877d98d91174ef0745d69c52aa7675588c5e1d7cc2f4cef876c312",
+    "sealed-artifacts.json": "bb35c8dbcb0ad6c82b991c36966f4cb4e2b2f291335da4c216f09c3483287dd5",
+    "root-dev-agent-score.json": "90248fcefe5897c4a3eec21d16ee69fd4bd18630b47664d8719f96217ea30788",
+    "root-first-real-trace.json": "ccc6c7c29a7b824d67e167f3074b7ffcfc5657b69de9593a557fbe8ec8048492"
+  },
+  "metrics_ui_fix": {
+    "schema_version": 1,
+    "image": "sha256:3f4dc3deaee7d142d1ef290027ceb7c0875b8f4933d5fb26f9dd0e9a4886d50a",
+    "worker_metrics_private_http": 200,
+    "prometheus_worker_up": true,
+    "ui_app_current": true,
+    "cloud_calls": 0,
+    "real_paid_key_mounted": false,
+    "database": "jobforge_s5_metrics_1065478a104d458c94b8441ce8307fe4",
+    "sha256": {
+      "prometheus-targets.json": "f5fcd4baa3e883c45e55eddd7c64c179c00c7da46a6f8ac5e05df78717e4b646",
+      "worker-metrics.txt": "6b2baaf7dbad7456d3b6d5b2286faee313ca96e92dd8767d4cda4b95ab966aeb",
+      "zero-call-audit.json": "1af0deacf1dc88e608706bdb3adce7e871d3c85d75bc21133a0405a162a5f731"
+    }
+  }
+}

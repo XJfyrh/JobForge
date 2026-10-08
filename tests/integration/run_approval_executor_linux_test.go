@@ -99,6 +99,9 @@ func approvalStartFormalWorker(t *testing.T, h *runHarness, origin, gateway stri
 	launcherJSON(t, keys, map[string]any{"control_token": token, "tenants": map[string]any{"tenant-north": map[string]string{"business_read_key": "synthetic-business-read-key", "deepseek_api_key": "synthetic-provider-key", "action_reader_key": "synthetic-action-reader-key", "action_writer_key": "synthetic-action-writer-key"}}})
 	command := exec.Command("/usr/local/bin/agent-worker")
 	command.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin", "JOBFORGE_AGENT_WORKER_CONFIG=" + config, "JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE=" + keys, "JOBFORGE_AGENT_GATEWAY=" + gateway, "JOBFORGE_AGENT_GRPC_TLS=false"}
+	if os.Getenv("JOBFORGE_S5_REVIEW_DIR") != "" {
+		command.Env = append(command.Env, "JOBFORGE_OTEL_EXPORTER=otlp", "OTEL_EXPORTER_OTLP_ENDPOINT="+os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), "JOBFORGE_METRICS_ADDR=0.0.0.0:6064")
+	}
 	if err := command.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +118,7 @@ func approvalStartFormalWorker(t *testing.T, h *runHarness, origin, gateway stri
 	return worker
 }
 
-func approvalSyntheticProvider(t *testing.T, chats *atomic.Int32) {
+func approvalSyntheticProvider(t *testing.T, chats *atomic.Int32, repeat ...bool) {
 	t.Helper()
 	decisions := []string{
 		`{"type":"tool","name":"get_order","arguments":{"order_id":"order-1"}}`,
@@ -141,6 +144,9 @@ func approvalSyntheticProvider(t *testing.T, chats *atomic.Int32) {
 			return
 		}
 		n := int(chats.Add(1)) - 1
+		if len(repeat) == 1 && repeat[0] {
+			n %= len(decisions)
+		}
 		if req.URL.Path != "/chat/completions" || n >= len(decisions) || req.Header.Get("Authorization") != "Bearer synthetic-provider-key" {
 			w.WriteHeader(400)
 			return
@@ -164,7 +170,11 @@ func TestRunApprovalExecutorRealBusinessNaturalRecovery(t *testing.T) {
 	if os.Getenv("JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS") != "1" {
 		t.Skip("requires fixed Linux --init, real control PG, pgvector business PG and installed SDK")
 	}
-	for _, mode := range []string{"normal", "commit_loss"} {
+	modes := []string{"normal", "commit_loss"}
+	if os.Getenv("JOBFORGE_S5_REVIEW_DIR") != "" {
+		modes = []string{"review"}
+	}
+	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
 			h := setupApprovalHarness(t)
 			h.Ctx = t.Context()
@@ -275,8 +285,12 @@ func TestRunApprovalExecutorRealBusinessNaturalRecovery(t *testing.T) {
 			launcherJSON(t, manifestPath, runworker.Manifest{SchemaVersion: 1, ExecutorVersion: h.Profile.ExecutorVersion, Profiles: []runworker.ManifestProfile{{ProfileID: h.Profile.ID, ProfileHash: h.Profile.Hash, AdapterID: "support-agent-v1"}}})
 			t.Cleanup(func() { _ = os.WriteFile(manifestPath, original, 0600) })
 			var chats atomic.Int32
-			approvalSyntheticProvider(t, &chats)
+			approvalSyntheticProvider(t, &chats, mode == "review")
 			gateway, _ := recoveryExecutorGateway(t, h, "")
+			if mode == "review" {
+				s5ReviewEnvironment(t, h, server, gateway, admin, &lose)
+				return
+			}
 			r := h.submit(t, "tenant-north", "joint-"+mode)
 			worker := approvalStartFormalWorker(t, h, server.URL, gateway, 0)
 			recoveryEventually(t, 20*time.Second, func() bool {
@@ -350,6 +364,7 @@ func TestRunApprovalExecutorRealBusinessNaturalRecovery(t *testing.T) {
 				if !reflect.DeepEqual(before.Budget.Family.Used, after.Budget.Family.Used) || after.AttemptNo != 3 || after.RecoveryCount != 1 {
 					t.Fatal("recovery changed model budget")
 				}
+				t.Logf("natural action recovery: elapsed_ms=%d, attempts=3, receipt_queries=2, new_model_calls=0", time.Since(started).Milliseconds())
 			}
 			recoveryEventually(t, 15*time.Second, func() bool {
 				view, err := h.Store.Get(h.Ctx, r.TenantID, r.ID)

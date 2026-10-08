@@ -28,6 +28,8 @@ Windows PG/SDK 前置、固定 Linux `--init`、专用环境开关和同 DSN 串
 
 ## 查询与实验工具
 
+S5 使用 `tools.support_recovery.plan --s5`：schema7/prompt-v2生成历史plan2，schema9/prompt-v3生成plan3。两者都保留原十一项故障/对照意图和费用≤¥4，plan3不另设阶段chat预算，family协议限制保留。到方案保存后待审批或no_action结束，不批准业务写入；S3的plan1与历史报告保持原语义。版本边界见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md)和[ADR-0030](../adr/0030-s5-policy-condition-candidate.md)。
+
 使用 `RunClient.get/steps/events/calls/result` 读取状态、已提交前缀、attempt 与原调用/费用；恢复不创建人工 retry 后继。终态方案导出与后续审批等待到期状态分别保存，不改写评分时点结果。
 
 [有限实验工具记录](../archive/s3-experiment-tools.md)说明固定代理、Supervisor、单 Submit、分离计时与受控续执行；它只适用于已完成的十一项历史实验。新实验需重新冻结来源、预算和实际授权，不重启原 attempted 批次。

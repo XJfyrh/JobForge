@@ -5,6 +5,7 @@ package httpapi
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -61,30 +62,63 @@ func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 		h.keys[key] = identity
 	}
 	router := chi.NewRouter()
-	router.Use(h.boundary)
+	router.Get("/ui", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/ui/", http.StatusTemporaryRedirect)
+	})
+	router.Get("/ui/*", serveUI)
 	router.NotFound(func(w http.ResponseWriter, _ *http.Request) { writeError(w, run.ErrNotFound) })
 	router.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) { writeError(w, run.ErrInvalidArgument) })
-	router.Post("/v2/runs", h.submit)
-	router.Get("/v2/runs", h.list)
-	router.Get("/v2/runs/{run_id}", h.get)
-	router.Get("/v2/runs/{run_id}/steps", h.steps)
-	router.Get("/v2/runs/{run_id}/events", h.events)
-	router.Get("/v2/runs/{run_id}/result", h.result)
-	router.Get("/v2/runs/{run_id}/calls", h.calls)
-	router.Post("/v2/runs/{run_id}/cancel", h.cancel)
-	router.Post("/v2/runs/{run_id}/retry", h.retry)
-	router.Get("/v2/runs/{run_id}/approval", h.approval)
-	router.Post("/v2/runs/{run_id}/approval", h.decideApproval)
-	router.Get("/v2/runs/{run_id}/effect", h.effect)
-	router.Post("/v2/runs/{run_id}/reconcile", h.reconcile)
-	router.Get("/v2/runs/{run_id}/action-calls", h.actionCalls)
+	router.Group(func(router chi.Router) {
+		router.Use(h.boundary)
+		router.Get("/v2/identity", func(w http.ResponseWriter, r *http.Request) {
+			if _, err := query(r); err != nil {
+				writeError(w, err)
+				return
+			}
+			i := authenticated(r)
+			writeJSON(w, http.StatusOK, struct {
+				TenantID string `json:"tenant_id"`
+				Role     string `json:"role"`
+				ActorID  string `json:"actor_id"`
+			}{i.TenantID, i.Role, i.ActorID})
+		})
+		router.Post("/v2/runs", h.submit)
+		router.Get("/v2/runs", h.list)
+		router.Get("/v2/runs/{run_id}", h.get)
+		router.Get("/v2/runs/{run_id}/steps", h.steps)
+		router.Get("/v2/runs/{run_id}/events", h.events)
+		router.Get("/v2/runs/{run_id}/result", h.result)
+		router.Get("/v2/runs/{run_id}/calls", h.calls)
+		router.Post("/v2/runs/{run_id}/cancel", h.cancel)
+		router.Post("/v2/runs/{run_id}/retry", h.retry)
+		router.Get("/v2/runs/{run_id}/approval", h.approval)
+		router.Post("/v2/runs/{run_id}/approval", h.decideApproval)
+		router.Get("/v2/runs/{run_id}/effect", h.effect)
+		router.Post("/v2/runs/{run_id}/reconcile", h.reconcile)
+		router.Get("/v2/runs/{run_id}/action-calls", h.actionCalls)
+	})
 	return router, nil
 }
 
 func (h *handler) boundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		observed := &requestObservation{ResponseWriter: w, result: "ok"}
+		w = observed
+		defer func() {
+			route := chi.RouteContext(r.Context()).RoutePattern()
+			if route == "" {
+				route = "unmatched"
+			}
+			observability.RunHTTPRequests.WithLabelValues(route, observed.result).Inc()
+		}()
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// Browser mutations must be same-origin. Bearer-only SDK calls have no
+		// Origin; forwarding headers do not grant a different approval origin.
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && !sameOrigin(r) {
+			writeError(w, run.ErrForbidden)
+			return
+		}
 		headers := r.Header.Values("Authorization")
 		if len(headers) != 1 {
 			writeError(w, run.ErrUnauthorized)
@@ -104,10 +138,38 @@ func (h *handler) boundary(next http.Handler) http.Handler {
 		ctx = propagation.TraceContext{}.Extract(ctx, propagation.HeaderCarrier(r.Header))
 		ctx, span := observability.Tracer("jobforge/run/httpapi").Start(ctx, "run.http")
 		defer span.End()
+		carrier := propagation.MapCarrier{}
+		propagation.TraceContext{}.Inject(ctx, carrier)
+		ctx = run.WithTraceContext(ctx, carrier["traceparent"])
 		next.ServeHTTP(w, r.WithContext(ctx))
 		// Registered patterns contain no raw identifiers, query strings or bodies.
 		span.SetAttributes(attribute.String("http.route", chi.RouteContext(ctx).RoutePattern()))
+		if id := chi.URLParam(r, "run_id"); run.ValidUUID(id) {
+			span.SetAttributes(attribute.String("jobforge.run_id", id))
+		}
 	})
+}
+
+type requestObservation struct {
+	http.ResponseWriter
+	result string
+}
+
+func sameOrigin(r *http.Request) bool {
+	values := r.Header.Values("Origin")
+	if len(values) == 0 {
+		return true
+	}
+	if len(values) != 1 {
+		return false
+	}
+	origin, err := url.Parse(values[0])
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	return err == nil && origin.Scheme == scheme && strings.EqualFold(origin.Host, r.Host) &&
+		origin.User == nil && origin.Path == "" && origin.RawQuery == "" && origin.Fragment == ""
 }
 
 func authenticated(r *http.Request) Identity {

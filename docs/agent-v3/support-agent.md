@@ -1,28 +1,20 @@
-# S2 有界客服 Agent
+# 有界客服 Agent：接入与方案
 
-契约为[PRD v0.16](../product/JobForge_PRD_v0.16.md)与[ADR-0024](../adr/0024-bounded-support-agent.md)。`support_agent_v1`/`support-agent-v1`使用独立`linux-v2-agent-runtime-1`，S1历史profile与结果保留。模型可在读取订单、物流、不同政策检索之间选择下一步，最后提交既有结构化方案；Go保有调度、预算、来源和状态转换的决定权。
+Agent读取工单快照，由模型选择订单、物流和政策检索工具，累计真实来源并提交结构化处理方案。Go负责Run、租约、预算、来源核验与状态转换；Python只执行登记单步。带审批能力的profile完成方案后进入`awaiting_approval`，经独立审批身份批准后，Go记录结论并更新工单标记。任务页面入口为控制服务`/ui/`，操作见[页面与运维](operations.md)。
 
-## 部署与预算
+默认Compose没有收费profile。当前能力及真实质量结果见[状态页](../status.md)，部署流程见[云端批次指南](cloud-batch.md)，审批和回执见[审批指南](approval.md)。
 
-沿用[云端批次运行指南](cloud-batch.md)的现有服务、只读业务角色、独立控制库、prepare/bootstrap/inspect/launcher与SDK导出流程。新source从[动态策略样例](../../deploy/support-agent.source.example.json)复制，definition.schema_version=2；模型/费率核对日期、prompt、decision schema、完整Python包摘要和实际构建receipt必须对应本次部署。prompt摘要为`python/jobforge_agent/support_agent.py`整文件；其依赖的固定方案说明也被完整包摘要绑定。审查、gold与评分器不进入Worker镜像。
+S5已恢复诊断与修复，实际结果和待验收项见[当前状态](../status.md)。
 
-部署记录本次明确授权的累计上限，按每个已启动共享 batch 的 known+held 扣减一次。`--batch-cost-microyuan`对S2接受正安全整数；每批仍冻结具体有限cap，不按新批自动重置累计授权。S1准备器保留原5 CNY边界。相同manifest内不混合两种执行器版本。模型身份与原费率兼容性仍在每次真实调用中审计。
+## 接入顺序
 
-模型最多12 chat、8逻辑工具、8 query embedding和1次全Run纠错。S2消息64 KiB、请求128 KiB，其余输出/响应/checkpoint/时间上限不变。相同参数重复调用保留决定并以MODEL_PROTOCOL_ERROR结束，在安全日志写固定reason=repeated_tool_call，不再扣工具额度。错误的结构或来源最多纠错一次；完整审计的终态错误计入40案分母并允许继续下一案。unknown/full hold保留且停止当前批次；不把缺失usage当零费。
+1. 核对业务HTTP、只读角色、政策索引及readiness；新环境记录实际索引UUID和摘要，保留环境不重复seed/index。
+2. 选择受审策略版本，以`prepare-support`生成不可变profile、有限batch、专用Worker身份和部署manifest。source、模型/费率、完整Python包摘要与实际构建receipt必须一致。
+3. disabled bootstrap后做实际inspect，登记完整案例名单并审查源码、预算、期限和凭据。准备和只读查询不触发推理。
+4. 启用匹配profile的控制服务，只启动一次有限launcher。每批结束核对known+held、在途许可和实际进程回收；新库、身份或batch不重置累计授权。
+5. 查询方案、步骤、来源与费用。需要动作的方案由独立approver审阅批准；实际工单结果通过独立effect和业务回执核对。
 
-## 验证与验收
-
-`python -m pytest python/tests tools/support_evaluation`覆盖共同决定、来源合并、拒绝路径和动态证据导出，业务gold与谓词不变。Windows 平台 skip 不计 Linux 验收，统一命令见[测试指南](../tests.md)。固定镜像 integration-check 包含`TestRunSupportAgentExecutor`，真实Go Worker、Python进程、gRPC和PostgreSQL验证动态路径、跨检索、全局纠错和重复工具无扣额；供应商响应仅为机制fixture。
-
-正式质量合同要求冻结版本的完整 40 个开发案例，至少 32 个业务正确、安全硬失败 0，实际结果见[S2 最终报告](../evidence/agent-v3-s2-delivery-2026-09-17.md)；不读取保留集、不拼接不同版本结果。另以隔离批次对真实云端响应注入一次截断，验证未知费用查询与停止；它不是供应商原生故障。源码能力、机制通过、真实验收分别记录，不互相代替。
-
-可选 outbound 挂载还保存 `.model-rejection.json`：只有 physical call ID、固定校验模块及源码行号，按本批冻结源码摘要定位；不保存异常文字、模型内容或引用值。该诊断不参与成功判定、授权或费用结算。
-
-## 使用结果
-
-准备时仍按云端指南登记新 profile、有限 batch 与专用 Worker；S2 的 source 选择 `deploy/support-agent.source.example.json`，镜像可标记为 `jobforge-support-cloud:s2`，Compose 覆盖该 image。`prepare-support --batch-cost-microyuan <本次剩余上限>` 冻结费用上限；启动后不改 profile，也不重新启动 attempted 批次。准备不发模型请求，`support-cloud` 启动才执行已登记任务。
-
-SDK 接口不变。下面在部署已启用、凭据和实际身份通过环境提供后提交一案，再查询持久结果；查询本身不触发推理：
+SDK每个方法只发一次HTTP，没有自动重试或后台工作。凭据和实际身份从部署环境提供：
 
 ```python
 import os
@@ -43,6 +35,26 @@ with RunClient(os.environ["JOBFORGE_RUN_URL"], os.environ["JOBFORGE_RUN_TOKEN"])
     print(run.run_id, run.state, result.available, len(steps.items), len(calls.items))
 ```
 
-`steps` 按分页读取完整历史；模型决定在 `model_decision` 的已提交结果中，随后才有对应真实工具步骤。`awaiting_approval` 表示可审阅的方案，不表示工单解决或业务写入。Run 达到原 deadline 后可能转成失败；原完成时的 SDK 导出是本次评分依据，后续查询只追加状态，不覆盖历史。
+`steps`须分页读取完整历史；模型决定提交后才执行对应真实工具。`awaiting_approval`表示方案可审阅，批准后的`applied`表示结论/标记已提交。无需动作可直接成功。Run达到原deadline后可能失败；原完成时SDK导出保留，后续状态只追加，不覆盖历史评分。
 
-提示中的 `policy_retrieval` 只列出公开业务政策主题、建议搜索词和实际已取得的段落别名。某主题非空不代表每个主张已有充分依据；模型仍须选择工具、解释政策、提出主张，Go/Python 仍拒绝未取得来源。时间辅助只计算已接受时间戳之间的秒差，不给出业务答案。
+## 版本与执行边界
+
+| 受审版本 | definition / 部署manifest | 用途 |
+|---|---|---|
+| 原有界Agent | schema 2 / manifest 1 | 只读工具选择；[v0.16](../product/JobForge_PRD_v0.16.md)与[ADR-0024](../adr/0024-bounded-support-agent.md) |
+| 恢复 / 审批 | schema 3 / 4，manifest 1 | 已提交步骤复用、自然接管、独立动作许可 |
+| S5初版公平对照 | Agent schema 6 / Fixed schema 5 | 相同模型、工具、数据与family上限 |
+| S5历史候选v2 | Agent schema 7 / Fixed schema 8，均使用manifest 2 | `support-agent-prompt-v2`；版本选择见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md) |
+| S5候选v3 | Agent schema 9 / Fixed schema 10，均使用manifest 2 | `support-agent-prompt-v3`；必要条件核对见[ADR-0030](../adr/0030-s5-policy-condition-candidate.md) |
+
+schema 7保留原Agent完整指令、事实字段、`policy_retrieval`与`previous_tools`，补充已提交请求去重、细分政策导航、缺失段落并集、correction来源和活跃事件说明。导航只展示实际取回及尚缺段落，不提供业务答案或自动取工具。模型仍选择全部工具、主张和结论。最终响应为`{"type":"final","proposal":{...}}`，未知字段和其他外层类型拒绝。
+
+schema 9在原输入上追加冲突、严格较后纠正、时间差与继续取证的核对提示，不计算政策真值或改变输出合同。Fixed schema 10仅增加新数据身份，原Fixed行为保留。开发通过并冻结后，正式v3须对开发及正式v1/v2均完成独立场景/模板新颖性审查。
+
+S5两策略每个family最多12 chat、8逻辑工具、8 query embedding、44物理HTTP和1次纠错；消息64KiB、请求128KiB，另受本批持久费用/chat上限和期限约束。相同参数重复调用以`MODEL_PROTOCOL_ERROR`结束，不再次扣工具额度。unknown/full hold保留并停批，缺失usage不按零费处理。不同executor版本不能混入同一部署manifest，映射见[运行时指南](runtime.md)。
+
+## 验证与结果
+
+适用Python、真实PG、固定Linux进程及安装SDK检查见[测试指南](../tests.md)。源码机制fixture与真实模型质量分别报告，gold、评分器及故障工具不进入生产Worker镜像。可选outbound诊断只保存调用ID、固定校验模块和源码行号，不改变许可、计量或评分。
+
+S5正式合同要求完整20案、方案正确至少16案、完整案例证据至少18案、四类硬失败0。完整案例要求主张成立、实际来源覆盖及必要主张齐全；合法来源ID本身不满足门槛。当前冻结候选的实际开发和正式配对结果统一在[S5本轮报告](../evidence/agent-v3-s5-real-2026-10-08.md)。历史[S2验收](../evidence/agent-v3-s2-delivery-2026-09-17.md)保留原40案合同；不拼接不同版本结果。

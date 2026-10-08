@@ -1,0 +1,11 @@
+# Explicit S5 external operator; never use as a production Worker parent.
+# Build support-approval from the frozen S5 production Worker first and record
+# both immutable image IDs in the review receipt.
+ARG OPERATOR_IMAGE=jobforge-support-approval:s5-base
+FROM ${OPERATOR_IMAGE}
+USER root
+RUN python -m pip install --no-cache-dir opentelemetry-sdk==1.44.0 opentelemetry-exporter-otlp-proto-http==1.44.0
+COPY tools/support_evaluation/launcher.py /app/tools/support_evaluation/
+COPY tools/support_s5/__init__.py tools/support_s5/assemble.py tools/support_s5/driver.py tools/support_s5/freeze.py tools/support_s5/launcher.py tools/support_s5/package.py tools/support_s5/score.py tools/support_s5/telemetry.py /app/tools/support_s5/
+USER 65532:65532
+ENTRYPOINT ["python", "-m", "tools.support_s5.launcher"]

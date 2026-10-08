@@ -115,6 +115,9 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 
 func writeError(w http.ResponseWriter, err error) {
 	code, status := publicError(err)
+	if observed, ok := w.(*requestObservation); ok {
+		observed.result = string(code)
+	}
 	// Never expose err.Error(): wrapped errors may contain SQL or credentials.
 	envelope := struct {
 		Error run.Failure `json:"error"`
@@ -136,6 +139,8 @@ func publicError(err error) (run.ErrorCode, int) {
 		return code, http.StatusForbidden
 	case run.ErrNotFound:
 		return code, http.StatusNotFound
+	case run.ErrResultExpired, run.ErrRequestExpired:
+		return code, http.StatusGone
 	case run.ErrConflict, run.ErrAlreadyTerminal, run.ErrInvalidTransition,
 		run.ErrProfileUnavailable, run.ErrBudgetExhausted, run.ErrApprovalConflict, run.ErrApprovalExpired,
 		run.ErrActionConflict, run.ErrActionAuthorizationExpired, run.ErrActionOutcomeUnknown:

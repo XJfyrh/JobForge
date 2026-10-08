@@ -133,7 +133,7 @@ def prepare_chat_request(
     """Prepare one immutable fixed request with no caller-selected URL or model."""
     failure = None
     try:
-        payload = _chat_payload(messages, agent=context.agent)
+        payload = _chat_payload(messages, agent=context.agent or context.wide_context)
     except ToolError as error:
         failure = _failure(error)
     if failure is not None:
@@ -147,7 +147,9 @@ def prepare_chat_request(
         body=payload,
         max_response_bytes=MAX_RESPONSE_BYTES,
     )
-    if len(request.body) > (131072 if context.agent else MAX_REQUEST_BYTES):
+    if len(request.body) > (
+        131072 if context.agent or context.wide_context else MAX_REQUEST_BYTES
+    ):
         raise DispatchError("OUTPUT_INVALID", fact="size_limit", stop=True)
     return request
 
@@ -375,6 +377,9 @@ class DeepSeekChat:
                 failure = DispatchError(error.code, fact=error.fact, stop=error.stop)
             except (ToolError, ValueError, TypeError):
                 failure = DispatchError("OUTPUT_INVALID")
+            from jobforge_agent.outbound_audit import model_shape
+
+            model_shape(response.physical_call_id, proposal)
             raise failure
 
         return await self._dispatcher.execute(

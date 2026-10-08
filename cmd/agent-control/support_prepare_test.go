@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -65,6 +66,190 @@ func supportPrepareFixture(t *testing.T) (supportPrepareOptions, supportSource) 
 		t.Fatal(err)
 	}
 	return o, source
+}
+
+func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T) {
+	o, _ := supportPrepareFixture(t)
+	for _, cap := range []int64{0, 240, 480, -1, 481} {
+		o.BatchChatLimit = cap
+		files, err := prepareSupportFiles(o)
+		if cap < 0 || cap > 480 {
+			if err == nil {
+				t.Fatal("invalid chat cap accepted")
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		var control deployment
+		if json.Unmarshal(files["control.disabled.json"], &control) != nil {
+			t.Fatal("configuration")
+		}
+		expected := cap
+		if expected == 0 {
+			expected = 480
+		}
+		if control.Budgets[0].Limits.Chat != expected || control.Budgets[1].Limits.Chat != 240 || control.Budgets[2].Limits.Chat != 240 {
+			t.Fatal("shared cap changed tenant/family limits")
+		}
+		manifest, err := runworker.ParseManifest(files["executor.json"])
+		if err != nil || manifest.SchemaVersion != 1 || manifest.Profiles[0].PromptVersion != "" {
+			t.Fatal("default deployment changed", err)
+		}
+	}
+}
+
+func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
+	o, source := supportPrepareFixture(t)
+	for _, schema := range []int{7, 8, 9, 10} {
+		agent := schema == 7 || schema == 9
+		d := source.Definition
+		if agent {
+			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var historical supportSource
+			if json.Unmarshal(raw, &historical) != nil {
+				t.Fatal("source")
+			}
+			d = historical.Definition
+			d.SchemaVersion = schema
+			d.Program.PromptVersion = run.SupportAgentPromptV2
+			promptFile := "support_agent_v2.py"
+			if schema == 9 {
+				d.Program.PromptVersion = run.SupportAgentPromptV3
+				promptFile = "support_agent_v3.py"
+			}
+			d.Program.ApprovalPolicy = run.TicketResolutionApprovalPolicy
+			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}
+			prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", promptFile))
+			if err != nil {
+				t.Fatal(err)
+			}
+			d.Program.PromptSHA256 = supportSHA256(prompt)
+			d.Program.ProposalSchemaSHA256 = source.Definition.Program.ProposalSchemaSHA256
+		} else {
+			d.SchemaVersion = schema
+		}
+		d.Program.AdapterSourceSHA256 = source.Definition.Program.AdapterSourceSHA256
+		d.Price.SourceSHA256 = source.Definition.Price.SourceSHA256
+		d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+		candidate := source
+		candidate.Definition = d
+		if os.WriteFile(o.Source, supportJSON(candidate), 0600) != nil {
+			t.Fatal("source write")
+		}
+		files, err := prepareSupportFiles(o)
+		if err != nil {
+			t.Fatal("new candidate rejected", err)
+		}
+		manifest, err := runworker.ParseManifest(files["executor.json"])
+		if err != nil || manifest.SchemaVersion != 2 || manifest.Profiles[0].PromptVersion != d.Program.PromptVersion {
+			t.Fatal("candidate binding", err)
+		}
+		if agent {
+			candidate.Definition.Program.PromptSHA256 = source.Definition.Program.PromptSHA256
+			if os.WriteFile(o.Source, supportJSON(candidate), 0600) != nil {
+				t.Fatal("source write")
+			}
+			if _, err := prepareSupportFiles(o); err == nil {
+				t.Fatal("wrong prompt source accepted")
+			}
+		}
+	}
+}
+
+func TestPrepareS5ExternalReviewedDataDoesNotReplaceDevelopment(t *testing.T) {
+	for _, candidate := range []struct {
+		schema  int
+		dataset string
+	}{{5, run.SupportS5DatasetID}, {8, run.SupportS5V2DatasetID}, {10, run.SupportS5V3DatasetID}} {
+		t.Run(candidate.dataset, func(t *testing.T) {
+			testPrepareExternalReviewedData(t, candidate.schema, candidate.dataset)
+		})
+	}
+}
+
+func testPrepareExternalReviewedData(t *testing.T, schema int, dataset string) {
+	t.Helper()
+	o, source := supportPrepareFixture(t)
+	source.SchemaVersion = 2
+	source.Definition.SchemaVersion = schema
+	source.Definition.Model.ObservedOn, source.Definition.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	source.Definition.Model.MessageContentBytes, source.Definition.Model.RequestBodyBytes = 65536, 131072
+	source.Definition.Resources.DatasetID = dataset
+	root := filepath.Dir(o.Source)
+	developmentPath := filepath.Join(o.Repo, "examples", "support-agent", "runtime", "seed.json")
+	original, err := os.ReadFile(developmentPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Clearly synthetic structural fixtures only: no formal unseen cases, gold
+	// or new business scenarios are authored by this unit test.
+	seed, manifest := []byte(`{"synthetic_unit_seed":true}`), []byte(`{"synthetic_unit_manifest":true}`)
+	if err := os.WriteFile(filepath.Join(root, "unit-seed.json"), seed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "unit-manifest.json"), manifest, 0600); err != nil {
+		t.Fatal(err)
+	}
+	source.Definition.Resources.SeedSHA256, source.Definition.Resources.RuntimeManifestSHA256 = supportSHA256(seed), supportSHA256(manifest)
+	source.RuntimeData = &supportRuntimeData{Seed: supportReceipt{"unit-seed.json", supportSHA256(seed)}, Manifest: supportReceipt{"unit-manifest.json", supportSHA256(manifest)}}
+	var rows bytes.Buffer
+	for i := 1; i <= 20; i++ {
+		tenant := "tenant-north"
+		if i > 10 {
+			tenant = "tenant-south"
+		}
+		row := map[string]any{"case_id": fmt.Sprintf("UNIT-%02d", i), "tenant_id": tenant, "ticket_id": fmt.Sprintf("unit-ticket-%02d", i), "as_of": run.SupportObservedAt, "dataset_version": dataset, "policy_version": run.SupportPolicyVersion, "template_family": "synthetic-structural-unit-only"}
+		raw, _ := json.Marshal(row)
+		rows.Write(raw)
+		rows.WriteByte('\n')
+	}
+	if err := os.WriteFile(filepath.Join(root, "unit-cases.jsonl"), rows.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	source.CaseMap = &supportReceipt{"unit-cases.jsonl", supportSHA256(rows.Bytes())}
+	write := func() {
+		t.Helper()
+		if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write()
+	files, err := prepareSupportFiles(o)
+	if err != nil {
+		t.Fatal("separately reviewed data rejected", err)
+	}
+	var launch supportLaunch
+	if json.Unmarshal(files["launch.json"], &launch) != nil || len(launch.Cases) != 20 {
+		t.Fatal("S5 registered list mismatch")
+	}
+	unchanged, _ := os.ReadFile(developmentPath)
+	if !bytes.Equal(original, unchanged) {
+		t.Fatal("historical development seed changed")
+	}
+	old := source.RuntimeData.Seed
+	source.RuntimeData.Seed.Path = developmentPath
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("repo data accepted as S5 external seed")
+	}
+	source.RuntimeData.Seed = old
+	source.RuntimeData.Seed.SHA256 = strings.Repeat("f", 64)
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("tampered S5 external seed digest accepted")
+	}
+	source.RuntimeData.Seed = old
+	source.CaseMap.SHA256 = strings.Repeat("f", 64)
+	write()
+	if _, err := prepareSupportFiles(o); err == nil {
+		t.Fatal("tampered S5 case map accepted")
+	}
 }
 
 func TestPrepareSupportApprovalFrozenActionOrigin(t *testing.T) {

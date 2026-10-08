@@ -23,6 +23,9 @@ func readStep(row pgx.Row) (agentrun.Step, error) {
 	if err != nil {
 		return step, err
 	}
+	if step.Output == nil {
+		return step, agentrun.ErrResultExpired
+	}
 	step.Output, err = canonicalStoredJSON(step.Output)
 	return step, err
 }
@@ -37,6 +40,9 @@ func canonicalStoredJSON(raw []byte) ([]byte, error) {
 
 func loadCheckpoint(ctx context.Context, tx pgx.Tx, r agentrun.Run, a agentrun.Authority) (agentrun.Checkpoint, error) {
 	checkpoint := agentrun.Checkpoint{Run: r, Authority: a, Steps: []agentrun.Step{}}
+	if r.ContentPurgedAt != nil {
+		return checkpoint, agentrun.ErrResultExpired
+	}
 	snapshot := &checkpoint.Snapshot
 	snapshot.TenantID, snapshot.TicketID, snapshot.ID, snapshot.ContentHash = r.TenantID, r.TicketID, r.SnapshotID, r.SnapshotHash
 	snapshot.VersionVector = r.VersionVector

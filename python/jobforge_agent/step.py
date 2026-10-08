@@ -7,7 +7,7 @@ import copy
 import os
 import signal
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from jobforge_agent.business import SnapshotBinding
 from jobforge_agent.deepseek import DeepSeekChat
@@ -24,11 +24,12 @@ from jobforge_agent.protocol_v2 import Frame, ProtocolError
 from jobforge_agent.run_tools import RunBusinessTools
 from jobforge_agent.runtime_adapters import RegisteredAdapter, resolve_adapter
 from jobforge_agent.runtime_input import (
+    FIXED_COMPARISON_EXECUTOR_VERSION,
     RuntimeInput,
     RuntimeInputError,
     parse_runtime_input,
 )
-from jobforge_agent.support_adapter import validate_support_step
+from jobforge_agent.support_adapter import SupportFixedAdapter, validate_support_step
 from jobforge_agent.support_agent import next_tool_arguments, validate_agent_step
 
 
@@ -85,6 +86,7 @@ async def execute_registered_step(
         frame["binding"]["snapshot_hash"],
         runtime.tool_invocation_id,
         agent=agent,
+        wide_context=runtime.executor_version == FIXED_COMPARISON_EXECUTOR_VERSION,
     )
     outcome: Literal["success", "error"] = "success"
     error_code = ""
@@ -121,7 +123,11 @@ async def execute_registered_step(
     elif kind in {"model_proposal", "model_decision", "protocol_correction"}:
         try:
             output = await DeepSeekChat(dispatcher).propose(
-                adapter.proposal_messages(
+                cast(SupportFixedAdapter, adapter).comparison_messages(
+                    copy.deepcopy(checkpoint), correction=kind == "protocol_correction"
+                )
+                if context.wide_context
+                else adapter.proposal_messages(
                     copy.deepcopy(checkpoint), correction=kind == "protocol_correction"
                 ),
                 context=context,

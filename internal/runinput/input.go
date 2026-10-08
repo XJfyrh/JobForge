@@ -254,5 +254,5 @@ func ExecutorMatchesAdapter(version, adapter string) bool {
 	if adapter == "support-agent-v1" {
 		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion
 	}
-	return version == ExecutorVersion
+	return version == ExecutorVersion || adapter == "support-fixed-v1" && version == run.SupportFixedComparisonExecutorVersion
 }

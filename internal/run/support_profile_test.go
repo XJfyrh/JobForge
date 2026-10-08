@@ -41,6 +41,131 @@ func supportDefinitionFixture() SupportDefinition {
 	return d
 }
 
+func TestSupportS5FixedComparisonProfile(t *testing.T) {
+	d := supportDefinitionFixture()
+	d.SchemaVersion = 5
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+	d.Resources.DatasetID = SupportS5DatasetID
+	p, err := BuildSupportProfile("s5-fixed-comparison", d)
+	if err != nil || ValidateSupportProfile(p) != nil || p.ValidateAuditPolicy() != nil ||
+		p.ExecutorVersion != SupportFixedComparisonExecutorVersion || p.Executable || p.ApprovalEnabled() || p.ConfirmedStepRecovery() {
+		t.Fatal("invalid separately versioned comparison capability", err)
+	}
+	for _, mutate := range []func(*SupportDefinition){
+		func(d *SupportDefinition) { d.SchemaVersion = 1 },
+		func(d *SupportDefinition) { d.Program.Strategy = SupportAgentStrategy },
+		func(d *SupportDefinition) { d.Model.MessageContentBytes = 16384 },
+		func(d *SupportDefinition) { d.Price.ObservedOn = "2026-09-16" },
+		func(d *SupportDefinition) { d.Resources.DatasetID = "arbitrary-dataset" },
+		func(d *SupportDefinition) { d.Program.RecoveryPolicy = ConfirmedUncommittedRecovery },
+	} {
+		changed := d
+		mutate(&changed)
+		if _, err := BuildSupportProfile("bad-comparison", changed); err == nil {
+			t.Fatal("widened or mixed comparison capability accepted")
+		}
+	}
+}
+
+func TestSupportS5AgentProfileKeepsApprovalAndRecovery(t *testing.T) {
+	d := supportDefinitionFixture()
+	d.SchemaVersion = 6
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+	d.Program = SupportProgramDefinition{Strategy: SupportAgentStrategy, Adapter: "support-agent-v1",
+		RecoveryPolicy: ConfirmedUncommittedRecovery, ApprovalPolicy: TicketResolutionApprovalPolicy,
+		DecisionSchema: SupportAgentDecisionSchema, DecisionSchemaSHA256: strings.Repeat("a", 64),
+		ProposalSchema: SupportProposalSchema, ProposalSchemaSHA256: strings.Repeat("a", 64),
+		PromptVersion: SupportAgentPromptVersion, PromptSHA256: strings.Repeat("a", 64), AdapterSourceSHA256: strings.Repeat("a", 64)}
+	d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "s5-key", PublicKeySHA256: strings.Repeat("a", 64)}
+	d.Resources.DatasetID = SupportS5DatasetID
+	p, err := BuildSupportProfile("s5-agent", d)
+	if err != nil || ValidateSupportProfile(p) != nil || !p.ApprovalEnabled() || !p.ConfirmedStepRecovery() || p.ExecutorVersion != SupportApprovalExecutorVersion {
+		t.Fatal("S5 lost original approval/recovery capability", err)
+	}
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-06", "2026-10-06"
+	if _, err := BuildSupportProfile("s5-old-price", d); err == nil {
+		t.Fatal("pre-S5 price snapshot accepted")
+	}
+}
+
+func TestSupportS5CandidateVersionsKeepHistoricalPromptBoundary(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "deploy", "support-recovery.source.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source struct {
+		Definition SupportDefinition `json:"definition"`
+	}
+	if json.Unmarshal(raw, &source) != nil {
+		t.Fatal("source template")
+	}
+	d := source.Definition
+	d.SchemaVersion = 7
+	d.Program.ApprovalPolicy = TicketResolutionApprovalPolicy
+	d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "synthetic-key", PublicKeySHA256: strings.Repeat("a", 64)}
+	d.Program.PromptVersion = SupportAgentPromptV2
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	d.Resources.DatasetID = SupportS5V2DatasetID
+	p, err := BuildSupportProfile("candidate-v2", d)
+	if err != nil || !p.ApprovalEnabled() || !p.ConfirmedStepRecovery() || p.ExecutorVersion != SupportApprovalExecutorVersion {
+		t.Fatal("new candidate lost capabilities", err)
+	}
+	for _, mutate := range []func(*SupportDefinition){
+		func(d *SupportDefinition) { d.SchemaVersion = 6 },
+		func(d *SupportDefinition) { d.Program.PromptVersion = SupportAgentPromptVersion },
+		func(d *SupportDefinition) { d.Resources.DatasetID = "unknown-cohort" },
+	} {
+		changed := d
+		mutate(&changed)
+		if _, err := BuildSupportProfile("mixed", changed); err == nil {
+			t.Fatal("mixed candidate accepted")
+		}
+	}
+	d.SchemaVersion, d.Program.PromptVersion, d.Resources.DatasetID = 6, SupportAgentPromptVersion, SupportS5DatasetID
+	if _, err := BuildSupportProfile("historical", d); err != nil {
+		t.Fatal("historical profile changed", err)
+	}
+	fixed := supportDefinitionFixture()
+	fixed.SchemaVersion = 8
+	fixed.Model.ObservedOn, fixed.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	fixed.Model.MessageContentBytes, fixed.Model.RequestBodyBytes = 65536, 131072
+	fixed.Resources.DatasetID = SupportS5V2DatasetID
+	if _, err := BuildSupportProfile("fixed-v2", fixed); err != nil {
+		t.Fatal(err)
+	}
+	fixed.SchemaVersion = 5
+	if _, err := BuildSupportProfile("old-mixed", fixed); err == nil {
+		t.Fatal("historical schema5 silently widened")
+	}
+	d.SchemaVersion, d.Program.PromptVersion, d.Resources.DatasetID = 9, SupportAgentPromptV3, SupportS5V3DatasetID
+	p, err = BuildSupportProfile("candidate-v3", d)
+	if err != nil || ValidateSupportProfile(p) != nil || !p.ApprovalEnabled() || !p.ConfirmedStepRecovery() || p.ExecutorVersion != SupportApprovalExecutorVersion {
+		t.Fatal("v3 candidate lost capabilities", err)
+	}
+	for _, mutate := range []func(*SupportDefinition){
+		func(d *SupportDefinition) { d.SchemaVersion = 7 },
+		func(d *SupportDefinition) { d.Program.PromptVersion = SupportAgentPromptV2 },
+		func(d *SupportDefinition) { d.Resources.DatasetID = "unknown-cohort" },
+	} {
+		changed := d
+		mutate(&changed)
+		if _, err := BuildSupportProfile("mixed-v3", changed); err == nil {
+			t.Fatal("mixed v3 candidate accepted")
+		}
+	}
+	fixed.SchemaVersion, fixed.Resources.DatasetID = 10, SupportS5V3DatasetID
+	fixedProfile, err := BuildSupportProfile("fixed-v3", fixed)
+	if err != nil || ValidateSupportProfile(fixedProfile) != nil || fixedProfile.ApprovalEnabled() || fixedProfile.ConfirmedStepRecovery() || fixedProfile.ExecutorVersion != SupportFixedComparisonExecutorVersion {
+		t.Fatal("fixed v3 capability changed", err)
+	}
+	fixed.SchemaVersion = 8
+	if _, err := BuildSupportProfile("old-fixed-v3-data", fixed); err == nil {
+		t.Fatal("historical schema8 silently widened")
+	}
+}
+
 func TestSupportProfileFixture(t *testing.T) {
 	d := supportDefinitionFixture()
 	p, err := BuildSupportProfile("support-cloud-vector-v1", d)

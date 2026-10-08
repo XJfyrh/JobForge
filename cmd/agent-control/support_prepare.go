@@ -32,11 +32,18 @@ type supportSource struct {
 	DataReview    supportReceipt        `json:"data_review"`
 	ScoringReview supportReceipt        `json:"scoring_review"`
 	PriceSnapshot supportReceipt        `json:"price_snapshot"`
+	CaseMap       *supportReceipt       `json:"case_map,omitempty"`
+	RuntimeData   *supportRuntimeData   `json:"runtime_data,omitempty"`
+}
+
+type supportRuntimeData struct {
+	Manifest supportReceipt `json:"manifest"`
+	Seed     supportReceipt `json:"seed"`
 }
 
 type supportPrepareOptions struct {
 	Source, Repo, ProfileID, WorkerID, BatchID, BatchKey, NorthID, SouthID, ValidFrom, Out string
-	BatchCostMicroyuan                                                                     int64
+	BatchCostMicroyuan, BatchChatLimit                                                     int64
 }
 
 type supportCase struct {
@@ -46,6 +53,7 @@ type supportCase struct {
 	TicketID           string `json:"ticket_id"`
 	BusinessRequestKey string `json:"business_request_key"`
 	IdempotencyKey     string `json:"idempotency_key"`
+	TemplateFamily     string `json:"template_family,omitempty"`
 }
 
 type supportLaunch struct {
@@ -71,6 +79,7 @@ func prepareSupport(args []string) error {
 	flags := flag.NewFlagSet("prepare-support", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.Int64Var(&o.BatchCostMicroyuan, "batch-cost-microyuan", 5000000, "shared batch cost limit within the remaining authorization")
+	flags.Int64Var(&o.BatchChatLimit, "batch-chat-limit", 0, "optional shared chat limit; zero preserves 12 per registered case")
 	for name, target := range map[string]*string{"source": &o.Source, "repo": &o.Repo, "profile-id": &o.ProfileID,
 		"worker-id": &o.WorkerID, "batch-id": &o.BatchID, "batch-key": &o.BatchKey,
 		"north-account-id": &o.NorthID, "south-account-id": &o.SouthID, "valid-from": &o.ValidFrom, "out": &o.Out} {
@@ -92,7 +101,9 @@ func prepareSupport(args []string) error {
 			return errors.New("prepare output write failed; partial directory must not be launched")
 		}
 	}
-	fmt.Println(`{"prepare_support":"complete","cases":40,"enabled":false}`)
+	var launch supportLaunch
+	_ = json.Unmarshal(files["launch.json"], &launch)
+	fmt.Printf("{\"prepare_support\":\"complete\",\"cases\":%d,\"enabled\":false}\n", len(launch.Cases))
 	return nil
 }
 
@@ -110,7 +121,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	}
 	raw, err := readSupportFile(o.Source)
 	var source supportSource
-	if err != nil || jsonstrict.Decode(raw, &source) != nil || source.SchemaVersion != 1 {
+	if err != nil || jsonstrict.Decode(raw, &source) != nil || (source.SchemaVersion != 1 && source.SchemaVersion != 2) {
 		return nil, errors.New("invalid reviewed support source manifest")
 	}
 	var fields map[string]json.RawMessage
@@ -118,6 +129,11 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	d, err := run.DecodeSupportDefinition(fields["definition"])
 	if err != nil || d.SchemaVersion == 1 && o.BatchCostMicroyuan > 5000000 {
 		return nil, errors.New("invalid fixed support definition or S1 cost limit")
+	}
+	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID || d.Resources.DatasetID == run.SupportS5V3DatasetID
+	if newDataset != (source.SchemaVersion == 2 && source.CaseMap != nil && source.RuntimeData != nil) ||
+		!newDataset && (source.SchemaVersion != 1 || source.CaseMap != nil || source.RuntimeData != nil) {
+		return nil, errors.New("S5 registration requires its separately reviewed case map")
 	}
 	for _, receipt := range []supportReceipt{source.BuildReceipt, source.DataReview, source.ScoringReview, source.PriceSnapshot} {
 		path := receipt.Path
@@ -129,26 +145,39 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			return nil, errors.New("reviewed support receipt digest mismatch")
 		}
 	}
-	if source.PriceSnapshot.SHA256 != d.Price.SourceSHA256 || verifySupportSources(o.Repo, d) != nil {
+	if source.PriceSnapshot.SHA256 != d.Price.SourceSHA256 || verifySupportSources(o.Repo, o.Source, d, source.RuntimeData) != nil {
 		return nil, errors.New("reviewed support source digest mismatch")
 	}
 	profile, err := run.BuildSupportProfile(o.ProfileID, d)
 	if err != nil {
 		return nil, errors.New("fixed support profile could not be built")
 	}
-	cases, err := readSupportCases(o.Repo, o.BatchID)
+	cases, err := readSupportCases(o.Repo, o.BatchID, o.Source, source.CaseMap, d.Resources.DatasetID)
 	if err != nil {
 		return nil, err
 	}
+	if o.BatchChatLimit < 0 || o.BatchChatLimit > 12*int64(len(cases)) {
+		return nil, errors.New("batch chat limit must be within the registered family total")
+	}
 	tenants := []string{"tenant-north", "tenant-south"}
+	counts := map[string]int64{}
+	for _, c := range cases {
+		counts[c.TenantID]++
+	}
+	if counts[tenants[0]] == 0 || counts[tenants[1]] == 0 {
+		return nil, errors.New("reviewed registration requires both frozen tenants")
+	}
 	until := from.Add(6 * time.Hour)
 	config := deployment{SchemaVersion: 1, Tenants: tenants, Profiles: []run.Profile{profile}, EnabledProfiles: []string{},
 		Workers: []workerConfig{{ID: o.WorkerID, Tenants: tenants, Profiles: []string{o.ProfileID}, Capacity: 1}}, TenantCapacity: 1, ProfileCapacity: 1,
-		Budgets: []budgetConfig{{ID: o.BatchID, Scope: "batch", Key: o.BatchKey, ValidFrom: from, ValidUntil: until, Limits: supportBudget(40)},
-			{ID: o.NorthID, Scope: "tenant", Key: tenants[0], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)},
-			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(20)}},
+		Budgets: []budgetConfig{{ID: o.BatchID, Scope: "batch", Key: o.BatchKey, ValidFrom: from, ValidUntil: until, Limits: supportBudget(int64(len(cases)))},
+			{ID: o.NorthID, Scope: "tenant", Key: tenants[0], ValidFrom: from, ValidUntil: until, Limits: supportBudget(counts[tenants[0]])},
+			{ID: o.SouthID, Scope: "tenant", Key: tenants[1], ValidFrom: from, ValidUntil: until, Limits: supportBudget(counts[tenants[1]])}},
 		Bindings: []budgetBinding{{TenantID: tenants[0], BatchAccountID: o.BatchID, TenantAccountID: o.NorthID}, {TenantID: tenants[1], BatchAccountID: o.BatchID, TenantAccountID: o.SouthID}}}
 	config.Budgets[0].Limits.CostMicroyuan = o.BatchCostMicroyuan
+	if o.BatchChatLimit > 0 {
+		config.Budgets[0].Limits.Chat = o.BatchChatLimit
+	}
 	if d.SchemaVersion >= 2 {
 		for i := range config.Budgets {
 			config.Budgets[i].Limits.CostMicroyuan = o.BatchCostMicroyuan
@@ -176,8 +205,13 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 		}
 	}
 	files["worker.json"] = supportJSON(worker)
-	files["executor.json"] = supportJSON(runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
-		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}})
+	manifest := runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
+		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}}
+	if d.SchemaVersion == 7 || d.SchemaVersion == 8 || d.SchemaVersion == 9 || d.SchemaVersion == 10 {
+		manifest.SchemaVersion = 2
+		manifest.Profiles[0].PromptVersion = d.Program.PromptVersion
+	}
+	files["executor.json"] = supportJSON(manifest)
 	launch := supportLaunch{SchemaVersion: 1, BatchAccountID: o.BatchID, BatchKey: o.BatchKey, WorkerID: o.WorkerID, ProfileID: profile.ID,
 		ProfileHash: profile.Hash, PriceHash: profile.Pricing.Hash, ValidFrom: from, ValidUntil: until, SourceManifestSHA256: supportSHA256(raw),
 		BuildReceiptSHA256: source.BuildReceipt.SHA256, DataReviewSHA256: source.DataReview.SHA256, ScoringReviewSHA256: source.ScoringReview.SHA256,
@@ -237,18 +271,43 @@ func supportJSON(value any) []byte {
 	return append(data, '\n')
 }
 
-func verifySupportSources(repo string, d run.SupportDefinition) error {
+func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, external *supportRuntimeData) error {
 	promptPath := "python/jobforge_agent/support_adapter.py"
-	if d.SchemaVersion >= 2 {
+	if d.Program.Strategy == run.SupportAgentStrategy {
 		promptPath = "python/jobforge_agent/support_agent.py"
+		if d.Program.PromptVersion == run.SupportAgentPromptV2 {
+			promptPath = "python/jobforge_agent/support_agent_v2.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV3 {
+			promptPath = "python/jobforge_agent/support_agent_v3.py"
+		}
 	}
 	sources := map[string]string{
 		"api/support/v1/schema.json": d.Program.ProposalSchemaSHA256,
 		promptPath:                   d.Program.PromptSHA256,
-		"examples/support-agent/runtime/dataset-manifest.json": d.Resources.RuntimeManifestSHA256,
-		"examples/support-agent/runtime/seed.json":             d.Resources.SeedSHA256,
 	}
-	if d.SchemaVersion >= 2 {
+	if external == nil {
+		sources["examples/support-agent/runtime/dataset-manifest.json"] = d.Resources.RuntimeManifestSHA256
+		sources["examples/support-agent/runtime/seed.json"] = d.Resources.SeedSHA256
+	} else {
+		for _, input := range []struct {
+			receipt  supportReceipt
+			expected string
+		}{
+			{external.Manifest, d.Resources.RuntimeManifestSHA256}, {external.Seed, d.Resources.SeedSHA256},
+		} {
+			receipt, expected := input.receipt, input.expected
+			path := receipt.Path
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(filepath.Dir(sourcePath), path)
+			}
+			data, err := readSupportFile(path)
+			if err != nil || !outsideRepository(repo, path) || !run.ValidHash(receipt.SHA256) || receipt.SHA256 != expected || supportSHA256(data) != expected {
+				return errors.New("separately reviewed S5 runtime data mismatch")
+			}
+		}
+	}
+	if d.Program.Strategy == run.SupportAgentStrategy {
 		sources["api/support/agent-v1/schema.json"] = d.Program.DecisionSchemaSHA256
 	}
 	for name, want := range sources {
@@ -283,12 +342,24 @@ func supportAdapterSHA256(repo string) (string, error) {
 	return run.Fingerprint(parts[0], parts[1:]...), nil
 }
 
-func readSupportCases(repo, batchID string) ([]supportCase, error) {
-	raw, err := readSupportFile(filepath.Join(repo, "examples", "support-agent", "evaluation", "case-map.jsonl"))
-	if err != nil || supportSHA256(raw) != "b07c6c56fe1cfc4a39b73c7f0063b055b6b9b4a43d0cb4ebc58dda295c698ce7" {
-		return nil, errors.New("reviewed 40-case registration mismatch")
+func readSupportCases(repo, batchID, sourcePath string, receipt *supportReceipt, datasetID ...string) ([]supportCase, error) {
+	path := filepath.Join(repo, "examples", "support-agent", "evaluation", "case-map.jsonl")
+	digest, count, dataset := "b07c6c56fe1cfc4a39b73c7f0063b055b6b9b4a43d0cb4ebc58dda295c698ce7", 40, run.SupportDatasetID
+	if receipt != nil {
+		path, digest, count, dataset = receipt.Path, receipt.SHA256, 20, run.SupportS5DatasetID
+		if len(datasetID) == 1 {
+			dataset = datasetID[0]
+		}
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(filepath.Dir(sourcePath), path)
+		}
+	}
+	raw, err := readSupportFile(path)
+	if err != nil || !run.ValidHash(digest) || supportSHA256(raw) != digest {
+		return nil, errors.New("reviewed case registration mismatch")
 	}
 	var cases []supportCase
+	seen := map[string]bool{}
 	for _, line := range bytes.Split(bytes.TrimSpace(raw), []byte{'\n'}) {
 		var row struct {
 			CaseID         string `json:"case_id"`
@@ -297,11 +368,20 @@ func readSupportCases(repo, batchID string) ([]supportCase, error) {
 			AsOf           string `json:"as_of"`
 			DatasetVersion string `json:"dataset_version"`
 			PolicyVersion  string `json:"policy_version"`
+			TemplateFamily string `json:"template_family,omitempty"`
 		}
-		if jsonstrict.Decode(line, &row) != nil {
+		if jsonstrict.Decode(line, &row) != nil || !run.ValidIdentifier(row.CaseID) || !run.ValidIdentifier(row.TicketID) ||
+			(row.TenantID != "tenant-north" && row.TenantID != "tenant-south") || seen[row.CaseID] ||
+			row.AsOf != run.SupportObservedAt || row.DatasetVersion != dataset || row.PolicyVersion != run.SupportPolicyVersion ||
+			(receipt != nil && !run.ValidIdentifier(row.TemplateFamily)) || (receipt == nil && row.TemplateFamily != "") {
 			return nil, errors.New("invalid reviewed case registration")
 		}
-		cases = append(cases, supportCase{len(cases) + 1, row.CaseID, row.TenantID, row.TicketID, "support-" + batchID + "-" + row.CaseID, "submit-" + batchID + "-" + row.CaseID})
+		seen[row.CaseID] = true
+		cases = append(cases, supportCase{Ordinal: len(cases) + 1, CaseID: row.CaseID, TenantID: row.TenantID, TicketID: row.TicketID,
+			BusinessRequestKey: "support-" + batchID + "-" + row.CaseID, IdempotencyKey: "submit-" + batchID + "-" + row.CaseID, TemplateFamily: row.TemplateFamily})
+	}
+	if len(cases) != count {
+		return nil, errors.New("reviewed case count mismatch")
 	}
 	return cases, nil
 }
