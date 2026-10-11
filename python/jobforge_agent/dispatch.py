@@ -75,6 +75,7 @@ class RunCallContext:
     tool_invocation_id: str
     agent: bool = False
     wide_context: bool = False
+    final_adjudication: bool = False
 
 
 @dataclass(frozen=True)
@@ -182,12 +183,19 @@ def _fingerprint(*values: str) -> str:
     return digest.hexdigest()
 
 
-def _shape(request: PreparedRequest, *, agent: bool = False) -> None:
+def _shape(
+    request: PreparedRequest, *, agent: bool = False, thinking: bool = False
+) -> None:
     fixed = {
         "profile_version": ("ollama", "GET", "/api/version", 1024),
         "profile_tags": ("ollama", "GET", "/api/tags", 65536),
         "query_embedding": ("ollama", "POST", "/api/embed", 262144),
-        "chat": ("deepseek", "POST", "/chat/completions", 65536),
+        "chat": (
+            "deepseek",
+            "POST",
+            "/chat/completions",
+            1048576 if thinking else 65536,
+        ),
     }
     if request.subcall in fixed:
         endpoint, method, path, cap = fixed[request.subcall]
@@ -270,7 +278,11 @@ def prepare_request(
     request = PreparedRequest(
         endpoint, subcall, method, path, raw, max_response_bytes, ""
     )
-    _shape(request, agent=context.agent or context.wide_context)
+    _shape(
+        request,
+        agent=context.agent or context.wide_context,
+        thinking=context.final_adjudication,
+    )
     return PreparedRequest(
         endpoint,
         subcall,
@@ -302,15 +314,26 @@ class AuthorizedDispatcher:
         ):
             raise DispatchError("INPUT_INVALID")
         self._clock = clock
-        if (
-            expected_response_model != "deepseek-flash"
-            or provider_audit_policy != "deepseek-audit-v1"
-        ):
+        if expected_response_model != "deepseek-flash" or provider_audit_policy not in {
+            "deepseek-audit-v1",
+            "deepseek-audit-v2",
+        }:
             raise DispatchError("PROFILE_UNAVAILABLE")
         self._expected_response_model = expected_response_model
         self._last_now = -1
         self._conversation = Conversation()
         self._start = copy.deepcopy(execute_step)
+        from jobforge_agent.runtime_input import ADJUDICATION_EXECUTORS
+
+        new_runtime = (
+            self._start.get("input", {}).get("executor_version")
+            in ADJUDICATION_EXECUTORS
+        )
+        if new_runtime != (provider_audit_policy == "deepseek-audit-v2"):
+            raise DispatchError("PROFILE_UNAVAILABLE")
+        self._thinking = (
+            new_runtime and self._start["binding"]["step_kind"] == "model_proposal"
+        )
         try:
             self._conversation.accept(self._start, self._now())
         except ProtocolError:
@@ -511,7 +534,7 @@ class AuthorizedDispatcher:
                 headers=headers,
                 follow_redirects=False,
                 trust_env=False,
-                timeout=httpx.Timeout(60, connect=5),
+                timeout=httpx.Timeout(120 if self._thinking else 60, connect=5),
                 transport=httpx.AsyncHTTPTransport(retries=0, trust_env=False),
                 limits=httpx.Limits(max_connections=1, max_keepalive_connections=1),
             )
@@ -581,6 +604,7 @@ class AuthorizedDispatcher:
             http_status=complete.status_code if complete is not None else 0,
             physical_call_id=permit["physical_call_id"],
             expected_response_model=self._expected_response_model,
+            thinking=self._thinking,
         )
         report = self._frame(
             "metering_report",
@@ -776,7 +800,11 @@ class AuthorizedDispatcher:
     ) -> tuple[T | None, DispatchError | None]:
         deadline = self._conversation.deadline
         self._guard(deadline)
-        _shape(request, agent=context.agent or context.wide_context)
+        _shape(
+            request,
+            agent=context.agent or context.wide_context,
+            thinking=self._thinking,
+        )
         binding = self._start["binding"]
         if context.agent != (
             self._start.get("input", {}).get("adapter_id") == "support-agent-v1"
@@ -784,8 +812,13 @@ class AuthorizedDispatcher:
             raise DispatchError("INPUT_INVALID")
         if context.wide_context != (
             self._start.get("input", {}).get("executor_version")
-            == "linux-v2-fixed-comparison-runtime-1"
+            in {
+                "linux-v2-fixed-comparison-runtime-1",
+                "linux-v2-fixed-adjudication-runtime-1",
+            }
         ):
+            raise DispatchError("INPUT_INVALID")
+        if context.final_adjudication != self._thinking:
             raise DispatchError("INPUT_INVALID")
         if (
             context.run_profile_hash != binding["profile_hash"]

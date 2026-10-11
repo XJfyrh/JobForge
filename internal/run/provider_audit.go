@@ -44,6 +44,7 @@ type ProviderModeState string
 // Provider mode states are observations, not permission to execute tool calls.
 const (
 	ProviderModeNonthinking ProviderModeState = "nonthinking"
+	ProviderModeThinking    ProviderModeState = "thinking"
 	ProviderModeUnexpected  ProviderModeState = "unexpected"
 	ProviderModeInvalid     ProviderModeState = "invalid"
 	ProviderModeUnavailable ProviderModeState = "unavailable"
@@ -87,7 +88,7 @@ func (a ProviderAudit) Hash() string {
 // Validate checks intrinsic audit facts and the hash. CallReport.Validate must
 // additionally check the frozen expected model, usage count bounds and receipt.
 func (a ProviderAudit) Validate() error {
-	if a.SchemaVersion != 1 || a.Provider != "deepseek" || !a.validStates() ||
+	if (a.SchemaVersion != 1 && a.SchemaVersion != 2) || (a.ModeState == ProviderModeThinking && a.SchemaVersion != 2) || a.Provider != "deepseek" || !a.validStates() ||
 		!validAuditIdentifier(a.ResponseID) || !validAuditIdentifier(a.ResponseModel) ||
 		!validAuditIdentifier(a.SystemFingerprint) || !validAuditInteger(a.Created) ||
 		!validAuditInteger(a.ReasoningTokens) || (a.ResponseSHA256 != nil && !ValidHash(*a.ResponseSHA256)) ||
@@ -124,7 +125,7 @@ func (a ProviderAudit) validStates() bool {
 		a.UsageEvidence == UsageEvidenceInvalid || a.UsageEvidence == UsageEvidenceUnavailable
 	reasoning := a.ReasoningState == ReasoningObserved || a.ReasoningState == ReasoningAbsent ||
 		a.ReasoningState == ReasoningInvalid || a.ReasoningState == ReasoningUnavailable
-	mode := a.ModeState == ProviderModeNonthinking || a.ModeState == ProviderModeUnexpected ||
+	mode := a.ModeState == ProviderModeNonthinking || a.ModeState == ProviderModeThinking || a.ModeState == ProviderModeUnexpected ||
 		a.ModeState == ProviderModeInvalid || a.ModeState == ProviderModeUnavailable
 	return identity && usage && reasoning && mode
 }
@@ -161,11 +162,14 @@ func (a ProviderAudit) validateReasoning() error {
 		(a.UsageEvidence != UsageEvidenceComplete || (a.ReasoningTokens != nil && *a.ReasoningTokens != 0)) {
 		return ErrInvalidArgument
 	}
+	if a.ModeState == ProviderModeThinking && a.UsageEvidence != UsageEvidenceComplete {
+		return ErrInvalidArgument
+	}
 	if a.UsageEvidence == UsageEvidenceComplete && a.ModeState == ProviderModeUnavailable {
 		return ErrInvalidArgument
 	}
 	if a.ReasoningTokens != nil && *a.ReasoningTokens > 0 &&
-		a.ModeState != ProviderModeUnexpected && a.ModeState != ProviderModeInvalid {
+		a.ModeState != ProviderModeUnexpected && a.ModeState != ProviderModeInvalid && a.ModeState != ProviderModeThinking {
 		return ErrInvalidArgument
 	}
 	return nil

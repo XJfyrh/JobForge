@@ -60,6 +60,12 @@ def _manifest_profiles(
             or type(value["schema_version"]) is not int
             or value["schema_version"] not in {1, 2}
             or value["executor_version"] != executor_version
+            or executor_version
+            in {
+                "linux-v2-adjudication-runtime-1",
+                "linux-v2-fixed-adjudication-runtime-1",
+            }
+            and value["schema_version"] != 2
             or not isinstance(value["profiles"], list)
             or not 1 <= len(value["profiles"]) <= 32
         ):
@@ -108,6 +114,16 @@ def _manifest_profiles(
                     "support-fixed-prompt-v1",
                     "linux-v2-fixed-comparison-runtime-1",
                 ),
+                (
+                    "support-agent-v1",
+                    "support-agent-prompt-v4",
+                    "linux-v2-adjudication-runtime-1",
+                ),
+                (
+                    "support-fixed-v1",
+                    "support-fixed-prompt-v1",
+                    "linux-v2-fixed-adjudication-runtime-1",
+                ),
             }:
                 raise ValueError()
             seen.add(item["profile_id"])
@@ -146,6 +162,10 @@ def resolve_adapter(
         from jobforge_agent.support_agent_v3 import SupportAgentV3Adapter
 
         return SupportAgentV3Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v4":
+        from jobforge_agent.support_agent_v4 import SupportAgentV4Adapter
+
+        return SupportAgentV4Adapter()
     return adapter
 
 

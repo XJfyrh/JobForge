@@ -73,12 +73,17 @@ func ParseManifest(data []byte) (Manifest, error) {
 
 // Validate rejects mixed versions, missing identities, and duplicate profiles.
 func (m Manifest) Validate() error {
-	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportFixedComparisonExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion && m.ExecutorVersion != run.SupportApprovalExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
+	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportFixedComparisonExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion && m.ExecutorVersion != run.SupportApprovalExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationExecutorVersion && m.ExecutorVersion != run.SupportFixedAdjudicationExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
 		return run.ErrProfileUnavailable
 	}
 	seen := make(map[string]bool, len(m.Profiles))
 	for _, p := range m.Profiles {
 		validPrompt := (p.AdapterID == "support-agent-v1" && (p.PromptVersion == run.SupportAgentPromptV2 || p.PromptVersion == run.SupportAgentPromptV3) && m.ExecutorVersion == run.SupportApprovalExecutorVersion) || (p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedComparisonExecutorVersion)
+		validPrompt = validPrompt || p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV4 && m.ExecutorVersion == run.SupportAdjudicationExecutorVersion ||
+			p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion
+		if (m.ExecutorVersion == run.SupportAdjudicationExecutorVersion || m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion) && m.SchemaVersion != 2 {
+			return run.ErrProfileUnavailable
+		}
 		if m.SchemaVersion == 1 && p.PromptVersion != "" || m.SchemaVersion == 2 && !validPrompt {
 			return run.ErrProfileUnavailable
 		}

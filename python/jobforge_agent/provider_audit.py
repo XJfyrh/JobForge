@@ -157,7 +157,8 @@ class ProviderAudit:
 
     def validate(self) -> None:
         """Check intrinsic facts and hash without guessing the original profile."""
-        _require(_integer(self.schema_version, 1, 1) and self.provider == "deepseek")
+        _require(_integer(self.schema_version, 1, 2) and self.provider == "deepseek")
+        _require(self.mode_state != "thinking" or self.schema_version == 2)
         _require(type(self.response_complete) is bool)
         _require(_integer(self.http_status, 0, 599))
         _require(self.response_sha256 is None or _match(self.response_sha256, _HASH))
@@ -183,7 +184,8 @@ class ProviderAudit:
         )
         _require(
             _member(
-                self.mode_state, {"nonthinking", "unexpected", "invalid", "unavailable"}
+                self.mode_state,
+                {"nonthinking", "thinking", "unexpected", "invalid", "unavailable"},
             )
         )
         identity = (
@@ -222,8 +224,10 @@ class ProviderAudit:
             _require(self.mode_state == "invalid")
         if self.mode_state == "nonthinking":
             _require(self.reasoning_state == "absent" or self.reasoning_tokens == 0)
+        if self.mode_state == "thinking":
+            _require(self.usage_evidence == "complete")
         if self.reasoning_tokens is not None and self.reasoning_tokens > 0:
-            _require(self.mode_state in {"unexpected", "invalid"})
+            _require(self.mode_state in {"thinking", "unexpected", "invalid"})
         _require(_match(self.audit_hash, _HASH) and self.audit_hash == self.hash())
         _require(len(_json_bytes(self.to_dict())) <= MAX_AUDIT_BYTES)
 
@@ -543,7 +547,11 @@ def _usage_facts(
 
 
 def _mode(
-    envelope: dict[str, Any], reasoning_state: str, reasoning_tokens: int | None
+    envelope: dict[str, Any],
+    reasoning_state: str,
+    reasoning_tokens: int | None,
+    *,
+    thinking: bool = False,
 ) -> str:
     if reasoning_state == "invalid":
         return "invalid"
@@ -573,6 +581,12 @@ def _mode(
         tools is not None and not isinstance(tools, list)
     ):
         return "invalid"
+    if thinking and not tools:
+        if reasoning and reasoning_tokens == 0:
+            return "invalid"
+        if reasoning_state not in {"observed", "absent"}:
+            return "unavailable"
+        return "thinking" if reasoning or (reasoning_tokens or 0) > 0 else "nonthinking"
     if reasoning or tools or (reasoning_tokens is not None and reasoning_tokens > 0):
         return "unexpected"
     return "nonthinking" if reasoning_state in {"observed", "absent"} else "unavailable"
@@ -584,6 +598,7 @@ def capture_chat_report(
     http_status: int,
     physical_call_id: str,
     expected_response_model: str,
+    thinking: bool = False,
 ) -> CallReport:
     """Freeze facts from one already-read bounded body before asynchronous hooks.
 
@@ -593,6 +608,7 @@ def capture_chat_report(
         http_status: Received status; ignored when no bounded complete body exists.
         physical_call_id: The original canonical physical-call UUID.
         expected_response_model: Trusted frozen profile value, never body-derived.
+        thinking: Trusted final-step selection; preserves the legacy extractor by default.
 
     Returns:
         A content-free immutable report, including safe incompatible-model usage.
@@ -600,11 +616,13 @@ def capture_chat_report(
     """
     _require(_match(physical_call_id, _UUID) and _match(expected_response_model))
     _require(body is None or type(body) is bytes)
-    complete = body is not None and len(body) <= MAX_RESPONSE_BYTES
+    complete = body is not None and len(body) <= (
+        1048576 if thinking else MAX_RESPONSE_BYTES
+    )
     if complete:
         _require(_integer(http_status, 100, 599))
     audit = ProviderAudit(
-        1,
+        2 if thinking else 1,
         "deepseek",
         complete,
         http_status if complete else 0,
@@ -643,6 +661,22 @@ def capture_chat_report(
         evidence, reasoning_state, reasoning_tokens = _usage_facts(
             envelope, identity_valid
         )
+        # In the new mode, contradictory text/count evidence cannot release a hold.
+        choices = envelope.get("choices")
+        if (
+            thinking
+            and reasoning_tokens == 0
+            and isinstance(choices, list)
+            and len(choices) == 1
+        ):
+            choice = choices[0]
+            message = choice.get("message") if isinstance(choice, dict) else None
+            if (
+                isinstance(message, dict)
+                and isinstance(message.get("reasoning_content"), str)
+                and message["reasoning_content"]
+            ):
+                evidence, reasoning_state, reasoning_tokens = "invalid", "invalid", None
         audit = replace(
             audit,
             identity_state=(
@@ -657,7 +691,9 @@ def capture_chat_report(
             usage_evidence=evidence,
             reasoning_state=reasoning_state,
             reasoning_tokens=reasoning_tokens,
-            mode_state=_mode(envelope, reasoning_state, reasoning_tokens),
+            mode_state=_mode(
+                envelope, reasoning_state, reasoning_tokens, thinking=thinking
+            ),
         )
     audit = replace(audit, audit_hash=audit.hash())
     usage = None

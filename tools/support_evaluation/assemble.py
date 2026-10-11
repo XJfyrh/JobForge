@@ -152,11 +152,14 @@ def register(
         from tools.support_s5.freeze import blueprint
 
         result["strategy_blueprint"] = blueprint(profile["definition"])
-        result["comparison"] = {
+        comparison = {
             "model": profile["definition"]["model"],
             "resources": resources,
             "family_limits": family,
         }
+        if "final_model" in profile["definition"]:
+            comparison["final_model"] = profile["definition"]["final_model"]
+        result["comparison"] = comparison
     registration(result, package, s5=s5)
     return result
 

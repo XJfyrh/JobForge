@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -22,9 +23,16 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 	if os.Getenv("JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS") != "1" {
 		t.Skip("requires fixed Linux image, init and real PostgreSQL; skip is not acceptance")
 	}
-	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid"} {
+	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid", "adjudication", "adjudication_empty", "adjudication_truncated", "adjudication_oversize", "adjudication_long", "adjudication_cancel"} {
 		t.Run(mode, func(t *testing.T) {
-			h := setupSupportProfileStrategyHarness(t, "support-agent-synthetic-v1", 20000000, true)
+			adjudication := strings.HasPrefix(mode, "adjudication")
+			var h *runHarness
+			if adjudication {
+				h = setupAdjudicationHarness(t)
+			} else {
+				h = setupSupportProfileStrategyHarness(t, "support-agent-synthetic-v1", 20000000, true)
+			}
+			finalStarted := make(chan struct{})
 			// Install a complete, version-matched synthetic manifest for this test,
 			// restoring the S1 manifest before any other test runs.
 			path := "/etc/jobforge/executor.json"
@@ -34,6 +42,9 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			}
 			manifest := runworker.Manifest{SchemaVersion: 1, ExecutorVersion: h.Profile.ExecutorVersion,
 				Profiles: []runworker.ManifestProfile{{ProfileID: h.Profile.ID, ProfileHash: h.Profile.Hash, AdapterID: "support-agent-v1"}}}
+			if adjudication {
+				manifest.SchemaVersion, manifest.Profiles[0].PromptVersion = 2, agentrun.SupportAgentPromptV4
+			}
 			raw, err := json.Marshal(manifest)
 			if err != nil {
 				t.Fatal(err)
@@ -56,6 +67,10 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				`{"type":"tool","name":"get_delivery","arguments":{"order_id":"order-1"}}`,
 				`{"type":"tool","name":"search_policy","arguments":{"query":"late delivery action"}}`,
 				`{"type":"final","proposal":{"decision":"proposal","action":"escalate","conclusion":"delayed","requested_fields":[],"target_ticket_status":"escalated","claims":[{"kind":"timing","test":"delivered_late","event_id":"synthetic-delivered","refs":["T#/observed_at","E1#/order/promised_delivery_at","P01.1"]}]}}`,
+			}
+			if adjudication {
+				decisions = append(decisions, decisions[len(decisions)-1])
+				decisions[len(decisions)-2] = `{"type":"final","proposal":{"decision":"proposal","action":"DRAFT_ONLY","conclusion":"conflicting","requested_fields":[],"target_ticket_status":"escalated","claims":[]}}`
 			}
 			switch mode {
 			case "correction_then_dynamic":
@@ -97,9 +112,47 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 					f.reject(w)
 					return
 				}
+				final := adjudication && n == len(decisions)
+				wantTokens, wantMode := "1024", `{"type":"disabled"}`
+				if final {
+					close(finalStarted)
+					if mode == "adjudication_cancel" {
+						<-req.Context().Done()
+						return
+					}
+					wantTokens, wantMode = "16384", `{"type":"enabled"}`
+					if string(body["reasoning_effort"]) != `"high"` || body["temperature"] != nil || strings.Contains(string(body["messages"]), "DRAFT_ONLY") {
+						f.reject(w)
+						return
+					}
+				}
+				if string(body["max_tokens"]) != wantTokens || string(body["thinking"]) != wantMode {
+					f.reject(w)
+					return
+				}
+				content, finish, reasoning, output, reasoningTokens := decisions[n-1], "stop", "", 5, 0
+				if final {
+					reasoning, output, reasoningTokens = strings.Repeat("synthetic reasoning ", 4000), 16384, 16000
+					if mode == "adjudication_empty" {
+						reasoning, reasoningTokens = "", 0
+					}
+					if mode == "adjudication_truncated" {
+						content, finish, reasoningTokens = "", "length", 16384
+					}
+					if mode == "adjudication_oversize" {
+						content = `{"too_long":"` + strings.Repeat("x", 17000) + `"}`
+					}
+					if mode == "adjudication_long" {
+						select {
+						case <-time.After(65 * time.Second):
+						case <-req.Context().Done():
+							return
+						}
+					}
+				}
 				_ = json.NewEncoder(w).Encode(map[string]any{"id": "synthetic-agent-chat", "object": "chat.completion", "created": 1, "model": "deepseek-flash", "system_fingerprint": "fp_synthetic_agent",
-					"choices": []any{map[string]any{"index": 0, "finish_reason": "stop", "logprobs": nil, "message": map[string]any{"role": "assistant", "content": decisions[n-1]}}},
-					"usage":   map[string]any{"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "prompt_cache_hit_tokens": 2, "prompt_cache_miss_tokens": 8}})
+					"choices": []any{map[string]any{"index": 0, "finish_reason": finish, "logprobs": nil, "message": map[string]any{"role": "assistant", "content": content, "reasoning_content": reasoning}}},
+					"usage":   map[string]any{"prompt_tokens": 10, "completion_tokens": output, "total_tokens": 10 + output, "prompt_cache_hit_tokens": 2, "prompt_cache_miss_tokens": 8, "completion_tokens_details": map[string]any{"reasoning_tokens": reasoningTokens}}})
 			})
 			server := httptest.NewServer(handler)
 			t.Cleanup(server.Close)
@@ -116,13 +169,82 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				t.Cleanup(s.Close)
 			}
 			client := executorGateway(t, h)
-			running := startExecutorWorker(t, h, f.executorHTTPFixture, client)
-			waitExecutorSignal(t, running, client.looped)
+			var expectedErrors []error
+			if mode == "adjudication_cancel" {
+				expectedErrors = []error{runworker.ErrBatchStopped}
+			}
+			running := startExecutorWorker(t, h, f.executorHTTPFixture, client, expectedErrors...)
+			t.Cleanup(func() {
+				if !t.Failed() {
+					return
+				}
+				var diagnostic string
+				ctx, cancel := context.WithTimeout(context.WithoutCancel(h.Ctx), time.Second)
+				defer cancel()
+				if err := h.Pool.QueryRow(ctx, `select coalesce(json_agg(x)::text,'[]') from (select step_kind,status,transport_outcome,business_outcome,observation_error_code,call_report->'provider_audit' as audit from physical_calls where run_id=$1 and kind='chat' order by reserved_at) x`, r.ID).Scan(&diagnostic); err == nil {
+					t.Log("chat ledger metadata", diagnostic)
+				} else {
+					t.Log("diagnostic failed", err)
+				}
+			})
+			if mode == "adjudication_cancel" {
+				waitExecutorSignal(t, running, finalStarted)
+				if _, err := h.Store.Cancel(h.Ctx, r.TenantID, r.ID, "cancel-long-final"); err != nil {
+					t.Fatal(err)
+				}
+				select {
+				case <-running.done:
+				case <-time.After(15 * time.Second):
+					t.Fatal("cancelled final ignored lease revocation")
+				}
+				view, err := h.Store.Get(h.Ctx, r.TenantID, r.ID)
+				if err != nil || (view.State != agentrun.Stopping && view.State != agentrun.Cancelled) || view.CancelRequestedAt == nil || view.ProposalRef != nil || f.count("/chat/completions") != len(decisions) {
+					t.Fatal("cancelled final produced proposal or repeated call", view.State, err)
+				}
+				if view.State == agentrun.Stopping {
+					if _, err := h.Pool.Exec(h.Ctx, "update runs set lease_until=clock_timestamp()-interval '1 millisecond' where run_id=$1", r.ID); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := h.Store.Sweep(h.Ctx, 100); err != nil {
+						t.Fatal(err)
+					}
+					view, err = h.Store.Get(h.Ctx, r.TenantID, r.ID)
+					if err != nil || view.State != agentrun.Cancelled {
+						t.Fatal("cancelled final not closed by lease recovery", err)
+					}
+				}
+				calls, err := h.Store.Calls(h.Ctx, r.TenantID, r.ID)
+				if err != nil || len(calls.Items) == 0 {
+					t.Fatal("missing cancellation exposure", err)
+				}
+				last := calls.Items[len(calls.Items)-1]
+				if last.StepKind != "model_proposal" || last.UsageKnown || last.HeldTokens != last.Reserved.TotalTokens || last.HeldCostMicroyuan != last.Reserved.CostMicroyuan {
+					t.Fatal("cancellation released unknown terminal exposure")
+				}
+				return
+			}
+			if mode == "adjudication_long" {
+				select {
+				case <-client.looped:
+				case <-running.done:
+					t.Fatal("long final stopped early", running.err)
+				case <-time.After(100 * time.Second):
+					t.Fatal("long final did not finish")
+				}
+			} else {
+				waitExecutorSignal(t, running, client.looped)
+			}
 			view, err := h.Store.Get(h.Ctx, r.TenantID, r.ID)
 			if err != nil {
 				t.Fatal(err)
 			}
 			wantState, wantTools, wantSteps, wantCalls := agentrun.AwaitingApproval, 4, 11, 15
+			if adjudication {
+				wantSteps, wantCalls = 12, 16
+				if mode == "adjudication_truncated" || mode == "adjudication_oversize" {
+					wantState, wantSteps = agentrun.Failed, 10
+				}
+			}
 			switch mode {
 			case "correction_then_dynamic":
 				wantSteps++

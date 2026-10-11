@@ -79,6 +79,31 @@ def _free_frames() -> dict[str, Frame]:
     return frames
 
 
+@pytest.mark.parametrize("mode", ["legacy", "final", "investigation", "wrong_policy"])
+def test_expanded_final_permit_requires_original_version(mode: str) -> None:
+    """Neither a terminal step name nor a new profile alone expands permissions."""
+    frames = _frames()
+    start = frames["execute_step"]
+    start["remaining_ms"] = 180000
+    if mode != "legacy":
+        start["input"] = {
+            "executor_version": "linux-v2-adjudication-runtime-1",
+            "provider_audit_policy": "deepseek-audit-v2",
+        }
+    if mode == "wrong_policy":
+        start["input"]["provider_audit_policy"] = "deepseek-audit-v1"
+    for frame in frames.values():
+        frame["binding"]["step_kind"] = (
+            "model_decision" if mode == "investigation" else "model_proposal"
+        )
+    frames["call_permit"].update(output_token_limit=16384, call_ms=120000)
+    if mode == "final":
+        assert not _started(frames).closed
+    else:
+        with pytest.raises(ProtocolError):
+            _started(frames)
+
+
 def _observation_ack(observation: Frame, emitted: int = 1000) -> Frame:
     return {
         "version": 2,

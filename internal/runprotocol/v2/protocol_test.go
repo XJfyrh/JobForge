@@ -69,6 +69,48 @@ func TestSharedExecutorV2Fixtures(t *testing.T) {
 	checkSharedFixtures(t, fixture)
 }
 
+func TestExpandedFinalPermitRequiresVersionedExecution(t *testing.T) {
+	for _, mode := range []string{"legacy", "final", "investigation", "wrong_policy"} {
+		t.Run(mode, func(t *testing.T) {
+			frames := map[string]Frame{}
+			for _, raw := range loadFixtures(t).ValidFrames {
+				f := decodeFixture(t, raw)
+				if _, exists := frames[f.Kind]; !exists {
+					frames[f.Kind] = f
+				}
+			}
+			start := frames["execute_step"]
+			start.EmittedMonoMS, start.RemainingMS = 1000, 180000
+			if mode != "legacy" {
+				start.Input = json.RawMessage(`{"executor_version":"linux-v2-adjudication-runtime-1","provider_audit_policy":"deepseek-audit-v2"}`)
+			}
+			if mode == "wrong_policy" {
+				start.Input = json.RawMessage(`{"executor_version":"linux-v2-adjudication-runtime-1","provider_audit_policy":"deepseek-audit-v1"}`)
+			}
+			start.Binding.StepKind = "model_proposal"
+			if mode == "investigation" {
+				start.Binding.StepKind = "model_decision"
+			}
+			var c Conversation
+			if err := c.Accept(start, 1000); err != nil {
+				t.Fatal(err)
+			}
+			intent := frames["call_intent"]
+			intent.Binding, intent.EmittedMonoMS, intent.Subcall = start.Binding, 1000, "chat"
+			if err := c.Accept(intent, 1000); err != nil {
+				t.Fatal(err)
+			}
+			permit := frames["call_permit"]
+			permit.Binding, permit.EmittedMonoMS, permit.Subcall = start.Binding, 1000, "chat"
+			permit.OutputTokenLimit, permit.CallMS = 16384, 120000
+			err := c.Accept(permit, 1000)
+			if (err == nil) != (mode == "final") {
+				t.Fatal("expanded permit version isolation", err)
+			}
+		})
+	}
+}
+
 func checkSharedFixtures(t *testing.T, fixture fixtures) {
 	for _, raw := range fixture.ValidFrames {
 		f := decodeFixture(t, raw)

@@ -1,10 +1,17 @@
 package runprotocol
 
+import (
+	"encoding/json"
+
+	"github.com/xjfyrh/jobforge/internal/run"
+)
+
 // Conversation validates one step without owning I/O, goroutines or authority.
 // The caller serializes both FD readers, injects CLOCK_BOOTTIME milliseconds and
 // drains/joins both readers before committing any result. Stop is irreversible.
 type Conversation struct {
 	started, closed, blocked                                                 bool
+	thinking                                                                 bool
 	phase                                                                    string
 	requestID                                                                string
 	binding                                                                  Binding
@@ -72,6 +79,13 @@ func (c *Conversation) accept(f Frame, now int64) error {
 		}
 		c.started, c.phase = true, "idle"
 		c.requestID, c.binding, c.deadline = f.RequestID, f.Binding, deadline
+		var selection struct {
+			Executor string `json:"executor_version"`
+			Policy   string `json:"provider_audit_policy"`
+		}
+		if json.Unmarshal(f.Input, &selection) == nil && f.Binding.StepKind == "model_proposal" && selection.Policy == run.ProviderAuditPolicyDeepSeekV2 {
+			c.thinking = selection.Executor == run.SupportAdjudicationExecutorVersion || selection.Executor == run.SupportFixedAdjudicationExecutorVersion
+		}
 		c.metering = MeteringReceiver{requestID: f.RequestID, binding: f.Binding, start: f.EmittedMonoMS, calls: map[string]*meteredCall{}}
 		return nil
 	}
@@ -103,6 +117,9 @@ func (c *Conversation) accept(f Frame, now int64) error {
 		if !f.Granted {
 			c.blocked, c.phase = true, "idle"
 			return nil
+		}
+		if !c.thinking && (f.OutputTokenLimit > 1024 || f.CallMS > 60000) {
+			return ErrProtocol
 		}
 		if _, exists := c.metering.calls[f.PhysicalCallID]; exists {
 			return ErrProtocol
@@ -230,7 +247,7 @@ func (c *Conversation) AcceptMetering(frame Frame, nowMonoMS int64) error {
 	c.lastNow = nowMonoMS
 	call := c.metering.calls[frame.PhysicalCallID]
 	if nowMonoMS >= c.deadline || call.overrun || call.observationDisposition == "unknown" ||
-		(call.report != nil && !reportAllowsContinuation(call.report)) || oneOf(call.settlement, "recorded", "anomaly", "conflict", "unconfirmed") {
+		(call.report != nil && !reportAllowsContinuation(call.report, c.thinking)) || oneOf(call.settlement, "recorded", "anomaly", "conflict", "unconfirmed") {
 		c.Stop()
 	}
 	if c.phase == "observation" && frame.PhysicalCallID == c.pending.PhysicalCallID {

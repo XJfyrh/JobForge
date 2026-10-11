@@ -24,6 +24,8 @@ from jobforge_agent.protocol_v2 import Frame, ProtocolError
 from jobforge_agent.run_tools import RunBusinessTools
 from jobforge_agent.runtime_adapters import RegisteredAdapter, resolve_adapter
 from jobforge_agent.runtime_input import (
+    ADJUDICATION_EXECUTORS,
+    FIXED_ADJUDICATION_EXECUTOR_VERSION,
     FIXED_COMPARISON_EXECUTOR_VERSION,
     RuntimeInput,
     RuntimeInputError,
@@ -78,15 +80,18 @@ async def execute_registered_step(
     if adapter.strategy == "support_fixed_v1":
         validate_support_step(checkpoint, kind)
     agent = adapter.strategy == "support_agent_v1"
+    adjudication = runtime.executor_version in ADJUDICATION_EXECUTORS
     if agent:
-        validate_agent_step(checkpoint, kind)
+        validate_agent_step(checkpoint, kind, adjudication=adjudication)
     snapshot = checkpoint["snapshot"]
     context = RunCallContext(
         frame["binding"]["profile_hash"],
         frame["binding"]["snapshot_hash"],
         runtime.tool_invocation_id,
         agent=agent,
-        wide_context=runtime.executor_version == FIXED_COMPARISON_EXECUTOR_VERSION,
+        wide_context=runtime.executor_version
+        in {FIXED_COMPARISON_EXECUTOR_VERSION, FIXED_ADJUDICATION_EXECUTOR_VERSION},
+        final_adjudication=adjudication and kind == "model_proposal",
     )
     outcome: Literal["success", "error"] = "success"
     error_code = ""
@@ -135,7 +140,7 @@ async def execute_registered_step(
                     value, copy.deepcopy(checkpoint)
                 ),
             )
-            if agent and output["type"] == "tool":
+            if agent and output["type"] in {"tool", "investigation_complete"}:
                 result["content"] = output
             else:
                 result["proposal"] = output["proposal"] if agent else output
@@ -143,6 +148,7 @@ async def execute_registered_step(
             confirmed = dispatcher.last_confirmed_observation()
             if not (
                 kind in {"model_proposal", "model_decision"}
+                and not context.final_adjudication
                 and not (
                     agent
                     and any(

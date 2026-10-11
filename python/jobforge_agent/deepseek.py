@@ -36,6 +36,8 @@ MAX_REQUEST_BYTES = 64 * 1024
 MAX_RESPONSE_BYTES = 64 * 1024
 MAX_CONTENT_BYTES = 16 * 1024
 MAX_OUTPUT_TOKENS = 1024
+FINAL_OUTPUT_TOKENS = 16384
+FINAL_RESPONSE_BYTES = 1024 * 1024
 T = TypeVar("T")
 
 _IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
@@ -74,7 +76,10 @@ class CompleteChatUsage:
 
 
 def _chat_payload(
-    messages: Sequence[Mapping[str, object]], *, agent: bool = False
+    messages: Sequence[Mapping[str, object]],
+    *,
+    agent: bool = False,
+    thinking: bool = False,
 ) -> dict[str, Any]:
     if not isinstance(messages, (list, tuple)) or not messages:
         raise ToolError("INVALID_ARGUMENT")
@@ -104,15 +109,19 @@ def _chat_payload(
         invalid = True
     if invalid:
         raise ToolError("INVALID_ARGUMENT")
-    return {
+    payload: dict[str, Any] = {
         "model": MODEL,
         "messages": normalized,
-        "thinking": {"type": "disabled"},
+        "thinking": {"type": "enabled" if thinking else "disabled"},
         "stream": False,
-        "max_tokens": MAX_OUTPUT_TOKENS,
+        "max_tokens": FINAL_OUTPUT_TOKENS if thinking else MAX_OUTPUT_TOKENS,
         "response_format": {"type": "json_object"},
         "temperature": 0,
     }
+    if thinking:
+        payload["reasoning_effort"] = "high"
+        del payload["temperature"]
+    return payload
 
 
 def _failure(error: ToolError) -> DispatchError:
@@ -133,7 +142,11 @@ def prepare_chat_request(
     """Prepare one immutable fixed request with no caller-selected URL or model."""
     failure = None
     try:
-        payload = _chat_payload(messages, agent=context.agent or context.wide_context)
+        payload = _chat_payload(
+            messages,
+            agent=context.agent or context.wide_context,
+            thinking=context.final_adjudication,
+        )
     except ToolError as error:
         failure = _failure(error)
     if failure is not None:
@@ -145,7 +158,9 @@ def prepare_chat_request(
         method="POST",
         path=CHAT_PATH,
         body=payload,
-        max_response_bytes=MAX_RESPONSE_BYTES,
+        max_response_bytes=FINAL_RESPONSE_BYTES
+        if context.final_adjudication
+        else MAX_RESPONSE_BYTES,
     )
     if len(request.body) > (
         131072 if context.agent or context.wide_context else MAX_REQUEST_BYTES
@@ -162,8 +177,10 @@ def _identifier(value: Any) -> bool:
     return isinstance(value, str) and _IDENTIFIER.fullmatch(value) is not None
 
 
-def _envelope(raw: bytes) -> tuple[dict[str, Any], ResponseIdentity]:
-    if len(raw) > MAX_RESPONSE_BYTES:
+def _envelope(
+    raw: bytes, *, thinking: bool = False
+) -> tuple[dict[str, Any], ResponseIdentity]:
+    if len(raw) > (FINAL_RESPONSE_BYTES if thinking else MAX_RESPONSE_BYTES):
         raise ToolError("SIZE_LIMIT")
     invalid = False
     try:
@@ -261,9 +278,9 @@ def complete_usage(raw: bytes, *, physical_call_id: str) -> CompleteChatUsage | 
     )
 
 
-def proposal_object(raw: bytes) -> dict[str, Any]:
+def proposal_object(raw: bytes, *, thinking: bool = False) -> dict[str, Any]:
     """Reject incomplete or invalid output without altering independently read usage."""
-    envelope, _ = _envelope(raw)
+    envelope, _ = _envelope(raw, thinking=thinking)
     choice = _choice(envelope)
     message = choice["message"]
     provider_usage = envelope.get("usage")
@@ -273,13 +290,20 @@ def proposal_object(raw: bytes) -> dict[str, Any]:
         else None
     )
     reasoning = details.get("reasoning_tokens") if isinstance(details, dict) else None
-    if isinstance(reasoning, int) and _safe_integer(reasoning) and reasoning > 0:
+    if thinking and reasoning == 0 and message.get("reasoning_content"):
+        raise ToolError("PROTOCOL_ERROR")
+    if (
+        not thinking
+        and isinstance(reasoning, int)
+        and _safe_integer(reasoning)
+        and reasoning > 0
+    ):
         # Count this complete usage, but never continue a batch whose provider
         # reports thinking despite the fixed non-thinking request configuration.
         raise ToolError("PROFILE_UNAVAILABLE")
-    if message.get("reasoning_content") not in (None, "") or message.get(
-        "tool_calls"
-    ) not in (None, []):
+    if (
+        not thinking and message.get("reasoning_content") not in (None, "")
+    ) or message.get("tool_calls") not in (None, []):
         raise ToolError("PROTOCOL_ERROR")
     content = message["content"]
     if choice["finish_reason"] != "stop" or not isinstance(content, str):
@@ -363,9 +387,15 @@ class DeepSeekChat:
                 raise DispatchError("PROFILE_UNAVAILABLE", fact="identity", stop=True)
             failure = None
             try:
-                proposal = proposal_object(response.body)
+                proposal = proposal_object(
+                    response.body, thinking=context.final_adjudication
+                )
             except ToolError as error:
-                failure = _failure(error)
+                failure = (
+                    DispatchError("OUTPUT_INVALID")
+                    if context.final_adjudication and error.code == "SIZE_LIMIT"
+                    else _failure(error)
+                )
             if failure is not None:
                 raise failure
             try:
@@ -374,7 +404,11 @@ class DeepSeekChat:
                 from jobforge_agent.outbound_audit import model_rejection
 
                 model_rejection(response.physical_call_id, error)
-                failure = DispatchError(error.code, fact=error.fact, stop=error.stop)
+                failure = (
+                    DispatchError("OUTPUT_INVALID")
+                    if context.final_adjudication and error.code == "OUTPUT_INVALID"
+                    else DispatchError(error.code, fact=error.fact, stop=error.stop)
+                )
             except (ToolError, ValueError, TypeError):
                 failure = DispatchError("OUTPUT_INVALID")
             from jobforge_agent.outbound_audit import model_shape

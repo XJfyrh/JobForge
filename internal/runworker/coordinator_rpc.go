@@ -59,6 +59,7 @@ func (c *coordinator) report(ctx context.Context, f v2.Frame, now int64) {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
 	}
+	binding.AllowThinking = c.profile.ThinkingStep(c.execute.Binding.StepKind)
 	disposition, err := run.FirstReportDisposition(binding, v2.Report(f), run.CallBudget{InputTokens: budget.InputTokens,
 		OutputTokens: budget.OutputTokens, TotalTokens: budget.TotalTokens, CostMicroyuan: budget.CostMicroyuan}, c.profile.Pricing)
 	if err != nil {
@@ -222,9 +223,12 @@ func (c *coordinator) reserved(ctx context.Context, call *callRecord, done compl
 		return
 	}
 	r := response.Reservation
+	budget, budgetErr := run.ReservationBudgetForStep(c.profile, c.execute.Binding.StepKind, run.Subcall(call.intent.Subcall))
 	binding, bindingErr := v2.ReportBinding(v2.Frame{Binding: c.execute.Binding, PhysicalCallID: call.id, ParameterHash: call.intent.ParameterHash}, c.profile.ExpectedResponseModel)
 	if r.Budget == nil || r.UsageKnown || r.MeasurementAnomaly || bindingErr != nil || r.ExecutionBindingHash != binding.ExecutionBindingHash ||
-		r.PersistedReportHash != "" || r.PersistedAuditHash != "" {
+		r.PersistedReportHash != "" || r.PersistedAuditHash != "" || budgetErr != nil ||
+		r.Budget.InputTokens != budget.InputTokens || r.Budget.OutputTokens != budget.OutputTokens ||
+		r.Budget.TotalTokens != budget.TotalTokens || r.Budget.CostMicroyuan != budget.CostMicroyuan {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 		return
 	}
@@ -236,6 +240,9 @@ func (c *coordinator) reserved(ctx context.Context, call *callRecord, done compl
 	maxCall := 10 * time.Second
 	if call.intent.Subcall == "chat" || call.intent.Subcall == "query_embedding" {
 		maxCall = 60 * time.Second
+	}
+	if c.profile.ThinkingStep(c.execute.Binding.StepKind) && call.intent.Subcall == "chat" {
+		maxCall = 120 * time.Second
 	}
 	dispatch, dispatchErr := stampDeadline(done.start, now, r.ReservedAt, r.DispatchExpiresAt, 30*time.Second)
 	deadline, callErr := stampDeadline(done.start, now, r.ReservedAt, r.CallDeadline, maxCall)

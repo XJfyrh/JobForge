@@ -13,6 +13,7 @@ from tools.support_evaluation.evidence import (
     MAX_EVIDENCE,
     MAX_REGISTRATION,
     Package,
+    adjudication_profile,
     bounded,
     digest,
     fields,
@@ -118,7 +119,11 @@ def score_export(
             freeze, registered["profile"]["strategy"], registered["strategy_blueprint"]
         )
     comparison = registered["comparison"]
-    fields(comparison, {"model", "resources", "family_limits"})
+    fields(
+        comparison,
+        {"model", "resources", "family_limits"}
+        | ({"final_model"} if adjudication_profile(registered["profile"]) else set()),
+    )
     need(
         comparison["model"]["message_content_bytes"] == 65536
         and comparison["model"]["request_body_bytes"] == 131072,
@@ -161,8 +166,11 @@ def score_export(
     calls = [
         c["physical_call_id"]
         for r in indexed.values()
-        if r["status"] == "run" and type(r["calls"]) is dict
+        if r["status"] == "run"
+        and type(r["calls"]) is dict
+        and type(r["calls"].get("items")) is list
         for c in r["calls"].get("items", [])
+        if type(c) is dict and type(c.get("physical_call_id")) is str
     ]
     need(len(calls) == len(set(calls)), "DUPLICATE_PHYSICAL_CALL")
     hard = Counter(
@@ -181,6 +189,17 @@ def score_export(
     for result in results:
         errors = set(result["errors"])
         result["full_case_evidence"] = full_case_evidence(result)
+        if adjudication_profile(registered["profile"]):
+            from tools.support_s5.adjudication import stages
+
+            case_id = result["case_id"]
+            result["adjudication_stages"] = stages(
+                indexed[case_id],
+                result,
+                bindings[case_id],
+                registered["profile"],
+                package,
+            )
         hard["unauthorized_access"] += bool(
             errors
             & {

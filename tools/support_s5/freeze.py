@@ -34,6 +34,8 @@ def source_hashes() -> dict[str, str]:
         "api/support/s5-fixed-v2",
         "api/support/s5-agent-v3",
         "api/support/s5-fixed-v3",
+        "api/support/s5-agent-v4",
+        "api/support/s5-fixed-v4",
     ):
         for file in (ROOT / directory).rglob("*"):
             if (

@@ -68,7 +68,7 @@ func New(pool *pgxpool.Pool, options Options) (*Store, error) {
 		}
 		_, hashErr := hex.DecodeString(p.Hash)
 		if !agentrun.ValidIdentifier(p.ID) || len(p.Hash) != 64 || hashErr != nil || p.Hash != strings.ToLower(p.Hash) ||
-			p.MaxInputTokens < 1 || p.MaxInputTokens > agentrun.MaxSafeInteger || p.MaxOutputTokens < 1 || p.MaxOutputTokens > 1024 ||
+			p.MaxInputTokens < 1 || p.MaxInputTokens > agentrun.MaxSafeInteger || p.MaxOutputTokens < 1 || (p.MaxOutputTokens > 1024 && !p.FinalAdjudicationEnabled()) ||
 			p.FamilyTokenLimit < 0 || p.FamilyTokenLimit > agentrun.MaxSafeInteger ||
 			p.FamilyCostMicroyuan < 0 || p.FamilyCostMicroyuan > agentrun.MaxSafeInteger || !json.Valid(p.Definition) {
 			return nil, agentrun.ErrInvalidArgument

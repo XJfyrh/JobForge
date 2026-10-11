@@ -206,8 +206,12 @@ func validStep(s identity) bool {
 }
 
 func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
+	policy := run.ProviderAuditPolicyDeepSeekV1
+	if i.ExecutorVersion == run.SupportAdjudicationExecutorVersion || i.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion {
+		policy = run.ProviderAuditPolicyDeepSeekV2
+	}
 	if i.SchemaVersion != 1 || !ExecutorMatchesAdapter(i.ExecutorVersion, i.AdapterID) || !run.ValidIdentifier(i.AdapterID) ||
-		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != run.ProviderAuditPolicyDeepSeekV1 ||
+		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != policy ||
 		p.CursorVersion < 0 || p.CursorVersion > 31 || p.Steps == nil || int64(len(p.Steps)) != p.CursorVersion || !validStep(p.NextStep) {
 		return run.ErrInvalidArgument
 	}
@@ -252,7 +256,7 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 // ExecutorMatchesAdapter prevents mixed strategy/version deployments.
 func ExecutorMatchesAdapter(version, adapter string) bool {
 	if adapter == "support-agent-v1" {
-		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion
+		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion || version == run.SupportAdjudicationExecutorVersion
 	}
-	return version == ExecutorVersion || adapter == "support-fixed-v1" && version == run.SupportFixedComparisonExecutorVersion
+	return version == ExecutorVersion || adapter == "support-fixed-v1" && (version == run.SupportFixedComparisonExecutorVersion || version == run.SupportFixedAdjudicationExecutorVersion)
 }

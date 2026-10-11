@@ -261,10 +261,18 @@ func ToolSequence(kind string) []Subcall {
 
 // ReservationBudget derives bounds entirely from registered execution resources.
 func ReservationBudget(profile Profile, subcall Subcall) (CallBudget, error) {
+	maximum := int64(1024)
+	if profile.FinalAdjudicationEnabled() {
+		maximum = FinalAdjudicationMaxTokens
+	}
+	return reservationBudget(profile, subcall, maximum)
+}
+
+func reservationBudget(profile Profile, subcall Subcall, maximum int64) (CallBudget, error) {
 	switch CallKind(subcall) {
 	case "chat":
 		if profile.MaxInputTokens < 1 || profile.MaxInputTokens > MaxSafeInteger || profile.MaxOutputTokens < 1 ||
-			profile.MaxOutputTokens > 1024 || profile.MaxInputTokens > MaxSafeInteger-profile.MaxOutputTokens {
+			profile.MaxOutputTokens > maximum || profile.MaxInputTokens > MaxSafeInteger-profile.MaxOutputTokens {
 			return CallBudget{}, ErrProfileUnavailable
 		}
 		upper := UsageReport{InputTokens: profile.MaxInputTokens, OutputTokens: profile.MaxOutputTokens}

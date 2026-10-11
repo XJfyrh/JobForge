@@ -63,6 +63,7 @@ type supportLaunch struct {
 	WorkerID             string            `json:"worker_id"`
 	ProfileID            string            `json:"profile_id"`
 	ProfileHash          string            `json:"profile_hash"`
+	ExecutorVersion      string            `json:"executor_version,omitempty"`
 	PriceHash            string            `json:"price_hash"`
 	ValidFrom            time.Time         `json:"valid_from"`
 	ValidUntil           time.Time         `json:"valid_until"`
@@ -183,6 +184,15 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 			config.Budgets[i].Limits.CostMicroyuan = o.BatchCostMicroyuan
 		}
 	}
+	if profile.FinalAdjudicationEnabled() {
+		for i := range config.Budgets {
+			families := int64(len(cases))
+			if config.Budgets[i].Scope == "tenant" {
+				families = counts[config.Budgets[i].Key]
+			}
+			config.Budgets[i].Limits.Tokens = profile.FamilyTokenLimit * families
+		}
+	}
 	files := map[string][]byte{}
 	files["control.disabled.json"] = supportJSON(config)
 	config.EnabledProfiles = []string{o.ProfileID}
@@ -207,7 +217,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	files["worker.json"] = supportJSON(worker)
 	manifest := runworker.Manifest{SchemaVersion: 1, ExecutorVersion: profile.ExecutorVersion,
 		Profiles: []runworker.ManifestProfile{{ProfileID: profile.ID, ProfileHash: profile.Hash, AdapterID: d.Program.Adapter}}}
-	if d.SchemaVersion == 7 || d.SchemaVersion == 8 || d.SchemaVersion == 9 || d.SchemaVersion == 10 {
+	if d.SchemaVersion >= 7 {
 		manifest.SchemaVersion = 2
 		manifest.Profiles[0].PromptVersion = d.Program.PromptVersion
 	}
@@ -216,6 +226,9 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 		ProfileHash: profile.Hash, PriceHash: profile.Pricing.Hash, ValidFrom: from, ValidUntil: until, SourceManifestSHA256: supportSHA256(raw),
 		BuildReceiptSHA256: source.BuildReceipt.SHA256, DataReviewSHA256: source.DataReview.SHA256, ScoringReviewSHA256: source.ScoringReview.SHA256,
 		ConfigSHA256: map[string]string{}, Cases: cases}
+	if profile.FinalAdjudicationEnabled() {
+		launch.ExecutorVersion = profile.ExecutorVersion
+	}
 	for name, data := range files {
 		launch.ConfigSHA256[name] = supportSHA256(data)
 	}
@@ -280,6 +293,9 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 		}
 		if d.Program.PromptVersion == run.SupportAgentPromptV3 {
 			promptPath = "python/jobforge_agent/support_agent_v3.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV4 {
+			promptPath = "python/jobforge_agent/support_agent_v4.py"
 		}
 	}
 	sources := map[string]string{

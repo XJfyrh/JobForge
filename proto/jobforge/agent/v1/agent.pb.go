@@ -670,6 +670,8 @@ const (
 	ProviderModeState_PROVIDER_MODE_STATE_INVALID ProviderModeState = 3
 	// The mode could not be established from complete evidence.
 	ProviderModeState_PROVIDER_MODE_STATE_UNAVAILABLE ProviderModeState = 4
+	// Schema 2 observes reasoning in a versioned final-only response.
+	ProviderModeState_PROVIDER_MODE_STATE_THINKING ProviderModeState = 5
 )
 
 // Enum value maps for ProviderModeState.
@@ -680,6 +682,7 @@ var (
 		2: "PROVIDER_MODE_STATE_UNEXPECTED",
 		3: "PROVIDER_MODE_STATE_INVALID",
 		4: "PROVIDER_MODE_STATE_UNAVAILABLE",
+		5: "PROVIDER_MODE_STATE_THINKING",
 	}
 	ProviderModeState_value = map[string]int32{
 		"PROVIDER_MODE_STATE_UNSPECIFIED": 0,
@@ -687,6 +690,7 @@ var (
 		"PROVIDER_MODE_STATE_UNEXPECTED":  2,
 		"PROVIDER_MODE_STATE_INVALID":     3,
 		"PROVIDER_MODE_STATE_UNAVAILABLE": 4,
+		"PROVIDER_MODE_STATE_THINKING":    5,
 	}
 )
 
@@ -2749,7 +2753,7 @@ type CallBudget struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Nonnegative upper bound on input tokens.
 	InputTokens int64 `protobuf:"varint,1,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
-	// Nonnegative upper bound on output tokens; chat maximum is 1024.
+	// Profile/step-derived output bound: 1024 investigation or 16384 final.
 	OutputTokens int64 `protobuf:"varint,2,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
 	// Nonnegative combined token hold, with checked integer addition.
 	TotalTokens int64 `protobuf:"varint,3,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
@@ -2834,7 +2838,7 @@ type CallReservation struct {
 	ReservedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=reserved_at,json=reservedAt,proto3" json:"reserved_at,omitempty"`
 	// Latest dispatch time, bounded by lease/attempt/Run/batch expiry.
 	DispatchExpiresAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=dispatch_expires_at,json=dispatchExpiresAt,proto3" json:"dispatch_expires_at,omitempty"`
-	// Fixed response deadline, at most 60 seconds, or 10 for free tools.
+	// Profile/step-derived deadline: up to 120 seconds for final adjudication.
 	CallDeadline *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
 	// Conservative token/cost hold applied atomically to all three accounts.
 	Budget *CallBudget `protobuf:"bytes,9,opt,name=budget,proto3" json:"budget,omitempty"`
@@ -4516,13 +4520,14 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"!PROVIDER_REASONING_STATE_OBSERVED\x10\x01\x12#\n" +
 	"\x1fPROVIDER_REASONING_STATE_ABSENT\x10\x02\x12$\n" +
 	" PROVIDER_REASONING_STATE_INVALID\x10\x03\x12(\n" +
-	"$PROVIDER_REASONING_STATE_UNAVAILABLE\x10\x04*\xc7\x01\n" +
+	"$PROVIDER_REASONING_STATE_UNAVAILABLE\x10\x04*\xe9\x01\n" +
 	"\x11ProviderModeState\x12#\n" +
 	"\x1fPROVIDER_MODE_STATE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fPROVIDER_MODE_STATE_NONTHINKING\x10\x01\x12\"\n" +
 	"\x1ePROVIDER_MODE_STATE_UNEXPECTED\x10\x02\x12\x1f\n" +
 	"\x1bPROVIDER_MODE_STATE_INVALID\x10\x03\x12#\n" +
-	"\x1fPROVIDER_MODE_STATE_UNAVAILABLE\x10\x042\x82\r\n" +
+	"\x1fPROVIDER_MODE_STATE_UNAVAILABLE\x10\x04\x12 \n" +
+	"\x1cPROVIDER_MODE_STATE_THINKING\x10\x052\x82\r\n" +
 	"\fAgentService\x12S\n" +
 	"\bRegister\x12\".jobforge.agent.v1.RegisterRequest\x1a#.jobforge.agent.v1.RegisterResponse\x12J\n" +
 	"\x05Claim\x12\x1f.jobforge.agent.v1.ClaimRequest\x1a .jobforge.agent.v1.ClaimResponse\x12V\n" +

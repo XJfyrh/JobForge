@@ -150,9 +150,14 @@ def next_tool_arguments(checkpoint: RuntimeCheckpoint, kind: str) -> dict[str, A
     return copy.deepcopy(decision["arguments"])
 
 
-def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
+def validate_agent_step(
+    checkpoint: RuntimeCheckpoint, kind: str, *, adjudication: bool = False
+) -> None:
     """Check the accepted sequence while leaving all cursor choices to Go."""
-    from jobforge_agent.runtime_input import validate_step_result
+    from jobforge_agent.runtime_input import (
+        is_investigation_complete,
+        validate_step_result,
+    )
 
     expected = "read_ticket"
     corrected = False
@@ -175,7 +180,11 @@ def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
                 require(current == "model_decision" and not corrected)
                 corrected = True
                 expected = "protocol_correction"
+            elif adjudication and is_investigation_complete(result["content"]):
+                require(result["proposal"] is None)
+                expected = "model_proposal"
             elif result["proposal"] is not None:
+                require(not adjudication)
                 prior = dict(checkpoint, steps=checkpoint["steps"][:index])
                 validate_persisted_proposal(
                     result["proposal"], prior, repeated_search=True
@@ -183,6 +192,11 @@ def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
                 expected = "submit_proposal"
             else:
                 expected = tool_decision(result["content"], checkpoint)["name"]
+        elif adjudication and current == "model_proposal":
+            require(not result["correction_required"] and result["content"] is None)
+            prior = dict(checkpoint, steps=checkpoint["steps"][:index])
+            validate_persisted_proposal(result["proposal"], prior, repeated_search=True)
+            expected = "submit_proposal"
         else:
             require(False)
     require(kind == expected)

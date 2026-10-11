@@ -304,10 +304,16 @@ def _priceable(report: Frame) -> bool:
     )
 
 
-def _ordinary_report(report: Frame) -> bool:
+def _ordinary_report(report: Frame, *, thinking: bool = False) -> bool:
     audit = report["provider_audit"]
     return _priceable(report) and (
-        audit is None or audit["mode_state"] == "nonthinking"
+        audit is None
+        or (audit["schema_version"] == 2) == thinking
+        and (
+            audit["mode_state"] == "nonthinking"
+            or thinking
+            and audit["mode_state"] == "thinking"
+        )
     )
 
 
@@ -326,7 +332,8 @@ def _permit(frame: Frame) -> None:
     _require(type(frame["granted"]) is bool)
     _require(_member(frame["error_code"], _ERRORS))
     _require(_integer(frame["input_token_limit"], 0, MAX_INTEGER))
-    _require(_integer(frame["output_token_limit"], 0, 1024))
+    final = frame["binding"]["step_kind"] == "model_proposal"
+    _require(_integer(frame["output_token_limit"], 0, 16384 if final else 1024))
     _require(frame["input_token_limit"] + frame["output_token_limit"] <= MAX_INTEGER)
     if not frame["granted"]:
         _require(frame["physical_call_id"] == "" and frame["error_code"] != "")
@@ -341,7 +348,10 @@ def _permit(frame: Frame) -> None:
     paid = frame["subcall"] in {"chat", "query_embedding"}
     _require(_match(_UUID, frame["physical_call_id"]) and frame["error_code"] == "")
     _require(_integer(frame["dispatch_ms"], 1, 30000))
-    _require(_integer(frame["call_ms"], 1, 60000 if paid else 10000))
+    maximum = (
+        120000 if final and frame["subcall"] == "chat" else 60000 if paid else 10000
+    )
+    _require(_integer(frame["call_ms"], 1, maximum))
     _require(frame["dispatch_ms"] <= frame["call_ms"])
     if not paid:
         _require(frame["input_token_limit"] == frame["output_token_limit"] == 0)
@@ -612,6 +622,23 @@ class Conversation:
         self._last_time = now
         self._emitted[direction] = emitted
 
+    def _thinking(self) -> bool:
+        if (
+            self._start is None
+            or self._start["binding"]["step_kind"] != "model_proposal"
+        ):
+            return False
+        selection = self._start.get("input")
+        return (
+            isinstance(selection, dict)
+            and selection.get("provider_audit_policy") == "deepseek-audit-v2"
+            and selection.get("executor_version")
+            in {
+                "linux-v2-adjudication-runtime-1",
+                "linux-v2-fixed-adjudication-runtime-1",
+            }
+        )
+
     def _identity(self, frame: Frame) -> None:
         _require(
             self._start is not None
@@ -706,6 +733,8 @@ class Conversation:
         if not frame["granted"]:
             self._blocked, self._phase = True, "idle"
             return
+        if not self._thinking():
+            _require(frame["output_token_limit"] <= 1024 and frame["call_ms"] <= 60000)
         physical_id = frame["physical_call_id"]
         dispatch_deadline = frame["emitted_mono_ms"] + frame["dispatch_ms"]
         call_deadline = frame["emitted_mono_ms"] + frame["call_ms"]
@@ -788,7 +817,7 @@ class Conversation:
                 if report["provider_audit"] is not None
                 else None
             )
-            or not _ordinary_report(report)
+            or not _ordinary_report(report, thinking=self._thinking())
         ):
             # Preserve independently validated usage even when ordinary output
             # lied about its hash; the caller can still settle the original call.
@@ -880,7 +909,9 @@ class Conversation:
             _require(old is None or old["report_hash"] == frame["report_hash"])
             if old is None:
                 call["report"] = frame
-            if not _ordinary_report(frame) or not _within_reservation(frame, permit):
+            if not _ordinary_report(
+                frame, thinking=self._thinking()
+            ) or not _within_reservation(frame, permit):
                 self._closed = True
         else:
             report = call["report"]

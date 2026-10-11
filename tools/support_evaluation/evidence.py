@@ -301,7 +301,8 @@ def registration(
         type(profile["max_input_tokens"]) is int
         and 1 <= profile["max_input_tokens"] <= 9007199254739967
         and type(profile["max_output_tokens"]) is int
-        and profile["max_output_tokens"] == 1024,
+        and profile["max_output_tokens"]
+        == (16384 if adjudication_profile(profile) else 1024),
         "PROFILE_BOUNDS",
     )
     fields(profile["origins"], {"business", "ollama", "deepseek"})
@@ -352,6 +353,20 @@ def registration(
             }
             if not s5
             else {
+                (
+                    "support_fixed_v1",
+                    "support-proposal-v1",
+                    "linux-v2-fixed-adjudication-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-adjudication-runtime-1",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
                 (
                     "support_fixed_v1",
                     "support-proposal-v1",
@@ -435,6 +450,19 @@ def registration(
         result[binding["case_id"]] = binding
     need(set(result) == set(package.cases), "CASE_COVERAGE")
     return result
+
+
+def adjudication_profile(profile: dict[str, Any]) -> bool:
+    """Expanded permits belong only to the two versioned terminal runtimes."""
+    return profile.get("executor_version") in {
+        "linux-v2-adjudication-runtime-1",
+        "linux-v2-fixed-adjudication-runtime-1",
+    }
+
+
+def final_adjudication_call(profile: dict[str, Any], call: dict[str, Any]) -> bool:
+    """Use the persisted original step, never response mode, to select limits."""
+    return adjudication_profile(profile) and call["step_kind"] == "model_proposal"
 
 
 def same_source(actual: Any, expected: Any) -> bool:
@@ -580,11 +608,12 @@ def validate_run_sources(
         )
         need(record["commit_hash"] == expected_hash, "STEP_COMMIT_HASH")
         validate_step_result(record["output"], record["kind"])
-        (
-            validate_agent_step
-            if profile["strategy"] == "support_agent_v1"
-            else validate_support_step
-        )(checkpoint, record["kind"])
+        if profile["strategy"] == "support_agent_v1":
+            validate_agent_step(
+                checkpoint, record["kind"], adjudication=adjudication_profile(profile)
+            )
+        else:
+            validate_support_step(checkpoint, record["kind"])
         if record["kind"] == "read_ticket":
             need(same_source(record["output"]["content"], ticket), "TICKET_SOURCE")
             checkpoint["snapshot"]["ticket_binding_json"] = record["output"]["content"]

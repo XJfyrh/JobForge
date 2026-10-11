@@ -115,22 +115,38 @@ func CheckSupportAgentTool(snapshot SnapshotBinding, prior []Step, kind string) 
 	return nil
 }
 
-func decideSupportAgentModel(snapshot SnapshotBinding, prior []Step, req CommitStepRequest, decision CommitDecision, allowed map[string]bool) (CommitDecision, error) {
+func decideSupportAgentModel(profile Profile, snapshot SnapshotBinding, prior []Step, req CommitStepRequest, decision CommitDecision, allowed map[string]bool) (CommitDecision, error) {
 	result, kind := decision.Result, req.Step.Kind
-	if kind != "model_decision" && kind != "protocol_correction" && kind != "submit_proposal" {
+	adjudication := profile.FinalAdjudicationEnabled()
+	if kind != "model_decision" && kind != "protocol_correction" && kind != "submit_proposal" && (!adjudication || kind != "model_proposal") {
 		return decision, ErrStepConflict
 	}
 	if result.ToolInvocationID != "" || len(result.EvidenceRefs) != 0 {
 		return decision, ErrStepConflict
 	}
 	nullContent := bytes.Equal(bytes.TrimSpace(result.Content), []byte("null"))
+	if kind == "model_proposal" {
+		if len(prior) == 0 || !nullContent || result.CorrectionRequired {
+			return decision, ErrModelProtocol
+		}
+		last := prior[len(prior)-1]
+		previous, _, err := CanonicalStepResultForStrategy(last.Output, last.Kind, SupportAgentStrategy)
+		if err != nil || (last.Kind != "model_decision" && last.Kind != "protocol_correction") || previous.Proposal != nil ||
+			previous.CorrectionRequired || !ValidInvestigationComplete(previous.Content) {
+			return decision, ErrStepConflict
+		}
+	}
 	if kind == "submit_proposal" {
 		if result.PhysicalCallID != "" || result.CorrectionRequired || !nullContent || len(prior) == 0 {
 			return decision, ErrStepConflict
 		}
 		last := prior[len(prior)-1]
 		previous, _, err := CanonicalStepResultForStrategy(last.Output, last.Kind, SupportAgentStrategy)
-		if err != nil || (last.Kind != "model_decision" && last.Kind != "protocol_correction") || previous.Proposal == nil ||
+		validLast := last.Kind == "model_decision" || last.Kind == "protocol_correction"
+		if adjudication {
+			validLast = last.Kind == "model_proposal"
+		}
+		if err != nil || !validLast || previous.Proposal == nil ||
 			!sameProposal(previous.Proposal, result.Proposal) {
 			return decision, ErrStepConflict
 		}
@@ -146,12 +162,19 @@ func decideSupportAgentModel(snapshot SnapshotBinding, prior []Step, req CommitS
 		return decision, nil
 	}
 	if !nullContent {
+		if adjudication && (kind == "model_decision" || kind == "protocol_correction") && result.Proposal == nil && ValidInvestigationComplete(result.Content) {
+			decision.NextKind = "model_proposal"
+			return decision, nil
+		}
 		tool, canonical, err := SupportAgentToolDecision(snapshot, result.Content)
 		if err != nil || result.Proposal != nil || decision.CloseAttempt || !sameJSON(canonical, result.Content) {
 			return decision, ErrModelProtocol
 		}
 		decision.NextKind = tool.Name
 		return decision, nil
+	}
+	if adjudication && kind != "model_proposal" && kind != "submit_proposal" {
+		return decision, ErrModelProtocol
 	}
 	if !validProposal(result.Proposal, allowed) || validateSupportProposalWithSearch(snapshot, prior, result.Proposal, true) != nil {
 		return decision, ErrModelProtocol

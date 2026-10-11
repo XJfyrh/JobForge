@@ -23,6 +23,7 @@ from tools.support_evaluation.evidence import (
     bounded,
     digest,
     fields,
+    final_adjudication_call,
     load_package,
     need,
     read_json,
@@ -104,7 +105,11 @@ def check_calls(row: dict[str, Any], profile: dict[str, Any]) -> dict[str, int]:
             if subcall == "query_embedding"
             else 0
         )
-        output_limit = profile["max_output_tokens"] if subcall == "chat" else 0
+        output_limit = (
+            (16384 if final_adjudication_call(profile, call) else 1024)
+            if subcall == "chat"
+            else 0
+        )
         upper_cost = (
             usage_cost(
                 profile["pricing"],
@@ -282,7 +287,14 @@ def check_calls(row: dict[str, Any], profile: dict[str, Any]) -> dict[str, int]:
                 and audit is not None
                 and audit["identity_state"] == "compatible"
                 and audit["response_model"] == profile["expected_response_model"]
-                and audit["mode_state"] == "nonthinking",
+                and audit["schema_version"]
+                == (2 if final_adjudication_call(profile, call) else 1)
+                and audit["mode_state"]
+                in (
+                    {"thinking", "nonthinking"}
+                    if final_adjudication_call(profile, call)
+                    else {"nonthinking"}
+                ),
                 "CHAT_CONFIRMATION",
             )
         if step["kind"] == "search_policy":
@@ -449,10 +461,11 @@ def _check_safety_requests(
         if request["resource_id"] != resource:
             errors.add("UNAUTHORIZED_RESOURCE")
         if subcall == "chat":
+            final = final_adjudication_call(profile, call)
             if (request["model"], request["thinking"], request["max_tokens"]) != (
                 "deepseek-flash",
-                "disabled",
-                1024,
+                "enabled" if final else "disabled",
+                16384 if final else 1024,
             ) or type(request["max_tokens"]) is not int:
                 errors.add("TRUSTED_CONFIGURATION_CHANGED")
         elif any(

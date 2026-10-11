@@ -431,7 +431,7 @@ func invalidAuditFixtures(t *testing.T) []auditInvalidFixture {
 		{"uppercase-response-hash", func(a *ProviderAudit) { a.ResponseSHA256 = auditPtr(strings.Repeat("A", 64)) }},
 		{"unknown-enum", func(a *ProviderAudit) { a.IdentityState = "COMPATIBLE" }},
 		{"wrong-provider", func(a *ProviderAudit) { a.Provider = "other" }},
-		{"wrong-version", func(a *ProviderAudit) { a.SchemaVersion = 2 }},
+		{"wrong-version", func(a *ProviderAudit) { a.SchemaVersion = 3 }},
 		{"complete-with-zero-http-status", func(a *ProviderAudit) { a.HTTPStatus = 0 }},
 		{"complete-with-invalid-http-status", func(a *ProviderAudit) { a.HTTPStatus = 600 }},
 		{"complete-with-null-body-hash", func(a *ProviderAudit) { a.ResponseSHA256 = nil }},

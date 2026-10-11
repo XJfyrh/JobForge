@@ -24,7 +24,7 @@ from tools.support_evaluation.validate_data import (
 DATASET = "support-s5-2026-10-07-v1"
 DATASET_V2 = "support-s5-2026-10-07-v2"
 DATASET_V3 = "support-s5-2026-10-08-v3"
-SEEN_DATASETS = {DATASET, DATASET_V2}
+SEEN_DATASETS = {DATASET, DATASET_V2, DATASET_V3}
 DATASETS = {*SEEN_DATASETS, DATASET_V3}
 ARTIFACT_NAMES = (ARTIFACTS - {"evaluation/dev_gold.jsonl"}) | {
     "evaluation/gold.jsonl",
@@ -300,7 +300,7 @@ def prior_families(
             isinstance(prior_list, list)
             and len(prior_list) == 2
             and all(isinstance(p, dict) for p in prior_list)
-            and {p.get("dataset_id") for p in prior_list} == SEEN_DATASETS,
+            and {p.get("dataset_id") for p in prior_list} == {DATASET, DATASET_V2},
             "SEEN_FORMAL_PROVENANCE_REQUIRED",
         )
         expected = {p["dataset_id"]: p["manifest_sha256"] for p in prior_list}

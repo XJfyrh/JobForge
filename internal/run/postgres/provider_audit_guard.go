@@ -112,7 +112,7 @@ func checkBatchAuditGuard(ctx context.Context, tx pgx.Tx, batchID string, curren
 func persistedChatObservation(call callRow, profile agentrun.Profile) bool {
 	if !profile.AuditEnabled() || call.Report == nil || call.Report.ProviderAudit == nil ||
 		call.Report.ProviderAudit.IdentityState != agentrun.ProviderIdentityCompatible ||
-		call.Report.ProviderAudit.ModeState != agentrun.ProviderModeNonthinking || call.ReportRecordedAt == nil ||
+		!profile.AllowsProviderAudit(call.StepKind, call.Report.ProviderAudit) || call.ReportRecordedAt == nil ||
 		call.ObservedAt == nil || call.ObservationHash == nil || call.HTTPStatus == nil || call.ErrorCode == nil ||
 		call.TransportOutcome == nil || call.BusinessOutcome == nil || call.Reservation.ReportedUsage == nil ||
 		call.Report.Usage == nil || *call.Reservation.ReportedUsage != *call.Report.Usage {
@@ -135,7 +135,7 @@ func (b chatBarrier) complete() bool {
 	if b.StepID != nil {
 		return b.committedStep()
 	}
-	if (c.StepKind != "protocol_correction" && (b.Profile.Strategy != agentrun.SupportAgentStrategy || c.StepKind != "model_decision")) || *c.BusinessOutcome != "rejected" || *c.ErrorCode != "MODEL_PROTOCOL_ERROR" ||
+	if (c.StepKind != "protocol_correction" && (b.Profile.Strategy != agentrun.SupportAgentStrategy || c.StepKind != "model_decision") && !b.Profile.ThinkingStep(c.StepKind)) || *c.BusinessOutcome != "rejected" || *c.ErrorCode != "MODEL_PROTOCOL_ERROR" ||
 		b.Run.State != agentrun.Failed || b.RunError == nil || *b.RunError != "MODEL_PROTOCOL_ERROR" ||
 		b.Run.AttemptNo != c.Lease.AttemptNo || b.Authority.FencingToken != c.Lease.FencingToken ||
 		b.AttemptFinished == nil || b.AttemptOutcome == nil || *b.AttemptOutcome != "failed_terminal" ||

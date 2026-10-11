@@ -1,6 +1,6 @@
 # 当前状态与下一步
 
-更新于2026-10-08。已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。[ADR-0030](adr/0030-s5-policy-condition-candidate.md)的schema9/10候选已完成真实配对：Agent正确12/20、完整证据15/20，未达16/18门槛，恢复与演示未启动。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
+更新于2026-10-11。已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。schema9/10最后正式结果为Agent正确12/20、完整证据15/20；新[独立终裁候选](evidence/agent-v3-s5-final-adjudication-2026-10-11.md)开发正确/完整证据38/40、已见回归17/20，但004/018未解决，停在冻结之前，恢复与演示未启动。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|
@@ -14,6 +14,10 @@
 任务页面支持审阅方案，批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
 
 S5 的剩余范围和门槛见[验收矩阵](agent-v3/s5-acceptance.md)。免费机制通过不替代真实 DeepSeek 方案质量、恢复成本对照及正式20案验收。
+
+2026-10-11完成[固定输入裁决诊断](evidence/agent-v3-s5-decision-diagnosis-2026-10-11.md)：已见20案、四组各三轮共240次调用，原提示A、thinking B、完整政策C、精简提示D正确数分别为31/49/33/19（各60次）。B三轮均改善，但有3次截断和持续语义错误，单次裁决估算费用/平均耗时约为A的10.3/15.4倍。诊断结束时S5累计observed usage估算¥7.103572，held为零；不重发原15条，该诊断未新增生产Run。
+
+随后按[ADR-0033](adr/0033-versioned-final-adjudication.md)实现schema11/12独立终裁，并完成[开发40案和已见v3回归20案](evidence/agent-v3-s5-final-adjudication-2026-10-11.md)。同批初稿到终裁，开发正确数38→38、完整证据39→38；已见回归正确数11→17、完整证据12→17，四类硬失败均零。004缺少冲突定义P05.1并漏送达后的运输冲突，017/018取得P06.1后仍错用未送达时效分支，因此未冻结候选，未启动Fixed开发、新未见集、恢复或演示。当前23库累计449 Runs、1808 chat、observed usage估算¥9.275641，held/unknown/在途和未结束attempt均零，剩余¥10.724359；两批收费进程已退出。免费检查与真实质量分列，提交前完整Go race复跑通过，远程CI未运行。
 
 ## 限制与未结事项
 

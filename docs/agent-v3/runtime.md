@@ -9,8 +9,12 @@ Go Worker 持有执行权，固定 Python guardian/step 执行登记单步，通
 | schema 3 / `support_agent_v1` + `confirmed_uncommitted_v1` | `support-agent-v1` | `linux-v2-recovery-runtime-1` |
 | schema 4 / 6 / 7 / 9 / `support_agent_v1` + 恢复/审批 | `support-agent-v1` | `linux-v2-approval-runtime-1` |
 | schema 5 / 8 / 10 / `support_fixed_v1` | `support-fixed-v1` | `linux-v2-fixed-comparison-runtime-1` |
+| schema 11 / `support_agent_v1` + 独立终裁/恢复/审批 | `support-agent-v1` | `linux-v2-adjudication-runtime-1` |
+| schema 12 / `support_fixed_v1` + 同参数终裁 | `support-fixed-v1` | `linux-v2-fixed-adjudication-runtime-1` |
 
-这些版本均使用`deepseek-audit-v1` / `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9分别绑定实际`support-agent-prompt-v2/v3`源码，schema 7–10均使用部署manifest 2；schema 1–6使用manifest 1。实际验收见[证据索引](../evidence/README.md)。
+schema 1–10 使用 `deepseek-audit-v1`，schema 11–12 使用 `deepseek-audit-v2`；模型均为 `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9/11分别绑定实际 `support-agent-prompt-v2/v3/v4` 源码，schema 7–12均使用部署manifest 2；schema 1–6使用manifest 1。实际验收见[证据索引](../evidence/README.md)。
+
+schema 11 保持 v3 调查提示与工具行为。首次 `final` 只提交含原始初稿的 `investigation_complete` 标记，不能审批；Go 再调度独立 `model_proposal`，只传已提交事实与来源，不传初稿。终裁 thinking/high、16,384 completion token、120s HTTP 上限仍受原 attempt 180s、Run、账号截止和取消/租约约束。reasoning 包含于 completion，不重复计费；响应上限 1MiB，最终内容仍为 16KiB，推理正文不进入 IPC 或日志。空推理只观测；有效计量下截断/无效终裁结束当前 Run，不纠错、不按质量重试。schema 12 的 Fixed 终裁使用相同模型参数和额度。见 [ADR-0033](../adr/0033-versioned-final-adjudication.md)。
 
 ## 执行权与组件
 
@@ -36,7 +40,7 @@ Worker容量固定为1。Register版本、Worker允许的**所有profile**的exe
 
 [运行输入源合同](../../api/executor/v2/runtime-input.md)和 [schema](../../api/executor/v2/runtime-input.schema.json)沿用 RPC 字段名，将 JSON bytes 投影为对象。Go 使用现有领域 canonicalizer 验证 accepted 结果、CommitHash、NextInputHash 全链、序号、资源和 result_ref；最新资源还须与原 Claim 一致。Python 验证形状与字符串链，不重新实现任意 decimal 规范化。原 JSON 与最终编码大小分别校验，超限不裁剪历史。
 
-Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–10，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
+Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–12，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
 
 生产入口是 [cmd/agent-worker](../../cmd/agent-worker/main.go)，不接命令行参数。配置由受信部署文件提供：
 

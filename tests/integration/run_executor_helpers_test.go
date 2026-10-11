@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	agentrun "github.com/xjfyrh/jobforge/internal/run"
+	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/run/grpcapi"
 	runpostgres "github.com/xjfyrh/jobforge/internal/run/postgres"
 	"github.com/xjfyrh/jobforge/internal/runexecutor"
@@ -328,11 +329,23 @@ type executorWorkerRun struct {
 func startExecutorWorker(t *testing.T, h *runHarness, f *executorHTTPFixture, client agentv1.AgentServiceClient, expectedErrors ...error) *executorWorkerRun {
 	t.Helper()
 	manifest := executorManifest(t, h.Profile)
-	w, err := runworker.New(client, manifest, runworker.Config{Profiles: []agentrun.Profile{h.Profile}, Environments: map[string]runexecutor.Environment{h.Options.Workers[0].Tenants[0]: {BusinessOrigin: f.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}})
+	config := runworker.Config{Profiles: []agentrun.Profile{h.Profile}, Environments: map[string]runexecutor.Environment{h.Options.Workers[0].Tenants[0]: {BusinessOrigin: f.BusinessOrigin, BusinessReadKey: "synthetic-business-read-key", OllamaOrigin: "http://127.0.0.1:11434", DeepSeekKey: "synthetic-provider-key"}}}
+	if h.Profile.ApprovalEnabled() {
+		d, err := agentrun.DecodeSupportDefinition(h.Profile.Definition)
+		if err != nil {
+			t.Fatal(err)
+		}
+		config.Actions = map[string]businessclient.ActionCredentials{h.Options.Workers[0].Tenants[0]: {Origin: d.Action.Origin, ReaderKey: "synthetic-action-reader-key", WriterKey: "synthetic-action-writer-key"}}
+	}
+	w, err := runworker.New(client, manifest, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(h.Ctx, 30*time.Second)
+	timeout := 30 * time.Second
+	if h.Profile.FinalAdjudicationEnabled() {
+		timeout = 180 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(h.Ctx, timeout)
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer executor-synthetic-control-token")
 	running := &executorWorkerRun{cancel: cancel, done: make(chan struct{})}
 	go func() { running.err = w.Run(ctx); close(running.done) }()

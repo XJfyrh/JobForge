@@ -13,7 +13,8 @@ import (
 func reportBinding(call callRow, profile agentrun.Profile) agentrun.ReportBinding {
 	return agentrun.ReportBinding{ExecutionBindingHash: call.Reservation.ExecutionBindingHash,
 		PhysicalCallID: call.Reservation.PhysicalCallID, ParameterHash: call.Reservation.ParameterHash,
-		Subcall: call.Reservation.Subcall, ExpectedResponseModel: profile.ExpectedResponseModel}
+		Subcall: call.Reservation.Subcall, ExpectedResponseModel: profile.ExpectedResponseModel,
+		AllowThinking: profile.ThinkingStep(call.StepKind)}
 }
 
 func freezeReportBatch(accounts *[3]budgetRow, reason agentrun.BatchStopCode) {
@@ -146,6 +147,9 @@ func checkAuditObservation(call callRow, profile agentrun.Profile, req agentrun.
 	}
 	if call.Reservation.Subcall == agentrun.SubcallChat {
 		if req.AuditHash == "" || !req.UsageKnown || req.Usage == nil || req.TransportOutcome != "response" || req.HTTPStatus != 200 {
+			return "", agentrun.ErrCallConflict
+		}
+		if call.Report == nil || !profile.AllowsProviderAudit(call.StepKind, call.Report.ProviderAudit) {
 			return "", agentrun.ErrCallConflict
 		}
 	} else if req.AuditHash != "" {

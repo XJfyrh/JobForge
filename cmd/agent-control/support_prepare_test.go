@@ -102,8 +102,8 @@ func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T)
 
 func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 	o, source := supportPrepareFixture(t)
-	for _, schema := range []int{7, 8, 9, 10} {
-		agent := schema == 7 || schema == 9
+	for _, schema := range []int{7, 8, 9, 10, 11, 12} {
+		agent := schema == 7 || schema == 9 || schema == 11
 		d := source.Definition
 		if agent {
 			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
@@ -122,6 +122,10 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 				d.Program.PromptVersion = run.SupportAgentPromptV3
 				promptFile = "support_agent_v3.py"
 			}
+			if schema == 11 {
+				d.Program.PromptVersion = run.SupportAgentPromptV4
+				promptFile = "support_agent_v4.py"
+			}
 			d.Program.ApprovalPolicy = run.TicketResolutionApprovalPolicy
 			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}
 			prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", promptFile))
@@ -137,6 +141,12 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 		d.Price.SourceSHA256 = source.Definition.Price.SourceSHA256
 		d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
 		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+		if schema >= 11 {
+			d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-11", "2026-10-11"
+			final := d.Model
+			final.Thinking, final.ReasoningEffort, final.MaxTokens, final.ResponseBodyBytes = "enabled", "high", 16384, 1048576
+			d.FinalModel = &final
+		}
 		candidate := source
 		candidate.Definition = d
 		if os.WriteFile(o.Source, supportJSON(candidate), 0600) != nil {
@@ -149,6 +159,16 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 		manifest, err := runworker.ParseManifest(files["executor.json"])
 		if err != nil || manifest.SchemaVersion != 2 || manifest.Profiles[0].PromptVersion != d.Program.PromptVersion {
 			t.Fatal("candidate binding", err)
+		}
+		if schema >= 11 {
+			var config deployment
+			var launch supportLaunch
+			if json.Unmarshal(files["control.disabled.json"], &config) != nil || json.Unmarshal(files["launch.json"], &launch) != nil {
+				t.Fatal("adjudication preparation")
+			}
+			if config.Budgets[0].Limits.Tokens != 12610560*40 || config.Budgets[1].Limits.Tokens != 12610560*20 || launch.ExecutorVersion != config.Profiles[0].ExecutorVersion {
+				t.Fatal("final capacity or operator version not bound")
+			}
 		}
 		if agent {
 			candidate.Definition.Program.PromptSHA256 = source.Definition.Program.PromptSHA256
@@ -268,6 +288,11 @@ func TestPrepareSupportApprovalFrozenActionOrigin(t *testing.T) {
 	source.Definition.Program.ApprovalPolicy = "ticket_resolution_v1"
 	source.Definition.Program.AdapterSourceSHA256 = currentAdapter
 	source.Definition.Price.SourceSHA256 = priceReceipt
+	prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", "support_agent.py"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.Definition.Program.PromptSHA256 = supportSHA256(prompt)
 	source.Definition.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic-key", PublicKeySHA256: strings.Repeat("b", 64)}
 	o.ValidFrom = "2026-10-05T12:00:00Z"
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
@@ -392,6 +417,11 @@ func TestPrepareSupportAgentVersionAndOperatorBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", "support_agent.py"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.Definition.Program.PromptSHA256 = supportSHA256(prompt)
 	o.ValidFrom, o.BatchCostMicroyuan = "2026-09-17T12:00:00Z", 20000000
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
 		t.Fatal(err)
@@ -594,6 +624,11 @@ func TestPrepareSupportRecoveryVersionAndSourceBinding(t *testing.T) {
 	source.Definition = example.Definition
 	source.Definition.Program.AdapterSourceSHA256 = currentAdapter
 	source.Definition.Price.SourceSHA256 = priceReceipt
+	prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", "support_agent.py"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.Definition.Program.PromptSHA256 = supportSHA256(prompt)
 	o.ValidFrom = "2026-10-04T12:00:00Z"
 	if err := os.WriteFile(o.Source, supportJSON(source), 0600); err != nil {
 		t.Fatal(err)

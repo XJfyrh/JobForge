@@ -15,7 +15,7 @@
 | `adapter_id` | 现有 `ValidIdentifier` ASCII 1～128 字符规则；来自可信部署 manifest |
 | `tool_invocation_id` | `get_order/get_delivery/search_policy` 为 Go 已确认 BeginTool 的 UUID；其余非工具步骤恰为 `""` |
 | `expected_response_model` | `deepseek-flash`；来自不可变 profile，不能由请求 payload 指定 |
-| `provider_audit_policy` | `deepseek-audit-v1`；来自同份 profile |
+| `provider_audit_policy` | `deepseek-audit-v1`；新独立终裁 executor 使用 `deepseek-audit-v2`，来自同份 profile |
 
 不接受额外或重复字段。输入没有 query、messages、endpoint、模块、命令、价格或秘密。Go `Selection` 只接收已经由 Worker 核对的部署选择；输入 schema 不注册 adapter。Python 固定 registry 还会核对 manifest 与可用 adapter。`bounded-readonly-mechanism-v1` 仅是测试构建中的机制 adapter，不证明真实业务链或云端模型验收。
 

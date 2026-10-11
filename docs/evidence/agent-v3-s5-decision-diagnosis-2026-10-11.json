@@ -1,0 +1,854 @@
+{
+  "kind": "s5-seen-final-decision-diagnosis-summary",
+  "recorded_at": "2026-10-11T06:36:21.4345863Z",
+  "analysis_rule": "requested-group-intent-to-treat",
+  "thresholds_met": false,
+  "not_end_to_end": true,
+  "repetitions": 3,
+  "planned_calls": 240,
+  "calls_before_amendment": 15,
+  "calls_after_amendment": 225,
+  "groups": {
+    "A": {
+      "metrics": {
+        "denominator": 60,
+        "protocol": 60,
+        "sources": 60,
+        "action": 57,
+        "conclusion": 37,
+        "full_evidence": 42,
+        "correct": 31,
+        "correct_by_repetition": [
+          11,
+          10,
+          10
+        ],
+        "known_cost_microyuan": 208542,
+        "usage_known_calls": 60,
+        "reasoning_observed_calls": 0,
+        "elapsed_ms": 71659,
+        "output_tokens": 8150
+      },
+      "full_evidence_by_repetition": [
+        14,
+        14,
+        14
+      ],
+      "all_three_correct_cases": 10,
+      "at_least_one_correct_cases": 11,
+      "latency_median_ms": 1154.5,
+      "latency_p95_ms": 1515,
+      "outcomes": {
+        "final": 60
+      }
+    },
+    "B": {
+      "metrics": {
+        "denominator": 60,
+        "protocol": 57,
+        "sources": 57,
+        "action": 54,
+        "conclusion": 49,
+        "full_evidence": 50,
+        "correct": 49,
+        "correct_by_repetition": [
+          15,
+          16,
+          18
+        ],
+        "known_cost_microyuan": 2151740,
+        "usage_known_calls": 60,
+        "reasoning_observed_calls": 59,
+        "elapsed_ms": 1104857,
+        "output_tokens": 249418
+      },
+      "full_evidence_by_repetition": [
+        16,
+        16,
+        18
+      ],
+      "all_three_correct_cases": 15,
+      "at_least_one_correct_cases": 18,
+      "latency_median_ms": 12194.5,
+      "latency_p95_ms": 51641,
+      "outcomes": {
+        "final": 56,
+        "incomplete_output": 3,
+        "thinking_not_observed": 1
+      }
+    },
+    "C": {
+      "metrics": {
+        "denominator": 60,
+        "protocol": 60,
+        "sources": 60,
+        "action": 57,
+        "conclusion": 39,
+        "full_evidence": 39,
+        "correct": 33,
+        "correct_by_repetition": [
+          12,
+          10,
+          11
+        ],
+        "known_cost_microyuan": 323818,
+        "usage_known_calls": 60,
+        "reasoning_observed_calls": 0,
+        "elapsed_ms": 78997,
+        "output_tokens": 8317
+      },
+      "full_evidence_by_repetition": [
+        14,
+        12,
+        13
+      ],
+      "all_three_correct_cases": 10,
+      "at_least_one_correct_cases": 12,
+      "latency_median_ms": 1288.5,
+      "latency_p95_ms": 1708,
+      "outcomes": {
+        "final": 60
+      }
+    },
+    "D": {
+      "metrics": {
+        "denominator": 60,
+        "protocol": 59,
+        "sources": 59,
+        "action": 52,
+        "conclusion": 36,
+        "full_evidence": 24,
+        "correct": 19,
+        "correct_by_repetition": [
+          6,
+          6,
+          7
+        ],
+        "known_cost_microyuan": 218061,
+        "usage_known_calls": 60,
+        "reasoning_observed_calls": 0,
+        "elapsed_ms": 76407,
+        "output_tokens": 9434
+      },
+      "full_evidence_by_repetition": [
+        8,
+        7,
+        9
+      ],
+      "all_three_correct_cases": 4,
+      "at_least_one_correct_cases": 8,
+      "latency_median_ms": 1266,
+      "latency_p95_ms": 1575,
+      "outcomes": {
+        "final": 60
+      }
+    }
+  },
+  "paired_against_A": {
+    "B": {
+      "win": {
+        "count": 19,
+        "trials": [
+          "S5V3-002-B-1",
+          "S5V3-012-B-1",
+          "S5V3-014-B-1",
+          "S5V3-016-B-1",
+          "S5V3-019-B-1",
+          "S5V3-002-B-2",
+          "S5V3-012-B-2",
+          "S5V3-014-B-2",
+          "S5V3-015-B-2",
+          "S5V3-016-B-2",
+          "S5V3-019-B-2",
+          "S5V3-002-B-3",
+          "S5V3-012-B-3",
+          "S5V3-014-B-3",
+          "S5V3-015-B-3",
+          "S5V3-016-B-3",
+          "S5V3-017-B-3",
+          "S5V3-019-B-3",
+          "S5V3-020-B-3"
+        ]
+      },
+      "loss": {
+        "count": 1,
+        "trials": [
+          "S5V3-003-B-1"
+        ]
+      },
+      "tie": {
+        "count": 40,
+        "trials": [
+          "S5V3-001-B-1",
+          "S5V3-004-B-1",
+          "S5V3-005-B-1",
+          "S5V3-006-B-1",
+          "S5V3-007-B-1",
+          "S5V3-008-B-1",
+          "S5V3-009-B-1",
+          "S5V3-010-B-1",
+          "S5V3-011-B-1",
+          "S5V3-013-B-1",
+          "S5V3-015-B-1",
+          "S5V3-017-B-1",
+          "S5V3-018-B-1",
+          "S5V3-020-B-1",
+          "S5V3-001-B-2",
+          "S5V3-003-B-2",
+          "S5V3-004-B-2",
+          "S5V3-005-B-2",
+          "S5V3-006-B-2",
+          "S5V3-007-B-2",
+          "S5V3-008-B-2",
+          "S5V3-009-B-2",
+          "S5V3-010-B-2",
+          "S5V3-011-B-2",
+          "S5V3-013-B-2",
+          "S5V3-017-B-2",
+          "S5V3-018-B-2",
+          "S5V3-020-B-2",
+          "S5V3-001-B-3",
+          "S5V3-003-B-3",
+          "S5V3-004-B-3",
+          "S5V3-005-B-3",
+          "S5V3-006-B-3",
+          "S5V3-007-B-3",
+          "S5V3-008-B-3",
+          "S5V3-009-B-3",
+          "S5V3-010-B-3",
+          "S5V3-011-B-3",
+          "S5V3-013-B-3",
+          "S5V3-018-B-3"
+        ]
+      }
+    },
+    "C": {
+      "win": {
+        "count": 5,
+        "trials": [
+          "S5V3-014-C-1",
+          "S5V3-014-C-2",
+          "S5V3-015-C-2",
+          "S5V3-014-C-3",
+          "S5V3-015-C-3"
+        ]
+      },
+      "loss": {
+        "count": 3,
+        "trials": [
+          "S5V3-005-C-2",
+          "S5V3-013-C-2",
+          "S5V3-013-C-3"
+        ]
+      },
+      "tie": {
+        "count": 52,
+        "trials": [
+          "S5V3-001-C-1",
+          "S5V3-002-C-1",
+          "S5V3-003-C-1",
+          "S5V3-004-C-1",
+          "S5V3-005-C-1",
+          "S5V3-006-C-1",
+          "S5V3-007-C-1",
+          "S5V3-008-C-1",
+          "S5V3-009-C-1",
+          "S5V3-010-C-1",
+          "S5V3-011-C-1",
+          "S5V3-012-C-1",
+          "S5V3-013-C-1",
+          "S5V3-015-C-1",
+          "S5V3-016-C-1",
+          "S5V3-017-C-1",
+          "S5V3-018-C-1",
+          "S5V3-019-C-1",
+          "S5V3-020-C-1",
+          "S5V3-001-C-2",
+          "S5V3-002-C-2",
+          "S5V3-003-C-2",
+          "S5V3-004-C-2",
+          "S5V3-006-C-2",
+          "S5V3-007-C-2",
+          "S5V3-008-C-2",
+          "S5V3-009-C-2",
+          "S5V3-010-C-2",
+          "S5V3-011-C-2",
+          "S5V3-012-C-2",
+          "S5V3-016-C-2",
+          "S5V3-017-C-2",
+          "S5V3-018-C-2",
+          "S5V3-019-C-2",
+          "S5V3-020-C-2",
+          "S5V3-001-C-3",
+          "S5V3-002-C-3",
+          "S5V3-003-C-3",
+          "S5V3-004-C-3",
+          "S5V3-005-C-3",
+          "S5V3-006-C-3",
+          "S5V3-007-C-3",
+          "S5V3-008-C-3",
+          "S5V3-009-C-3",
+          "S5V3-010-C-3",
+          "S5V3-011-C-3",
+          "S5V3-012-C-3",
+          "S5V3-016-C-3",
+          "S5V3-017-C-3",
+          "S5V3-018-C-3",
+          "S5V3-019-C-3",
+          "S5V3-020-C-3"
+        ]
+      }
+    },
+    "D": {
+      "win": {
+        "count": 3,
+        "trials": [
+          "S5V3-014-D-1",
+          "S5V3-014-D-2",
+          "S5V3-014-D-3"
+        ]
+      },
+      "loss": {
+        "count": 15,
+        "trials": [
+          "S5V3-001-D-1",
+          "S5V3-003-D-1",
+          "S5V3-007-D-1",
+          "S5V3-009-D-1",
+          "S5V3-013-D-1",
+          "S5V3-015-D-1",
+          "S5V3-001-D-2",
+          "S5V3-006-D-2",
+          "S5V3-009-D-2",
+          "S5V3-010-D-2",
+          "S5V3-013-D-2",
+          "S5V3-001-D-3",
+          "S5V3-009-D-3",
+          "S5V3-010-D-3",
+          "S5V3-013-D-3"
+        ]
+      },
+      "tie": {
+        "count": 42,
+        "trials": [
+          "S5V3-002-D-1",
+          "S5V3-004-D-1",
+          "S5V3-005-D-1",
+          "S5V3-006-D-1",
+          "S5V3-008-D-1",
+          "S5V3-010-D-1",
+          "S5V3-011-D-1",
+          "S5V3-012-D-1",
+          "S5V3-016-D-1",
+          "S5V3-017-D-1",
+          "S5V3-018-D-1",
+          "S5V3-019-D-1",
+          "S5V3-020-D-1",
+          "S5V3-002-D-2",
+          "S5V3-003-D-2",
+          "S5V3-004-D-2",
+          "S5V3-005-D-2",
+          "S5V3-007-D-2",
+          "S5V3-008-D-2",
+          "S5V3-011-D-2",
+          "S5V3-012-D-2",
+          "S5V3-015-D-2",
+          "S5V3-016-D-2",
+          "S5V3-017-D-2",
+          "S5V3-018-D-2",
+          "S5V3-019-D-2",
+          "S5V3-020-D-2",
+          "S5V3-002-D-3",
+          "S5V3-003-D-3",
+          "S5V3-004-D-3",
+          "S5V3-005-D-3",
+          "S5V3-006-D-3",
+          "S5V3-007-D-3",
+          "S5V3-008-D-3",
+          "S5V3-011-D-3",
+          "S5V3-012-D-3",
+          "S5V3-015-D-3",
+          "S5V3-016-D-3",
+          "S5V3-017-D-3",
+          "S5V3-018-D-3",
+          "S5V3-019-D-3",
+          "S5V3-020-D-3"
+        ]
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "S5V3-001",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-002",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-003",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "011",
+        "full_evidence": "011"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "011",
+        "full_evidence": "011"
+      }
+    },
+    {
+      "case_id": "S5V3-004",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-005",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "101",
+        "full_evidence": "101"
+      },
+      "D": {
+        "correct": "111",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-006",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "101",
+        "full_evidence": "101"
+      }
+    },
+    {
+      "case_id": "S5V3-007",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "011",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-008",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "111",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-009",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-010",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "100",
+        "full_evidence": "100"
+      }
+    },
+    {
+      "case_id": "S5V3-011",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "111",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-012",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-013",
+      "A": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "100",
+        "full_evidence": "100"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-014",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "111",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-015",
+      "A": {
+        "correct": "100",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-016",
+      "A": {
+        "correct": "000",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "001"
+      }
+    },
+    {
+      "case_id": "S5V3-017",
+      "A": {
+        "correct": "000",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "001",
+        "full_evidence": "001"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "111"
+      }
+    },
+    {
+      "case_id": "S5V3-018",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-019",
+      "A": {
+        "correct": "000",
+        "full_evidence": "111"
+      },
+      "B": {
+        "correct": "111",
+        "full_evidence": "111"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "111"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    },
+    {
+      "case_id": "S5V3-020",
+      "A": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "B": {
+        "correct": "001",
+        "full_evidence": "101"
+      },
+      "C": {
+        "correct": "000",
+        "full_evidence": "000"
+      },
+      "D": {
+        "correct": "000",
+        "full_evidence": "000"
+      }
+    }
+  ],
+  "accounting": {
+    "diagnosis": {
+      "diagnosis_calls": 240,
+      "experiment_id": "s5-final-diagnosis-20261011-v2",
+      "held_cost_microyuan": 0,
+      "known_cost_microyuan": 2902161,
+      "prior_cost_microyuan": 4201411,
+      "remaining_cost_microyuan": 12896428,
+      "s5_exposure_microyuan": 7103572,
+      "stopped_reason": null
+    },
+    "legacy": {
+      "runs": 389,
+      "chat_calls": 1234,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 4201411,
+      "held": 0
+    },
+    "cumulative_s5_chat_calls": 1474,
+    "cumulative_s5_runs": 389,
+    "cost_cap_microyuan": 20000000,
+    "settled_provider_bill": false
+  },
+  "protocol": {
+    "model": "deepseek-flash",
+    "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+    "max_output_tokens": 16384,
+    "thinking_group": "B",
+    "reasoning_effort": "high",
+    "effective_temperature_zero_groups": [
+      "A",
+      "C",
+      "D"
+    ],
+    "thinking_temperature_ignored": true,
+    "response_ids_unique": 240,
+    "incomplete_output_trials": [
+      "S5V3-003-B-1",
+      "S5V3-017-B-1",
+      "S5V3-020-B-2"
+    ],
+    "incomplete_outputs": {
+      "finish_reason": "length",
+      "output_tokens_each": 16384,
+      "reasoning_tokens_each": 16384,
+      "final_chars_each": 0
+    },
+    "empty_reasoning_trials": [
+      "S5V3-004-B-1"
+    ]
+  },
+  "integrity": {
+    "base_commit": "06d25884f6e042efba22827a744843e59a56defb",
+    "original_requests_reconstructed": 103,
+    "parent_pg_rows_identical": 15,
+    "copied_json_files_byte_identical": 130,
+    "source_snapshot_files_verified": 17,
+    "parent_stop_reason": "thinking_not_observed",
+    "final_sender_connections": 0,
+    "source_receipt_sha256": "65d57272659045bec0c8df4722c71419ed3da7ccb658280b2ac192a94414d99f",
+    "parent_manifest_sha256": "cedd5756f598d9826ca6746e1ed7dd8977fcc44777d15ced0f68e5e7265fed2e",
+    "manifest_sha256": "67681ccde420f9b37b692df5154bb044dbcd3b1dfff40997f1c30b98107947e9",
+    "runner_sha256": "00a0c4fea5f33aedb35bd91145929244352ec12e70ff30f92e2b0dce101b2c59",
+    "score_sha256": "e1783c3100b5a2bf857369d926060acebb43d9603d1d898fc289a70049889208",
+    "ledger_sha256": "68e7a2c239552811addf8ea0976e922ad1d6ce185cf7d05aa0fc5eeab387a214",
+    "legacy_recheck_sha256": "62262444677386f2de6687ab77d7ae5d1a7f6e4b49d08eaa0f18c791365cf0af",
+    "release_sha256": "1adb7a3ebb03eb6cf3d273df6a1219774f622f06acb5d61d49b1b9dc3efe5c2a"
+  },
+  "private_evidence": {
+    "directory": "E:/JobForgeEvidence/s5-2026-10-07/diagnosis-20261011-v2",
+    "ledger_export": "ledger-export-1791700358673499000.json",
+    "full_score": "score.json",
+    "source_snapshot": "source/"
+  },
+  "verification": {
+    "full_go_race": "passed, real PostgreSQL, Redis AOF, installed Python SDK",
+    "focused_diagnosis_pg_race": "passed",
+    "python_diagnosis_tests": 10,
+    "prior_related_python_tests": {
+      "passed": 253,
+      "skipped": 4,
+      "skip_reason": "real Linux process tests on Windows"
+    },
+    "lint": "Go build/vet/golangci-lint, Ruff, mypy, SQLFluff passed",
+    "remote_ci_for_uncommitted_changes": "not run",
+    "formal_acceptance": "not applicable to this diagnostic",
+    "independent_replay": "All 240 scores reproduced from raw responses and PG; original 15 PG rows and response/report bytes unchanged; costs independently recomputed"
+  },
+  "case_count": 20,
+  "analysis_unit": "matched seen case; three repetitions are not independent new cases"
+}

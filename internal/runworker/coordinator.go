@@ -175,7 +175,7 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 		// Missing chat confirmation stops this Worker; a fresh Worker must pass
 		// the persisted batch guard after natural lease expiry and closure.
 		for _, call := range c.calls {
-			if call.intent.Subcall == "chat" && !confirmedChat(call) {
+			if call.intent.Subcall == "chat" && !c.confirmedChat(call) {
 				return stepOutcome{Fatal: ErrBatchStopped}
 			}
 		}
@@ -190,8 +190,8 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 			// Only the fully confirmed second business-validation failure may
 			// finish this case without stopping the batch. Durable storage checks
 			// its exact attempt/step terminal facts before any later permission.
-			secondRejected := (c.execute.Binding.StepKind == "protocol_correction" || c.profile.Strategy == run.SupportAgentStrategy && c.execute.Binding.StepKind == "model_decision") && code == "MODEL_PROTOCOL_ERROR" &&
-				confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
+			secondRejected := (c.execute.Binding.StepKind == "protocol_correction" || c.profile.Strategy == run.SupportAgentStrategy && c.execute.Binding.StepKind == "model_decision" || c.profile.ThinkingStep(c.execute.Binding.StepKind)) && code == "MODEL_PROTOCOL_ERROR" &&
+				c.confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
 				call.observation.ErrorCode == "OUTPUT_INVALID" && !c.stopped && c.failure == ""
 			if !secondRejected {
 				c.fatal = true

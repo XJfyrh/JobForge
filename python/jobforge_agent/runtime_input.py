@@ -17,6 +17,11 @@ AGENT_EXECUTOR_VERSION = "linux-v2-agent-runtime-1"
 RECOVERY_EXECUTOR_VERSION = "linux-v2-recovery-runtime-1"
 APPROVAL_EXECUTOR_VERSION = "linux-v2-approval-runtime-1"
 FIXED_COMPARISON_EXECUTOR_VERSION = "linux-v2-fixed-comparison-runtime-1"
+ADJUDICATION_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-1"
+FIXED_ADJUDICATION_EXECUTOR_VERSION = "linux-v2-fixed-adjudication-runtime-1"
+ADJUDICATION_EXECUTORS = frozenset(
+    {ADJUDICATION_EXECUTOR_VERSION, FIXED_ADJUDICATION_EXECUTOR_VERSION}
+)
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 HASH = re.compile(r"[0-9a-f]{64}")
@@ -119,6 +124,22 @@ def input_hash(
     return digest.hexdigest()
 
 
+def is_investigation_complete(value: Any) -> bool:
+    """Recognize an audit-only closed draft without judging its truth or sources."""
+    if not isinstance(value, dict) or set(value) != {"type", "draft"}:
+        return False
+    draft = value["draft"]
+    strings = {"decision", "action", "conclusion", "target_ticket_status"}
+    return (
+        value["type"] == "investigation_complete"
+        and isinstance(draft, dict)
+        and set(draft) == strings | {"requested_fields", "claims"}
+        and all(isinstance(draft[key], str) for key in strings)
+        and isinstance(draft["requested_fields"], list)
+        and isinstance(draft["claims"], list)
+    )
+
+
 def validate_step_result(result: Any, kind: str) -> None:
     """Check the protected envelope and closed registered proposal formats."""
     _require(kind in KINDS)
@@ -177,11 +198,12 @@ def validate_step_result(result: Any, kind: str) -> None:
             _require(
                 kind in {"model_decision", "protocol_correction"} and proposal is None
             )
-            _object(result["content"], {"type", "name", "arguments"})
-            _require(
-                result["content"]["type"] == "tool"
-                and result["content"]["name"] in TOOLS
-            )
+            if not is_investigation_complete(result["content"]):
+                _object(result["content"], {"type", "name", "arguments"})
+                _require(
+                    result["content"]["type"] == "tool"
+                    and result["content"]["name"] in TOOLS
+                )
         else:
             _require(proposal is not None)
 
@@ -343,7 +365,12 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
         executor_matches_adapter(selection["executor_version"], selection["adapter_id"])
         and _match(IDENTIFIER, selection["adapter_id"])
         and selection["expected_response_model"] == "deepseek-flash"
-        and selection["provider_audit_policy"] == "deepseek-audit-v1"
+        and selection["provider_audit_policy"]
+        == (
+            "deepseek-audit-v2"
+            if selection["executor_version"] in ADJUDICATION_EXECUTORS
+            else "deepseek-audit-v1"
+        )
     )
     _require(
         _match(UUID, selection["tool_invocation_id"])
@@ -396,7 +423,10 @@ def executor_matches_adapter(version: str, adapter: str) -> bool:
             AGENT_EXECUTOR_VERSION,
             RECOVERY_EXECUTOR_VERSION,
             APPROVAL_EXECUTOR_VERSION,
+            ADJUDICATION_EXECUTOR_VERSION,
         )
     return version == EXECUTOR_VERSION or (
-        adapter == "support-fixed-v1" and version == FIXED_COMPARISON_EXECUTOR_VERSION
+        adapter == "support-fixed-v1"
+        and version
+        in {FIXED_COMPARISON_EXECUTOR_VERSION, FIXED_ADJUDICATION_EXECUTOR_VERSION}
     )

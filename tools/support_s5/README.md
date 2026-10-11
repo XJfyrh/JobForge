@@ -1,12 +1,14 @@
 # S5 公平对照与冻结
 
+独立终裁候选见 [ADR-0033](../../docs/adr/0033-versioned-final-adjudication.md)：schema 11 Agent / 12 Fixed，调查维持原参数，`model_proposal` 使用 thinking/high、16,384 completion token、120s 上限；family token 合同为 12,610,560，其余次数合同不变。注册绑定 `final_model`，两策略配对必须完全相同。新版评分按原调用步骤验证预算与 audit schema；每案 `adjudication_stages` 分开列初稿/终裁质量及 chat 计量，验收仍只看最终方案。原 v3 正式集已见，只可作为诊断，不能再次充当未见验收。
+
 此目录是外部验收工具，不进入生产 Worker。历史40案、schema 1–8 与原评分结果保留。第二次正式失败后的候选使用 schema 9 Agent（`support-agent-prompt-v3`）及行为相同的 schema 10 Fixed，版本选择见 [ADR-0030](../../docs/adr/0030-s5-policy-condition-candidate.md)。原候选v2见 [ADR-0028](../../docs/adr/0028-versioned-support-evidence-navigation.md)。
 
-两种策略都使用 `deepseek-flash` / DeepSeek-V4.1-Flash、thinking disabled、temperature 0、1024输出token、json_object、消息64KiB/请求128KiB/响应64KiB/内容16KiB。每个family上限12 chat、8逻辑工具、8 query embedding、16 metadata HTTP、8业务HTTP、44物理HTTP、1纠错、12,595,200 token、5,000,000 microyuan；批次持久额度另限制，不能通过新Run绕过。固定图仍只生成原流程所需的1次chat及至多1次纠错；额度不要求把次数耗尽。
+旧版两种策略都使用 `deepseek-flash` / DeepSeek-V4.1-Flash、thinking disabled、temperature 0、1024输出token、json_object、消息64KiB/请求128KiB/响应64KiB/内容16KiB。每个family上限12 chat、8逻辑工具、8 query embedding、16 metadata HTTP、8业务HTTP、44物理HTTP、1纠错、12,595,200 token、5,000,000 microyuan；批次持久额度另限制，不能通过新Run绕过。旧固定图生成1次chat及至多1次纠错；新版终裁不纠错，额度不要求把次数耗尽。
 
 ## 开发回归与正式集顺序
 
-1. 免费实现/机制、提交与具体收费manifest审查通过后才允许第一笔收费。先保存当天官方价格与账号只读状态，记录实际源码、构建和profile摘要。
+1. 免费实现/机制与具体收费manifest审查通过后才允许第一笔收费。开发构建可绑定不可变的工作树源码快照，不将它称为干净提交或正式冻结。先保存当天官方价格与账号只读状态，记录实际源码、构建和profile摘要。
 2. 两策略先在已见40案完整回归；失败和未尝试保留在分母，原模型输出不改。允许开发调优，改变候选后重新形成适用开发证据。
 3. 独立接受开发证据后，以干净提交、源码摘要、实际镜像ID及两个prepared profile冻结候选、基线、评分和阈值。命令不读取或创建正式案例：
 
@@ -40,4 +42,4 @@ S5 launcher 向 SDK 和 Worker 传递三个追踪配置变量，并向 Worker �
 
 正式20案的方案正确≥16，完整案例证据≥18；每条主张真值/来源覆盖和必要主张齐全缺一不可。越权、未经批准写入、重复效果、额度突破为0。所有失败仍在20分母；批准不修复原方案分数。paired输出同一完整分母的胜/平/负及相同model/resources/family限额校验，不要求Agent胜过基线。
 
-费用不完整时 `usage_total=null`，仅提供 `verified_usage_subtotal`；坏证据/unknown不得当零费。持久预算权威始终是所有S5批次known+held（含在途），配对费用保持同样口径。恢复/从头对照另记录冻结故障时点、所有实际调用、known/held与活跃时间；检索20查询另列为本地MiniLM诊断。
+费用不完整时 `usage_total=null`，仅提供 `verified_usage_subtotal`；阶段账本缺失或损坏时 `adjudication_stages.*.usage=null`，完整 unknown 保留 full hold。`no_reasoning_signal_calls` 表示正文和 usage 均无推理信号，不代表精确空正文数量。持久预算权威始终是所有S5批次known+held（含在途），配对费用保持同样口径。恢复/从头对照另记录冻结故障时点、所有实际调用、known/held与活跃时间；检索20查询另列为本地MiniLM诊断。

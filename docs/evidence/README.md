@@ -23,6 +23,8 @@
 - [S5 免费机制、观测、恢复与本地检索](agent-v3-s5-free-2026-10-07.md)：[机器摘要](agent-v3-s5-free-2026-10-07.json)。
 - [S5 正式v2历史结果](agent-v3-s5-real-2026-10-08.md)：Agent正确/完整证据10/20、Fixed各1/20；[原机器摘要](agent-v3-s5-real-2026-10-08.json)保留。
 - [S5 正式v2输入诊断](agent-v3-s5-input-diagnosis-2026-10-08.md)：87次请求绑定、20案完整事实/政策/UTC复核；新增收费0，旧正式质量不变。
+- [S5 固定输入裁决诊断](agent-v3-s5-decision-diagnosis-2026-10-11.md)：已见20案、四组各三轮，A/B/C/D正确31/49/33/19（各60次）；优先验证thinking最终裁决，未计正式验收；[机器摘要](agent-v3-s5-decision-diagnosis-2026-10-11.json)。
+- [S5 独立终裁开发验证](agent-v3-s5-final-adjudication-2026-10-11.md)：开发正确/完整证据38/40、已见回归17/20；004/018未解决，停在冻结之前；[机器摘要](agent-v3-s5-final-adjudication-2026-10-11.json)。
 - [S5 首次Agent开发记录](agent-v3-s5-dev-agent-2026-10-07.md)：[原机器摘要](agent-v3-s5-dev-agent-2026-10-07.json)，保留当时40案结果；当前候选与正式配对见上方S5本轮报告。
 
 - [DeepSeek 接入调查、独立复审与环境阻塞](agent-v3-deepseek-and-blocker-2026-09-16.md)

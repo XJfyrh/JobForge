@@ -16,6 +16,9 @@ const (
 // ConfirmedStepRecovery requires the original complete profile identity. Neither
 // a current request nor a newer deployment can upgrade an older call's policy.
 func (p Profile) ConfirmedStepRecovery() bool {
+	if p.ExecutorVersion == SupportAdjudicationExecutorVersion {
+		return p.FinalAdjudicationEnabled()
+	}
 	if (p.ExecutorVersion != SupportRecoveryExecutorVersion && p.ExecutorVersion != SupportApprovalExecutorVersion) || p.Strategy != SupportAgentStrategy || !p.AuditEnabled() {
 		return false
 	}

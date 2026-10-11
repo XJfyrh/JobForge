@@ -306,7 +306,11 @@ func validateFrame(f Frame) error {
 }
 
 func validPermit(f Frame) bool {
-	if !validError(f.ErrorCode) || !between(f.InputTokenLimit, 0, MaxInteger) || !between(f.OutputTokenLimit, 0, 1024) || f.InputTokenLimit > MaxInteger-f.OutputTokenLimit {
+	outputMax := int64(1024)
+	if f.Binding.StepKind == "model_proposal" {
+		outputMax = run.FinalAdjudicationMaxTokens
+	}
+	if !validError(f.ErrorCode) || !between(f.InputTokenLimit, 0, MaxInteger) || !between(f.OutputTokenLimit, 0, outputMax) || f.InputTokenLimit > MaxInteger-f.OutputTokenLimit {
 		return false
 	}
 	if !f.Granted {
@@ -315,6 +319,9 @@ func validPermit(f Frame) bool {
 	maxCall := int64(10000)
 	if oneOf(f.Subcall, "chat", "query_embedding") {
 		maxCall = 60000
+		if f.Subcall == "chat" && f.Binding.StepKind == "model_proposal" {
+			maxCall = 120000
+		}
 	} else if f.InputTokenLimit != 0 || f.OutputTokenLimit != 0 {
 		return false
 	}

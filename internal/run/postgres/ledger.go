@@ -339,7 +339,7 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
 			return err
 		}
-		budget, err := agentrun.ReservationBudget(profile, req.Subcall)
+		budget, err := agentrun.ReservationBudgetForStep(profile, req.Step.Kind, req.Subcall)
 		if err != nil {
 			return err
 		}
@@ -359,10 +359,7 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 			limit = earliest(limit, account.ValidUntil)
 		}
 		limit = earliest(limit, *r.AttemptDeadline)
-		timeout := 10 * time.Second
-		if req.Subcall == agentrun.SubcallChat {
-			timeout = 60 * time.Second
-		}
+		timeout := profile.CallTimeout(req.Step.Kind, req.Subcall)
 		callDeadline := earliest(now.Add(timeout), limit)
 		dispatchExpiry := earliest(*r.LeaseUntil, callDeadline)
 		reservation := agentrun.CallReservation{PhysicalCallID: req.PhysicalCallID, ToolInvocationID: req.ToolInvocationID,
@@ -459,7 +456,7 @@ func restoreCallBudget(c *callRow, p agentrun.Profile) error {
 	if p.Hash != c.ProfileHash || p.Pricing.Hash != c.Reservation.PriceHash {
 		return agentrun.ErrProfileUnavailable
 	}
-	budget, err := agentrun.ReservationBudget(p, c.Reservation.Subcall)
+	budget, err := agentrun.ReservationBudgetForStep(p, c.StepKind, c.Reservation.Subcall)
 	if err != nil {
 		return err
 	}

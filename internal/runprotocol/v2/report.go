@@ -53,6 +53,8 @@ func priceable(r *run.CallReport) bool {
 	return r.Usage != nil && (r.ProviderAudit == nil || r.ProviderAudit.IdentityState == run.ProviderIdentityCompatible)
 }
 
-func reportAllowsContinuation(r *run.CallReport) bool {
-	return priceable(r) && (r.ProviderAudit == nil || r.ProviderAudit.ModeState == run.ProviderModeNonthinking)
+func reportAllowsContinuation(r *run.CallReport, thinking bool) bool {
+	a := r.ProviderAudit
+	return priceable(r) && (a == nil || (a.SchemaVersion == 2) == thinking &&
+		(a.ModeState == run.ProviderModeNonthinking || thinking && a.ModeState == run.ProviderModeThinking))
 }

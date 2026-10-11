@@ -119,7 +119,7 @@
     },
     {
       "name": "wrong-version",
-      "raw": "{\"schema_version\":2,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"7475cee0aeefb076bc9db9e331ab59ed651740171d8eb87d808d156175f8bcc6\"}"
+      "raw": "{\"schema_version\":3,\"provider\":\"deepseek\",\"response_complete\":true,\"http_status\":200,\"response_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"identity_state\":\"compatible\",\"response_id\":\"synthetic-response-1\",\"response_model\":\"deepseek-flash\",\"system_fingerprint\":\"synthetic-fp-1\",\"created\":0,\"usage_evidence\":\"complete\",\"reasoning_state\":\"absent\",\"reasoning_tokens\":null,\"mode_state\":\"nonthinking\",\"audit_hash\":\"0e68a250a71168b00924fd53ee737ebfe73c1eda7fe8f062668a8dad3ab645e3\"}"
     },
     {
       "name": "complete-with-zero-http-status",

@@ -333,7 +333,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		return decision, nil
 	}
 	if profile.Strategy == SupportAgentStrategy {
-		return decideSupportAgentModel(snapshot, prior, req, decision, allowed)
+		return decideSupportAgentModel(profile, snapshot, prior, req, decision, allowed)
 	}
 	if req.Step.Kind != "model_proposal" && req.Step.Kind != "protocol_correction" && req.Step.Kind != "submit_proposal" {
 		return decision, ErrInvalidArgument
@@ -356,7 +356,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		return decision, ErrStepConflict
 	}
 	if result.CorrectionRequired {
-		if req.Step.Kind != "model_proposal" || result.Proposal != nil {
+		if req.Step.Kind != "model_proposal" || result.Proposal != nil || profile.ThinkingStep(req.Step.Kind) {
 			return decision, ErrModelProtocol
 		}
 		decision.NextKind = "protocol_correction"

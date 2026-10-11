@@ -36,7 +36,7 @@ def instant(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def continuation(evidence: dict[str, Any]) -> bool:
+def continuation(evidence: dict[str, Any], *, executor_version: str = "") -> bool:
     """Check visible completion; PostgreSQL alone authorizes the next call.
 
     The public export cannot prove the internal attempt/session/fence barrier.
@@ -46,8 +46,13 @@ def continuation(evidence: dict[str, Any]) -> bool:
     if calls["batch_frozen"] or calls["batch_stop_code"] is not None:
         return False
     chat = [call for call in calls["items"] if call["subcall"] == "chat"]
+    adjudication = executor_version in {
+        "linux-v2-adjudication-runtime-1",
+        "linux-v2-fixed-adjudication-runtime-1",
+    }
     for call in chat:
         audit = call["provider_audit"]
+        final = adjudication and call["step_kind"] == "model_proposal"
         if (
             not call["usage_known"]
             or call["measurement_anomaly"]
@@ -56,7 +61,9 @@ def continuation(evidence: dict[str, Any]) -> bool:
             or call["observed_at"] is None
             or audit is None
             or audit["identity_state"] != "compatible"
-            or audit["mode_state"] != "nonthinking"
+            or audit["schema_version"] != (2 if final else 1)
+            or audit["mode_state"]
+            not in ({"thinking", "nonthinking"} if final else {"nonthinking"})
         ):
             return False
     steps = [item["record"] for item in evidence["steps"]]
@@ -96,6 +103,17 @@ def continuation(evidence: dict[str, Any]) -> bool:
                 )
                 for call in chat
             )
+        )
+    if adjudication:
+        return bool(
+            run["state"] == "failed"
+            and run["error"] is not None
+            and run["error"]["code"] == "MODEL_PROTOCOL_ERROR"
+            and len(chat) == 1
+            and chat[0]["step_kind"] == "model_proposal"
+            and chat[0]["transport_outcome"] == "response"
+            and chat[0]["business_outcome"] == "rejected"
+            and chat[0]["error_code"] == "MODEL_PROTOCOL_ERROR"
         )
     return bool(
         run["state"] == "failed"
@@ -208,7 +226,10 @@ class Driver:
                     atomic_json(archive / "events.json", events)
                     row["status"] = "finished"
                     self.save()
-                    if not continuation(evidence):
+                    if not continuation(
+                        evidence,
+                        executor_version=self.manifest.get("executor_version", ""),
+                    ):
                         raise BatchStopped("CASE_BARRIER_INCOMPLETE")
                 except (JobForgeError, ExportError, OSError, BatchStopped) as exc:
                     row["error_code"] = (

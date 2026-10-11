@@ -52,7 +52,7 @@ go test -race -count=1 ./...
 .venv/Scripts/python.exe -m pytest sdk/python/tests python/tests tools/agent_probe_data tools/executorprobe tools/support_evaluation
 $env:PYTHONPATH='python;sdk/python'
 .venv/Scripts/python.exe -m pytest tools/support_recovery tools/support_approval
-.venv/Scripts/python.exe -m pytest tools/support_s5 tools/support_lifecycle
+.venv/Scripts/python.exe -m pytest tools/support_s5 tools/support_lifecycle tools/support_diagnosis
 .venv/Scripts/ruff.exe check .
 .venv/Scripts/ruff.exe format --check .
 .venv/Scripts/mypy.exe sdk/python
@@ -62,9 +62,9 @@ $env:MYPYPATH='python;sdk/python'
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_evaluation
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
 .venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_approval
-.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_s5 tools/support_lifecycle
+.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_s5 tools/support_lifecycle tools/support_diagnosis
 .venv/Scripts/python.exe tools/check_sqlfluff_baseline.py
-.venv/Scripts/sqlfluff.exe lint migrations
+.venv/Scripts/sqlfluff.exe lint migrations tools/support_diagnosis/migrations
 .tools/bin/buf.exe lint
 ```
 
@@ -123,6 +123,8 @@ docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint pr
 真实模型层使用独立[工作流](../.github/workflows/real-models.yml)及[旧模型任务](legacy/real-tasks.md)或 [v3 批次](agent-v3/cloud-batch.md)的明确运行范围。缺 `JOBFORGE_REAL_MODEL_URL` 的 skip 不算真实模型通过。模型协议探针 fixture 不代表真实业务工具，开发集分数不代表保留集泛化；资料/注册能力不构成收费授权。
 
 S5登记与离线评分按[S5工具](../tools/support_s5/README.md)：开发40案、正式v1/v2/v3各20案分别核验，`tools/support_evaluation/test_registration_routing.py`覆盖两策略及数量/未知dataset拒绝，Go准备器另覆盖外部20案路径。正式Agent须正确≥16、完整案例证据≥18、四类硬失败0；普通质量失败仍完成Fixed基线，再停恢复/演示。原SDK输出、实际PG与业务/回执前后审计必须保留；输入重建仅核验实际request parameter hash，不调用模型，也不计为修复后的质量通过。
+
+独立终裁候选按 [ADR-0033](adr/0033-versioned-final-adjudication.md) 验证：真实 PostgreSQL 的 `TestRunAdjudication` 覆盖新 Agent/Fixed 许可、初稿隔离、终裁失败、unknown hold、晚到计量及两阶段恢复；固定 Linux 镜像中的 `TestRunSupportAgentExecutor/adjudication` 覆盖安装后的长终裁、取消、空推理、截断和超长内容。`tools/support_s5/test_adjudication.py` 检查阶段未知计量不作零、初稿不能替代最终分数；旧版本仍运行原合同用例。以上机制测试的模型响应均为合成，真实开发和已见回归另列。
 
 ## CI 质量门禁
 
