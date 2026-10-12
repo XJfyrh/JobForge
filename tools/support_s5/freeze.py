@@ -18,6 +18,13 @@ from tools.support_s5.score import THRESHOLDS
 
 ROOT = Path(__file__).resolve().parents[2]
 
+# Independently reviewed (Agent, Fixed) deployment schema pairs. ADR-0034 adds
+# the schema 13 candidate against the unchanged schema 12 Fixed baseline; every
+# pair listed before it keeps its exact acceptance and rejection behaviour. The
+# schema 11/12 pair is deliberately absent: admitting it would change existing
+# rejection behaviour for schema 11, and ADR-0034 supersedes that candidate.
+SCHEMA_PAIRS = frozenset({(6, 5), (7, 8), (9, 10), (13, 12)})
+
 
 def source_hashes() -> dict[str, str]:
     """Bind installed execution, preparation, UI, telemetry and operator sources."""
@@ -36,6 +43,9 @@ def source_hashes() -> dict[str, str]:
         "api/support/s5-fixed-v3",
         "api/support/s5-agent-v4",
         "api/support/s5-fixed-v4",
+        # ADR-0034 introduces only the schema 13 Agent deployment definition;
+        # the Fixed baseline stays schema 12 (api/support/s5-fixed-v4).
+        "api/support/s5-agent-v5",
     ):
         for file in (ROOT / directory).rglob("*"):
             if (
@@ -93,6 +103,7 @@ def create(
     build_receipt: Path,
     seen_formal_manifest: Path | None = None,
     seen_formal_v2_manifest: Path | None = None,
+    seen_formal_v3_manifest: Path | None = None,
 ) -> dict[str, Any]:
     """No formal cases are read, generated or executed by candidate freeze."""
     status = subprocess.run(
@@ -137,25 +148,38 @@ def create(
         read(p)["profiles"][0]["definition"] for p in (agent_config, fixed_config)
     )
     need(
-        (agent["schema_version"], fixed["schema_version"]) in {(6, 5), (7, 8), (9, 10)}
+        (agent["schema_version"], fixed["schema_version"]) in SCHEMA_PAIRS
         and agent["model"] == fixed["model"]
         and agent["resources"] == fixed["resources"],
         "COMPARISON_PROFILE_MISMATCH",
     )
+    # Each schema binds exactly the formal cohorts already seen when it was
+    # proposed. ADR-0034's schema 13 therefore binds v1+v2+v3: the third formal
+    # package is seen too, so it can never serve as the unseen acceptance set.
+    agent_schema: int = agent["schema_version"]
     seen = {}
-    if agent["schema_version"] in {7, 9}:
+    if agent_schema in {7, 9, 13}:
         need(seen_formal_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_manifest is not None
         seen = seen_package(seen_formal_manifest, "support-s5-2026-10-07-v1")
     need(
-        agent["schema_version"] == 9 or seen_formal_v2_manifest is None,
+        agent_schema in {9, 13} or seen_formal_v2_manifest is None,
+        "SEEN_FORMAL_PROVENANCE_SCOPE",
+    )
+    need(
+        agent_schema == 13 or seen_formal_v3_manifest is None,
         "SEEN_FORMAL_PROVENANCE_SCOPE",
     )
     seen_v2 = {}
-    if agent["schema_version"] == 9:
+    if agent_schema in {9, 13}:
         need(seen_formal_v2_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_v2_manifest is not None
         seen_v2 = seen_package(seen_formal_v2_manifest, "support-s5-2026-10-07-v2")
+    seen_v3 = {}
+    if agent_schema == 13:
+        need(seen_formal_v3_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
+        assert seen_formal_v3_manifest is not None
+        seen_v3 = seen_package(seen_formal_v3_manifest, "support-s5-2026-10-08-v3")
     result = {
         "schema_version": 1,
         "status": "frozen_before_unseen_creation",
@@ -171,7 +195,9 @@ def create(
         "images": build["images"],
         "model": agent["model"],
     }
-    if seen_v2:
+    if seen_v3:
+        result["seen_formal_packages"] = [seen, seen_v2, seen_v3]
+    elif seen_v2:
         result["seen_formal_packages"] = [seen, seen_v2]
     elif seen:
         result["seen_formal_package"] = seen
@@ -213,6 +239,7 @@ def main() -> None:
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--seen-formal-manifest", type=Path)
     parser.add_argument("--seen-formal-v2-manifest", type=Path)
+    parser.add_argument("--seen-formal-v3-manifest", type=Path)
     args = parser.parse_args()
     save_new(
         args.out,
@@ -223,6 +250,7 @@ def main() -> None:
             args.build_receipt,
             args.seen_formal_manifest,
             args.seen_formal_v2_manifest,
+            args.seen_formal_v3_manifest,
         ),
     )
 

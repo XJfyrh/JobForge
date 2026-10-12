@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from tools.support_evaluation.evidence import Package, fields, need
+from tools.support_evaluation.evidence import EvidenceError, Package, fields, need
 from tools.support_evaluation.predicates import derive_facts
 from tools.support_evaluation.validate_data import (
     ARTIFACTS,
@@ -24,8 +24,18 @@ from tools.support_evaluation.validate_data import (
 DATASET = "support-s5-2026-10-07-v1"
 DATASET_V2 = "support-s5-2026-10-07-v2"
 DATASET_V3 = "support-s5-2026-10-08-v3"
+# The ADR-0034 candidate (Agent schema 13 / Fixed schema 12) has no unseen cohort
+# yet, so its dataset id cannot be a literal here. Bind it explicitly in the
+# reviewed change that authors the package; while it is None no unseen cohort is
+# admitted at all, and prior_families() rejects rather than returning nothing.
+# Binding it here is necessary but not sufficient: the same id must also be
+# registered in tools/support_evaluation/evidence.py, internal/run/support_profile.go
+# and the api/support/s5-agent-v5 + s5-fixed-v4 dataset_id enums.
+DATASET_V4: str | None = None
 SEEN_DATASETS = {DATASET, DATASET_V2, DATASET_V3}
-DATASETS = {*SEEN_DATASETS, DATASET_V3}
+DATASETS: set[str] = {*SEEN_DATASETS, DATASET_V3}
+if DATASET_V4 is not None:
+    DATASETS.add(DATASET_V4)
 ARTIFACT_NAMES = (ARTIFACTS - {"evaluation/dev_gold.jsonl"}) | {
     "evaluation/gold.jsonl",
     "evaluation/family-review.json",
@@ -114,6 +124,13 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
             "novelty_against_seen_formal_confirmed",
         }
     elif dataset == DATASET_V3:
+        review_fields |= {
+            "seen_formal_manifest_sha256_by_dataset",
+            "novelty_against_seen_formals_confirmed",
+        }
+    elif DATASET_V4 is not None and dataset == DATASET_V4:
+        # The first unseen cohort of the ADR-0034 candidate is novel against all
+        # three seen formals, so it carries the same by-dataset binding as v3.
         review_fields |= {
             "seen_formal_manifest_sha256_by_dataset",
             "novelty_against_seen_formals_confirmed",
@@ -284,7 +301,20 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
 def prior_families(
     dataset: str, review: dict[str, Any], freeze: dict[str, Any]
 ) -> set[str]:
-    """Require every seen cohort in both the new freeze and novelty review."""
+    """Require every seen cohort in both the new freeze and novelty review.
+
+    Every admitted dataset has an explicit branch; an unrecognised one raises
+    instead of yielding no prior families, so the novelty gate can never pass
+    vacuously.
+    """
+    if dataset == DATASET:
+        # v1 was the FIRST unseen cohort, so it has no prior formal package to
+        # bind. Its only priors are the development families, which load_package
+        # already unions in before calling this. Returning an empty set here is
+        # the reviewed historical behaviour and must not become a rejection:
+        # re-scoring the already-seen v1 formal set is a supported
+        # `--seen-diagnostic` path.
+        return set()
     if dataset == DATASET_V2:
         prior = freeze.get("seen_formal_package", {})
         need(
@@ -310,4 +340,32 @@ def prior_families(
             "SEEN_FORMAL_NOVELTY_REVIEW",
         )
         return {family for p in prior_list for family in p["template_families"]}
-    return set()
+    if DATASET_V4 is not None and dataset == DATASET_V4:
+        return unseen_prior_families(review, freeze)
+    # Fail closed. An unrecognised cohort has no reviewed prior families, and
+    # returning an empty set here would make the family-novelty gate in
+    # load_package vacuous for exactly the batch that carries acceptance weight.
+    raise EvidenceError("UNKNOWN_DATASET_PRIOR_FAMILIES")
+
+
+def unseen_prior_families(review: dict[str, Any], freeze: dict[str, Any]) -> set[str]:
+    """Bind all three seen formal cohorts to the first unseen ADR-0034 cohort.
+
+    ``load_package`` already adds the development families, so the union of that
+    set with this one is the complete prior-family set the novelty gate checks.
+    """
+    prior_list = freeze.get("seen_formal_packages", [])
+    need(
+        isinstance(prior_list, list)
+        and len(prior_list) == 3
+        and all(isinstance(p, dict) for p in prior_list)
+        and {p.get("dataset_id") for p in prior_list} == SEEN_DATASETS,
+        "SEEN_FORMAL_PROVENANCE_REQUIRED",
+    )
+    expected = {p["dataset_id"]: p["manifest_sha256"] for p in prior_list}
+    need(
+        review["seen_formal_manifest_sha256_by_dataset"] == expected
+        and review["novelty_against_seen_formals_confirmed"] is True,
+        "SEEN_FORMAL_NOVELTY_REVIEW",
+    )
+    return {family for p in prior_list for family in p["template_families"]}

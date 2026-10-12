@@ -9,7 +9,12 @@ from pathlib import Path
 import pytest
 from jobforge_agent import runtime_adapters, runtime_registry
 from jobforge_agent.dispatch import DispatchError
-from jobforge_agent.runtime_input import EXECUTOR_VERSION
+from jobforge_agent.runtime_input import (
+    ADJUDICATION_EXECUTOR_VERSION,
+    ADJUDICATION_V2_EXECUTOR_VERSION,
+    EXECUTOR_VERSION,
+)
+from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
 from runtime_fixture_registry import MechanismAdapter
 
 PROFILE = {
@@ -132,3 +137,44 @@ def test_production_support_requires_matching_manifest_identity(
         runtime_adapters.resolve_adapter(
             profile["adapter_id"], profile["profile_id"], "b" * 64, EXECUTOR_VERSION
         )
+
+
+@pytest.mark.parametrize(
+    "prompt,executor,valid",
+    [
+        ("support-agent-prompt-v5", ADJUDICATION_V2_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v5", ADJUDICATION_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v4", ADJUDICATION_V2_EXECUTOR_VERSION, False),
+    ],
+)
+def test_manifest_selects_only_registered_v5(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    prompt: str,
+    executor: str,
+    valid: bool,
+) -> None:
+    """The v5 candidate resolves only through its own frozen manifest tuple."""
+    manifest(
+        monkeypatch,
+        tmp_path,
+        {
+            "schema_version": 2,
+            "executor_version": executor,
+            "profiles": [
+                {
+                    "profile_id": "candidate",
+                    "profile_hash": "a" * 64,
+                    "adapter_id": "support-agent-v1",
+                    "prompt_version": prompt,
+                }
+            ],
+        },
+    )
+    args = ("support-agent-v1", "candidate", "a" * 64, executor)
+    if valid:
+        assert type(runtime_adapters.resolve_adapter(*args)) is SupportAgentV5Adapter
+    else:
+        with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
+            runtime_adapters.resolve_adapter(*args)
+    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1", "support-agent-v1"}

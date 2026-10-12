@@ -4,7 +4,7 @@
 
 ## 数据与权限
 
-support schema 1–10 固定 `provider_audit_policy=deepseek-audit-v1`；schema 11–12 固定 `deepseek-audit-v2`，均使用 `expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
+support schema 1–10 固定 `provider_audit_policy=deepseek-audit-v1`；schema 11–13 固定 `deepseek-audit-v2`，均使用 `expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
 
 `deepseek-audit-v2` 的调查步骤仍使用 audit schema 1/nonthinking；只有原始步骤为 `model_proposal` 的终裁使用 audit schema 2，可观测 `thinking` 或空推理的 `nonthinking`。Go 本地判定、PG 持久判定与 IPC 都按原 profile/步骤选择，不能从响应反推权限。非空推理正文与显式零推理 token 矛盾时 usage 无效，保留 full hold 并停发；有效计量下的截断或无效最终 JSON 保留原费用，结束 Run 而非重发。reasoning token 属于 completion，不额外相加。[ADR-0033](../adr/0033-versioned-final-adjudication.md) 定义完整边界。
 

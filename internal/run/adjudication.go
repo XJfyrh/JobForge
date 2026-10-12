@@ -9,8 +9,13 @@ import (
 const (
 	// SupportAgentPromptV4 preserves v3 investigation and adds final-only adjudication.
 	SupportAgentPromptV4 = "support-agent-prompt-v4"
+	// SupportAgentPromptV5 separates the final stage's task from the investigation stage.
+	SupportAgentPromptV5 = "support-agent-prompt-v5"
 	// SupportAdjudicationExecutorVersion opts Agent into the two-stage model graph.
 	SupportAdjudicationExecutorVersion = "linux-v2-adjudication-runtime-1"
+	// SupportAdjudicationV2ExecutorVersion runs the same two-stage graph with the
+	// separated v5 final task; the investigation contract is unchanged.
+	SupportAdjudicationV2ExecutorVersion = "linux-v2-adjudication-runtime-2"
 	// SupportFixedAdjudicationExecutorVersion uses the same final model in the fixed graph.
 	SupportFixedAdjudicationExecutorVersion = "linux-v2-fixed-adjudication-runtime-1"
 	// FinalAdjudicationMaxTokens includes reasoning and final content together.
@@ -19,7 +24,7 @@ const (
 
 // FinalAdjudicationEnabled selects only a fully frozen new profile.
 func (p Profile) FinalAdjudicationEnabled() bool {
-	if p.ExecutorVersion != SupportAdjudicationExecutorVersion && p.ExecutorVersion != SupportFixedAdjudicationExecutorVersion {
+	if p.ExecutorVersion != SupportAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV2ExecutorVersion && p.ExecutorVersion != SupportFixedAdjudicationExecutorVersion {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

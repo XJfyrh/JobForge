@@ -45,6 +45,7 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0031](0031-s5-controlled-decision-diagnosis.md) | S5 固定输入裁决对照 | Accepted（诊断工具，不改变正式验收） | 2026-10-11 |
 | [ADR-0032](0032-s5-reasoning-observation-amendment.md) | 空推理观测与原名单续跑 | Accepted（仅修订空推理分类） | 2026-10-11 |
 | [ADR-0033](0033-versioned-final-adjudication.md) | 版本化独立终裁 | Accepted（随本 PR 合并生效） | 2026-10-11 |
+| [ADR-0034](0034-s5-final-stage-separation-and-condition-enumeration.md) | S5 终裁任务分离与条件枚举候选 | Accepted（维护者批准方案与 ¥28 上限，独立设计审查通过；随本 PR 合并生效。增补 0033 的冻结守卫与阶段费用上限） | 2026-10-12 |
 
 ## 增量适用范围
 

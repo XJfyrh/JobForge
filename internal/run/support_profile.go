@@ -174,10 +174,10 @@ func supportDigest(value string) bool {
 
 func (d SupportDefinition) validate() error {
 	m, p, r, price := d.Model, d.Program, d.Resources, d.Price
-	if d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9 && d.SchemaVersion != 11 && (d.Action != nil || p.ApprovalPolicy != "") {
+	if d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9 && d.SchemaVersion != 11 && d.SchemaVersion != 13 && (d.Action != nil || p.ApprovalPolicy != "") {
 		return ErrProfileUnavailable
 	}
-	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9 || d.SchemaVersion == 11 {
+	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9 || d.SchemaVersion == 11 || d.SchemaVersion == 13 {
 		if d.Action == nil || p.ApprovalPolicy != TicketResolutionApprovalPolicy ||
 			d.Action.Operation != business.ResolutionOperation || !ValidIdentifier(d.Action.KeyID) || !supportDigest(d.Action.PublicKeySHA256) {
 			return ErrProfileUnavailable
@@ -210,7 +210,7 @@ func (d SupportDefinition) validate() error {
 		}
 		expected.ObservedOn = m.ObservedOn
 		expected.MessageContentBytes, expected.RequestBodyBytes = 65536, 131072
-	case 2, 3, 4, 6, 7, 9, 11:
+	case 2, 3, 4, 6, 7, 9, 11, 13:
 		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion >= 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
 			return ErrProfileUnavailable
 		}
@@ -223,6 +223,9 @@ func (d SupportDefinition) validate() error {
 		}
 		if d.SchemaVersion == 11 {
 			promptVersion = SupportAgentPromptV4
+		}
+		if d.SchemaVersion == 13 {
+			promptVersion = SupportAgentPromptV5
 		}
 		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != promptVersion ||
 			p.DecisionSchema != SupportAgentDecisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
@@ -237,7 +240,7 @@ func (d SupportDefinition) validate() error {
 	default:
 		return ErrProfileUnavailable
 	}
-	if d.SchemaVersion == 11 || d.SchemaVersion == 12 {
+	if d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 {
 		final := expected
 		final.Thinking, final.ReasoningEffort = "enabled", "high"
 		final.MaxTokens, final.ResponseBodyBytes = FinalAdjudicationMaxTokens, 1048576
@@ -251,7 +254,7 @@ func (d SupportDefinition) validate() error {
 	if d.SchemaVersion == 7 || d.SchemaVersion == 8 {
 		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID
 	}
-	if d.SchemaVersion == 9 || d.SchemaVersion == 10 || d.SchemaVersion == 11 || d.SchemaVersion == 12 {
+	if d.SchemaVersion == 9 || d.SchemaVersion == 10 || d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 {
 		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID || r.DatasetID == SupportS5V3DatasetID
 	}
 	if m != expected || p.ProposalSchema != SupportProposalSchema || !validDataset ||
@@ -324,10 +327,13 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 	if definition.SchemaVersion == 5 || definition.SchemaVersion == 8 || definition.SchemaVersion == 10 {
 		p.ExecutorVersion = SupportFixedComparisonExecutorVersion
 	}
-	if definition.SchemaVersion == 11 || definition.SchemaVersion == 12 {
+	if definition.SchemaVersion == 11 || definition.SchemaVersion == 12 || definition.SchemaVersion == 13 {
 		p.ExecutorVersion = SupportAdjudicationExecutorVersion
 		if definition.SchemaVersion == 12 {
 			p.ExecutorVersion = SupportFixedAdjudicationExecutorVersion
+		}
+		if definition.SchemaVersion == 13 {
+			p.ExecutorVersion = SupportAdjudicationV2ExecutorVersion
 		}
 		p.ProviderAuditPolicy = ProviderAuditPolicyDeepSeekV2
 		p.MaxOutputTokens, p.FamilyTokenLimit = FinalAdjudicationMaxTokens, 12610560
@@ -353,10 +359,13 @@ func SupportProfileHash(p Profile) (string, error) {
 		expectedExecutor = SupportFixedComparisonExecutorVersion
 	}
 	policy, output, family := ProviderAuditPolicyDeepSeekV1, int64(1024), int64(12595200)
-	if d.SchemaVersion == 11 || d.SchemaVersion == 12 {
+	if d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 {
 		expectedExecutor = SupportAdjudicationExecutorVersion
 		if d.SchemaVersion == 12 {
 			expectedExecutor = SupportFixedAdjudicationExecutorVersion
+		}
+		if d.SchemaVersion == 13 {
+			expectedExecutor = SupportAdjudicationV2ExecutorVersion
 		}
 		policy, output, family = ProviderAuditPolicyDeepSeekV2, FinalAdjudicationMaxTokens, 12610560
 	}

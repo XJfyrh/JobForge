@@ -46,10 +46,14 @@ with RunClient(os.environ["JOBFORGE_RUN_URL"], os.environ["JOBFORGE_RUN_TOKEN"])
 | S5初版公平对照 | Agent schema 6 / Fixed schema 5 | 相同模型、工具、数据与family上限 |
 | S5历史候选v2 | Agent schema 7 / Fixed schema 8，均使用manifest 2 | `support-agent-prompt-v2`；版本选择见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md) |
 | S5候选v3 | Agent schema 9 / Fixed schema 10，均使用manifest 2 | `support-agent-prompt-v3`；必要条件核对见[ADR-0030](../adr/0030-s5-policy-condition-candidate.md) |
+| S5独立终裁v4 | Agent schema 11 / Fixed schema 12，均使用manifest 2 | `support-agent-prompt-v4`；版本化独立终裁见[ADR-0033](../adr/0033-versioned-final-adjudication.md) |
+| S5终裁任务分离v5 | Agent schema 13 / manifest 2，Fixed 仍为 schema 12 | `support-agent-prompt-v5`；终裁任务分离与条件枚举见[ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md) |
 
 schema 7保留原Agent完整指令、事实字段、`policy_retrieval`与`previous_tools`，补充已提交请求去重、细分政策导航、缺失段落并集、correction来源和活跃事件说明。导航只展示实际取回及尚缺段落，不提供业务答案或自动取工具。模型仍选择全部工具、主张和结论。最终响应为`{"type":"final","proposal":{...}}`，未知字段和其他外层类型拒绝。
 
 schema 9在原输入上追加冲突、严格较后纠正、时间差与继续取证的核对提示，不计算政策真值或改变输出合同。Fixed schema 10仅增加新数据身份，原Fixed行为保留。开发通过并冻结后，正式v3须对开发及正式v1/v2均完成独立场景/模板新颖性审查。
+
+schema 11把调查与终裁分成两个阶段：调查返回不可审批的`investigation_complete`初稿标记，Go再调度只接收已提交事实与来源的独立`model_proposal`。schema 13只改两阶段各自看到的内容——终裁改为自包含的final-only请求并移除载荷中的工具额度与检索导航，调查增加条件类枚举与`definition_retrieved`——输出形状、工具、事实投影与全部校验保持不变。Fixed未获得schema 13的澄清，配对对照存在这一已知不对称。
 
 S5两策略每个family最多12 chat、8逻辑工具、8 query embedding、44物理HTTP和1次纠错；消息64KiB、请求128KiB，另受本批持久费用/chat上限和期限约束。相同参数重复调用以`MODEL_PROTOCOL_ERROR`结束，不再次扣工具额度。unknown/full hold保留并停批，缺失usage不按零费处理。不同executor版本不能混入同一部署manifest，映射见[运行时指南](runtime.md)。
 

@@ -213,6 +213,11 @@ def score_export(
         hard["budget_breach"] += bool(
             errors & {"UNRESERVED_PHYSICAL_SEND", "TRUSTED_BUDGET_CHANGED"}
         ) or budget_breach(indexed[result["case_id"]])
+    measurement = None
+    if adjudication_profile(registered["profile"]):
+        from tools.support_s5.adjudication import measurement_summary
+
+        measurement = measurement_summary(results)
     complete = registered["evidence_origin"] == "run_api_export" and all(
         r["status"] == "run"
         and r["model_send_observed"]
@@ -233,7 +238,14 @@ def score_export(
         for k in ZERO_USAGE
     }
     return {
-        "schema_version": 1,
+        # Version 2 adds adjudication_measurement and the per-case
+        # claim_level_delta/retrieval_closure/definition_closure/reasoning_budget
+        # groups purely additively. Neither freeze.py nor package.py validates
+        # this summary schema_version (freeze binds reports by
+        # sha256/kind/denominator/proposal_audit_complete; the seen-diagnostic
+        # gate checks THRESHOLDS only), so published schema-1 summaries and
+        # frozen receipts stay valid byte-unchanged.
+        "schema_version": 2,
         "scorer_version": SCORER,
         "kind": "s5-seen-diagnostic"
         if seen_diagnostic
@@ -266,6 +278,7 @@ def score_export(
         "execution_outcomes": dict(
             Counter(r["run_state"] or r["status"] for r in results)
         ),
+        "adjudication_measurement": measurement,
         "cases": results,
     }
 

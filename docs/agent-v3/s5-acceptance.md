@@ -23,6 +23,7 @@
 | S5-15 | 无模型控制开销、checkpoint提交p95和恢复耗时 | 有限固定机器/样本/并发测量，原始数值与环境 | 100次只读p95 17.184ms；33次CommitStep RPC p95 151.262ms；自然恢复31.015秒 |
 | S5-13 | 适用工程检查及最新head全部8项CI | build/vet/lint/race/PG/Linux/Python/SQL/Buf/observability/链接与秘密 | 本地检查通过；最新head状态见[PR检查](https://github.com/XJfyrh/JobForge/pull/61/checks) |
 | S5-14 | 当前文档、简短成果与演示可按实际证据复核 | README/导航/状态/架构/开发/测试/操作/证据索引 | 当前文档与三分钟脚本已更新；实模演示待运行 |
+| S5-16 | 逐案可判定性：主张级与证据级配对回退、**两种**检索闭合、终裁推理余量分别可见，且跨案汇总在受审代码内 | `adjudication_stages` 的 `claim_level_delta`(按 coverage_key，含 `flipped`/`evidence_regressed`)、`retrieval_closure`(可引用闭合，含 `adjudication_recoverable`)、`definition_closure`(定义闭合，含 `investigation_definition_complete`)、`reasoning_budget`(含 `truncation_risk`)，以及 `score.py` 的 `adjudication_measurement`（摘要 schema_version 2，两种闭合各带显式分母）；离线工具，加法字段，不改任何验收口径 | 已实现并由合成用例覆盖（别名映射与 `claim_sources` 全 17 分支 × 20 别名双向一致、未测得不计通过、未知 dataset 失败关闭）；上一轮 60 案复算为可引用闭合 2/60 不可达、定义闭合 3/60 不完整（57 完整→55 正确、3 不完整→0 正确）；真实批次待运行 |
 
 ## 审查点与执行顺序
 

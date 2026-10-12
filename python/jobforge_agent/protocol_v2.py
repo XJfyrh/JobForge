@@ -635,6 +635,7 @@ class Conversation:
             and selection.get("executor_version")
             in {
                 "linux-v2-adjudication-runtime-1",
+                "linux-v2-adjudication-runtime-2",
                 "linux-v2-fixed-adjudication-runtime-1",
             }
         )

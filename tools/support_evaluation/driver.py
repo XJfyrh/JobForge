@@ -48,6 +48,7 @@ def continuation(evidence: dict[str, Any], *, executor_version: str = "") -> boo
     chat = [call for call in calls["items"] if call["subcall"] == "chat"]
     adjudication = executor_version in {
         "linux-v2-adjudication-runtime-1",
+        "linux-v2-adjudication-runtime-2",
         "linux-v2-fixed-adjudication-runtime-1",
     }
     for call in chat:

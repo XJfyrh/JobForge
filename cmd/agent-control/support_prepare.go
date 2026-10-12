@@ -297,6 +297,9 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 		if d.Program.PromptVersion == run.SupportAgentPromptV4 {
 			promptPath = "python/jobforge_agent/support_agent_v4.py"
 		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV5 {
+			promptPath = "python/jobforge_agent/support_agent_v5.py"
+		}
 	}
 	sources := map[string]string{
 		"api/support/v1/schema.json": d.Program.ProposalSchemaSHA256,

@@ -9,23 +9,29 @@ import (
 	"github.com/xjfyrh/jobforge/internal/business"
 )
 
-func adjudicationProfile(t *testing.T, agent bool) Profile {
-	t.Helper()
+func adjudicationDefinition(schema int) SupportDefinition {
 	d := supportDefinitionFixture()
-	d.SchemaVersion = 12
+	d.SchemaVersion = schema
 	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-11", "2026-10-11"
 	d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
 	final := d.Model
 	final.Thinking, final.ReasoningEffort, final.MaxTokens, final.ResponseBodyBytes = "enabled", "high", 16384, 1048576
 	d.FinalModel = &final
-	if agent {
-		d.SchemaVersion = 11
+	if schema != 12 {
 		d.Program.Strategy, d.Program.Adapter, d.Program.PromptVersion = SupportAgentStrategy, "support-agent-v1", SupportAgentPromptV4
+		if schema == 13 {
+			d.Program.PromptVersion = SupportAgentPromptV5
+		}
 		d.Program.DecisionSchema, d.Program.DecisionSchemaSHA256 = SupportAgentDecisionSchema, strings.Repeat("a", 64)
 		d.Program.RecoveryPolicy, d.Program.ApprovalPolicy = ConfirmedUncommittedRecovery, TicketResolutionApprovalPolicy
 		d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "test-key", PublicKeySHA256: strings.Repeat("a", 64)}
 	}
-	p, err := BuildSupportProfile("adjudication", d)
+	return d
+}
+
+func adjudicationProfile(t *testing.T, schema int) Profile {
+	t.Helper()
+	p, err := BuildSupportProfile("adjudication", adjudicationDefinition(schema))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,9 +39,16 @@ func adjudicationProfile(t *testing.T, agent bool) Profile {
 }
 
 func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
-	for _, agent := range []bool{true, false} {
-		p := adjudicationProfile(t, agent)
-		if !p.FinalAdjudicationEnabled() || p.ValidateAuditPolicy() != nil || p.ApprovalEnabled() != agent || p.ConfirmedStepRecovery() != agent {
+	for _, schema := range []int{11, 12, 13} {
+		p := adjudicationProfile(t, schema)
+		agent, executor := schema != 12, SupportFixedAdjudicationExecutorVersion
+		if schema == 11 {
+			executor = SupportAdjudicationExecutorVersion
+		}
+		if schema == 13 {
+			executor = SupportAdjudicationV2ExecutorVersion
+		}
+		if p.ExecutorVersion != executor || !p.FinalAdjudicationEnabled() || p.ValidateAuditPolicy() != nil || p.ApprovalEnabled() != agent || p.ConfirmedStepRecovery() != agent {
 			t.Fatal("versioned capability mismatch")
 		}
 		for _, kind := range []string{"model_decision", "protocol_correction", "model_proposal"} {
@@ -46,6 +59,10 @@ func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
 			}
 			if err != nil || budget.OutputTokens != output || p.CallTimeout(kind, SubcallChat) != timeout || p.AllowsProviderMode(kind, ProviderModeThinking) != (kind == "model_proposal") {
 				t.Fatalf("wrong step policy %s: %+v %v", kind, budget, err)
+			}
+			thinking := &ProviderAudit{SchemaVersion: 2, ModeState: ProviderModeThinking}
+			if p.AllowsProviderAudit(kind, thinking) != (kind == "model_proposal") {
+				t.Fatalf("wrong thinking audit policy %s", kind)
 			}
 		}
 		mutated := p
@@ -64,8 +81,21 @@ func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
 	}
 }
 
+func TestAdjudicationPromptVersionBoundToSchema(t *testing.T) {
+	mismatch := adjudicationDefinition(13)
+	mismatch.Program.PromptVersion = SupportAgentPromptV4
+	if _, err := BuildSupportProfile("mismatch", mismatch); err == nil {
+		t.Fatal("schema 13 accepted the v4 prompt")
+	}
+	mismatch = adjudicationDefinition(11)
+	mismatch.Program.PromptVersion = SupportAgentPromptV5
+	if _, err := BuildSupportProfile("mismatch", mismatch); err == nil {
+		t.Fatal("schema 11 accepted the v5 prompt")
+	}
+}
+
 func TestAdjudicationDraftCannotApproveAndFinalCannotRetry(t *testing.T) {
-	p := adjudicationProfile(t, true)
+	p := adjudicationProfile(t, 11)
 	request := func(kind string, result StepResult) CommitStepRequest {
 		_, req := supportCommitRequest(t, kind, result)
 		req.Step.ProfileID, req.Step.ProfileHash = p.ID, p.Hash

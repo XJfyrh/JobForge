@@ -368,6 +368,13 @@ def registration(
                     "deepseek-audit-v2",
                 ),
                 (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-adjudication-runtime-2",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
                     "support_fixed_v1",
                     "support-proposal-v1",
                     "linux-v2-fixed-comparison-runtime-1",
@@ -453,9 +460,10 @@ def registration(
 
 
 def adjudication_profile(profile: dict[str, Any]) -> bool:
-    """Expanded permits belong only to the two versioned terminal runtimes."""
+    """Expanded permits belong only to the three versioned terminal runtimes."""
     return profile.get("executor_version") in {
         "linux-v2-adjudication-runtime-1",
+        "linux-v2-adjudication-runtime-2",
         "linux-v2-fixed-adjudication-runtime-1",
     }
 

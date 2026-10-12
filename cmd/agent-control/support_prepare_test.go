@@ -102,8 +102,8 @@ func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T)
 
 func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 	o, source := supportPrepareFixture(t)
-	for _, schema := range []int{7, 8, 9, 10, 11, 12} {
-		agent := schema == 7 || schema == 9 || schema == 11
+	for _, schema := range []int{7, 8, 9, 10, 11, 12, 13} {
+		agent := schema == 7 || schema == 9 || schema == 11 || schema == 13
 		d := source.Definition
 		if agent {
 			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
@@ -125,6 +125,10 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 			if schema == 11 {
 				d.Program.PromptVersion = run.SupportAgentPromptV4
 				promptFile = "support_agent_v4.py"
+			}
+			if schema == 13 {
+				d.Program.PromptVersion = run.SupportAgentPromptV5
+				promptFile = "support_agent_v5.py"
 			}
 			d.Program.ApprovalPolicy = run.TicketResolutionApprovalPolicy
 			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}

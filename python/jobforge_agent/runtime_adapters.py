@@ -63,6 +63,7 @@ def _manifest_profiles(
             or executor_version
             in {
                 "linux-v2-adjudication-runtime-1",
+                "linux-v2-adjudication-runtime-2",
                 "linux-v2-fixed-adjudication-runtime-1",
             }
             and value["schema_version"] != 2
@@ -120,6 +121,11 @@ def _manifest_profiles(
                     "linux-v2-adjudication-runtime-1",
                 ),
                 (
+                    "support-agent-v1",
+                    "support-agent-prompt-v5",
+                    "linux-v2-adjudication-runtime-2",
+                ),
+                (
                     "support-fixed-v1",
                     "support-fixed-prompt-v1",
                     "linux-v2-fixed-adjudication-runtime-1",
@@ -166,6 +172,10 @@ def resolve_adapter(
         from jobforge_agent.support_agent_v4 import SupportAgentV4Adapter
 
         return SupportAgentV4Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v5":
+        from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
+
+        return SupportAgentV5Adapter()
     return adapter
 
 

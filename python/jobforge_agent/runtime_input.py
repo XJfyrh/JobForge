@@ -18,9 +18,14 @@ RECOVERY_EXECUTOR_VERSION = "linux-v2-recovery-runtime-1"
 APPROVAL_EXECUTOR_VERSION = "linux-v2-approval-runtime-1"
 FIXED_COMPARISON_EXECUTOR_VERSION = "linux-v2-fixed-comparison-runtime-1"
 ADJUDICATION_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-1"
+ADJUDICATION_V2_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-2"
 FIXED_ADJUDICATION_EXECUTOR_VERSION = "linux-v2-fixed-adjudication-runtime-1"
 ADJUDICATION_EXECUTORS = frozenset(
-    {ADJUDICATION_EXECUTOR_VERSION, FIXED_ADJUDICATION_EXECUTOR_VERSION}
+    {
+        ADJUDICATION_EXECUTOR_VERSION,
+        ADJUDICATION_V2_EXECUTOR_VERSION,
+        FIXED_ADJUDICATION_EXECUTOR_VERSION,
+    }
 )
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
@@ -424,6 +429,7 @@ def executor_matches_adapter(version: str, adapter: str) -> bool:
             RECOVERY_EXECUTOR_VERSION,
             APPROVAL_EXECUTOR_VERSION,
             ADJUDICATION_EXECUTOR_VERSION,
+            ADJUDICATION_V2_EXECUTOR_VERSION,
         )
     return version == EXECUTOR_VERSION or (
         adapter == "support-fixed-v1"

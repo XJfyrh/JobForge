@@ -15,10 +15,18 @@ import (
 // The ledger and fenced execution are real; provider content and usage are synthetic.
 func setupAdjudicationHarness(t *testing.T) *runHarness {
 	t.Helper()
-	return setupAdjudicationProfileHarness(t, false)
+	return setupAdjudicationProfileHarness(t, false, 11)
 }
 
-func setupAdjudicationProfileHarness(t *testing.T, fixed bool) *runHarness {
+// setupAdjudicationV5Harness binds the ADR-0034 candidate: Agent schema 13 with
+// support-agent-prompt-v5 on linux-v2-adjudication-runtime-2, against the
+// unchanged schema 12 Fixed baseline.
+func setupAdjudicationV5Harness(t *testing.T) *runHarness {
+	t.Helper()
+	return setupAdjudicationProfileHarness(t, false, 13)
+}
+
+func setupAdjudicationProfileHarness(t *testing.T, fixed bool, agentSchema int) *runHarness {
 	t.Helper()
 	var h *runHarness
 	if fixed {
@@ -30,7 +38,10 @@ func setupAdjudicationProfileHarness(t *testing.T, fixed bool) *runHarness {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d.SchemaVersion, d.Program.PromptVersion = 11, agentrun.SupportAgentPromptV4
+	d.SchemaVersion, d.Program.PromptVersion = agentSchema, agentrun.SupportAgentPromptV4
+	if agentSchema == 13 {
+		d.Program.PromptVersion = agentrun.SupportAgentPromptV5
+	}
 	if fixed {
 		d.SchemaVersion, d.Program.PromptVersion = 12, agentrun.SupportPromptVersion
 		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
@@ -65,7 +76,7 @@ func setupAdjudicationProfileHarness(t *testing.T, fixed bool) *runHarness {
 func TestRunAdjudicationFixedFinal(t *testing.T) {
 	for _, rejected := range []bool{false, true} {
 		t.Run(map[bool]string{false: "accepted", true: "rejected"}[rejected], func(t *testing.T) {
-			h := setupAdjudicationProfileHarness(t, true)
+			h := setupAdjudicationProfileHarness(t, true, 11)
 			var err error
 			h.Session, err = h.Store.Register(h.Ctx, h.Principal, uuid.NewString(), h.Profile.ExecutorVersion)
 			if err != nil {
@@ -340,6 +351,79 @@ func TestRunAdjudicationLedgerFinalAndTerminalRejection(t *testing.T) {
 			resumed, err := h.Store.Claim(h.Ctx, h.Principal, h.Session.ID)
 			if err != nil || resumed == nil || resumed.Lease.RunID != next.ID {
 				t.Fatal("closed final blocked next case", err)
+			}
+		})
+	}
+}
+
+// TestRunAdjudicationV5InheritsFrozenFinalContract backs ADR-0034's claim that
+// schema 13 changes only what the two stages are shown. Against real PostgreSQL
+// the permit, audit schema, accounting and no-resend boundary must match schema
+// 11 exactly, and a terminal tool object must still end the Run rather than buy
+// a second final call.
+func TestRunAdjudicationV5InheritsFrozenFinalContract(t *testing.T) {
+	for _, mode := range []string{"accepted", "tool_rejected"} {
+		t.Run(mode, func(t *testing.T) {
+			h := setupAdjudicationV5Harness(t)
+			if h.Profile.ExecutorVersion != agentrun.SupportAdjudicationV2ExecutorVersion {
+				t.Fatal("schema 13 did not bind the v2 adjudication executor", h.Profile.ExecutorVersion)
+			}
+			if !h.Profile.FinalAdjudicationEnabled() || !h.Profile.ApprovalEnabled() || !h.Profile.ConfirmedStepRecovery() {
+				t.Fatal("schema 13 lost a capability inherited from schema 11")
+			}
+			if !h.Profile.ThinkingStep("model_proposal") || h.Profile.ThinkingStep("model_decision") {
+				t.Fatal("schema 13 moved the thinking step binding")
+			}
+			claimed := adjudicationAtFinal(t, h)
+			req := ledgerRequest(h, claimed, agentrun.SubcallChat, "")
+			reserved := ledgerReserve(t, h, req)
+			if reserved.Budget.OutputTokens != 16384 || reserved.CallDeadline.Sub(reserved.ReservedAt) != 120*time.Second || reserved.DispatchExpiresAt.Sub(reserved.ReservedAt) > 30*time.Second {
+				t.Fatal("schema 13 changed the frozen final permit", reserved)
+			}
+			report := adjudicationReport(t, h, req, 16384)
+			if report.ProviderAudit == nil || report.ProviderAudit.SchemaVersion != 2 || report.ProviderAudit.ModeState != agentrun.ProviderModeThinking {
+				t.Fatal("schema 13 changed the terminal audit policy", report.ProviderAudit)
+			}
+			settled := auditSettle(t, h, report)
+			if settled.BatchFrozen || !settled.Reservation.UsageKnown || settled.Reservation.Budget != reserved.Budget {
+				t.Fatal("schema 13 final usage incorrectly held or repriced")
+			}
+			if mode == "tool_rejected" {
+				auditObserve(t, h, req, report, "rejected")
+				if _, err := h.Store.FailExecution(h.Ctx, h.Principal, claimed.Lease, req.Step, "MODEL_PROTOCOL_ERROR"); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := h.Store.ReserveCall(h.Ctx, h.Principal, ledgerRequest(h, claimed, agentrun.SubcallChat, "")); err == nil {
+					t.Fatal("schema 13 resent a rejected final call")
+				}
+			} else {
+				auditObserve(t, h, req, report, "accepted")
+				proposal, err := agentrun.SupportProposalFromModel(claimed.Checkpoint.Snapshot, claimed.Checkpoint.Steps,
+					[]byte(`{"decision":"proposal","action":"record_conclusion","conclusion":"delayed","requested_fields":[],"target_ticket_status":"open","claims":[{"kind":"timing","test":"delivered_late","event_id":"synthetic-delivered","refs":["E1#/order/promised_delivery_at","P01.1"]}]}`))
+				if err != nil {
+					t.Fatal(err)
+				}
+				result := agentrun.StepResult{SchemaVersion: 1, PhysicalCallID: req.PhysicalCallID, Content: json.RawMessage("null"), EvidenceRefs: []string{}, Proposal: proposal}
+				commit := recoveryCommit(t, h, &claimed, result)
+				if _, err := h.Store.CommitStep(h.Ctx, h.Principal, commit); err != nil {
+					t.Fatal("schema 13 rejected a valid final proposal", err)
+				}
+			}
+			calls, err := h.Store.Calls(h.Ctx, claimed.Lease.TenantID, claimed.Lease.RunID)
+			if err != nil || calls.BatchFrozen {
+				t.Fatal("schema 13 final audit gap", err)
+			}
+			finals := 0
+			for _, call := range calls.Items {
+				if call.StepKind == "model_proposal" {
+					finals++
+					if call.Reserved.OutputTokens != 16384 || call.KnownTokens != 16484 || call.HeldCostMicroyuan != 0 {
+						t.Fatal("schema 13 changed final accounting", call)
+					}
+				}
+			}
+			if finals != 1 {
+				t.Fatal("schema 13 did not make exactly one final call", finals)
 			}
 		})
 	}
