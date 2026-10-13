@@ -49,6 +49,10 @@ def continuation(evidence: dict[str, Any], *, executor_version: str = "") -> boo
     adjudication = executor_version in {
         "linux-v2-adjudication-runtime-1",
         "linux-v2-adjudication-runtime-2",
+        "linux-v2-adjudication-runtime-3",
+        "linux-v2-adjudication-runtime-4",
+        "linux-v2-adjudication-runtime-5",
+        "linux-v2-fixed-adjudication-runtime-2",
         "linux-v2-fixed-adjudication-runtime-1",
     }
     for call in chat:

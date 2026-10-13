@@ -99,7 +99,7 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Failure: "PROFILE_UNAVAILABLE"}
 	}
 	toolID := ""
-	if s.Kind == agentv1.StepKind_STEP_KIND_GET_ORDER || s.Kind == agentv1.StepKind_STEP_KIND_GET_DELIVERY || s.Kind == agentv1.StepKind_STEP_KIND_SEARCH_POLICY {
+	if s.Kind == agentv1.StepKind_STEP_KIND_GET_ORDER || s.Kind == agentv1.StepKind_STEP_KIND_GET_DELIVERY || s.Kind == agentv1.StepKind_STEP_KIND_SEARCH_POLICY || s.Kind == agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE {
 		toolID = uuid.NewString()
 		bounded, cancel := context.WithTimeout(ctx, controlTimeout)
 		response, beginErr := w.client.BeginTool(bounded, &agentv1.BeginToolRequest{Execution: lease.Execution, Step: s, ToolInvocationId: toolID})
@@ -278,7 +278,7 @@ func (c *coordinator) failStoppedBatch(ctx context.Context, reason string) {
 
 func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexecutor.Environment {
 	switch kind {
-	case agentv1.StepKind_STEP_KIND_GET_ORDER, agentv1.StepKind_STEP_KIND_GET_DELIVERY:
+	case agentv1.StepKind_STEP_KIND_GET_ORDER, agentv1.StepKind_STEP_KIND_GET_DELIVERY, agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey}
 	case agentv1.StepKind_STEP_KIND_SEARCH_POLICY:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey, OllamaOrigin: all.OllamaOrigin}

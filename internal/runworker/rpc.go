@@ -69,7 +69,8 @@ func subcall(value string) agentv1.Subcall {
 		"get_order": agentv1.Subcall_SUBCALL_GET_ORDER, "get_delivery": agentv1.Subcall_SUBCALL_GET_DELIVERY,
 		"profile_version": agentv1.Subcall_SUBCALL_PROFILE_VERSION, "profile_tags": agentv1.Subcall_SUBCALL_PROFILE_TAGS,
 		"query_embedding": agentv1.Subcall_SUBCALL_QUERY_EMBEDDING, "search_policy": agentv1.Subcall_SUBCALL_SEARCH_POLICY,
-		"chat": agentv1.Subcall_SUBCALL_CHAT,
+		"read_policy_bundle": agentv1.Subcall_SUBCALL_READ_POLICY_BUNDLE,
+		"chat":               agentv1.Subcall_SUBCALL_CHAT,
 	}[value]
 }
 

@@ -40,7 +40,7 @@ type SupportToolDecision struct {
 func SupportAgentToolDecision(snapshot SnapshotBinding, data []byte) (SupportToolDecision, json.RawMessage, error) {
 	var decision SupportToolDecision
 	if ValidateStepJSON(data, 16384) != nil || !exactSupportKeys(data, "type", "name", "arguments") ||
-		strictSupportDecode(data, &decision) != nil || decision.Type != "tool" || len(ToolSequence(decision.Name)) == 0 {
+		strictSupportDecode(data, &decision) != nil || decision.Type != "tool" || len(ToolSequence(decision.Name)) == 0 || decision.Name == "read_policy_bundle" {
 		return decision, nil, ErrModelProtocol
 	}
 	var args map[string]json.RawMessage
@@ -126,14 +126,24 @@ func decideSupportAgentModel(profile Profile, snapshot SnapshotBinding, prior []
 	}
 	nullContent := bytes.Equal(bytes.TrimSpace(result.Content), []byte("null"))
 	if kind == "model_proposal" {
-		if len(prior) == 0 || !nullContent || result.CorrectionRequired {
+		if result.CorrectionRequired {
 			return decision, ErrModelProtocol
 		}
-		last := prior[len(prior)-1]
-		previous, _, err := CanonicalStepResultForStrategy(last.Output, last.Kind, SupportAgentStrategy)
-		if err != nil || (last.Kind != "model_decision" && last.Kind != "protocol_correction") || previous.Proposal != nil ||
-			previous.CorrectionRequired || !ValidInvestigationComplete(previous.Content) {
-			return decision, ErrStepConflict
+		if err := adjudicationPredecessor(profile, snapshot, prior); err != nil {
+			return decision, err
+		}
+		if !nullContent {
+			if !profile.PolicySupplementEnabled() || result.Proposal != nil {
+				return decision, ErrModelProtocol
+			}
+			if err := checkPolicySupplement(snapshot, prior, result.Content); err != nil {
+				return decision, err
+			}
+			if result.PhysicalCallID == "" {
+				return decision, ErrStepConflict
+			}
+			decision.NextKind = "search_policy"
+			return decision, nil
 		}
 	}
 	if kind == "submit_proposal" {
@@ -164,6 +174,19 @@ func decideSupportAgentModel(profile Profile, snapshot SnapshotBinding, prior []
 	if !nullContent {
 		if adjudication && (kind == "model_decision" || kind == "protocol_correction") && result.Proposal == nil && ValidInvestigationComplete(result.Content) {
 			decision.NextKind = "model_proposal"
+			if profile.StatusPolicyEnabled() {
+				missing, err := missingStatusPolicy(snapshot, prior)
+				if err != nil {
+					return decision, err
+				}
+				if missing != nil {
+					withMarker := append(slices.Clone(prior), Step{Kind: kind, Output: decision.CanonicalJSON})
+					if _, err := pendingStatusPolicy(snapshot, withMarker); err != nil {
+						return decision, err
+					}
+					decision.NextKind = "search_policy"
+				}
+			}
 			return decision, nil
 		}
 		tool, canonical, err := SupportAgentToolDecision(snapshot, result.Content)

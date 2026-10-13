@@ -16,6 +16,16 @@ const (
 	// SupportAdjudicationV2ExecutorVersion runs the same two-stage graph with the
 	// separated v5 final task; the investigation contract is unchanged.
 	SupportAdjudicationV2ExecutorVersion = "linux-v2-adjudication-runtime-2"
+	// SupportAdjudicationV3ExecutorVersion permits one policy supplement before final.
+	SupportAdjudicationV3ExecutorVersion = "linux-v2-adjudication-runtime-3"
+	// SupportAgentPromptV6 binds the controlled supplement contract.
+	SupportAgentPromptV6 = "support-agent-prompt-v6"
+	// SupportAdjudicationV4ExecutorVersion requires status policy before thinking.
+	SupportAdjudicationV4ExecutorVersion = "linux-v2-adjudication-runtime-4"
+	// SupportAgentPromptV7 binds the status-policy prerequisite projection.
+	SupportAgentPromptV7 = "support-agent-prompt-v7"
+	// SupportSupplementDecisionSchema adds a typed read-only supplement intent.
+	SupportSupplementDecisionSchema = "support-agent-decision-v2"
 	// SupportFixedAdjudicationExecutorVersion uses the same final model in the fixed graph.
 	SupportFixedAdjudicationExecutorVersion = "linux-v2-fixed-adjudication-runtime-1"
 	// FinalAdjudicationMaxTokens includes reasoning and final content together.
@@ -24,7 +34,7 @@ const (
 
 // FinalAdjudicationEnabled selects only a fully frozen new profile.
 func (p Profile) FinalAdjudicationEnabled() bool {
-	if p.ExecutorVersion != SupportAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV2ExecutorVersion && p.ExecutorVersion != SupportFixedAdjudicationExecutorVersion {
+	if p.ExecutorVersion != SupportAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV2ExecutorVersion && p.ExecutorVersion != SupportAdjudicationV3ExecutorVersion && p.ExecutorVersion != SupportAdjudicationV4ExecutorVersion && p.ExecutorVersion != SupportFixedAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV5ExecutorVersion && p.ExecutorVersion != SupportFixedBundleExecutorVersion {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

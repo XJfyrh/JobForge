@@ -56,9 +56,11 @@ $retrieval=(.venv\Scripts\python -m jobforge_agent retrieval --output-dir $out -
 
 ## 契约与边界
 
-完整接口表和版本规则见[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)。HTTP创建≤4KiB、搜索≤32KiB、响应≤8KiB、并发8、每请求10秒；未知字段、大小写别名、重复字段、尾随JSON、数值null和非法向量均拒绝。read服务启动检查低权限身份及每个配置tenant的种子/完整索引；缺资源时停止启动，运行中丢失依赖时ready返回503。
+完整接口表和版本规则见[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)。HTTP创建≤4KiB、搜索≤32KiB、原接口响应≤8KiB、并发8、每请求10秒；未知字段、大小写别名、重复字段、尾随JSON、数值null和非法向量均拒绝。read服务启动检查低权限身份及每个配置tenant的种子/完整索引；缺资源时停止启动，运行中丢失依赖时ready返回503。
 
-固定业务观察时点保存在ticket.observed_at并冻结为snapshot.as_of；created_at另记事务捕获时间。快照事务使用repeatable-read，源表变更不影响已捕获订单、物流和旧政策；新事实需新请求键。三种工具只接受当前snapshot/order绑定，输入不能成为URL、SQL、shell或动态工具名入口。
+[ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 新增 `GET /business/v1/snapshots/{id}/policies/bundle`，只读授权快照所绑定索引的 P01.1 至 P10.2 全部 20 段，按别名排序。请求不接受 query/body 或调用方选择索引、版本、别名；响应独立上限 32 KiB，保留实际来源六字段，不含向量 distance。缺段、额外段落、重复别名或绑定/正文错误均拒绝，不降级搜索。`read_policy_bundle` 只由新 schema16/17 的 Go 步骤图安排，记一次逻辑工具和一次业务 HTTP，无 embedding/chat；旧工具仍用原 8 KiB 上限。
+
+固定业务观察时点保存在ticket.observed_at并冻结为snapshot.as_of；created_at另记事务捕获时间。快照事务使用repeatable-read，源表变更不影响已捕获订单、物流和旧政策；新事实需新请求键。工具只接受当前snapshot/order绑定，输入不能成为URL、SQL、shell或动态工具名入口。
 
 独立Compose项目`jobforge-agent-v3`占用5434、8092、11436，业务库与旧队列5433分离。NOLOGIN owner持有schema；HTTP用reader，种子/索引用loader，迁移用bootstrap。固定登录密码仅限本地开发实例。运行时虽在tenant间共用数据库角色，但HTTP/service每条查询均绑定鉴权tenant；不宣称数据库RLS隔离。全局角色标记属于该专属实例，业务库用途标记仍逐库核验；迁移拒绝未标记数据库和核心jobs表。
 

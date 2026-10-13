@@ -189,7 +189,8 @@ func (l *Ledger) NextBatch(ctx context.Context) (string, error) {
 		from budget_accounts where scope='batch'`).Scan(&used, &held); err != nil {
 		return "", err
 	}
-	if held != 0 || l.m.CostCap-l.m.PriorCost-used < upper.CostMicroyuan {
+	if held != 0 || l.m.CostCap-l.m.PriorCost-used < upper.CostMicroyuan ||
+		l.m.SchemaVersion == 3 && l.m.BatchCap-used < upper.CostMicroyuan {
 		return "", run.ErrBudgetExhausted
 	}
 	var id string
@@ -208,6 +209,9 @@ func (l *Ledger) NextBatch(ctx context.Context) (string, error) {
 	id = uuid.NewString()
 	now := time.Now().UTC()
 	batchCap := min(l.m.BatchCap, l.m.CostCap-l.m.PriorCost-used)
+	if l.m.SchemaVersion == 3 {
+		batchCap = min(batchCap, l.m.BatchCap-used)
+	}
 	err = store.CreateBudget(ctx, run.BudgetSpec{ID: id, Scope: "batch", Key: "diagnosis-" + id,
 		ValidFrom: now.Add(-time.Minute), ValidUntil: now.Add(6 * time.Hour),
 		Limits: run.Usage{Chat: int64(len(l.m.Trials)), PhysicalHTTP: int64(len(l.m.Trials)),
@@ -257,7 +261,8 @@ func (l *Ledger) Reserve(ctx context.Context, batch string, t Trial, ordinal int
 	if err := tx.QueryRow(ctx, `select coalesce(sum(known_cost_microyuan+held_cost_microyuan),0) from budget_accounts where scope='batch'`).Scan(&total); err != nil {
 		return err
 	}
-	if l.m.PriorCost+total+upper.CostMicroyuan > l.m.CostCap {
+	if l.m.PriorCost+total+upper.CostMicroyuan > l.m.CostCap ||
+		l.m.SchemaVersion == 3 && total+upper.CostMicroyuan > l.m.BatchCap {
 		return run.ErrBudgetExhausted
 	}
 	a, err = run.ReserveAccount(a, run.Usage{Chat: 1, PhysicalHTTP: 1, Tokens: upper.TotalTokens, CostMicroyuan: upper.CostMicroyuan})

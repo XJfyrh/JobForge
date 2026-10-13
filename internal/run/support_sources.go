@@ -50,6 +50,9 @@ func validateSupportTool(snapshot SnapshotBinding, kind string, result StepResul
 	if err != nil || !toolEvidence(snapshot, kind, result) {
 		return false, ErrStepConflict
 	}
+	if kind == "read_policy_bundle" {
+		return false, validatePolicyBundle(snapshot, result)
+	}
 	if kind == "search_policy" {
 		var search struct {
 			SnapshotID string               `json:"snapshot_id"`
@@ -167,7 +170,7 @@ func buildSupportSourcesWithSearch(snapshot SnapshotBinding, prior []Step, repea
 					sources.events[event.EventID] = SupportSource{EvidenceRef: ref, SourcePointer: fmt.Sprintf("/delivery/events/%d", index)}
 				}
 			}
-		case "search_policy":
+		case "search_policy", "read_policy_bundle":
 			var search struct {
 				Matches []business.PolicyHit `json:"matches"`
 			}

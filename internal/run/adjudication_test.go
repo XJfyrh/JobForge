@@ -17,12 +17,24 @@ func adjudicationDefinition(schema int) SupportDefinition {
 	final := d.Model
 	final.Thinking, final.ReasoningEffort, final.MaxTokens, final.ResponseBodyBytes = "enabled", "high", 16384, 1048576
 	d.FinalModel = &final
-	if schema != 12 {
+	if schema == 17 {
+		d.Program.PromptVersion = SupportFixedPromptV2
+	}
+	if schema != 12 && schema != 17 {
 		d.Program.Strategy, d.Program.Adapter, d.Program.PromptVersion = SupportAgentStrategy, "support-agent-v1", SupportAgentPromptV4
 		if schema == 13 {
 			d.Program.PromptVersion = SupportAgentPromptV5
 		}
 		d.Program.DecisionSchema, d.Program.DecisionSchemaSHA256 = SupportAgentDecisionSchema, strings.Repeat("a", 64)
+		if schema == 14 {
+			d.Program.PromptVersion, d.Program.DecisionSchema = SupportAgentPromptV6, SupportSupplementDecisionSchema
+		}
+		if schema == 15 {
+			d.Program.PromptVersion, d.Program.DecisionSchema = SupportAgentPromptV7, SupportSupplementDecisionSchema
+		}
+		if schema == 16 {
+			d.Program.PromptVersion = SupportAgentPromptV8
+		}
 		d.Program.RecoveryPolicy, d.Program.ApprovalPolicy = ConfirmedUncommittedRecovery, TicketResolutionApprovalPolicy
 		d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "test-key", PublicKeySHA256: strings.Repeat("a", 64)}
 	}
@@ -39,14 +51,35 @@ func adjudicationProfile(t *testing.T, schema int) Profile {
 }
 
 func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
-	for _, schema := range []int{11, 12, 13} {
+	for _, schema := range []int{11, 12, 13, 14, 15, 16, 17} {
 		p := adjudicationProfile(t, schema)
-		agent, executor := schema != 12, SupportFixedAdjudicationExecutorVersion
+		agent, executor := schema != 12 && schema != 17, SupportFixedAdjudicationExecutorVersion
+		if schema == 16 {
+			executor = SupportAdjudicationV5ExecutorVersion
+		}
+		if schema == 17 {
+			executor = SupportFixedBundleExecutorVersion
+		}
+		if schema >= 16 && (!p.PolicyBundleEnabled() || p.PolicySupplementEnabled() || p.StatusPolicyEnabled() || p.FamilyTokenLimit != 12610560) {
+			t.Fatal("bundle capability mismatch")
+		}
 		if schema == 11 {
 			executor = SupportAdjudicationExecutorVersion
 		}
 		if schema == 13 {
 			executor = SupportAdjudicationV2ExecutorVersion
+		}
+		if schema == 14 {
+			executor = SupportAdjudicationV3ExecutorVersion
+			if p.FamilyTokenLimit != 12625920 || !p.PolicySupplementEnabled() {
+				t.Fatal("supplement token envelope mismatch")
+			}
+		}
+		if schema == 15 {
+			executor = SupportAdjudicationV4ExecutorVersion
+			if p.FamilyTokenLimit != 12625920 || !p.PolicySupplementEnabled() || !p.StatusPolicyEnabled() {
+				t.Fatal("status policy capability mismatch")
+			}
 		}
 		if p.ExecutorVersion != executor || !p.FinalAdjudicationEnabled() || p.ValidateAuditPolicy() != nil || p.ApprovalEnabled() != agent || p.ConfirmedStepRecovery() != agent {
 			t.Fatal("versioned capability mismatch")

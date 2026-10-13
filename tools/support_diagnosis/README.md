@@ -4,9 +4,11 @@
 
 Python 只读准备与评分，Go 串行调用真实模型。生产代码、历史候选、政策及 gold 不变。输出、推理、凭据和 PG 导出全部留在仓库外。
 
+[ADR-0035](../../docs/adr/0035-s5-batch-reservation-and-v5-replay.md)新增显式 schema 3，供 [v5 固定输入终裁回放](../support_s5/README.md)复用隔离发送器：20 案各一次、120s、不传 temperature、单批累计 ¥4 / S5 累计 ¥28。它不是旧 A/B/C/D 实验的继续，也不是生产 Run/IPC 验收。下述 schema 1/2 的历史参数与 ¥20 合同不变。
+
 ## 原始首段
 
-以下是 schema 1 的原始准备过程，执行使用首段冻结的旧 runner。当前 runner 只执行下述 schema 2 修订，不重新执行首段。
+以下是 schema 1 的原始准备过程，执行使用首段冻结的旧 runner。当前 runner 对旧实验只执行下述 schema 2 修订，不重新执行首段。
 
 1. 停止旧收费入口。`python -m tools.support_diagnosis.preflight --root ROOT --output PREFLIGHT` 刷新 20 库账本及官方模型、价格、余额。核对峰值费率后，同命令增加 `--confirm-tariff` 保存 receipt；此阶段没有 chat 调用。
 2. 构建 `go build -o RUNNER ./tools/support_diagnosis/runner`。创建专用 `jobforge_s5_diagnosis_...` 空数据库，设置 `JOBFORGE_DIAGNOSIS_DSN` 后执行 `RUNNER --init`。迁移只用于该诊断库，不加入生产迁移。

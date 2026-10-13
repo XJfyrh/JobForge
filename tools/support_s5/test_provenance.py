@@ -195,3 +195,85 @@ def test_first_unseen_cohort_v1_has_no_prior_formal_and_still_loads() -> None:
         prior_families(DATASET_V2, {}, {})
     with pytest.raises(EvidenceError, match="SEEN_FORMAL_PROVENANCE_REQUIRED"):
         prior_families(DATASET_V3, {}, {})
+
+
+@pytest.mark.parametrize("dataset", sorted(package.SEEN_DATASETS))
+@pytest.mark.parametrize(
+    "historical,schema",
+    [
+        (False, 13),
+        (True, 13),
+        (False, 14),
+        (True, 14),
+        (False, 15),
+        (True, 15),
+        (False, 9),
+    ],
+)
+def test_rebound_seen_manifest_is_not_unseen_for_schema_13(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dataset: str,
+    historical: bool,
+    schema: int,
+) -> None:
+    """Reject old ids before reading their artifacts; keep historical routing."""
+    from tools.support_s5 import freeze as freeze_module
+    from tools.support_s5.score import THRESHOLDS
+
+    freeze = {
+        "status": "frozen_before_unseen_creation",
+        "candidate_blueprint": {"schema_version": schema},
+        "thresholds": THRESHOLDS,
+        "frozen_at": "2026-10-13T00:00:00Z",
+    }
+    raw = json.dumps(freeze).encode()
+    freeze_path = tmp_path / "freeze.json"
+    freeze_path.write_bytes(raw)
+    manifest = {
+        "schema_version": 1,
+        "dataset_id": dataset,
+        "case_count": 20,
+        "authored_at": "2026-10-13T00:01:00Z",
+        "freeze_sha256": sha256(raw),
+        "artifact_sha256": {name: "a" * 64 for name in package.ARTIFACT_NAMES},
+        "corpus_sha256": "a" * 64,
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(freeze_module, "validate", lambda _: None)
+    if schema in {13, 14, 15, 16} and not historical:
+        with pytest.raises(EvidenceError, match="SEEN_DATASET_NOT_UNSEEN"):
+            package.load_package(tmp_path, freeze_path, historical=historical)
+    else:
+        # The real loader got past dataset routing and attempted the artifacts.
+        with pytest.raises(FileNotFoundError):
+            package.load_package(tmp_path, freeze_path, historical=historical)
+
+
+@pytest.mark.parametrize("dataset", sorted(package.SEEN_DATASETS))
+@pytest.mark.parametrize("strategy", ["support_agent_v1", "support_fixed_v1"])
+@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+def test_direct_formal_score_cannot_bypass_seen_dataset_guard(
+    monkeypatch: pytest.MonkeyPatch,
+    dataset: str,
+    strategy: str,
+    schema: int,
+) -> None:
+    """A caller supplying an already loaded Package still cannot relabel it."""
+    from tools.support_evaluation.evidence import load_package
+    from tools.support_s5 import score
+
+    monkeypatch.setattr(score, "registration", lambda *a, **kw: {})
+    registered = {
+        "dataset_version": dataset,
+        "profile": {"strategy": strategy},
+        "strategy_blueprint": {},
+    }
+    with pytest.raises(EvidenceError, match="SEEN_DATASET_NOT_UNSEEN"):
+        score.score_export(
+            registered,
+            {},
+            "a" * 64,
+            freeze={"candidate_blueprint": {"schema_version": schema}},
+            package=load_package(),
+        )

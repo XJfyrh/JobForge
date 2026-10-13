@@ -99,6 +99,7 @@ _USAGE = {
     "usage_hash",
 }
 _STEPS = {
+    "read_policy_bundle",
     "read_ticket",
     "get_order",
     "get_delivery",
@@ -207,7 +208,7 @@ def _binding(value: Any) -> None:
 
 
 def _subcalls(step: str) -> list[str]:
-    if step in {"get_order", "get_delivery"}:
+    if step in {"get_order", "get_delivery", "read_policy_bundle"}:
         return [step]
     if step == "search_policy":
         return ["profile_version", "profile_tags", "query_embedding", "search_policy"]
@@ -512,6 +513,8 @@ def _raw_sizes(text: str, frame: Frame) -> None:
         "search_policy",
     }:
         limits["result"] = 8192
+    if frame["binding"]["step_kind"] == "read_policy_bundle":
+        limits["result"] = 32768
     decoder = json.JSONDecoder()
     index = text.index("{") + 1
     while True:
@@ -636,6 +639,10 @@ class Conversation:
             in {
                 "linux-v2-adjudication-runtime-1",
                 "linux-v2-adjudication-runtime-2",
+                "linux-v2-adjudication-runtime-3",
+                "linux-v2-adjudication-runtime-4",
+                "linux-v2-adjudication-runtime-5",
+                "linux-v2-fixed-adjudication-runtime-2",
                 "linux-v2-fixed-adjudication-runtime-1",
             }
         )

@@ -12,9 +12,15 @@ from jobforge_agent.dispatch import DispatchError
 from jobforge_agent.runtime_input import (
     ADJUDICATION_EXECUTOR_VERSION,
     ADJUDICATION_V2_EXECUTOR_VERSION,
+    ADJUDICATION_V3_EXECUTOR_VERSION,
+    ADJUDICATION_V4_EXECUTOR_VERSION,
+    ADJUDICATION_V5_EXECUTOR_VERSION,
     EXECUTOR_VERSION,
 )
 from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
+from jobforge_agent.support_agent_v6 import SupportAgentV6Adapter
+from jobforge_agent.support_agent_v7 import SupportAgentV7Adapter
+from jobforge_agent.support_agent_v8 import SupportAgentV8Adapter
 from runtime_fixture_registry import MechanismAdapter
 
 PROFILE = {
@@ -145,16 +151,25 @@ def test_production_support_requires_matching_manifest_identity(
         ("support-agent-prompt-v5", ADJUDICATION_V2_EXECUTOR_VERSION, True),
         ("support-agent-prompt-v5", ADJUDICATION_EXECUTOR_VERSION, False),
         ("support-agent-prompt-v4", ADJUDICATION_V2_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v6", ADJUDICATION_V3_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v6", ADJUDICATION_V2_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v5", ADJUDICATION_V3_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v7", ADJUDICATION_V4_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v7", ADJUDICATION_V3_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v6", ADJUDICATION_V4_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v8", ADJUDICATION_V5_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v8", ADJUDICATION_V4_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v7", ADJUDICATION_V5_EXECUTOR_VERSION, False),
     ],
 )
-def test_manifest_selects_only_registered_v5(
+def test_manifest_selects_only_registered_adjudication_version(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     prompt: str,
     executor: str,
     valid: bool,
 ) -> None:
-    """The v5 candidate resolves only through its own frozen manifest tuple."""
+    """Each candidate resolves only through its own frozen manifest tuple."""
     manifest(
         monkeypatch,
         tmp_path,
@@ -173,7 +188,16 @@ def test_manifest_selects_only_registered_v5(
     )
     args = ("support-agent-v1", "candidate", "a" * 64, executor)
     if valid:
-        assert type(runtime_adapters.resolve_adapter(*args)) is SupportAgentV5Adapter
+        expected = (
+            SupportAgentV8Adapter
+            if executor == ADJUDICATION_V5_EXECUTOR_VERSION
+            else SupportAgentV7Adapter
+            if executor == ADJUDICATION_V4_EXECUTOR_VERSION
+            else SupportAgentV6Adapter
+            if executor == ADJUDICATION_V3_EXECUTOR_VERSION
+            else SupportAgentV5Adapter
+        )
+        assert type(runtime_adapters.resolve_adapter(*args)) is expected
     else:
         with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
             runtime_adapters.resolve_adapter(*args)

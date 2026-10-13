@@ -204,11 +204,17 @@ def _shape(
             method,
             path,
         )
-    elif request.subcall in {"get_order", "get_delivery", "search_policy"}:
+    elif request.subcall in {
+        "get_order",
+        "get_delivery",
+        "search_policy",
+        "read_policy_bundle",
+    }:
         suffix = {
             "get_order": "order",
             "get_delivery": "delivery",
             "search_policy": "policies/search",
+            "read_policy_bundle": "policies/bundle",
         }[request.subcall]
         method = "POST" if request.subcall == "search_policy" else "GET"
         valid = (
@@ -217,7 +223,7 @@ def _shape(
             and re.fullmatch(rf"/business/v1/snapshots/{_UUID}/{suffix}", request.path)
             is not None
         )
-        cap = 8192
+        cap = 32768 if request.subcall == "read_policy_bundle" else 8192
     else:
         raise DispatchError("INPUT_INVALID")
     if (
@@ -408,13 +414,23 @@ class AuthorizedDispatcher:
     ) -> Frame:
         """Validate and close the same Conversation with one bound step result."""
         # Imported locally to keep the generic C2 dispatcher independent at load.
-        from jobforge_agent.runtime_input import RuntimeInputError, validate_step_result
+        from jobforge_agent.runtime_input import (
+            ADJUDICATION_V3_EXECUTOR_VERSION,
+            ADJUDICATION_V4_EXECUTOR_VERSION,
+            RuntimeInputError,
+            validate_step_result,
+        )
 
         kind = self._start["binding"]["step_kind"]
         try:
             if self._finalized or self._busy:
                 raise ProtocolError()
-            validate_step_result(result, kind)
+            validate_step_result(
+                result,
+                kind,
+                supplement=self._start.get("input", {}).get("executor_version")
+                in {ADJUDICATION_V3_EXECUTOR_VERSION, ADJUDICATION_V4_EXECUTOR_VERSION},
+            )
             confirmed = self._confirmed
             local = kind in {"read_ticket", "submit_proposal"}
             if not local:
@@ -815,6 +831,7 @@ class AuthorizedDispatcher:
             in {
                 "linux-v2-fixed-comparison-runtime-1",
                 "linux-v2-fixed-adjudication-runtime-1",
+                "linux-v2-fixed-adjudication-runtime-2",
             }
         ):
             raise DispatchError("INPUT_INVALID")

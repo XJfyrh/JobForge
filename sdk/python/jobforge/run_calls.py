@@ -178,6 +178,7 @@ class RunCall(RunModel):
             "get_order",
             "get_delivery",
             "search_policy",
+            "read_policy_bundle",
             "model_proposal",
             "model_decision",
             "protocol_correction",
@@ -188,6 +189,7 @@ class RunCall(RunModel):
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat",
         ):
             raise ValueError("invalid registered physical call")

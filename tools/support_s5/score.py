@@ -26,7 +26,12 @@ from tools.support_evaluation.evidence import (
 )
 from tools.support_evaluation.score import CASE_FIELDS, ZERO_USAGE, evaluate_case
 from tools.support_evaluation.validate_data import parse_json, sha256
-from tools.support_s5.package import DATASETS, SEEN_DATASETS, load_package
+from tools.support_s5.package import (
+    DATASETS,
+    SEEN_DATASETS,
+    load_package,
+    require_unseen_dataset,
+)
 
 SCORER = "support-s5-quality-v1"
 # Pretty-printed comparison bindings can exceed the semantic 64 KiB ceiling.
@@ -115,6 +120,7 @@ def score_export(
 
         need(freeze is not None, "FORMAL_FREEZE_REQUIRED")
         assert freeze is not None
+        require_unseen_dataset(registered["dataset_version"], freeze)
         validate_blueprint(
             freeze, registered["profile"]["strategy"], registered["strategy_blueprint"]
         )
@@ -245,7 +251,15 @@ def score_export(
         # sha256/kind/denominator/proposal_audit_complete; the seen-diagnostic
         # gate checks THRESHOLDS only), so published schema-1 summaries and
         # frozen receipts stay valid byte-unchanged.
-        "schema_version": 2,
+        "schema_version": 3
+        if registered["profile"]["executor_version"]
+        in {
+            "linux-v2-adjudication-runtime-3",
+            "linux-v2-adjudication-runtime-4",
+            "linux-v2-adjudication-runtime-5",
+            "linux-v2-fixed-adjudication-runtime-2",
+        }
+        else 2,
         "scorer_version": SCORER,
         "kind": "s5-seen-diagnostic"
         if seen_diagnostic
@@ -285,11 +299,26 @@ def score_export(
 
 def paired(agent: dict[str, Any], fixed: dict[str, Any]) -> dict[str, Any]:
     """Both failures count as ties; no case disappears from paired W/T/L."""
+    comparison = agent["comparison"]
+    supplement_pair = (
+        agent.get("strategy_blueprint", {}).get("schema_version") in {14, 15}
+        and fixed.get("strategy_blueprint", {}).get("schema_version") == 12
+    )
+    if supplement_pair:
+        need(
+            comparison["family_limits"].get("tokens") == 12625920
+            and fixed["comparison"]["family_limits"].get("tokens") == 12610560,
+            "PAIR_DATA_BINDING",
+        )
+        comparison = dict(
+            comparison,
+            family_limits=dict(comparison["family_limits"], tokens=12610560),
+        )
     need(
         agent["dataset_version"] == fixed["dataset_version"]
         and agent["denominator"] == fixed["denominator"]
         and agent["gold_sha256"] == fixed["gold_sha256"]
-        and agent["comparison"] == fixed["comparison"],
+        and comparison == fixed["comparison"],
         "PAIR_DATA_BINDING",
     )
     need(
@@ -312,7 +341,7 @@ def paired(agent: dict[str, Any], fixed: dict[str, Any]) -> dict[str, Any]:
         }
         for c in a
     ]
-    return {
+    result = {
         "denominator": len(rows),
         "outcomes": dict(Counter(r["outcome"] for r in rows)),
         "cases": rows,
@@ -325,6 +354,13 @@ def paired(agent: dict[str, Any], fixed: dict[str, Any]) -> dict[str, Any]:
             for name, report in (("agent", agent), ("fixed", fixed))
         },
     }
+    if supplement_pair:
+        result["comparison_differences"] = {
+            "basis": "ADR-0036 controlled policy supplement; Fixed unchanged",
+            "family_tokens": {"agent": 12625920, "fixed": 12610560},
+            "maximum_thinking_calls": {"agent": 2, "fixed": 1},
+        }
+    return result
 
 
 def main() -> None:

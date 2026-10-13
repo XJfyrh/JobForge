@@ -75,16 +75,20 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 	if err != nil || len(raw) > 256*1024 || jsonstrict.Decode(raw, &m) != nil {
 		return m, nil, ErrInvalid
 	}
-	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || !run.ValidIdentifier(m.ExperimentID) ||
+	costCap, trials := int64(20000000), 240
+	if m.SchemaVersion == 3 {
+		costCap, trials = 28000000, 20
+	}
+	if (m.SchemaVersion != 1 && m.SchemaVersion != 2 && m.SchemaVersion != 3) || !run.ValidIdentifier(m.ExperimentID) ||
 		!strings.HasPrefix(m.DatabaseName, "jobforge_s5_diagnosis_") || uuid.Validate(m.DatabaseID) != nil ||
 		m.MaxInputTokens != maxInputTokens || m.MaxOutputTokens != maxOutputTokens ||
-		m.PriorCost < 0 || m.PriorCost >= m.CostCap || m.CostCap != 20000000 || m.BatchCap != 4000000 ||
+		m.PriorCost < 0 || m.PriorCost >= m.CostCap || m.CostCap != costCap || m.BatchCap != 4000000 ||
 		m.Pricing.Denominator != 1000000 || m.Pricing.InputMissMicroyuan != 2000000 ||
 		m.Pricing.InputHitMicroyuan != 40000 || m.Pricing.OutputMicroyuan != 8000000 ||
-		!run.ValidHash(m.Pricing.Hash) || !run.ValidHash(m.RunnerSHA256) || len(m.Trials) != 240 {
+		!run.ValidHash(m.Pricing.Hash) || !run.ValidHash(m.RunnerSHA256) || len(m.Trials) != trials {
 		return m, nil, ErrInvalid
 	}
-	if m.SchemaVersion == 1 && m.Parent != nil || m.SchemaVersion == 2 && (m.Parent == nil ||
+	if m.SchemaVersion != 2 && m.Parent != nil || m.SchemaVersion == 2 && (m.Parent == nil ||
 		m.Parent.CompletedTrials != 15 || !run.ValidIdentifier(m.Parent.ExperimentID) ||
 		m.Parent.ExperimentID == m.ExperimentID || !run.ValidHash(m.Parent.ManifestSHA256)) {
 		return m, nil, ErrInvalid
@@ -94,10 +98,20 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 			return m, nil, ErrInvalid
 		}
 	}
+	if m.SchemaVersion == 3 {
+		for _, key := range []string{"candidate_sources", "input_verification", "budget_authorisation", "historical_package", "historical_freeze"} {
+			if !run.ValidHash(m.Sources[key]) {
+				return m, nil, ErrInvalid
+			}
+		}
+	}
 	for index, t := range m.Trials {
 		repetition, caseIndex := index/80+1, index%80/4
 		group := string("ABCD"[(caseIndex+repetition-1+index%4)%4])
 		caseID := fmt.Sprintf("S5V3-%03d", caseIndex+1)
+		if m.SchemaVersion == 3 {
+			repetition, group, caseID = 1, "V5", fmt.Sprintf("S5V3-%03d", index+1)
+		}
 		if t.CaseID != caseID || t.Group != group || t.Repetition != repetition ||
 			t.ID != fmt.Sprintf("%s-%s-%d", caseID, group, repetition) {
 			return m, nil, ErrInvalid
@@ -137,15 +151,29 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		return nil, ErrInvalid
 	}
 	mode, effort := "disabled", ""
-	if t.Group == "B" {
+	if t.Group == "B" || t.Group == "V5" {
 		mode, effort = "enabled", "high"
 	}
 	if p.Model != "deepseek-flash" || p.Thinking.Type != mode || p.ReasoningEffort != effort ||
 		p.Stream == nil || *p.Stream || p.MaxTokens != maxOutputTokens || p.ResponseFormat.Type != "json_object" ||
-		p.Temperature == nil || *p.Temperature != 0 ||
 		len(p.Messages) != 2 || p.Messages[0].Role != "system" || p.Messages[1].Role != "user" ||
-		!strings.Contains(p.Messages[0].Content, "DIAGNOSTIC FINAL-ONLY PROTOCOL:") ||
 		len(p.Messages[0].Content)+len(p.Messages[1].Content) > 65536 {
+		return nil, ErrInvalid
+	}
+	if t.Group == "V5" {
+		var facts map[string]json.RawMessage
+		var fields map[string]json.RawMessage
+		if jsonstrict.Decode(raw, &fields) != nil || fields["temperature"] != nil ||
+			!strings.Contains(p.Messages[0].Content, "OUTPUT ENVELOPE FOR THIS STEP:") ||
+			jsonstrict.Decode([]byte(p.Messages[1].Content), &facts) != nil || string(facts["final_stage"]) != "true" {
+			return nil, ErrInvalid
+		}
+		for _, key := range []string{"previous_tools", "remaining_tools", "completed_requests", "policy_navigation", "policy_retrieval", "draft"} {
+			if _, exists := facts[key]; exists {
+				return nil, ErrInvalid
+			}
+		}
+	} else if p.Temperature == nil || *p.Temperature != 0 || !strings.Contains(p.Messages[0].Content, "DIAGNOSTIC FINAL-ONLY PROTOCOL:") {
 		return nil, ErrInvalid
 	}
 	return raw, nil

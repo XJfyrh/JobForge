@@ -70,7 +70,7 @@ func TestSharedExecutorV2Fixtures(t *testing.T) {
 }
 
 func TestExpandedFinalPermitRequiresVersionedExecution(t *testing.T) {
-	for _, mode := range []string{"legacy", "final", "investigation", "wrong_policy"} {
+	for _, mode := range []string{"legacy", "final", "bundle_agent", "bundle_fixed", "investigation", "wrong_policy"} {
 		t.Run(mode, func(t *testing.T) {
 			frames := map[string]Frame{}
 			for _, raw := range loadFixtures(t).ValidFrames {
@@ -86,6 +86,12 @@ func TestExpandedFinalPermitRequiresVersionedExecution(t *testing.T) {
 			}
 			if mode == "wrong_policy" {
 				start.Input = json.RawMessage(`{"executor_version":"linux-v2-adjudication-runtime-1","provider_audit_policy":"deepseek-audit-v1"}`)
+			}
+			if mode == "bundle_agent" {
+				start.Input = json.RawMessage(`{"executor_version":"linux-v2-adjudication-runtime-5","provider_audit_policy":"deepseek-audit-v2"}`)
+			}
+			if mode == "bundle_fixed" {
+				start.Input = json.RawMessage(`{"executor_version":"linux-v2-fixed-adjudication-runtime-2","provider_audit_policy":"deepseek-audit-v2"}`)
 			}
 			start.Binding.StepKind = "model_proposal"
 			if mode == "investigation" {
@@ -104,7 +110,7 @@ func TestExpandedFinalPermitRequiresVersionedExecution(t *testing.T) {
 			permit.Binding, permit.EmittedMonoMS, permit.Subcall = start.Binding, 1000, "chat"
 			permit.OutputTokenLimit, permit.CallMS = 16384, 120000
 			err := c.Accept(permit, 1000)
-			if (err == nil) != (mode == "final") {
+			if (err == nil) != (mode == "final" || mode == "bundle_agent" || mode == "bundle_fixed") {
 				t.Fatal("expanded permit version isolation", err)
 			}
 		})

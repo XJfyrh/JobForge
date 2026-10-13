@@ -102,8 +102,8 @@ func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T)
 
 func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 	o, source := supportPrepareFixture(t)
-	for _, schema := range []int{7, 8, 9, 10, 11, 12, 13} {
-		agent := schema == 7 || schema == 9 || schema == 11 || schema == 13
+	for _, schema := range []int{7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} {
+		agent := schema == 7 || schema == 9 || schema == 11 || schema == 13 || schema == 14 || schema == 15 || schema == 16
 		d := source.Definition
 		if agent {
 			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
@@ -130,6 +130,24 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 				d.Program.PromptVersion = run.SupportAgentPromptV5
 				promptFile = "support_agent_v5.py"
 			}
+			if schema == 16 {
+				d.Program.PromptVersion = run.SupportAgentPromptV8
+				promptFile = "support_agent_v8.py"
+			}
+			if schema == 14 || schema == 15 {
+				d.Program.PromptVersion = run.SupportAgentPromptV6
+				d.Program.DecisionSchema = run.SupportSupplementDecisionSchema
+				decision, err := os.ReadFile(filepath.Join(o.Repo, "api", "support", "agent-v2", "schema.json"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.Program.DecisionSchemaSHA256 = supportSHA256(decision)
+				promptFile = "support_agent_v6.py"
+				if schema == 15 {
+					d.Program.PromptVersion = run.SupportAgentPromptV7
+					promptFile = "support_agent_v7.py"
+				}
+			}
 			d.Program.ApprovalPolicy = run.TicketResolutionApprovalPolicy
 			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}
 			prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", promptFile))
@@ -140,6 +158,14 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 			d.Program.ProposalSchemaSHA256 = source.Definition.Program.ProposalSchemaSHA256
 		} else {
 			d.SchemaVersion = schema
+			if schema == 17 {
+				d.Program.PromptVersion = run.SupportFixedPromptV2
+				prompt, err := os.ReadFile(filepath.Join(o.Repo, "python", "jobforge_agent", "support_agent_v8.py"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.Program.PromptSHA256 = supportSHA256(prompt)
+			}
 		}
 		d.Program.AdapterSourceSHA256 = source.Definition.Program.AdapterSourceSHA256
 		d.Price.SourceSHA256 = source.Definition.Price.SourceSHA256
@@ -170,7 +196,11 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 			if json.Unmarshal(files["control.disabled.json"], &config) != nil || json.Unmarshal(files["launch.json"], &launch) != nil {
 				t.Fatal("adjudication preparation")
 			}
-			if config.Budgets[0].Limits.Tokens != 12610560*40 || config.Budgets[1].Limits.Tokens != 12610560*20 || launch.ExecutorVersion != config.Profiles[0].ExecutorVersion {
+			var tokens int64 = 12610560
+			if schema == 14 || schema == 15 {
+				tokens = 12625920
+			}
+			if config.Budgets[0].Limits.Tokens != tokens*40 || config.Budgets[1].Limits.Tokens != tokens*20 || launch.ExecutorVersion != config.Profiles[0].ExecutorVersion {
 				t.Fatal("final capacity or operator version not bound")
 			}
 		}

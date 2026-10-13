@@ -131,6 +131,7 @@
             "get_order",
             "get_delivery",
             "search_policy",
+            "read_policy_bundle",
             "model_proposal",
         "model_decision",
             "protocol_correction",
@@ -273,6 +274,7 @@
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat"
           ]
         },
@@ -361,6 +363,7 @@
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat"
           ]
         },
@@ -509,7 +512,8 @@
                   "get_delivery",
                   "profile_version",
                   "profile_tags",
-                  "search_policy"
+                  "search_policy",
+                  "read_policy_bundle"
                 ]
               }
             }

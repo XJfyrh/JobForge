@@ -23,12 +23,29 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 	if os.Getenv("JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS") != "1" {
 		t.Skip("requires fixed Linux image, init and real PostgreSQL; skip is not acceptance")
 	}
-	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid", "adjudication", "adjudication_empty", "adjudication_truncated", "adjudication_oversize", "adjudication_long", "adjudication_cancel"} {
+	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid", "adjudication", "adjudication_empty", "adjudication_truncated", "adjudication_oversize", "adjudication_long", "adjudication_cancel", "adjudication_supplement", "adjudication_supplement_empty", "adjudication_supplement_cancel", "adjudication_status", "adjudication_status_empty", "adjudication_status_supplement", "adjudication_status_cancel", "adjudication_bundle", "adjudication_bundle_fixed", "adjudication_bundle_cancel"} {
 		t.Run(mode, func(t *testing.T) {
 			adjudication := strings.HasPrefix(mode, "adjudication")
+			bundle := strings.HasPrefix(mode, "adjudication_bundle")
+			fixedBundle := mode == "adjudication_bundle_fixed"
+			statusPolicy := strings.HasPrefix(mode, "adjudication_status")
+			supplement := strings.HasPrefix(mode, "adjudication_supplement") || mode == "adjudication_status_supplement"
+			cancelFinal := strings.HasSuffix(mode, "_cancel")
 			var h *runHarness
 			if adjudication {
-				h = setupAdjudicationHarness(t)
+				if bundle {
+					schema := 16
+					if fixedBundle {
+						schema = 17
+					}
+					h = setupAdjudicationProfileHarness(t, fixedBundle, schema)
+				} else if statusPolicy {
+					h = setupAdjudicationProfileHarness(t, false, 15)
+				} else if supplement {
+					h = setupAdjudicationProfileHarness(t, false, 14)
+				} else {
+					h = setupAdjudicationHarness(t)
+				}
 			} else {
 				h = setupSupportProfileStrategyHarness(t, "support-agent-synthetic-v1", 20000000, true)
 			}
@@ -44,6 +61,18 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				Profiles: []runworker.ManifestProfile{{ProfileID: h.Profile.ID, ProfileHash: h.Profile.Hash, AdapterID: "support-agent-v1"}}}
 			if adjudication {
 				manifest.SchemaVersion, manifest.Profiles[0].PromptVersion = 2, agentrun.SupportAgentPromptV4
+				if supplement {
+					manifest.Profiles[0].PromptVersion = agentrun.SupportAgentPromptV6
+				}
+				if statusPolicy {
+					manifest.Profiles[0].PromptVersion = agentrun.SupportAgentPromptV7
+				}
+			}
+			if bundle {
+				manifest.Profiles[0].PromptVersion = agentrun.SupportAgentPromptV8
+				if fixedBundle {
+					manifest.Profiles[0].PromptVersion, manifest.Profiles[0].AdapterID = agentrun.SupportFixedPromptV2, "support-fixed-v1"
+				}
 			}
 			raw, err := json.Marshal(manifest)
 			if err != nil {
@@ -58,6 +87,9 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				}
 			})
 			snapshot := supportProfileCapture(t, h, "submit", "submit-"+mode, "", true)
+			if statusPolicy {
+				snapshot = statusPolicyCapture(t, h, mode, "informational_only")
+			}
 			r := h.submit(t, "tenant-north", mode)
 			f := &supportExecutorHTTPFixture{executorHTTPFixture: &executorHTTPFixture{counts: map[string]int{}}, withOrder: true}
 			f.snapshot = snapshot
@@ -72,6 +104,16 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				decisions = append(decisions, decisions[len(decisions)-1])
 				decisions[len(decisions)-2] = `{"type":"final","proposal":{"decision":"proposal","action":"DRAFT_ONLY","conclusion":"conflicting","requested_fields":[],"target_ticket_status":"escalated","claims":[]}}`
 			}
+			if bundle {
+				decisions = []string{decisions[0], decisions[2], decisions[4], decisions[5]}
+				if fixedBundle {
+					decisions = decisions[3:]
+				}
+			}
+			if supplement {
+				decisions = append(decisions, decisions[len(decisions)-1])
+				decisions[len(decisions)-2] = `{"type":"policy_supplement","topic":"missing_facts","required_aliases":["P03.2"]}`
+			}
 			switch mode {
 			case "correction_then_dynamic":
 				decisions = append([]string{`{}`}, decisions...)
@@ -83,6 +125,43 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				decisions = []string{`{}`, `{}`}
 			}
 			handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if bundle && strings.HasSuffix(req.URL.Path, "/policies/bundle") {
+					if req.Method != http.MethodGet || req.Header.Get("Authorization") != "Bearer synthetic-business-read-key" || req.URL.RawQuery != "" || req.URL.Path != "/business/v1/snapshots/"+snapshot.ID+"/policies/bundle" {
+						f.reject(w)
+						return
+					}
+					content, _ := bundleStorageContent(t, snapshot)
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(content)
+					return
+				}
+				if (supplement || statusPolicy) && strings.HasSuffix(req.URL.Path, "/policies/search") && f.count("search") >= 2 {
+					statusRead := statusPolicy && f.count("search") == 2
+					captured := httptest.NewRecorder()
+					f.serveSupport(captured, req)
+					if captured.Code != http.StatusOK {
+						f.reject(w)
+						return
+					}
+					var response map[string]any
+					if json.Unmarshal(captured.Body.Bytes(), &response) != nil {
+						f.reject(w)
+						return
+					}
+					hit := response["matches"].([]any)[0].(map[string]any)
+					hit["chunk_id"], hit["source"], hit["text"] = "P03.2", "P03.md", "Synthetic supplement definition"
+					hit["evidence_ref"] = "business-policy:" + snapshot.IndexID + ":P03.2"
+					if statusRead {
+						hit["chunk_id"], hit["source"], hit["text"] = "P08.1", "P08.md", "Synthetic status prerequisite"
+						hit["evidence_ref"] = "business-policy:" + snapshot.IndexID + ":P08.1"
+					}
+					if mode == "adjudication_supplement_empty" || mode == "adjudication_status_empty" {
+						response["matches"] = []any{}
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(response)
+					return
+				}
 				if req.URL.Path != "/chat/completions" && req.URL.Path != "/api/embed" {
 					f.serveSupport(w, req)
 					return
@@ -99,7 +178,7 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				if req.URL.Path == "/api/embed" {
 					var query []string
-					if json.Unmarshal(body["input"], &query) != nil || len(query) != 1 || (query[0] != "delivery timing" && query[0] != "late delivery action") {
+					if json.Unmarshal(body["input"], &query) != nil || len(query) != 1 || (query[0] != "delivery timing" && query[0] != "late delivery action" && !(supplement && query[0] == "Missing related order delivery tracking event or vague complaint needing specific problem description clarification") && !(statusPolicy && query[0] == "Already informational_only ticket action none; already escalated preserve status no silent downgrade")) {
 						f.reject(w)
 						return
 					}
@@ -108,20 +187,31 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 					_ = json.NewEncoder(w).Encode(map[string]any{"model": "all-minilm:22m", "embeddings": [][]float64{vector}, "prompt_eval_count": 3})
 					return
 				}
-				if req.Header.Get("Authorization") != "Bearer synthetic-provider-key" || n > len(decisions) || !strings.Contains(string(body["messages"]), "previous_tools") {
+				thinking := adjudication && (n == len(decisions) || supplement && n == len(decisions)-1)
+				if req.Header.Get("Authorization") != "Bearer synthetic-provider-key" || n > len(decisions) || (!((supplement || statusPolicy || bundle) && thinking) && !strings.Contains(string(body["messages"]), "previous_tools")) {
 					f.reject(w)
 					return
 				}
-				final := adjudication && n == len(decisions)
+				if bundle && (!strings.Contains(string(body["messages"]), "P05.1") || !strings.Contains(string(body["messages"]), "P10.2")) {
+					f.reject(w)
+					return
+				}
+				final := thinking
 				wantTokens, wantMode := "1024", `{"type":"disabled"}`
 				if final {
-					close(finalStarted)
-					if mode == "adjudication_cancel" {
+					if n == len(decisions) {
+						close(finalStarted)
+					}
+					if cancelFinal && n == len(decisions) {
 						<-req.Context().Done()
 						return
 					}
 					wantTokens, wantMode = "16384", `{"type":"enabled"}`
 					if string(body["reasoning_effort"]) != `"high"` || body["temperature"] != nil || strings.Contains(string(body["messages"]), "DRAFT_ONLY") {
+						f.reject(w)
+						return
+					}
+					if (supplement || statusPolicy || bundle) && (strings.Contains(string(body["messages"]), "previous_tools") || supplement && n == len(decisions) && strings.Contains(string(body["messages"]), "policy_supplement")) {
 						f.reject(w)
 						return
 					}
@@ -170,7 +260,7 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			}
 			client := executorGateway(t, h)
 			var expectedErrors []error
-			if mode == "adjudication_cancel" {
+			if cancelFinal {
 				expectedErrors = []error{runworker.ErrBatchStopped}
 			}
 			running := startExecutorWorker(t, h, f.executorHTTPFixture, client, expectedErrors...)
@@ -181,13 +271,19 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				var diagnostic string
 				ctx, cancel := context.WithTimeout(context.WithoutCancel(h.Ctx), time.Second)
 				defer cancel()
+				if err := h.Pool.QueryRow(ctx, `select coalesce(json_agg(x)::text,'[]') from (select r.state,r.cursor_version,r.next_step_kind,r.error_code,a.error_code as attempt_error from runs r join run_attempts a using(run_id) where r.run_id=$1) x`, r.ID).Scan(&diagnostic); err == nil {
+					t.Log("run failure metadata", diagnostic)
+				}
+				if err := h.Pool.QueryRow(ctx, `select coalesce(json_agg(x)::text,'[]') from (select step_kind,subcall,status,business_outcome,observation_error_code from physical_calls where run_id=$1 order by reserved_at) x`, r.ID).Scan(&diagnostic); err == nil {
+					t.Log("call outcomes", diagnostic)
+				}
 				if err := h.Pool.QueryRow(ctx, `select coalesce(json_agg(x)::text,'[]') from (select step_kind,status,transport_outcome,business_outcome,observation_error_code,call_report->'provider_audit' as audit from physical_calls where run_id=$1 and kind='chat' order by reserved_at) x`, r.ID).Scan(&diagnostic); err == nil {
 					t.Log("chat ledger metadata", diagnostic)
 				} else {
 					t.Log("diagnostic failed", err)
 				}
 			})
-			if mode == "adjudication_cancel" {
+			if cancelFinal {
 				waitExecutorSignal(t, running, finalStarted)
 				if _, err := h.Store.Cancel(h.Ctx, r.TenantID, r.ID, "cancel-long-final"); err != nil {
 					t.Fatal(err)
@@ -239,10 +335,31 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				t.Fatal(err)
 			}
 			wantState, wantTools, wantSteps, wantCalls := agentrun.AwaitingApproval, 4, 11, 15
+			wantChats := len(decisions)
 			if adjudication {
 				wantSteps, wantCalls = 12, 16
 				if mode == "adjudication_truncated" || mode == "adjudication_oversize" {
 					wantState, wantSteps = agentrun.Failed, 10
+				}
+			}
+			if bundle {
+				wantTools, wantSteps, wantCalls = 3, 9, 7
+				if fixedBundle {
+					wantSteps, wantCalls = 6, 4
+				}
+			}
+			if supplement {
+				wantTools, wantSteps, wantCalls = 5, 14, 21
+				if mode == "adjudication_supplement_empty" {
+					wantState, wantSteps, wantCalls, wantChats = agentrun.Failed, 11, 20, len(decisions)-1
+				}
+			}
+			if statusPolicy {
+				wantTools++
+				wantSteps++
+				wantCalls += 4
+				if mode == "adjudication_status_empty" {
+					wantState, wantSteps, wantCalls, wantChats = agentrun.Failed, 10, 19, 5
 				}
 			}
 			switch mode {
@@ -260,7 +377,7 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			if err := h.Pool.QueryRow(h.Ctx, "select coalesce(error_code,'') from run_attempts where run_id=$1", r.ID).Scan(&failure); err != nil {
 				t.Fatal(err)
 			}
-			if view.State != wantState || int(view.CursorVersion) != wantSteps || f.badRequest.Load() || f.count("/chat/completions") != len(decisions) {
+			if view.State != wantState || int(view.CursorVersion) != wantSteps || f.badRequest.Load() || f.count("/chat/completions") != wantChats {
 				t.Fatalf("state=%s cursor=%d error=%s chats=%d bad_request=%v", view.State, view.CursorVersion, failure, f.count("/chat/completions"), f.badRequest.Load())
 			}
 			if wantState == agentrun.Failed && failure != "MODEL_PROTOCOL_ERROR" {

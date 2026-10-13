@@ -286,6 +286,9 @@ func supportJSON(value any) []byte {
 
 func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, external *supportRuntimeData) error {
 	promptPath := "python/jobforge_agent/support_adapter.py"
+	if d.Program.PromptVersion == run.SupportFixedPromptV2 {
+		promptPath = "python/jobforge_agent/support_agent_v8.py"
+	}
 	if d.Program.Strategy == run.SupportAgentStrategy {
 		promptPath = "python/jobforge_agent/support_agent.py"
 		if d.Program.PromptVersion == run.SupportAgentPromptV2 {
@@ -299,6 +302,15 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 		}
 		if d.Program.PromptVersion == run.SupportAgentPromptV5 {
 			promptPath = "python/jobforge_agent/support_agent_v5.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV6 {
+			promptPath = "python/jobforge_agent/support_agent_v6.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV7 {
+			promptPath = "python/jobforge_agent/support_agent_v7.py"
+		}
+		if d.Program.PromptVersion == run.SupportAgentPromptV8 {
+			promptPath = "python/jobforge_agent/support_agent_v8.py"
 		}
 	}
 	sources := map[string]string{
@@ -327,7 +339,11 @@ func verifySupportSources(repo, sourcePath string, d run.SupportDefinition, exte
 		}
 	}
 	if d.Program.Strategy == run.SupportAgentStrategy {
-		sources["api/support/agent-v1/schema.json"] = d.Program.DecisionSchemaSHA256
+		decisionPath := "api/support/agent-v1/schema.json"
+		if d.Program.DecisionSchema == run.SupportSupplementDecisionSchema {
+			decisionPath = "api/support/agent-v2/schema.json"
+		}
+		sources[decisionPath] = d.Program.DecisionSchemaSHA256
 	}
 	for name, want := range sources {
 		data, err := readSupportFile(filepath.Join(repo, filepath.FromSlash(name)))

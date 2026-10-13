@@ -120,13 +120,13 @@ def main() -> None:
         s5,
         ".",
     )
-    # Host replay has its own diagnostic manifest and is not an operator source.
+    # Host replay and submission guard are manifest-bound, not operator sources.
     paths = [
         path.relative_to(ROOT)
         for path in (ROOT / "tools/support_s5").iterdir()
         if path.suffix == ".py"
         and not path.name.startswith("test_")
-        and path.name != "replay.py"
+        and path.name not in {"replay.py", "guard.py"}
     ]
     verify_sources(
         s5,
@@ -135,6 +135,7 @@ def main() -> None:
         [
             "/app/examples/support-agent/evaluation",
             "/app/tools/support_s5/replay.py",
+            "/app/tools/support_s5/guard.py",
             "/app/tools/support_diagnosis",
         ],
     )

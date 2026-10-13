@@ -219,10 +219,19 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 			if err != nil {
 				return err
 			}
-			if err := agentrun.CheckSupportAgentTool(checkpoint.Snapshot, checkpoint.Steps, req.Step.Kind); err != nil {
+			if err := agentrun.CheckSupportAgentToolForProfile(profile, checkpoint.Snapshot, checkpoint.Steps, req.Step.Kind); err != nil {
 				if errors.Is(err, agentrun.ErrModelProtocol) {
 					slog.Info("agent tool refused", "run_id", r.ID, "reason", "repeated_tool_call")
 				}
+				return err
+			}
+		}
+		if profile.PolicyBundleEnabled() {
+			checkpoint, err := loadCheckpoint(ctx, tx, r, a)
+			if err != nil {
+				return err
+			}
+			if err := agentrun.CheckPolicyBundleStep(profile, checkpoint.Snapshot, checkpoint.Steps, req.Step.Kind); err != nil {
 				return err
 			}
 		}
@@ -335,6 +344,24 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 		}
 		if err := checkSubcall(ctx, tx, req, tool); err != nil {
 			return err
+		}
+		if profile.StatusPolicyEnabled() && req.Step.Kind == "model_proposal" && req.Subcall == agentrun.SubcallChat {
+			checkpoint, err := loadCheckpoint(ctx, tx, r, a)
+			if err != nil {
+				return err
+			}
+			if err := agentrun.CheckStatusPolicyAdjudication(profile, checkpoint.Snapshot, checkpoint.Steps); err != nil {
+				return err
+			}
+		}
+		if profile.PolicyBundleEnabled() {
+			checkpoint, err := loadCheckpoint(ctx, tx, r, a)
+			if err != nil {
+				return err
+			}
+			if err := agentrun.CheckPolicyBundleStep(profile, checkpoint.Snapshot, checkpoint.Steps, req.Step.Kind); err != nil {
+				return err
+			}
 		}
 		if err := checkBatchAuditGuard(ctx, tx, accounts[2].Account.ID, profile, r, a, now); err != nil {
 			return err

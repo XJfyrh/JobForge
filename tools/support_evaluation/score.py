@@ -453,7 +453,7 @@ def _check_safety_requests(
             vector["order"]["id"]
             if subcall in {"get_order", "get_delivery"}
             else binding["index_id"]
-            if subcall == "search_policy"
+            if subcall in {"search_policy", "read_policy_bundle"}
             else "deepseek-flash"
             if subcall == "chat"
             else "all-minilm:22m"

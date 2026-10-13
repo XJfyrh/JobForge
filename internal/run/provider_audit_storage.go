@@ -23,7 +23,7 @@ func (p Profile) AuditEnabled() bool {
 // ValidateAuditPolicy rejects mismatched policy/runtime deployments. The profile
 // registrar must include these fields in its immutable content and profile hash.
 func (p Profile) ValidateAuditPolicy() error {
-	if p.ExecutorVersion == SupportAdjudicationExecutorVersion || p.ExecutorVersion == SupportAdjudicationV2ExecutorVersion || p.ExecutorVersion == SupportFixedAdjudicationExecutorVersion || p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV2 {
+	if p.ExecutorVersion == SupportAdjudicationExecutorVersion || p.ExecutorVersion == SupportAdjudicationV2ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV3ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV4ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV5ExecutorVersion || p.ExecutorVersion == SupportFixedBundleExecutorVersion || p.ExecutorVersion == SupportFixedAdjudicationExecutorVersion || p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV2 {
 		if !p.FinalAdjudicationEnabled() {
 			return ErrProfileUnavailable
 		}

@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jobforge:support-agent-decision-v2",
+  "title": "Versioned support decisions with one controlled policy supplement",
+  "description": "Shape only. Schema 14 permits policy_supplement only at the first adjudication. Runtime requires sorted unique missing aliases, a fixed topic query, source-bound acquisition, no repeat read and at most one supplement.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name",
+        "arguments"
+      ],
+      "properties": {
+        "type": {
+          "const": "tool"
+        },
+        "name": {
+          "enum": [
+            "get_order",
+            "get_delivery"
+          ]
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "order_id"
+          ],
+          "properties": {
+            "order_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name",
+        "arguments"
+      ],
+      "properties": {
+        "type": {
+          "const": "tool"
+        },
+        "name": {
+          "const": "search_policy"
+        },
+        "arguments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "proposal"
+      ],
+      "properties": {
+        "type": {
+          "const": "final"
+        },
+        "proposal": {
+          "$ref": "urn:jobforge:support-proposal-v1#/$defs/modelProposal"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "timing"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P02.1",
+              "P02.2"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "extended_delay"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P07.1",
+              "P07.2"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "missing_facts"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P03.1",
+              "P03.2"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "delivery_dispute"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P04.1",
+              "P04.2"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "structured_conflict"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P05.1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "critical_exception"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P06.1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "carrier_correction"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P05.2",
+              "P06.2"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "topic",
+        "required_aliases"
+      ],
+      "properties": {
+        "type": {
+          "const": "policy_supplement"
+        },
+        "topic": {
+          "const": "ticket_status"
+        },
+        "required_aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P08.1",
+              "P08.2",
+              "P09.1"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -116,6 +116,8 @@ func supportStorageResult(t *testing.T, h *runHarness, claimed agentrun.ClaimedR
 			t.Fatalf("support BeginTool: %v", err)
 		}
 		switch step.Kind {
+		case "read_policy_bundle":
+			result.Content, result.EvidenceRefs = bundleStorageContent(t, snapshot)
 		case "get_order", "get_delivery":
 			kind := "order"
 			if step.Kind == "get_delivery" {

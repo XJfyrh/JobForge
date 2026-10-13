@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status_aliases": {
+    "informational_only": "P08.1",
+    "escalated": "P08.2"
+  },
+  "ordinary_statuses": [
+    "open",
+    "awaiting_information"
+  ],
+  "query": "Already informational_only ticket action none; already escalated preserve status no silent downgrade"
+}

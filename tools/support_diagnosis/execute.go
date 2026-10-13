@@ -37,7 +37,7 @@ func credential(path string) (string, error) {
 // Execute sends each frozen trial at most once, with PG authorization before HTTP.
 func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsPath string, progress io.Writer) error {
 	m, raw, err := LoadManifest(manifestPath)
-	if err != nil || m.SchemaVersion != 2 {
+	if err != nil || (m.SchemaVersion != 2 && m.SchemaVersion != 3) {
 		return ErrInvalid
 	}
 	if err := VerifyBinary(m.RunnerSHA256); err != nil {
@@ -72,7 +72,11 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 	}()
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, DisableKeepAlives: true}
 	defer transport.CloseIdleConnections()
-	client := &http.Client{Transport: transport, Timeout: 180 * time.Second,
+	timeout := 180 * time.Second
+	if m.SchemaVersion == 3 {
+		timeout = 120 * time.Second
+	}
+	client := &http.Client{Transport: transport, Timeout: timeout,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return errors.New("redirect rejected") }}
 	for index, trial := range m.Trials {
 		if ctx.Err() != nil {
@@ -141,5 +145,9 @@ func send(ctx context.Context, client *http.Client, body []byte, key string, tri
 		r.ResponseSHA256 = Digest(raw)
 		return r, raw
 	}
-	return ParseReport(raw, response.StatusCode, trial.Group, trial.ID), raw
+	group := trial.Group
+	if group == "V5" {
+		group = "B"
+	}
+	return ParseReport(raw, response.StatusCode, group, trial.ID), raw
 }

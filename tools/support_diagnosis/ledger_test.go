@@ -315,3 +315,44 @@ func TestLedgerCrashReservationCannotBeReplayed(t *testing.T) {
 		t.Fatalf("crash hold %d: %v", held, err)
 	}
 }
+
+func TestReplayBatchCapCannotRollIntoAnotherAccount(t *testing.T) {
+	for _, schema := range []int{2, 3} {
+		t.Run(fmt.Sprint(schema), func(t *testing.T) {
+			pool := testPool(t)
+			m := testManifest()
+			m.SchemaVersion = schema
+			if schema == 3 {
+				m.CostCap = 28000000
+			}
+			l, _ := openTest(t, pool, m)
+			ctx := context.Background()
+			batch, err := l.NextBatch(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			trial := Trial{ID: "case-V5-1", RequestSHA256: strings.Repeat("b", 64)}
+			if err := l.Reserve(ctx, batch, trial, 1); err != nil {
+				t.Fatal(err)
+			}
+			usage := run.UsageReport{InputTokens: 900000, OutputTokens: 1, ReceiptHash: strings.Repeat("a", 64)}
+			usage.UsageHash = usage.Hash()
+			if err := l.Settle(ctx, trial, Report{Usage: &usage, Outcome: "final"}, 1); err != nil {
+				t.Fatal(err)
+			}
+			_, err = l.NextBatch(ctx)
+			if schema == 3 && !errors.Is(err, run.ErrBudgetExhausted) || schema == 2 && err != nil {
+				t.Fatalf("schema %d rollover: %v", schema, err)
+			}
+			if schema == 3 {
+				if err := l.Reserve(ctx, batch, Trial{ID: "another"}, 2); !errors.Is(err, run.ErrBudgetExhausted) {
+					t.Fatalf("direct reservation bypass: %v", err)
+				}
+				var accounts int
+				if err := pool.QueryRow(ctx, "select count(*) from budget_accounts where scope='batch'").Scan(&accounts); err != nil || accounts != 1 {
+					t.Fatalf("unexpected rollover account: %d %v", accounts, err)
+				}
+			}
+		})
+	}
+}

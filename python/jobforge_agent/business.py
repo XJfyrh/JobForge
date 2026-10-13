@@ -204,6 +204,56 @@ def validate_search_response(
     return result
 
 
+POLICY_BUNDLE_ALIASES = tuple(
+    f"P{policy:02d}.{paragraph}" for policy in range(1, 11) for paragraph in (1, 2)
+)
+
+
+def validate_policy_bundle_response(
+    result: dict[str, Any], binding: SnapshotBinding
+) -> dict[str, Any]:
+    """Require the complete fixed policy identity set without search distances."""
+    if (
+        set(result) != {"snapshot_id", "matches"}
+        or result["snapshot_id"] != binding.snapshot_id
+    ):
+        raise ToolError("INVALID_EVIDENCE")
+    matches = result["matches"]
+    if not isinstance(matches, list) or len(matches) != len(POLICY_BUNDLE_ALIASES):
+        raise ToolError("INVALID_EVIDENCE")
+    for alias, hit in zip(POLICY_BUNDLE_ALIASES, matches, strict=True):
+        if not isinstance(hit, dict) or set(hit) != {
+            "index_id",
+            "chunk_id",
+            "policy_version",
+            "evidence_ref",
+            "source",
+            "text",
+        }:
+            raise ToolError("INVALID_EVIDENCE")
+        if (
+            hit["chunk_id"] != alias
+            or hit["index_id"] != binding.index_id
+            or hit["policy_version"] != binding.policy_version
+            or hit["evidence_ref"] != f"business-policy:{binding.index_id}:{alias}"
+        ):
+            raise ToolError("INVALID_EVIDENCE")
+        if (
+            not isinstance(hit["source"], str)
+            or not hit["source"]
+            or not isinstance(hit["text"], str)
+            or not hit["text"].strip()
+            or "\x00" in hit["text"]
+        ):
+            raise ToolError("INVALID_RESPONSE")
+        try:
+            if len(hit["text"].encode("utf-8")) > 768:
+                raise ToolError("INVALID_RESPONSE")
+        except UnicodeError as exc:
+            raise ToolError("INVALID_RESPONSE") from exc
+    return result
+
+
 class BusinessTools:
     """Dispatch one authorized read tool over real HTTP with fixed URL paths."""
 

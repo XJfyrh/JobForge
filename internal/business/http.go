@@ -35,6 +35,7 @@ type HTTPStore interface {
 	GetEvidence(context.Context, string, string, string) (*Evidence, error)
 	SearchPolicies(context.Context, string, string, SearchRequest) ([]PolicyHit, error)
 	GetPolicy(context.Context, string, string, string) (*PolicyHit, error)
+	ReadPolicyBundle(context.Context, string, string) ([]PolicyHit, error)
 }
 
 type identityKey struct{}
@@ -82,6 +83,7 @@ func NewHTTPHandler(store HTTPStore, keys map[string]Identity) (http.Handler, er
 	router.Get("/business/v1/snapshots/{id}/delivery", h.delivery)
 	router.Get("/business/v1/snapshots/{id}/evidence/{kind}", h.evidence)
 	router.Post("/business/v1/snapshots/{id}/policies/search", h.search)
+	router.Get("/business/v1/snapshots/{id}/policies/bundle", h.policyBundle)
 	router.Get("/business/v1/snapshots/{id}/policies/{chunk}", h.policy)
 	return router, nil
 }
@@ -239,6 +241,31 @@ func (h *businessHTTP) search(w http.ResponseWriter, r *http.Request) {
 func (h *businessHTTP) policy(w http.ResponseWriter, r *http.Request) {
 	value, err := h.store.GetPolicy(r.Context(), requestIdentity(r).TenantID, chi.URLParam(r, "id"), chi.URLParam(r, "chunk"))
 	writeBusinessResult(w, value, err)
+}
+
+func (h *businessHTTP) policyBundle(w http.ResponseWriter, r *http.Request) {
+	if r.URL.RawQuery != "" || r.ContentLength != 0 {
+		writeBusinessError(w, ErrInvalidArgument)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	hits, err := h.store.ReadPolicyBundle(r.Context(), requestIdentity(r).TenantID, id)
+	if err != nil {
+		writeBusinessError(w, err)
+		return
+	}
+	value := struct {
+		SnapshotID string      `json:"snapshot_id"`
+		Matches    []PolicyHit `json:"matches"`
+	}{id, hits}
+	data, err := json.Marshal(value)
+	if err != nil || len(data) > PolicyBundleMaxBytes {
+		writeBusinessError(w, ErrInternal)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func writeBusinessResult(w http.ResponseWriter, value any, err error) {

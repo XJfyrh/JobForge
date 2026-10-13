@@ -84,7 +84,7 @@ func (c *Conversation) accept(f Frame, now int64) error {
 			Policy   string `json:"provider_audit_policy"`
 		}
 		if json.Unmarshal(f.Input, &selection) == nil && f.Binding.StepKind == "model_proposal" && selection.Policy == run.ProviderAuditPolicyDeepSeekV2 {
-			c.thinking = selection.Executor == run.SupportAdjudicationExecutorVersion || selection.Executor == run.SupportAdjudicationV2ExecutorVersion || selection.Executor == run.SupportFixedAdjudicationExecutorVersion
+			c.thinking = selection.Executor == run.SupportAdjudicationExecutorVersion || selection.Executor == run.SupportAdjudicationV2ExecutorVersion || selection.Executor == run.SupportAdjudicationV3ExecutorVersion || selection.Executor == run.SupportAdjudicationV4ExecutorVersion || selection.Executor == run.SupportAdjudicationV5ExecutorVersion || selection.Executor == run.SupportFixedAdjudicationExecutorVersion || selection.Executor == run.SupportFixedBundleExecutorVersion
 		}
 		c.metering = MeteringReceiver{requestID: f.RequestID, binding: f.Binding, start: f.EmittedMonoMS, calls: map[string]*meteredCall{}}
 		return nil
@@ -285,7 +285,7 @@ func validClock(emitted, now int64) bool {
 
 func subcalls(step string) []string {
 	switch step {
-	case "get_order", "get_delivery":
+	case "get_order", "get_delivery", "read_policy_bundle":
 		return []string{step}
 	case "search_policy":
 		return []string{"profile_version", "profile_tags", "query_embedding", "search_policy"}

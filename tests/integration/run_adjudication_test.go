@@ -42,8 +42,20 @@ func setupAdjudicationProfileHarness(t *testing.T, fixed bool, agentSchema int) 
 	if agentSchema == 13 {
 		d.Program.PromptVersion = agentrun.SupportAgentPromptV5
 	}
+	if agentSchema == 14 {
+		d.Program.PromptVersion, d.Program.DecisionSchema = agentrun.SupportAgentPromptV6, agentrun.SupportSupplementDecisionSchema
+	}
+	if agentSchema == 15 {
+		d.Program.PromptVersion, d.Program.DecisionSchema = agentrun.SupportAgentPromptV7, agentrun.SupportSupplementDecisionSchema
+	}
+	if agentSchema == 16 {
+		d.Program.PromptVersion = agentrun.SupportAgentPromptV8
+	}
 	if fixed {
 		d.SchemaVersion, d.Program.PromptVersion = 12, agentrun.SupportPromptVersion
+		if agentSchema == 17 {
+			d.SchemaVersion, d.Program.PromptVersion = 17, agentrun.SupportFixedPromptV2
+		}
 		d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
 	}
 	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-11", "2026-10-11"

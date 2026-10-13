@@ -25,8 +25,12 @@ from jobforge_agent.run_tools import RunBusinessTools
 from jobforge_agent.runtime_adapters import RegisteredAdapter, resolve_adapter
 from jobforge_agent.runtime_input import (
     ADJUDICATION_EXECUTORS,
+    ADJUDICATION_V3_EXECUTOR_VERSION,
+    ADJUDICATION_V4_EXECUTOR_VERSION,
     FIXED_ADJUDICATION_EXECUTOR_VERSION,
+    FIXED_BUNDLE_EXECUTOR_VERSION,
     FIXED_COMPARISON_EXECUTOR_VERSION,
+    POLICY_BUNDLE_EXECUTORS,
     RuntimeInput,
     RuntimeInputError,
     parse_runtime_input,
@@ -37,7 +41,7 @@ from jobforge_agent.support_agent import next_tool_arguments, validate_agent_ste
 
 def _endpoints(kind: str) -> dict[EndpointAlias, Endpoint]:
     values: dict[EndpointAlias, Endpoint] = {}
-    if kind in {"get_order", "get_delivery", "search_policy"}:
+    if kind in {"get_order", "get_delivery", "search_policy", "read_policy_bundle"}:
         origin = os.environ.get("JOBFORGE_BUSINESS_ORIGIN", "")
         key = os.environ.get("JOBFORGE_BUSINESS_READ_KEY", "")
         if not origin or not key:
@@ -77,12 +81,30 @@ async def execute_registered_step(
     """Run a fixed kind and bind its result to the last acknowledged call."""
     kind = frame["binding"]["step_kind"]
     checkpoint, result = runtime.checkpoint, _result()
+    policy_bundle = runtime.executor_version in POLICY_BUNDLE_EXECUTORS
     if adapter.strategy == "support_fixed_v1":
-        validate_support_step(checkpoint, kind)
+        if policy_bundle:
+            from jobforge_agent.support_agent_v8 import validate_fixed_bundle_step
+
+            validate_fixed_bundle_step(checkpoint, kind)
+        else:
+            validate_support_step(checkpoint, kind)
     agent = adapter.strategy == "support_agent_v1"
     adjudication = runtime.executor_version in ADJUDICATION_EXECUTORS
+    supplement = runtime.executor_version in {
+        ADJUDICATION_V3_EXECUTOR_VERSION,
+        ADJUDICATION_V4_EXECUTOR_VERSION,
+    }
+    status_policy = runtime.executor_version == ADJUDICATION_V4_EXECUTOR_VERSION
     if agent:
-        validate_agent_step(checkpoint, kind, adjudication=adjudication)
+        validate_agent_step(
+            checkpoint,
+            kind,
+            adjudication=adjudication,
+            supplement=supplement,
+            status_policy=status_policy,
+            policy_bundle=policy_bundle,
+        )
     snapshot = checkpoint["snapshot"]
     context = RunCallContext(
         frame["binding"]["profile_hash"],
@@ -90,7 +112,11 @@ async def execute_registered_step(
         runtime.tool_invocation_id,
         agent=agent,
         wide_context=runtime.executor_version
-        in {FIXED_COMPARISON_EXECUTOR_VERSION, FIXED_ADJUDICATION_EXECUTOR_VERSION},
+        in {
+            FIXED_COMPARISON_EXECUTOR_VERSION,
+            FIXED_ADJUDICATION_EXECUTOR_VERSION,
+            FIXED_BUNDLE_EXECUTOR_VERSION,
+        },
         final_adjudication=adjudication and kind == "model_proposal",
     )
     outcome: Literal["success", "error"] = "success"
@@ -100,7 +126,7 @@ async def execute_registered_step(
         result["evidence_refs"] = [
             f"business-evidence:{snapshot['snapshot_id']}:ticket"
         ]
-    elif kind in {"get_order", "get_delivery", "search_policy"}:
+    elif kind in {"get_order", "get_delivery", "search_policy", "read_policy_bundle"}:
         ticket = snapshot["ticket_binding_json"]
         binding = SnapshotBinding(
             snapshot["snapshot_id"],
@@ -109,20 +135,29 @@ async def execute_registered_step(
             snapshot["index_id"],
             ticket["policy_version"],
         )
-        arguments = (
-            {"query": adapter.policy_query(copy.deepcopy(checkpoint))}
-            if kind == "search_policy"
-            else {"order_id": binding.order_id}
-        )
         if agent:
-            arguments = next_tool_arguments(checkpoint, kind)
+            arguments = next_tool_arguments(
+                checkpoint,
+                kind,
+                supplement=supplement,
+                status_policy=status_policy,
+                policy_bundle=policy_bundle,
+            )
+        elif kind == "read_policy_bundle":
+            arguments = {}
+        else:
+            arguments = (
+                {"query": adapter.policy_query(copy.deepcopy(checkpoint))}
+                if kind == "search_policy"
+                else {"order_id": binding.order_id}
+            )
         content = await RunBusinessTools(dispatcher, binding).execute(
             kind, arguments, context=context
         )
         result["content"] = content
         result["evidence_refs"] = (
             [item["evidence_ref"] for item in content["matches"]]
-            if kind == "search_policy"
+            if kind in {"search_policy", "read_policy_bundle"}
             else [content["evidence_ref"]]
         )
     elif kind in {"model_proposal", "model_decision", "protocol_correction"}:
@@ -140,7 +175,11 @@ async def execute_registered_step(
                     value, copy.deepcopy(checkpoint)
                 ),
             )
-            if agent and output["type"] in {"tool", "investigation_complete"}:
+            if agent and output["type"] in {
+                "tool",
+                "investigation_complete",
+                "policy_supplement",
+            }:
                 result["content"] = output
             else:
                 result["proposal"] = output["proposal"] if agent else output

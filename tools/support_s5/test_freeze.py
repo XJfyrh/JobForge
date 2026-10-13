@@ -36,7 +36,7 @@ def test_new_bindings_preserve_blueprint_but_source_or_cap_change_fails(
     definition["model"]["message_content_bytes"] = 65536
     definition["model"]["request_body_bytes"] = 131072
     sources = {"synthetic-source.py": "a" * 64}
-    monkeypatch.setattr(freeze, "source_hashes", lambda: dict(sources))
+    monkeypatch.setattr(freeze, "source_hashes", lambda schema=None: dict(sources))
     receipt = {
         "status": "frozen_before_unseen_creation",
         "thresholds": THRESHOLDS,
@@ -108,7 +108,7 @@ def definition(schema_version: int) -> dict[str, Any]:
 @pytest.fixture
 def inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """A structurally complete, synthetic candidate-freeze input set."""
-    monkeypatch.setattr(freeze, "source_hashes", lambda: dict(SOURCES))
+    monkeypatch.setattr(freeze, "source_hashes", lambda schema=None: dict(SOURCES))
 
     def run(command: list[str], **kwargs: Any) -> SimpleNamespace:
         return SimpleNamespace(stdout=b"" if command[1] == "status" else HEAD.encode())
@@ -177,11 +177,13 @@ def create(
     )
 
 
-def test_schema_13_candidate_binds_all_three_seen_formals(
+@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+def test_candidate_binds_all_three_seen_formals(
     inputs: SimpleNamespace,
+    schema: int,
 ) -> None:
     """ADR-0034's candidate freezes, and formal v3 is bound as seen too."""
-    receipt = create(inputs, 13, 12, V1, V2, V3)
+    receipt = create(inputs, schema, 17 if schema == 16 else 12, V1, V2, V3)
     assert receipt["status"] == "frozen_before_unseen_creation"
     assert receipt["source_commit"] == HEAD and receipt["thresholds"] == THRESHOLDS
     packages = receipt["seen_formal_packages"]
@@ -200,13 +202,14 @@ def test_schema_13_candidate_binds_all_three_seen_formals(
 
 
 @pytest.mark.parametrize("omitted", [V1, V2, V3])
-def test_schema_13_requires_every_seen_formal_manifest(
-    inputs: SimpleNamespace, omitted: str
+@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+def test_candidate_requires_every_seen_formal_manifest(
+    inputs: SimpleNamespace, omitted: str, schema: int
 ) -> None:
     """An omitted prior cohort is a missing provenance, never a silent pass."""
     present = tuple(dataset for dataset in (V1, V2, V3) if dataset != omitted)
     with pytest.raises(EvidenceError, match="SEEN_FORMAL_PROVENANCE_REQUIRED"):
-        create(inputs, 13, 12, *present)
+        create(inputs, schema, 17 if schema == 16 else 12, *present)
 
 
 @pytest.mark.parametrize(
@@ -225,6 +228,8 @@ def test_schema_13_requires_every_seen_formal_manifest(
         # existing rejection, and ADR-0034 supersedes that candidate.
         (11, 12, (V1, V2), "COMPARISON_PROFILE_MISMATCH"),
         (13, 11, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
+        (16, 12, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
+        (15, 17, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (12, 13, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (13, 12, (V1, V2), "SEEN_FORMAL_PROVENANCE_REQUIRED"),
     ],
@@ -277,3 +282,88 @@ def test_source_hashes_bind_the_v5_deployment_definition_and_prompt() -> None:
     prompt = "python/jobforge_agent/support_agent_v5.py"
     assert prompt in sources
     assert sources[prompt] == sha256((ROOT / prompt).read_bytes())
+    for path in (
+        "api/support/s5-agent-v6/profile-schema.json",
+        "api/support/s5-agent-v7/profile-schema.json",
+        "api/support/s5-agent-v7/status-policy-fixtures.json",
+        "api/support/agent-v2/schema.json",
+        "python/jobforge_agent/support_agent_v6.py",
+        "python/jobforge_agent/support_agent_v7.py",
+        "python/jobforge_agent/status_policy.py",
+        "python/jobforge_agent/policy_supplement.py",
+    ):
+        assert sources[path] == sha256((ROOT / path).read_bytes())
+
+
+@pytest.mark.parametrize("schema", [16, 17])
+def test_bundle_source_hashes_bind_execution_protocol_and_generated_wire(
+    schema: int,
+) -> None:
+    """New candidates also freeze runtime permissions and serialized contracts."""
+    legacy = freeze.source_hashes()
+    sources = freeze.source_hashes(schema)
+    assert all(sources[path] == digest for path, digest in legacy.items())
+    for path in (
+        "internal/runprotocol/v2/conversation.go",
+        "internal/runprotocol/v2/protocol.go",
+        "internal/runinput/input.go",
+        "internal/runinput/snapshot.go",
+        "api/executor/v2/schema.json",
+        "api/executor/v2/runtime-input.schema.json",
+        "proto/jobforge/agent/v1/agent.pb.go",
+        "proto/jobforge/agent/v1/agent_grpc.pb.go",
+    ):
+        assert sources[path] == sha256((ROOT / path).read_bytes())
+        assert path not in legacy
+    assert freeze.source_hashes(15) == legacy
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "internal/runprotocol/v2/conversation.go",
+        "internal/runinput/input.go",
+        "api/executor/v2/runtime-input.schema.json",
+        "proto/jobforge/agent/v1/agent.pb.go",
+    ],
+)
+def test_bundle_freeze_rejects_execution_source_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    """A post-freeze change to any newly bound execution layer invalidates it."""
+    monkeypatch.setattr(freeze, "ROOT", tmp_path)
+    monkeypatch.setattr(freeze, "approval_sources", lambda: dict(SOURCES))
+    for name in (path, "deploy/Dockerfile.support-s5"):
+        file = tmp_path / name
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_bytes(b"synthetic before")
+    receipt = {
+        "status": "frozen_before_unseen_creation",
+        "thresholds": THRESHOLDS,
+        "sources": freeze.source_hashes(16),
+        "candidate_blueprint": {"schema_version": 16},
+    }
+    freeze.validate(receipt)
+    (tmp_path / path).write_bytes(b"synthetic after")
+    with pytest.raises(EvidenceError, match="CANDIDATE_FREEZE_CHANGED"):
+        freeze.validate(receipt)
+
+
+def test_bundle_freeze_requires_versioned_build_sources(
+    inputs: SimpleNamespace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An old build receipt cannot be reused for the new deployment pair."""
+    sources = {**SOURCES, "internal/runinput/input.go": "b" * 64}
+    monkeypatch.setattr(
+        freeze,
+        "source_hashes",
+        lambda schema=None: dict(sources if schema in {16, 17} else SOURCES),
+    )
+    with pytest.raises(EvidenceError, match="BUILD_RECEIPT_MISMATCH"):
+        create(inputs, 16, 17, V1, V2, V3)
+    build = json.loads(inputs.build.read_bytes())
+    build["sources"] = sources
+    write_json(inputs.build, build)
+    receipt = create(inputs, 16, 17, V1, V2, V3)
+    assert receipt["sources"] == sources
+    freeze.validate(receipt)

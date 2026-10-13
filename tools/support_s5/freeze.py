@@ -23,13 +23,15 @@ ROOT = Path(__file__).resolve().parents[2]
 # pair listed before it keeps its exact acceptance and rejection behaviour. The
 # schema 11/12 pair is deliberately absent: admitting it would change existing
 # rejection behaviour for schema 11, and ADR-0034 supersedes that candidate.
-SCHEMA_PAIRS = frozenset({(6, 5), (7, 8), (9, 10), (13, 12)})
+SCHEMA_PAIRS = frozenset(
+    {(6, 5), (7, 8), (9, 10), (13, 12), (14, 12), (15, 12), (16, 17)}
+)
 
 
-def source_hashes() -> dict[str, str]:
+def source_hashes(schema_version: int | None = None) -> dict[str, str]:
     """Bind installed execution, preparation, UI, telemetry and operator sources."""
     result = approval_sources()
-    for directory in (
+    directories: tuple[str, ...] = (
         "tools/support_s5",
         "tools/support_lifecycle",
         "internal/observability",
@@ -46,7 +48,20 @@ def source_hashes() -> dict[str, str]:
         # ADR-0034 introduces only the schema 13 Agent deployment definition;
         # the Fixed baseline stays schema 12 (api/support/s5-fixed-v4).
         "api/support/s5-agent-v5",
-    ):
+        "api/support/s5-agent-v6",
+        "api/support/s5-agent-v7",
+        "api/support/s5-agent-v8",
+        "api/support/s5-fixed-v5",
+        "api/support/agent-v2",
+    )
+    if schema_version in {16, 17}:
+        directories += (
+            "internal/runprotocol/v2",
+            "internal/runinput",
+            "api/executor/v2",
+            "proto/jobforge/agent/v1",
+        )
+    for directory in directories:
         for file in (ROOT / directory).rglob("*"):
             if (
                 file.is_file()
@@ -79,7 +94,8 @@ def validate(value: dict[str, Any]) -> None:
     need(
         value["status"] == "frozen_before_unseen_creation"
         and value["thresholds"] == THRESHOLDS
-        and value["sources"] == source_hashes(),
+        and value["sources"]
+        == source_hashes(value.get("candidate_blueprint", {}).get("schema_version")),
         "CANDIDATE_FREEZE_CHANGED",
     )
 
@@ -136,16 +152,17 @@ def create(
         and strategies == {"support_agent_v1", "support_fixed_v1"},
         "BOTH_DEVELOPMENT_STRATEGIES_REQUIRED",
     )
+    agent, fixed = (
+        read(p)["profiles"][0]["definition"] for p in (agent_config, fixed_config)
+    )
+    sources = source_hashes(agent["schema_version"])
     build = read(build_receipt)
     need(
         build["source_commit"] == head
-        and build["sources"] == source_hashes()
+        and build["sources"] == sources
         and build["production_registry"] == ["support-fixed-v1", "support-agent-v1"]
         and build["gold_present"] is False,
         "BUILD_RECEIPT_MISMATCH",
-    )
-    agent, fixed = (
-        read(p)["profiles"][0]["definition"] for p in (agent_config, fixed_config)
     )
     need(
         (agent["schema_version"], fixed["schema_version"]) in SCHEMA_PAIRS
@@ -158,25 +175,25 @@ def create(
     # package is seen too, so it can never serve as the unseen acceptance set.
     agent_schema: int = agent["schema_version"]
     seen = {}
-    if agent_schema in {7, 9, 13}:
+    if agent_schema in {7, 9, 13, 14, 15, 16}:
         need(seen_formal_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_manifest is not None
         seen = seen_package(seen_formal_manifest, "support-s5-2026-10-07-v1")
     need(
-        agent_schema in {9, 13} or seen_formal_v2_manifest is None,
+        agent_schema in {9, 13, 14, 15, 16} or seen_formal_v2_manifest is None,
         "SEEN_FORMAL_PROVENANCE_SCOPE",
     )
     need(
-        agent_schema == 13 or seen_formal_v3_manifest is None,
+        agent_schema in {13, 14, 15, 16} or seen_formal_v3_manifest is None,
         "SEEN_FORMAL_PROVENANCE_SCOPE",
     )
     seen_v2 = {}
-    if agent_schema in {9, 13}:
+    if agent_schema in {9, 13, 14, 15, 16}:
         need(seen_formal_v2_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_v2_manifest is not None
         seen_v2 = seen_package(seen_formal_v2_manifest, "support-s5-2026-10-07-v2")
     seen_v3 = {}
-    if agent_schema == 13:
+    if agent_schema in {13, 14, 15, 16}:
         need(seen_formal_v3_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_v3_manifest is not None
         seen_v3 = seen_package(seen_formal_v3_manifest, "support-s5-2026-10-08-v3")
@@ -185,7 +202,7 @@ def create(
         "status": "frozen_before_unseen_creation",
         "frozen_at": datetime.now(UTC).isoformat(),
         "source_commit": head,
-        "sources": source_hashes(),
+        "sources": sources,
         "thresholds": THRESHOLDS,
         "candidate_blueprint": blueprint(agent),
         "baseline_blueprint": blueprint(fixed),

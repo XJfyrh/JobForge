@@ -64,7 +64,11 @@ def _manifest_profiles(
             in {
                 "linux-v2-adjudication-runtime-1",
                 "linux-v2-adjudication-runtime-2",
+                "linux-v2-adjudication-runtime-3",
+                "linux-v2-adjudication-runtime-4",
+                "linux-v2-adjudication-runtime-5",
                 "linux-v2-fixed-adjudication-runtime-1",
+                "linux-v2-fixed-adjudication-runtime-2",
             }
             and value["schema_version"] != 2
             or not isinstance(value["profiles"], list)
@@ -102,6 +106,16 @@ def _manifest_profiles(
             ) not in {
                 (
                     "support-agent-v1",
+                    "support-agent-prompt-v8",
+                    "linux-v2-adjudication-runtime-5",
+                ),
+                (
+                    "support-fixed-v1",
+                    "support-fixed-prompt-v2",
+                    "linux-v2-fixed-adjudication-runtime-2",
+                ),
+                (
+                    "support-agent-v1",
                     "support-agent-prompt-v2",
                     "linux-v2-approval-runtime-1",
                 ),
@@ -124,6 +138,16 @@ def _manifest_profiles(
                     "support-agent-v1",
                     "support-agent-prompt-v5",
                     "linux-v2-adjudication-runtime-2",
+                ),
+                (
+                    "support-agent-v1",
+                    "support-agent-prompt-v6",
+                    "linux-v2-adjudication-runtime-3",
+                ),
+                (
+                    "support-agent-v1",
+                    "support-agent-prompt-v7",
+                    "linux-v2-adjudication-runtime-4",
                 ),
                 (
                     "support-fixed-v1",
@@ -176,6 +200,22 @@ def resolve_adapter(
         from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
 
         return SupportAgentV5Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v6":
+        from jobforge_agent.support_agent_v6 import SupportAgentV6Adapter
+
+        return SupportAgentV6Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v7":
+        from jobforge_agent.support_agent_v7 import SupportAgentV7Adapter
+
+        return SupportAgentV7Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v8":
+        from jobforge_agent.support_agent_v8 import SupportAgentV8Adapter
+
+        return SupportAgentV8Adapter()
+    if matched[0].get("prompt_version") == "support-fixed-prompt-v2":
+        from jobforge_agent.support_agent_v8 import SupportFixedV2Adapter
+
+        return SupportFixedV2Adapter()
     return adapter
 
 

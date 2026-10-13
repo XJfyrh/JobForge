@@ -90,7 +90,7 @@ docker run --rm --init --network none jobforge-agent-runtime:integration /app/wo
 docker run --rm --init --add-host control:127.0.0.1 -e JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1 -e 'JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@host.docker.internal:5433/jobforge?sslmode=disable' -e 'JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@host.docker.internal:5434/jobforge_business?sslmode=disable' jobforge-agent-runtime:integration
 ```
 
-联合层前先启动上述业务 pgvector 库；未设置业务 DSN 导致的 S4 skip 不算联合层通过。Linux 使用可达的 PG 地址，必要时在镜像名之前添加 `--add-host host.docker.internal:host-gateway`。Dockerfile 在测试 target 设置专用开关；`control:127.0.0.1` 供容器内 SDK listener 使用。S3 `TestRunRecovery` 和 S4 动作故障保留自然 30s lease、180s attempt 和三次恢复上限，联合测试最长 1200s，不缩短生产计时。
+联合层前先启动上述业务 pgvector 库；未设置业务 DSN 导致的 S4 skip 不算联合层通过。Linux 使用可达的 PG 地址，必要时在镜像名之前添加 `--add-host host.docker.internal:host-gateway`。Dockerfile 在测试 target 设置专用开关；`control:127.0.0.1` 供容器内 SDK listener 使用。S3 `TestRunRecovery` 和 S4 动作故障保留自然 30s lease、180s attempt 和三次恢复上限。上述镜像默认联合套件最长 1500s，包含新增版本回归；统一入口和 CI 拆分后的每组最长 1200s，均不改变生产计时。
 
 审计检查包含共同 audit/report/observation 向量、真实 PG 首报告/重放/冲突/冻结/晚到/批次 guard、`TestRunProviderAuditPythonHTTPContract` 和固定进程 `TestRunProviderAuditExecutor` 确认丢失/停发。恢复层验证关闭证明、原预算、迁移和实际进程接管；细节见[审计](agent-v3/provider-audit.md)与[恢复](agent-v3/recovery.md)。
 
@@ -117,6 +117,8 @@ docker run --rm -v "${PWD}/deploy/prometheus:/etc/prometheus:ro" --entrypoint pr
 S5登记与离线评分按[S5工具](../tools/support_s5/README.md)：开发40案、正式v1/v2/v3各20案分别核验，`tools/support_evaluation/test_registration_routing.py`覆盖两策略及数量/未知dataset拒绝，Go准备器另覆盖外部20案路径。正式Agent须正确≥16、完整案例证据≥18、四类硬失败0；普通质量失败仍完成Fixed基线，再停恢复/演示。原SDK输出、实际PG与业务/回执前后审计必须保留；输入重建仅核验实际request parameter hash，不调用模型，也不计为修复后的质量通过。
 
 独立终裁候选按 [ADR-0033](adr/0033-versioned-final-adjudication.md) 验证：真实 PostgreSQL 的 `TestRunAdjudication` 覆盖新 Agent/Fixed 许可、初稿隔离、终裁失败、unknown hold、晚到计量及两阶段恢复；固定 Linux 镜像中的 `TestRunSupportAgentExecutor/adjudication` 覆盖安装后的长终裁、取消、空推理、截断和超长内容。`tools/support_s5/test_adjudication.py` 检查阶段未知计量不作零、初稿不能替代最终分数；旧版本仍运行原合同用例。以上机制测试的模型响应均为合成，真实开发和已见回归另列。
+
+完整政策候选按 [ADR-0038](adr/0038-policy-bundle-before-adjudication.md) 验证：真实 PG 的 `TestRunPolicyBundle` 覆盖双策略图、工具/HTTP 计量、提交幂等、未提交与已提交恢复、取消/失租/额度；业务库 `TestCompletePolicyBundle` 覆盖完整有序 20 段、缺段/额外别名/跨租户拒绝和独立 32 KiB HTTP 上限。固定 Linux 的 `TestRunSupportAgentExecutor/adjudication_bundle` 包含 Agent、Fixed、终裁取消三项。Python `test_support_agent_v8.py` 与 S5 `test_bundle.py`、`test_freeze.py` 验证严格来源、单一 final envelope、初稿隔离、实际终裁双闭合、旧版本隔离及新冻结源码绑定。
 
 ## CI 质量门禁
 

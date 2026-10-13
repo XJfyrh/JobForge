@@ -25,6 +25,13 @@
 - [S5 正式v2输入诊断](agent-v3-s5-input-diagnosis-2026-10-08.md)：87次请求绑定、20案完整事实/政策/UTC复核；新增收费0，旧正式质量不变。
 - [S5 固定输入裁决诊断](agent-v3-s5-decision-diagnosis-2026-10-11.md)：已见20案、四组各三轮，A/B/C/D正确31/49/33/19（各60次）；优先验证thinking最终裁决，未计正式验收；[机器摘要](agent-v3-s5-decision-diagnosis-2026-10-11.json)。
 - [S5 独立终裁开发验证](agent-v3-s5-final-adjudication-2026-10-11.md)：开发正确/完整证据38/40、已见回归17/20；004/018未解决，停在冻结之前；[机器摘要](agent-v3-s5-final-adjudication-2026-10-11.json)。
+- [S5 v5候选验证](agent-v3-s5-v5-validation-2026-10-13.md)：终裁回放18/20；开发因DEV-020双闭合缺口停在第20案，原40分母19通过、1失败、20未执行；[机器摘要](agent-v3-s5-v5-validation-2026-10-13.json)，未冻结或进入后继批次。
+- [S5 v6受控补证机制](agent-v3-s5-v6-mechanism-2026-10-13.md)：版本化补证、原步骤恢复、两次 thinking 计量与新旧闭合分列；该免费验证未收费。
+- [S5 v6开发验证](agent-v3-s5-v6-development-2026-10-13.md)：DEV-020/031补证成功，DEV-033遗漏行动政策后停发；原40分母32通过、1失败、7未执行；[机器摘要](agent-v3-s5-v6-development-2026-10-13.json)。
+- [S5 v7状态政策前置读取](agent-v3-s5-v7-mechanism-2026-10-13.md)：权威状态触发一次固定查询，已有来源不重读；全仓 race、5 项 Linux 链路和独立历史重算通过，该机制验证未收费。
+- [S5 v7开发验证](agent-v3-s5-v7-development-2026-10-13.md)：正确与完整证据38/40，031/033状态读取修复；026协议失败、038语义退化保留。独立接受开发达标，未正式冻结；[机器摘要](agent-v3-s5-v7-development-2026-10-13.json)。
+- [S5 v7已见v3回归](agent-v3-s5-v7-seen-v3-2026-10-13.md)：004首次thinking用满输出容量、未提交final，输入缺P05.1但补证入口可用；第4案后停发，原20分母3通过、1失败、16未执行，018未验证；[机器摘要](agent-v3-s5-v7-seen-v3-2026-10-13.json)。
+- [S5 v8完整政策前置读取](agent-v3-s5-v8-mechanism-2026-10-13.md)：固定20段整包、双策略同能力单次终裁；免费机制、历史848请求哈希与新冻结源绑定验证，不代表云端质量通过。
 - [S5 首次Agent开发记录](agent-v3-s5-dev-agent-2026-10-07.md)：[原机器摘要](agent-v3-s5-dev-agent-2026-10-07.json)，保留当时40案结果；当前候选与正式配对见上方S5本轮报告。
 
 - [DeepSeek 接入调查、独立复审与环境阻塞](agent-v3-deepseek-and-blocker-2026-09-16.md)

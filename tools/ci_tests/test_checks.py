@@ -21,6 +21,7 @@ from tools.ci_checks import (
     validate_runtime_log,
 )
 from tools.ci_docs import check_link, headings, targets
+from tools.ci_images import main as check_images
 
 
 class SelectionTests(unittest.TestCase):
@@ -237,6 +238,26 @@ class RuntimeTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 validate_runtime_log(broken, expected)
+
+
+class ImageTests(unittest.TestCase):
+    """Preserve host-only boundaries when image checks move out of the workflow."""
+
+    def test_s5_sources_exclude_host_guard_and_replay(self) -> None:
+        """Verify deployed sources without requiring host-only modules in the image."""
+        with (
+            patch("tools.ci_images.docker"),
+            patch("tools.ci_images.verify_sources") as verify,
+        ):
+            check_images()
+        _, paths, _, absent = verify.call_args.args
+        names = {path.name for path in paths}
+        self.assertTrue({"freeze.py", "score.py"} <= names)
+        for name in ("guard.py", "replay.py"):
+            self.assertNotIn(name, names)
+            self.assertIn(f"/app/tools/support_s5/{name}", absent)
+        self.assertIn("/app/tools/support_diagnosis", absent)
+        self.assertIn("/app/examples/support-agent/evaluation", absent)
 
 
 class DocsTests(unittest.TestCase):

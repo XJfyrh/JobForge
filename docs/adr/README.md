@@ -46,6 +46,10 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0032](0032-s5-reasoning-observation-amendment.md) | 空推理观测与原名单续跑 | Accepted（仅修订空推理分类） | 2026-10-11 |
 | [ADR-0033](0033-versioned-final-adjudication.md) | 版本化独立终裁 | Accepted（随本 PR 合并生效） | 2026-10-11 |
 | [ADR-0034](0034-s5-final-stage-separation-and-condition-enumeration.md) | S5 终裁任务分离与条件枚举候选 | Accepted（维护者批准方案与 ¥28 上限，独立设计审查通过；随本 PR 合并生效。增补 0033 的冻结守卫与阶段费用上限） | 2026-10-12 |
+| [ADR-0035](0035-s5-batch-reservation-and-v5-replay.md) | S5 批次预留上限与 v5 终裁回放 | Accepted（逐批 ¥4、累计 ¥28；具体 manifest 独立放行） | 2026-10-13 |
+| [ADR-0036](0036-s5-controlled-policy-supplement.md) | S5 裁决阶段受控补证 | Accepted（机制通过；真实开发在 DEV-033 闭合缺口后停发，未冻结） | 2026-10-13 |
+| [ADR-0037](0037-status-policy-read-prerequisite.md) | 特殊工单状态的政策读取前置条件 | Accepted（独立设计审查通过；schema 15 新候选） | 2026-10-13 |
+| [ADR-0038](0038-policy-bundle-before-adjudication.md) | 先读取完整政策，再独立终裁 | Accepted（固定整包读取方向独立接受；实现验证另记） | 2026-10-13 |
 
 ## 增量适用范围
 

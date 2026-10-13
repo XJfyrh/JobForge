@@ -425,7 +425,9 @@ def _read_source(snapshot: dict[str, Any], kind: str, result: dict[str, Any]) ->
             seen.add(event["event_id"])
 
 
-def _policy_source(snapshot: dict[str, Any], result: dict[str, Any]) -> None:
+def _policy_source(
+    snapshot: dict[str, Any], result: dict[str, Any], *, bundle: bool = False
+) -> None:
     content = result["content"]
     require(
         set(content) == {"snapshot_id", "matches"}
@@ -434,10 +436,29 @@ def _policy_source(snapshot: dict[str, Any], result: dict[str, Any]) -> None:
     matches = content["matches"]
     require(
         isinstance(matches, list)
-        and len(matches) <= 3
+        and (len(matches) == 20 if bundle else len(matches) <= 3)
         and len(result["evidence_refs"]) == len(matches)
     )
     seen: set[str] = set()
+    if bundle:
+        from jobforge_agent.business import (
+            SnapshotBinding,
+            validate_policy_bundle_response,
+        )
+        from jobforge_agent.errors import ToolError
+
+        ticket = snapshot["ticket_binding_json"]
+        binding = SnapshotBinding(
+            snapshot["snapshot_id"],
+            ticket["order_id"],
+            snapshot["index_profile_hash"],
+            snapshot["index_id"],
+            ticket["policy_version"],
+        )
+        try:
+            validate_policy_bundle_response(content, binding)
+        except ToolError:
+            require(False)
     for index, hit in enumerate(matches):
         require(
             isinstance(hit, dict)
@@ -499,7 +520,12 @@ def support_sources(
         )
         for accepted in checkpoint["steps"]:
             kind = accepted["step"]["kind"]
-            if kind not in {"get_order", "get_delivery", "search_policy"}:
+            if kind not in {
+                "get_order",
+                "get_delivery",
+                "search_policy",
+                "read_policy_bundle",
+            }:
                 continue
             require(
                 kind not in sources.contents
@@ -508,8 +534,8 @@ def support_sources(
             result = accepted["result_json"]
             validate_step_result(result, kind)
             content = result["content"]
-            if kind == "search_policy":
-                _policy_source(snapshot, result)
+            if kind in {"search_policy", "read_policy_bundle"}:
+                _policy_source(snapshot, result, bundle=kind == "read_policy_bundle")
                 for hit in content["matches"]:
                     identity = {
                         key: val for key, val in hit.items() if key != "distance"

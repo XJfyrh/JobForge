@@ -115,6 +115,8 @@ enum StepKind {
   STEP_KIND_MODEL_DECISION = 8;
   // Execute the approved fixed business action in Go; never starts Python.
   STEP_KIND_APPLY_TICKET_RESOLUTION = 9;
+  // Read the complete versioned policy bundle before any model call.
+  STEP_KIND_READ_POLICY_BUNDLE = 10;
 }
 
 // RunState is the control-plane lifecycle; proposal does not mean applied.
@@ -450,6 +452,8 @@ enum Subcall {
   SUBCALL_SEARCH_POLICY = 6;
   // One registered chat HTTP request, including a separate correction call.
   SUBCALL_CHAT = 7;
+  // One snapshot-bound complete policy bundle HTTP read.
+  SUBCALL_READ_POLICY_BUNDLE = 8;
 }
 
 // ReserveCallRequest asks for one physical send, without caller-selected prices.

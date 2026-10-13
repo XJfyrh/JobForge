@@ -238,14 +238,14 @@ def draft_score(
 
 
 def _marker_context(
-    checkpoint: dict[str, Any], package: Package
+    checkpoint: dict[str, Any], package: Package, before_step: int | None = None
 ) -> tuple[Facts, set[str]] | None:
     """Recompute the pre-marker facts and the paragraph aliases retrieved.
 
     Both closure notions answer different questions over exactly this context, so
     they can never disagree about what the investigation had actually read.
     """
-    marker = marker_index(checkpoint)
+    marker = marker_index(checkpoint) if before_step is None else before_step
     if marker is None:
         return None
     prior = {**checkpoint, "steps": checkpoint["steps"][:marker]}
@@ -258,14 +258,14 @@ def _marker_context(
     )
     available: set[str] = set()
     for step in prior["steps"]:
-        if step["step"]["kind"] == "search_policy":
+        if step["step"]["kind"] in {"search_policy", "read_policy_bundle"}:
             for match in step["result_json"]["content"]["matches"]:
                 available.add(match["chunk_id"])
     return facts, available
 
 
 def retrieval_closure(
-    checkpoint: dict[str, Any], package: Package
+    checkpoint: dict[str, Any], package: Package, *, before_step: int | None = None
 ) -> dict[str, Any] | None:
     """Separate unreachable required evidence from wrong final reasoning.
 
@@ -280,7 +280,7 @@ def retrieval_closure(
     whose defining paragraph was never read. ``definition_closure`` answers that
     second question and the two are never merged.
     """
-    context = _marker_context(checkpoint, package)
+    context = _marker_context(checkpoint, package, before_step)
     if context is None:
         return None
     facts, available = context
@@ -333,7 +333,7 @@ def definition_entries(
 
 
 def definition_closure(
-    checkpoint: dict[str, Any], package: Package
+    checkpoint: dict[str, Any], package: Package, *, before_step: int | None = None
 ) -> dict[str, Any] | None:
     """Measure whether the investigation read the rule each required class needs.
 
@@ -348,7 +348,7 @@ def definition_closure(
     Marker-anchored like the accepted-alias view, so a Fixed row without a closed
     marker yields None rather than a passing measurement.
     """
-    context = _marker_context(checkpoint, package)
+    context = _marker_context(checkpoint, package, before_step)
     if context is None:
         return None
     facts, available = context
@@ -485,7 +485,7 @@ def measurement_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
         budget = detail["reasoning_budget"]
         if budget is not None and budget["truncation_risk"]:
             truncated.append(result["case_id"])
-    return {
+    summary = {
         "evidence_regressed": len(regressed),
         "evidence_regressed_cases": regressed,
         "evidence_improved": len(improved),
@@ -498,6 +498,106 @@ def measurement_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
         "investigation_definition_incomplete_cases": incomplete,
         "truncation_risk": len(truncated),
         "truncation_risk_cases": truncated,
+    }
+    new = [
+        r
+        for r in results
+        if "final_input_closure" in (r.get("adjudication_stages") or {})
+    ]
+    if new:
+        measured_final = [
+            r
+            for r in new
+            if r["adjudication_stages"]["final_input_closure"] is not None
+        ]
+        summary["final_input_closure_measured"] = len(measured_final)
+        for name, group, flag in (
+            (
+                "final_input_unrecoverable",
+                "retrieval_closure",
+                "adjudication_recoverable",
+            ),
+            (
+                "final_input_definition_incomplete",
+                "definition_closure",
+                "definition_complete",
+            ),
+        ):
+            cases = [
+                r["case_id"]
+                for r in measured_final
+                if not r["adjudication_stages"]["final_input_closure"][group][flag]
+            ]
+            summary[name] = len(cases)
+            summary[name + "_cases"] = cases
+    return summary
+
+
+def final_input_closure(
+    checkpoint: dict[str, Any] | None, package: Package
+) -> dict[str, Any] | None:
+    """Measure only the input to a committed final, never a supplement intent."""
+    if checkpoint is None:
+        return None
+    indices = [
+        i
+        for i, s in enumerate(checkpoint["steps"])
+        if s["step"]["kind"] == "model_proposal"
+        and s["result_json"]["proposal"] is not None
+    ]
+    if len(indices) != 1:
+        return None
+    index = indices[0]
+    definition = definition_closure(checkpoint, package, before_step=index)
+    assert definition is not None
+    definition["definition_complete"] = definition.pop(
+        "investigation_definition_complete"
+    )
+    return {
+        "step_index": index,
+        "retrieval_closure": retrieval_closure(checkpoint, package, before_step=index),
+        "definition_closure": definition,
+    }
+
+
+def supplement_reasoning_budget(calls: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Keep per-call capacities and clipped deadlines separate from totals."""
+    if not calls:
+        return None
+    rows = []
+    for call in calls:
+        audit = call["provider_audit"] or {}
+        reasoning = audit.get("reasoning_tokens")
+        completion = (call.get("observed_usage") or {}).get("output_tokens")
+        wall = stage_usage([call])["reservation_to_observation_seconds"]
+        deadline = (
+            instant(call["call_deadline"]) - instant(call["reserved_at"])
+        ).total_seconds()
+        capacity = call["reserved"]["output_tokens"]
+        rows.append(
+            {
+                "physical_call_id": call["physical_call_id"],
+                "reasoning_tokens": reasoning,
+                "completion_tokens": completion,
+                "completion_capacity": capacity,
+                "completion_ratio": completion / capacity
+                if completion is not None
+                else None,
+                "wall_seconds": wall,
+                "deadline_seconds": deadline,
+                "deadline_headroom_seconds": deadline - wall
+                if wall is not None
+                else None,
+                "truncation_risk": (
+                    completion is not None and completion > capacity * TRUNCATION_RATIO
+                )
+                or (wall is not None and wall > deadline * 0.8),
+            }
+        )
+    return {
+        "calls": rows,
+        "usage": stage_usage(calls),
+        "truncation_risk": any(r["truncation_risk"] for r in rows),
     }
 
 
@@ -530,10 +630,11 @@ def stages(
     proposal: dict[str, Any] = {}
     if (
         profile["strategy"] == "support_agent_v1"
-        and result["source"] == result["protocol"] == "passed"
-    ):
+        or profile["executor_version"] == "linux-v2-fixed-adjudication-runtime-2"
+    ) and result["source"] == result["protocol"] == "passed":
         checkpoint, proposal = validate_run_sources(row, binding, profile, package)
-        draft = draft_score(row, binding, profile, package, checkpoint=checkpoint)
+        if profile["strategy"] == "support_agent_v1":
+            draft = draft_score(row, binding, profile, package, checkpoint=checkpoint)
     draft_claims = draft.pop("claim_checks", [])
     draft_keys = draft.pop("claim_keys", [])
     final_usage = stage_usage(final) if verified else None
@@ -542,7 +643,7 @@ def stages(
     # a length mismatch means the paired structures are not comparable, which is
     # reported as an absent delta rather than raising inside scoring.
     comparable = draft["available"] and len(final_keys) == len(result["claim_checks"])
-    return {
+    detail = {
         "investigation": {
             **draft,
             "usage": stage_usage(investigation) if verified else None,
@@ -583,3 +684,16 @@ def stages(
         ),
         "reasoning_budget": reasoning_budget(final, final_usage),
     }
+    if profile["executor_version"] in {
+        "linux-v2-adjudication-runtime-3",
+        "linux-v2-adjudication-runtime-4",
+        "linux-v2-adjudication-runtime-5",
+        "linux-v2-fixed-adjudication-runtime-2",
+    }:
+        detail["final_input_closure"] = final_input_closure(checkpoint, package)
+    if profile["executor_version"] in {
+        "linux-v2-adjudication-runtime-3",
+        "linux-v2-adjudication-runtime-4",
+    }:
+        detail["reasoning_budget"] = supplement_reasoning_budget(final)
+    return detail

@@ -13,7 +13,7 @@
 | `schema_version` | 整数 `1` |
 | `executor_version` | 登记的 audit / agent / recovery runtime，完整对应表见[运行时](../../../docs/agent-v3/runtime.md) |
 | `adapter_id` | 现有 `ValidIdentifier` ASCII 1～128 字符规则；来自可信部署 manifest |
-| `tool_invocation_id` | `get_order/get_delivery/search_policy` 为 Go 已确认 BeginTool 的 UUID；其余非工具步骤恰为 `""` |
+| `tool_invocation_id` | `get_order/get_delivery/search_policy/read_policy_bundle` 为 Go 已确认 BeginTool 的 UUID；其余非工具步骤恰为 `""` |
 | `expected_response_model` | `deepseek-flash`；来自不可变 profile，不能由请求 payload 指定 |
 | `provider_audit_policy` | `deepseek-audit-v1`；新独立终裁 executor 使用 `deepseek-audit-v2`，来自同份 profile |
 
@@ -33,7 +33,9 @@
 
 ## 大小与所有权
 
-先检查 RPC 原 JSON 字节，再检查最终 JSON 编码后字节。`ticket_binding_json/version_vector_json` 分别 ≤8 KiB；read_ticket 和工具结果 ≤8 KiB，其余结果 ≤16 KiB；input ≤16 KiB；完整 checkpoint ≤256 KiB；普通帧包含 LF ≤384 KiB。空白压缩不能使原本超限的 RPC 通过；JSON 转义扩大后也必须重新检查。超限返回现有 `CHECKPOINT_TOO_LARGE`，不截断历史或正文。
+先检查 RPC 原 JSON 字节，再检查最终 JSON 编码后字节。`ticket_binding_json/version_vector_json` 分别 ≤8 KiB；read_ticket 和原工具结果 ≤8 KiB，`read_policy_bundle` 结果独立 ≤32 KiB，其余结果 ≤16 KiB；input ≤16 KiB；完整 checkpoint ≤256 KiB；普通帧包含 LF ≤384 KiB。空白压缩不能使原本超限的 RPC 通过；JSON 转义扩大后也必须重新检查。超限返回现有 `CHECKPOINT_TOO_LARGE`，不截断历史或正文。
+
+`read_policy_bundle` 仅属于 [ADR-0038](../../../docs/adr/0038-policy-bundle-before-adjudication.md) 的 `linux-v2-adjudication-runtime-5` 与 `linux-v2-fixed-adjudication-runtime-2`。旧 executor 的 next_step 或历史 steps 出现该工具均拒绝；模型不能选择它。Go 在 read_ticket 后、任何模型调用前安排一次读取，正常完成后保留完整 20 段来源于后继 checkpoint。
 
 `runinput.BuildExecute(lease, checkpoint, selection, requestID, emittedMonoMS, stepDeadlineMonoMS)` 返回独立 Frame。它不读取时钟、不发 RPC、不生成 UUID、不续租、不决定下一游标；remaining_ms 由调用者提供的两个 BOOTTIME 样本相减，范围 1～180000。trace_context 忠实沿用 Claim，经既有 v2 codec 验证。Worker 仍须通过原 Conversation 后才能发送。
 

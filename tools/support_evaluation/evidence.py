@@ -14,7 +14,11 @@ from urllib.parse import urlsplit
 
 from jobforge.run_calls import RunCalls
 from jobforge.run_models import Run, RunResult, RunStep, RunUsage
-from jobforge_agent.runtime_input import input_hash, validate_step_result
+from jobforge_agent.runtime_input import (
+    POLICY_BUNDLE_EXECUTORS,
+    input_hash,
+    validate_step_result,
+)
 from jobforge_agent.support_adapter import validate_support_step
 from jobforge_agent.support_agent import validate_agent_step
 from jobforge_agent.support_contract import support_sources, validate_persisted_proposal
@@ -95,12 +99,12 @@ def read_json(path: Path, maximum: int) -> tuple[dict[str, Any], str]:
     return value, sha256(raw)
 
 
-def canonical(raw: str) -> str:
+def canonical(raw: str, *, maximum: int = 16384) -> str:
     """Match Go CanonicalCheckpointJSON's exact decimal and string encoding."""
     # Parse once through the common strict reader for duplicates/UTF-8 and once
     # with Decimal so an original accepted number never goes through float.
-    need(type(raw) is str and len(raw.encode()) <= 16384, "STEP_SIZE")
-    bounded(parse_json(raw.encode()), 16384)
+    need(type(raw) is str and len(raw.encode()) <= maximum, "STEP_SIZE")
+    bounded(parse_json(raw.encode()), maximum)
 
     def number(text: str) -> Decimal:
         parts = re.split("[eE]", text)
@@ -354,6 +358,20 @@ def registration(
             if not s5
             else {
                 (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-adjudication-runtime-5",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
+                    "support_fixed_v1",
+                    "support-proposal-v1",
+                    "linux-v2-fixed-adjudication-runtime-2",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
                     "support_fixed_v1",
                     "support-proposal-v1",
                     "linux-v2-fixed-adjudication-runtime-1",
@@ -371,6 +389,20 @@ def registration(
                     "support_agent_v1",
                     "support-proposal-v1",
                     "linux-v2-adjudication-runtime-2",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-adjudication-runtime-3",
+                    "deepseek-flash",
+                    "deepseek-audit-v2",
+                ),
+                (
+                    "support_agent_v1",
+                    "support-proposal-v1",
+                    "linux-v2-adjudication-runtime-4",
                     "deepseek-flash",
                     "deepseek-audit-v2",
                 ),
@@ -464,7 +496,11 @@ def adjudication_profile(profile: dict[str, Any]) -> bool:
     return profile.get("executor_version") in {
         "linux-v2-adjudication-runtime-1",
         "linux-v2-adjudication-runtime-2",
+        "linux-v2-adjudication-runtime-3",
+        "linux-v2-adjudication-runtime-4",
         "linux-v2-fixed-adjudication-runtime-1",
+        "linux-v2-adjudication-runtime-5",
+        "linux-v2-fixed-adjudication-runtime-2",
     }
 
 
@@ -576,7 +612,13 @@ def validate_run_sources(
         fields(entry, {"record", "output_json"}, "STEP_SHAPE")
         record, raw = entry["record"], entry["output_json"]
         RunStep.from_dict(record)
-        need(type(raw) is str and len(raw.encode()) <= 16384, "STEP_SIZE")
+        maximum = (
+            32768
+            if record["kind"] == "read_policy_bundle"
+            and profile["executor_version"] in POLICY_BUNDLE_EXECUTORS
+            else 16384
+        )
+        need(type(raw) is str and len(raw.encode()) <= maximum, "STEP_SIZE")
         need(parse_json(raw.encode()) == record["output"], "OUTPUT_BYTES_MISMATCH")
         need(
             record["sequence"] == sequence
@@ -612,14 +654,34 @@ def validate_run_sources(
             profile["profile_hash"],
             run["snapshot_id"],
             run["snapshot_hash"],
-            canonical(raw),
+            canonical(raw, maximum=maximum),
         )
         need(record["commit_hash"] == expected_hash, "STEP_COMMIT_HASH")
-        validate_step_result(record["output"], record["kind"])
+        validate_step_result(
+            record["output"],
+            record["kind"],
+            supplement=profile["executor_version"]
+            in {"linux-v2-adjudication-runtime-3", "linux-v2-adjudication-runtime-4"},
+        )
         if profile["strategy"] == "support_agent_v1":
             validate_agent_step(
-                checkpoint, record["kind"], adjudication=adjudication_profile(profile)
+                checkpoint,
+                record["kind"],
+                adjudication=adjudication_profile(profile),
+                supplement=profile["executor_version"]
+                in {
+                    "linux-v2-adjudication-runtime-3",
+                    "linux-v2-adjudication-runtime-4",
+                },
+                status_policy=profile["executor_version"]
+                == "linux-v2-adjudication-runtime-4",
+                policy_bundle=profile["executor_version"]
+                == "linux-v2-adjudication-runtime-5",
             )
+        elif profile["executor_version"] == "linux-v2-fixed-adjudication-runtime-2":
+            from jobforge_agent.support_agent_v8 import validate_fixed_bundle_step
+
+            validate_fixed_bundle_step(checkpoint, record["kind"])
         else:
             validate_support_step(checkpoint, record["kind"])
         if record["kind"] == "read_ticket":
@@ -641,8 +703,8 @@ def validate_run_sources(
         content = sources.contents[kind]
         expected = table.get((binding["tenant_id"], vector[identity]["id"]))
         need(same_source(content.get(identity), expected), "BUSINESS_SOURCE")
-    if "search_policy" in sources.contents:
-        for hit in sources.contents["search_policy"]["matches"]:
+    for policy_kind in ("search_policy", "read_policy_bundle"):
+        for hit in sources.contents.get(policy_kind, {}).get("matches", []):
             need(
                 hit["text"] == package.paragraphs[hit["chunk_id"]]
                 and hit["source"] == hit["chunk_id"].split(".")[0] + ".md",

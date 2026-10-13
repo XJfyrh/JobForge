@@ -50,21 +50,24 @@ const (
 	StepKind_STEP_KIND_MODEL_DECISION StepKind = 8
 	// Execute the approved fixed business action in Go; never starts Python.
 	StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION StepKind = 9
+	// Read the complete versioned policy bundle before any model call.
+	StepKind_STEP_KIND_READ_POLICY_BUNDLE StepKind = 10
 )
 
 // Enum value maps for StepKind.
 var (
 	StepKind_name = map[int32]string{
-		0: "STEP_KIND_UNSPECIFIED",
-		1: "STEP_KIND_READ_TICKET",
-		2: "STEP_KIND_GET_ORDER",
-		3: "STEP_KIND_GET_DELIVERY",
-		4: "STEP_KIND_SEARCH_POLICY",
-		5: "STEP_KIND_MODEL_PROPOSAL",
-		6: "STEP_KIND_PROTOCOL_CORRECTION",
-		7: "STEP_KIND_SUBMIT_PROPOSAL",
-		8: "STEP_KIND_MODEL_DECISION",
-		9: "STEP_KIND_APPLY_TICKET_RESOLUTION",
+		0:  "STEP_KIND_UNSPECIFIED",
+		1:  "STEP_KIND_READ_TICKET",
+		2:  "STEP_KIND_GET_ORDER",
+		3:  "STEP_KIND_GET_DELIVERY",
+		4:  "STEP_KIND_SEARCH_POLICY",
+		5:  "STEP_KIND_MODEL_PROPOSAL",
+		6:  "STEP_KIND_PROTOCOL_CORRECTION",
+		7:  "STEP_KIND_SUBMIT_PROPOSAL",
+		8:  "STEP_KIND_MODEL_DECISION",
+		9:  "STEP_KIND_APPLY_TICKET_RESOLUTION",
+		10: "STEP_KIND_READ_POLICY_BUNDLE",
 	}
 	StepKind_value = map[string]int32{
 		"STEP_KIND_UNSPECIFIED":             0,
@@ -77,6 +80,7 @@ var (
 		"STEP_KIND_SUBMIT_PROPOSAL":         7,
 		"STEP_KIND_MODEL_DECISION":          8,
 		"STEP_KIND_APPLY_TICKET_RESOLUTION": 9,
+		"STEP_KIND_READ_POLICY_BUNDLE":      10,
 	}
 )
 
@@ -310,6 +314,8 @@ const (
 	Subcall_SUBCALL_SEARCH_POLICY Subcall = 6
 	// One registered chat HTTP request, including a separate correction call.
 	Subcall_SUBCALL_CHAT Subcall = 7
+	// One snapshot-bound complete policy bundle HTTP read.
+	Subcall_SUBCALL_READ_POLICY_BUNDLE Subcall = 8
 )
 
 // Enum value maps for Subcall.
@@ -323,16 +329,18 @@ var (
 		5: "SUBCALL_QUERY_EMBEDDING",
 		6: "SUBCALL_SEARCH_POLICY",
 		7: "SUBCALL_CHAT",
+		8: "SUBCALL_READ_POLICY_BUNDLE",
 	}
 	Subcall_value = map[string]int32{
-		"SUBCALL_UNSPECIFIED":     0,
-		"SUBCALL_GET_ORDER":       1,
-		"SUBCALL_GET_DELIVERY":    2,
-		"SUBCALL_PROFILE_VERSION": 3,
-		"SUBCALL_PROFILE_TAGS":    4,
-		"SUBCALL_QUERY_EMBEDDING": 5,
-		"SUBCALL_SEARCH_POLICY":   6,
-		"SUBCALL_CHAT":            7,
+		"SUBCALL_UNSPECIFIED":        0,
+		"SUBCALL_GET_ORDER":          1,
+		"SUBCALL_GET_DELIVERY":       2,
+		"SUBCALL_PROFILE_VERSION":    3,
+		"SUBCALL_PROFILE_TAGS":       4,
+		"SUBCALL_QUERY_EMBEDDING":    5,
+		"SUBCALL_SEARCH_POLICY":      6,
+		"SUBCALL_CHAT":               7,
+		"SUBCALL_READ_POLICY_BUNDLE": 8,
 	}
 )
 
@@ -4455,7 +4463,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12D\n" +
 	"\raccepted_step\x18\x02 \x01(\v2\x1f.jobforge.agent.v1.AcceptedStepR\facceptedStep\x12'\n" +
 	"\x0fattempt_outcome\x18\x03 \x01(\tR\x0eattemptOutcome\x121\n" +
-	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\xb7\x02\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1b.jobforge.agent.v1.RunStateR\x05state*\xd9\x02\n" +
 	"\bStepKind\x12\x19\n" +
 	"\x15STEP_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15STEP_KIND_READ_TICKET\x10\x01\x12\x17\n" +
@@ -4466,7 +4474,9 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x1dSTEP_KIND_PROTOCOL_CORRECTION\x10\x06\x12\x1d\n" +
 	"\x19STEP_KIND_SUBMIT_PROPOSAL\x10\a\x12\x1c\n" +
 	"\x18STEP_KIND_MODEL_DECISION\x10\b\x12%\n" +
-	"!STEP_KIND_APPLY_TICKET_RESOLUTION\x10\t*\xec\x01\n" +
+	"!STEP_KIND_APPLY_TICKET_RESOLUTION\x10\t\x12 \n" +
+	"\x1cSTEP_KIND_READ_POLICY_BUNDLE\x10\n" +
+	"*\xec\x01\n" +
 	"\bRunState\x12\x19\n" +
 	"\x15RUN_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fRUN_STATE_READY\x10\x01\x12\x15\n" +
@@ -4484,7 +4494,7 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\rControlSignal\x12\x1e\n" +
 	"\x1aCONTROL_SIGNAL_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CONTROL_SIGNAL_CONTINUE\x10\x01\x12\x17\n" +
-	"\x13CONTROL_SIGNAL_STOP\x10\x02*\xd4\x01\n" +
+	"\x13CONTROL_SIGNAL_STOP\x10\x02*\xf4\x01\n" +
 	"\aSubcall\x12\x17\n" +
 	"\x13SUBCALL_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBCALL_GET_ORDER\x10\x01\x12\x18\n" +
@@ -4493,7 +4503,8 @@ const file_jobforge_agent_v1_agent_proto_rawDesc = "" +
 	"\x14SUBCALL_PROFILE_TAGS\x10\x04\x12\x1b\n" +
 	"\x17SUBCALL_QUERY_EMBEDDING\x10\x05\x12\x19\n" +
 	"\x15SUBCALL_SEARCH_POLICY\x10\x06\x12\x10\n" +
-	"\fSUBCALL_CHAT\x10\a*t\n" +
+	"\fSUBCALL_CHAT\x10\a\x12\x1e\n" +
+	"\x1aSUBCALL_READ_POLICY_BUNDLE\x10\b*t\n" +
 	"\x10TransportOutcome\x12!\n" +
 	"\x1dTRANSPORT_OUTCOME_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aTRANSPORT_OUTCOME_RESPONSE\x10\x01\x12\x1d\n" +
