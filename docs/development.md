@@ -60,12 +60,12 @@ SDK 开发保持在仓库根目录，编辑后重新安装 `./sdk/python`；运�
 
 ## 检查与旧路径
 
-按[测试指南](tests.md)选择定向检查和全部 8 项 CI 门禁。Windows 集成测试必须先启动测试 PostgreSQL 并设置 DSN，安装 SDK 后设置跨语言解释器；专用 Linux 进程检查、同 DSN 串行和 skip 规则也在那里维护。
+日常先运行 `python -m tools.check quick`；`affected --base origin/main --plan` 显示本分支及未提交修改需要的检查。完整环境前置和 CI 路由见[测试指南](tests.md)。Windows 集成测试必须先启动测试 PostgreSQL 并设置 DSN，安装 SDK 后设置跨语言解释器；专用 Linux 进程检查、同 DSN 串行和 skip 规则也在那里维护。
 
 为保留现有引用，本页的“CI 质量门禁”入口如下；权威清单在测试指南。
 
 ### CI 质量门禁
 
-[8 项 PR CI 与本地命令](tests.md#ci-质量门禁)。
+[按改动选择的 PR CI 与统一入口](tests.md#ci-质量门禁)。
 
 既有 jobs 的任务目录、Redis、运维 CLI 与观测 profile 见[旧运行配置](legacy/operations.md)；本地 Ollama 示例见[真实任务](legacy/real-tasks.md)。Windows 一键检查与时间异常排查见[运行手册](runbooks/windows-acceptance.md)。

@@ -23,8 +23,12 @@
 
 ## 验证与汇报
 
-按[测试指南](docs/tests.md)运行与改动相称的检查；核心可靠性使用真实 PostgreSQL，并发修改必须通过 `go test -race ./...`。每个 PR 的[现有 8 项 CI](.github/workflows/ci.yml)均须通过。已通过且没有新风险的检查不重复。
+按[测试指南](docs/tests.md)运行与改动相称的检查；核心可靠性使用真实 PostgreSQL，并发修改必须通过 `go test -race ./...`。PR 由[检查选择器](tools/ci_checks.py)按完整差异选择必要 CI，最新 head 的 `CI required` 必须通过；未知路径和检查配置变更执行全套。已通过且没有新风险的检查不重复。本地先用 `python -m tools.check quick`；按需运行 `affected` 或 `full`，不要求在本地重复已由 CI 验证的相同环境。
 
-Windows 集成测试前必须 `docker compose -f deploy/compose.yaml up -d postgres` 并设置 `JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable`。SDK 要安装并设置 `JOBFORGE_TEST_PYTHON`；真实 Linux 进程使用固定镜像、`--init` 与专用测试环境开关；同一 DSN 只允许一个可能清理库的测试进程。具体命令及故障/审计/观测/模型层路由由测试指南维护。
+Windows 集成测试先启动可重建 PostgreSQL。单会话默认 `docker compose -f deploy/compose.yaml up -d postgres` 和 `JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@localhost:5433/jobforge?sslmode=disable`；并行会话或测试分组使用各自独占容器／DSN，Redis 重启测试使用固定宿主端口。SDK 要安装并设置 `JOBFORGE_TEST_PYTHON`；真实 Linux 进程使用固定镜像、`--init` 与专用测试环境开关；同一 DSN 只允许一个可能清理库的测试进程。具体命令及故障/审计/观测/模型层路由由测试指南维护。
 
 明确区分实际通过、失败、未适用和无法运行。平台/依赖/专用环境造成的 skip 不计验收通过；合成模型/向量不能替代真实业务或云端验收。unknown/full hold 不记成零费，observed usage 不称已结算费用。提交前检查 staged diff、秘密、迁移安全和文档链接。
+
+## 审查范围
+
+普通改动做一次聚焦主审；修复后只复核原问题、修复影响与新增差异。正确性、可靠性、公开契约、权限和费用问题可阻塞；风格偏好和无关重构建议不阻塞。生成代码与机器证据检查来源和一致性，不做逐行风格审查。新发现的相关实质问题继续处理，不用固定轮数代替质量判断。收费 manifest、正式保留集及阶段验收继续遵循各自 PRD/ADR，不扩展为普通改动的重复审批。

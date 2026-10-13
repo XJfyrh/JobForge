@@ -1,6 +1,24 @@
 # 测试与 CI 门禁
 
-所有命令从仓库根目录执行。先按[开发指南](development.md)安装工具与 SDK，再按本次改动选择检查；每个 PR 的现有 8 项 CI 都须在最新 head 通过。实际结果写明通过、失败、未运行及原因，skip 不计验收通过。
+所有命令从仓库根目录执行。先按[开发指南](development.md)安装工具与 SDK。本地按需要验证；PR 按完整差异选择门禁，由最新 head 的 `CI required` 汇总。实际结果区分通过、失败、未选择和未运行；选中的验收层不能把环境 skip 当成通过。
+
+## 统一入口
+
+使用已安装工具与 SDK 的 Python，Windows 可将下面的 `python` 换成 `.venv/Scripts/python.exe`，Linux 为 `.venv/bin/python`。
+
+```sh
+python -m tools.check quick
+python -m tools.check affected --base origin/main --plan
+python -m tools.check affected --base origin/main
+python -m tools.check full
+```
+
+- `quick`：SDK／流程守卫测试、Ruff、Go 的 internal/cmd/tools 测试。清除继承的 JobForge 环境变量，不连接数据库、不启动模型；用于编辑反馈，不作为数据库／Linux 进程验收。
+- `affected`：比较分支与 base 的 merge-base，叠加暂存、未暂存和未跟踪文件，执行相关检查。`--plan` 只显示范围与命令。重命名同时考虑原路径与新路径；无法解析 base 时失败，不静默减少范围。
+- `full`：全部免费检查，包含真实 PG、AOF Redis、业务 pgvector、固定 Linux 进程及生产镜像边界。只继承测试库／Redis配置，清除收费模型与手工恢复的环境开关。数据库前置见下文；命令在缺少所需 DSN／Redis／SDK 时提前失败。
+- `--only python-lint` 等可运行一个 CI 检查组。统一入口不安装工具、不管理数据库容器、不启动收费模型；集成测试会重建指定的可丢弃测试库。安装／数据库准备只做一次，完整本地检查串行使用测试 DSN，多会话必须各自使用独占测试容器和 DSN。
+
+CI 与本地共享 [tools/check.py](../tools/check.py) 的 Python／SQL、Go race 和镜像检查命令。Windows 全量检查出现 Linux 专用 skip 时，仍须有对应固定 Linux 层的实际结果。
 
 ## 按改动选择检查
 
@@ -19,7 +37,7 @@
 
 ## PostgreSQL 与跨语言前置
 
-Windows 的 Docker Desktop 后端不由 testcontainers 自动启动测试库。运行 `go test ./tests/integration/...` 或全仓 race 前必须：
+Windows 的 Docker Desktop 后端不由 testcontainers 自动启动测试库。以下是单会话默认前置；并行会话改用各自独占的测试容器、DSN和固定Redis端口。运行 `go test ./tests/integration/...` 或全仓 race 前先准备：
 
 ```powershell
 docker compose -f deploy/compose.yaml up -d postgres
@@ -38,37 +56,11 @@ $env:JOBFORGE_TEST_REDIS_URL='redis://localhost:6379/0'
 $env:JOBFORGE_TEST_REDIS_CONTAINER='deploy-redis-1'
 ```
 
-自定义 Compose project 时改为实际 Redis 容器名。AT-17/NFR-303 使用 stop/start 验证 AOF 恢复，保留 volume；缺 Redis 的 skip 不计耐久层通过。Windows 可用 `pwsh -NoProfile -File tools/test-windows.ps1`，前置和时间诊断见[手册](runbooks/windows-acceptance.md)。
+自定义 Compose project 时改为实际 Redis 容器名。Redis 必须使用固定宿主端口；Docker 动态发布端口会在 stop/start 后变化，统一入口会提前拒绝这种配置。AT-17/NFR-303 使用 stop/start 验证 AOF 恢复，保留 volume；缺 Redis 的 skip 不计耐久层通过。Windows 的时钟异常或旧 Job 完整验收可用 `pwsh -NoProfile -File tools/test-windows.ps1`；它包含 60s 时钟采样与全仓 race，不是日常 quick 入口。前置和时间诊断见[手册](runbooks/windows-acceptance.md)。
 
 ## 常规检查
 
-Windows PowerShell（Go 测试先完成上述前置）：
-
-```powershell
-go build ./...
-go vet ./...
-.tools/bin/golangci-lint.exe run
-go test -race -count=1 ./...
-.venv/Scripts/python.exe -m pytest sdk/python/tests python/tests tools/agent_probe_data tools/executorprobe tools/support_evaluation
-$env:PYTHONPATH='python;sdk/python'
-.venv/Scripts/python.exe -m pytest tools/support_recovery tools/support_approval
-.venv/Scripts/python.exe -m pytest tools/support_s5 tools/support_lifecycle tools/support_diagnosis
-.venv/Scripts/ruff.exe check .
-.venv/Scripts/ruff.exe format --check .
-.venv/Scripts/mypy.exe sdk/python
-.venv/Scripts/mypy.exe --platform linux python/jobforge_agent
-.venv/Scripts/mypy.exe --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py
-$env:MYPYPATH='python;sdk/python'
-.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_evaluation
-.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
-.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_approval
-.venv/Scripts/mypy.exe --platform linux --explicit-package-bases tools/support_s5 tools/support_lifecycle tools/support_diagnosis
-.venv/Scripts/python.exe tools/check_sqlfluff_baseline.py
-.venv/Scripts/sqlfluff.exe lint migrations tools/support_diagnosis/migrations
-.tools/bin/buf.exe lint
-```
-
-Linux/macOS 使用 `.venv/bin`、无 `.exe` 的 `.tools/bin` 路径；源码环境变量路径分隔符为 `:`。Proto 修改另运行 `.tools/bin/buf breaking --against '.git#branch=main'` 和 `.tools/bin/buf generate`。`.sqlfluffignore` 只冻结历史基线，新 migration 必须直接通过 lint。
+常规命令统一在 `tools/check.py` 维护，避免本地与 CI 的测试列表漂移。`python -m tools.check full --plan` 可查看全部命令；`--only go-lint`、`--only python-lint`、`--only proto-lint --base origin/main` 分别运行静态／Python和SQL／Proto检查。Proto 检查包含 Buf lint 和相对 base 的 breaking；生成代码仍使用 `buf generate`。`.sqlfluffignore` 只冻结历史基线，新 migration 必须直接通过 lint。
 
 独立业务层启动 `docker compose -f deploy/compose.agent.yaml up -d --wait business-postgres`，配置 `JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@127.0.0.1:5434/jobforge_business?sslmode=disable` 和安装 SDK 的解释器后，执行 `go test -race -count=1 ./internal/business ./internal/jsonstrict ./tests/integration/business`。合成向量验证机械合同，真实数据准备/检索按[业务指南](agent-v3/business.md)。
 
@@ -128,15 +120,25 @@ S5登记与离线评分按[S5工具](../tools/support_s5/README.md)：开发40�
 
 ## CI 质量门禁
 
-权威执行配置为 [ci.yml](../.github/workflows/ci.yml)，本页解释本地等价检查，不取代实际执行结果。8 项 job 全部强制执行：
+执行配置为 [ci.yml](../.github/workflows/ci.yml)，路径映射为 [ci_checks.py](../tools/ci_checks.py)。PR 始终执行路径／锚点和选择器回归检查，再运行被选择的组；main push 与手动触发运行全部免费检查。Go race、真实数据库和故障合同保留，普通说明文件不会启动这些服务。
 
-| Job ID | 检查 |
+| 改动范围 | 自动选择 |
 |---|---|
-| `go-lint` | Go build、vet、golangci-lint |
-| `go-test` | 全仓 race、真实 PG/AOF Redis、安装 SDK 的 HTTP 契约 |
-| `python-lint` | SDK/Agent/探针/数据评分/恢复测试，Ruff、各域 mypy（含 Linux）、SQLFluff 基线与 migration |
-| `business-contract` | 独立 pgvector、真实 HTTP/PG/race、业务 runtime 镜像 |
-| `executor-process-probe` | 固定 Linux 进程故障/race及 Go/Python 共享 BOOTTIME |
-| `proto-lint` | Buf lint |
-| `agent-runtime-contract` | 实际进程/PG/gRPC/SDK/恢复/race、S4真实业务HTTP/pgvector事务及生产镜像边界 |
-| `observability-config` | dashboard 生成一致性、promtool 配置/告警规则 |
+| 普通说明 Markdown／README | 文档检查；PRD、ADR、政策语料不按普通说明处理 |
+| 历史机器摘要 JSON | 文档及 Python 检查，不重跑模型 |
+| 离线评分／审批／S5工具 | Python及外部镜像来源检查；恢复工具另选联合层 |
+| Go业务、运行时Python、SDK、API、迁移、可执行数据 | Go build/vet/lint、全仓race、Python、业务pgvector、Linux联合层及镜像边界 |
+| Proto | 上述共享契约检查，加 Buf lint／breaking |
+| 时钟／S0进程探针 | 对应Go检查、固定进程与BOOTTIME检查 |
+| 观测配置与dashboard生成器 | Python、生成一致性、promtool配置及规则测试 |
+| PRD／ADR、依赖、CI／检查器、未知路径 | 全部免费检查 |
+
+这是一份保守的文件依赖映射，不靠标签或标题猜测风险。`go-test` 继续全仓 `-race -count=1`，不缓存真实数据库测试结果。新增路径未登记时先全跑，再明确归属。
+
+运行时联合套件分 `core`、`recovery`、`deadlines` 三组，在不同 runner、PostgreSQL／pgvector服务及容器文件系统中并行。由原测试名前缀自动收集，慢恢复与deadline组显式分配，新增匹配用例默认进入core；不改变自然30s lease、180s attempt或测试断言。生产／operator镜像检查拆成独立job，不再排在长故障测试之后。pip与固定运行时构建使用缓存。
+
+`CI required` 检查计划和所有 job 结果：必要 job 缺失、失败、取消或意外跳过均失败；未选择的 job 允许 skipped。仓库合并规则应只要求这个稳定状态。首次迁移时，先让新 workflow 在默认分支存在，再配置该必需状态，避免主分支还没有相应检查时阻断合并。
+
+PR 路径选择看整条 PR 差异；代码后追加报告仍可能选择原代码的检查。日志和复核记录优先链接 Actions artifact／PR说明；需入库的后续阶段报告可独立成小PR。不能只看最后一个提交就忽略此前未经验证的代码。
+
+独立[真实模型工作流](../.github/workflows/real-models.yml)只对旧模型任务／Worker／验收接入及其依赖触发，普通 examples README 不触发；v3收费批次、scale性能和阶段质量验收继续按各自指南执行，不包含在 `full` 的免费检查中。
