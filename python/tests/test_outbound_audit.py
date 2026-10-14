@@ -87,6 +87,7 @@ def records(directory: Path) -> list[dict[str, Any]]:
         ("get_order", "order-bound"),
         ("get_delivery", "order-bound"),
         ("search_policy", "index-bound"),
+        ("read_policy_bundle", "index-bound"),
     ],
 )
 def test_metadata_selects_bound_resources_without_copying_payload(
@@ -110,7 +111,8 @@ def test_metadata_selects_bound_resources_without_copying_payload(
             prepared,
             subcall=subcall,
             endpoint="business"
-            if subcall in {"get_order", "get_delivery", "search_policy"}
+            if subcall
+            in {"get_order", "get_delivery", "search_policy", "read_policy_bundle"}
             else "ollama",
             body=b'{"model":"actual-embedding-model","input":"PRIVATE-CUSTOMER-BODY"}'
             if subcall == "query_embedding"
@@ -125,6 +127,31 @@ def test_metadata_selects_bound_resources_without_copying_payload(
     assert value["model"] == ("deepseek-flash" if subcall == "chat" else None)
     assert value["thinking"] == ("disabled" if subcall == "chat" else None)
     assert value["max_tokens"] == (1024 if subcall == "chat" else None)
+
+
+@pytest.mark.parametrize("order_id", ["order-bound", None])
+def test_policy_bundle_audit_does_not_use_order_identity(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, order_id: str | None
+) -> None:
+    """Policy reads retain their authorized index even when an order is absent."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    start = start_frame()
+    start["checkpoint"] = {
+        "snapshot": {
+            "ticket_binding_json": {"order_id": order_id},
+            "index_id": "index-bound",
+        }
+    }
+    prepared = replace(
+        request(),
+        subcall="read_policy_bundle",
+        endpoint="business",
+        method="GET",
+        body=b"",
+    )
+    audit = outbound_audit.begin(prepared, CALL, start, "http://bound.example")
+    assert audit is not None
+    assert records(tmp_path)[0]["resource_id"] == "index-bound"
 
 
 def test_absent_mount_disables_output_and_records_stay_bounded(

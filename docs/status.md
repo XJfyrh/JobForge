@@ -1,6 +1,6 @@
 # 当前状态与下一步
 
-更新于2026-10-13。已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。schema9/10最后正式结果为Agent正确12/20、完整证据15/20。[v7 开发验证](evidence/agent-v3-s5-v7-development-2026-10-13.md)正确与完整证据均38/40；随后[原已见v3回归](evidence/agent-v3-s5-v7-seen-v3-2026-10-13.md)在004后停发：首次thinking用满输出容量、未提交final，输入仍缺P05.1。原20分母3通过、1失败、16未执行，018尚未验证；未冻结、不续跑。已按 [ADR-0038](adr/0038-policy-bundle-before-adjudication.md) 实现 v8 完整政策前置读取与同能力 Fixed；[免费机制验证](evidence/agent-v3-s5-v8-mechanism-2026-10-13.md)已完成全仓 race、独立历史复算与 Linux 联合用例；原联合命令总超时，尾部补跑通过，详细结果见报告。未新增收费，未宣称已修复 004/018。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
+更新于2026-10-14。已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。当前 v8 按 [ADR-0038](adr/0038-policy-bundle-before-adjudication.md)先读取完整政策，再执行同能力单次终裁；[免费机制](evidence/agent-v3-s5-v8-mechanism-2026-10-13.md)已验证。[首轮新身份开发回归](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)在首案后因资源审计标签错误停发：原正确与完整证据各1/40、39未执行；实际授权请求经独立复算确认，记录器已修复，原结果保留。累计 usage 估算¥13.212370，held、unknown、在途调用、未结束attempt均0。下一步是修复源码与镜像绑定后的新身份完整40案及具体manifest审查；不续跑停止批次、不接受v8完整质量或正式冻结。v7开发38/40及已见004截断失败、018未验证的历史结论不变。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|

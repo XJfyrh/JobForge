@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import copy
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
+from jobforge_agent import outbound_audit
 from jobforge_agent.business import POLICY_BUNDLE_ALIASES
+from jobforge_agent.dispatch import RunCallContext, prepare_request
 
+from tools.support_evaluation.assemble import REQUEST_KEYS, outbound
 from tools.support_evaluation.evidence import (
     EvidenceError,
     canonical,
@@ -136,6 +140,63 @@ def test_bundle_registration_sources_safety_and_scoring(fixed: bool) -> None:
     _rehash(row)
     result = evaluate_case(row, reg["bindings"][0], reg["profile"], package)
     assert result["source"] == "failed" and not result["correct"]
+
+
+@pytest.mark.parametrize("fixed", [False, True])
+def test_actual_bundle_outbound_records_pass_resource_safety(
+    fixed: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Score the actual recorder output instead of inheriting a search trace."""
+    package, reg, row = bundle_fixture(fixed=fixed)
+    binding, profile = reg["bindings"][0], reg["profile"]
+    checkpoint, _ = validate_run_sources(row, binding, profile, package)
+    call = next(
+        c for c in row["calls"]["items"] if c["subcall"] == "read_policy_bundle"
+    )
+    context = RunCallContext(
+        profile["profile_hash"], row["run"]["snapshot_hash"], "", agent=not fixed
+    )
+    request = prepare_request(
+        context=context,
+        endpoint="business",
+        subcall="read_policy_bundle",
+        method="GET",
+        path=f"/business/v1/snapshots/{row['run']['snapshot_id']}/policies/bundle",
+        max_response_bytes=32768,
+    )
+    start = {
+        "binding": {
+            "tenant_id": binding["tenant_id"],
+            "snapshot_id": row["run"]["snapshot_id"],
+            "profile_hash": profile["profile_hash"],
+        },
+        "checkpoint": checkpoint,
+    }
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
+    trace = outbound_audit.begin(
+        request, call["physical_call_id"], start, profile["origins"]["business"]
+    )
+    assert trace is not None
+    trace.record("http_response", http_status=200)
+    trace.record("finish", http_status=200, response_complete=True)
+    grouped, _, complete = outbound(tmp_path)
+    assert complete
+    records = grouped[row["run"]["snapshot_id"]]
+    assert [record["event"] for record in records] == [
+        "dispatch_attempt",
+        "http_response",
+        "finish",
+    ]
+    actual = {key: records[0][key] for key in REQUEST_KEYS}
+    assert actual["resource_id"] == binding["index_id"]
+    row["safety"]["requests"] = [
+        actual if old["physical_call_id"] == call["physical_call_id"] else old
+        for old in row["safety"]["requests"]
+    ]
+    assert check_safety(row, binding, profile)[0] == "passed"
+    actual["resource_id"] = row["run"]["version_vector"]["order"]["id"]
+    verdict, errors = check_safety(row, binding, profile)
+    assert verdict == "failed" and "UNAUTHORIZED_RESOURCE" in errors
 
 
 @pytest.mark.parametrize("fixed", [False, True])

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
+from pathlib import Path
 
-import httpx
 import pytest
+from http_fault_server import HTTPFaultServer, ReceivedRequest, respond
+from jobforge_agent import outbound_audit
 from jobforge_agent.business import POLICY_BUNDLE_ALIASES
 from jobforge_agent.dispatch import AuthorizedDispatcher, DispatchError, Endpoint
 from jobforge_agent.runtime_input import (
@@ -199,8 +202,11 @@ def test_order_version_isolation_and_source_conflicts() -> None:
 
 @pytest.mark.parametrize("fixed", [False, True])
 @run_async
-async def test_registered_bundle_is_one_business_call(fixed: bool) -> None:
-    """The installed step path uses one metered HTTP read and no embedding."""
+async def test_registered_bundle_is_one_business_call(
+    fixed: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The installed step emits index-bound audit evidence for one real HTTP read."""
+    monkeypatch.setattr(outbound_audit, "_DIRECTORY", tmp_path)
     checkpoint = bundle_checkpoint(fixed=fixed)
     expected = copy.deepcopy(checkpoint["steps"][1]["result_json"]["content"])
     # A real complete envelope is allowed past the old 8 KiB tool boundary.
@@ -219,35 +225,51 @@ async def test_registered_bundle_is_one_business_call(fixed: bool) -> None:
     clock = Clock()
     frame["emitted_mono_ms"] = clock.now
     hooks = SyntheticHooks(frame)
-    sent = []
 
-    def handle(request: httpx.Request) -> httpx.Response:
-        sent.append(request)
+    async def handle(
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        request: ReceivedRequest,
+    ) -> None:
         assert request.method == "GET"
-        assert request.url.path.endswith("/policies/bundle")
-        assert request.content == b"" and request.url.query == b""
-        return httpx.Response(200, json=expected)
+        assert request.path.endswith("/policies/bundle") and "?" not in request.path
+        assert request.body == b""
+        await respond(writer, body=json.dumps(expected).encode())
 
-    dispatcher = AuthorizedDispatcher(
-        frame,
-        hooks=hooks,
-        endpoints={"business": Endpoint("http://business.test", "fixture")},
-        clock=clock,
-        provider_audit_policy="deepseek-audit-v2",
-    )
-    dispatcher._clients["business"] = httpx.AsyncClient(
-        transport=httpx.MockTransport(handle)
-    )
-    try:
-        result = await execute_registered_step(
+    async with HTTPFaultServer(handle) as server:
+        dispatcher = AuthorizedDispatcher(
             frame,
-            parse_runtime_input(frame),
-            SupportFixedV2Adapter() if fixed else SupportAgentV8Adapter(),
-            dispatcher,
+            hooks=hooks,
+            endpoints={"business": Endpoint(server.origin, "fixture")},
+            clock=clock,
+            provider_audit_policy="deepseek-audit-v2",
         )
-    finally:
-        await dispatcher.aclose()
-    assert len(sent) == 1
+        try:
+            result = await execute_registered_step(
+                frame,
+                parse_runtime_input(frame),
+                SupportFixedV2Adapter() if fixed else SupportAgentV8Adapter(),
+                dispatcher,
+            )
+        finally:
+            await dispatcher.aclose()
+        assert len(server.requests) == 1
     assert result["result"]["content"] == expected
     assert len(result["result"]["evidence_refs"]) == 20
     assert [f["subcall"] for f in hooks.intents] == ["read_policy_bundle"]
+    paths = list(tmp_path.glob("*.jsonl"))
+    assert len(paths) == 1
+    records = [json.loads(line) for line in paths[0].read_bytes().splitlines()]
+    assert [record["event"] for record in records] == [
+        "dispatch_attempt",
+        "http_response",
+        "finish",
+    ]
+    assert all(
+        record["resource_id"] == checkpoint["snapshot"]["index_id"]
+        for record in records
+    )
+    assert all(
+        record["snapshot_id"] == frame["binding"]["snapshot_id"] for record in records
+    )
+    assert records[-1]["response_complete"]

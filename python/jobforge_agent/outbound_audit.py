@@ -229,7 +229,7 @@ def begin(
             snapshot = start["checkpoint"]["snapshot"]
             resource = (
                 snapshot["index_id"]
-                if request.subcall == "search_policy"
+                if request.subcall in {"search_policy", "read_policy_bundle"}
                 else snapshot["ticket_binding_json"]["order_id"]
             )
         if resource is not None and type(resource) is not str:
