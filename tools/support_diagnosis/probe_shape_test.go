@@ -121,7 +121,7 @@ func TestProbeAuthorizationDeadlineReachesPhysicalSend(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
 	transport := &probeDeadlineTransport{want: deadline}
-	report, _ := send(ctx, &http.Client{Transport: transport}, []byte(`{}`), "fixture-key", Trial{ID: "fixture"})
+	report, _ := send(ctx, &http.Client{Transport: transport}, []byte(`{"thinking":{"type":"enabled"}}`), "fixture-key", Trial{ID: "fixture"})
 	if !transport.matched || report.Usage != nil || report.Stop != "transport_unknown" {
 		t.Fatal("authorization expiry lost the physical deadline or converted unknown usage to zero")
 	}

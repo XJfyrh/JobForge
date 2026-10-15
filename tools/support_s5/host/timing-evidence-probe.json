@@ -1,0 +1,6 @@
+{
+  "kind": "outstanding-timing-evidence",
+  "case_ids": ["DEV-026", "DEV-027"],
+  "repetitions": 3,
+  "groups": ["V8T", "V8TE"]
+}

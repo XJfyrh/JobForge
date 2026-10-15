@@ -31,10 +31,14 @@ func probeManifestFixture(t *testing.T, schema int, kind string) (string, Manife
 	cases, groups, repeats := []string{"DEV-003", "DEV-004", "DEV-016", "DEV-017", "DEV-026", "DEV-027"}, []string{"V8", "V8C"}, 1
 	if schema == 5 {
 		cases, groups, repeats = []string{"DEV-016", "DEV-017", "DEV-020"}, []string{"C1", "C2"}, 3
-		if kind == "critical-timing-completeness" {
+		if kind == "critical-timing-completeness" || kind == "configured-labels" {
 			cases, groups = []string{"DEV-026", "DEV-027"}, []string{"V8", "V8T"}
 		}
 		m.Probe = &ProbePlan{Kind: kind, CaseIDs: cases, Repetitions: repeats}
+		if kind == "configured-labels" {
+			groups = []string{"A", "V5"}
+			m.Probe.Kind, m.Probe.Groups = "critical-timing-completeness", groups
+		}
 		m.Sources["probe_plan"] = m.RunnerSHA256
 	}
 	for repetition := 1; repetition <= repeats; repetition++ {
@@ -59,7 +63,7 @@ func probeManifestFixture(t *testing.T, schema int, kind string) (string, Manife
 }
 
 func TestTwelveTrialProbesRejectProtocolOrScopeMutation(t *testing.T) {
-	for _, kind := range []string{"", "critical-timing-completeness"} {
+	for _, kind := range []string{"", "critical-timing-completeness", "configured-labels"} {
 		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
 			schema := 4
 			if kind != "" {
@@ -174,7 +178,7 @@ func TestContractProbeProtocolHealth(t *testing.T) {
 }
 
 func TestConfiguredProbeManifestBindsKindCohortAndRepetitions(t *testing.T) {
-	for _, kind := range []string{"", "critical-timing-completeness"} {
+	for _, kind := range []string{"", "critical-timing-completeness", "configured-labels"} {
 		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
 			checkConfiguredProbeManifest(t, kind)
 		})
@@ -203,7 +207,7 @@ func checkConfiguredProbeManifest(t *testing.T, kind string) {
 	m.DatabaseName += "a"
 	check(false)
 	m.DatabaseName = originalName
-	for _, mutation := range []string{"missing_plan", "kind", "duplicate_case", "unknown_case", "missing_target", "missing_control", "repetitions", "order", "source", "old_schema", "group"} {
+	for _, mutation := range []string{"missing_plan", "kind", "duplicate_case", "unknown_case", "missing_target", "missing_control", "repetitions", "order", "source", "old_schema", "group", "label_count", "label_duplicate", "label_path", "label_colon", "label_length"} {
 		if mutation == "missing_control" && kind == "" {
 			continue
 		}
@@ -213,6 +217,16 @@ func checkConfiguredProbeManifest(t *testing.T, kind string) {
 			m.Probe = nil
 		case "kind":
 			m.Probe.Kind = "unregistered"
+		case "label_count":
+			m.Probe.Groups = []string{"one"}
+		case "label_duplicate":
+			m.Probe.Groups = []string{"same", "same"}
+		case "label_path":
+			m.Probe.Groups = []string{"one", `..\two`}
+		case "label_colon":
+			m.Probe.Groups = []string{"one", "C:two"}
+		case "label_length":
+			m.Probe.Groups = []string{"one", strings.Repeat("a", 65)}
 		case "duplicate_case":
 			m.Probe.CaseIDs[1] = m.Probe.CaseIDs[0]
 		case "unknown_case":
@@ -249,7 +263,7 @@ func checkConfiguredProbeManifest(t *testing.T, kind string) {
 }
 
 func TestConfiguredProbeRequiresLiveAuthorizationDeadline(t *testing.T) {
-	for _, kind := range []string{"", "critical-timing-completeness"} {
+	for _, kind := range []string{"", "critical-timing-completeness", "configured-labels"} {
 		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
 			checkConfiguredProbeDeadline(t, kind)
 		})

@@ -40,7 +40,11 @@ python -m tools.support_s5.host.workflow run --batch E:/CURRENT/NEW-BATCH --revi
 
 `prepare --plan tools/support_s5/host/description-probe.json` 复用同一入口生成C1/C2单句删减对照：配置固定DEV-016/017/020，各组三次，共18次；C1原字节保留，C2仅删除“问题描述是独立缺口”的额外提醒。私有诊断manifest5绑定名单和重复数，沿用deadline、结构健康检查、PG禁止重入及费用守卫，旧manifest4语义保持不变。候选须全部9次正确且完整，并至少一次DEV-016当轮配对改善；两组都通过时不宣称增益。固定配对完成与候选支持判据分开。
 
-`prepare --plan tools/support_s5/host/critical-timing-probe.json` 只验证原V8追加critical/必要timing完整性要求，固定DEV-026/027、各组三次，共12次；不加入C1的上游关系或描述提醒。候选须全部6次正确且完整，并至少一次DEV-027当轮配对改善。manifest5的`probe.kind=critical-timing-completeness`绑定此分组，原省略kind的描述对照保持原语义；配置只选择这两个登记问题，不能配置模型、端点或权限。
+`prepare --plan tools/support_s5/host/critical-timing-probe.json` 只验证原V8追加critical/必要timing完整性要求，固定DEV-026/027、各组三次，共12次；不加入C1的上游关系或描述提醒。候选须全部6次正确且完整，并至少一次DEV-027当轮配对改善。manifest5的`probe.kind=critical-timing-completeness`绑定此队列，原省略kind的描述对照保持原语义。
+
+`prepare --plan tools/support_s5/host/timing-evidence-probe.json` 以原V8T字节为基线，只追加每条outstanding timing自身须引用`E2#/delivery/events`的要求；026/027各三对共12次，候选须全6正确/完整且至少一次当轮同案同轮改善。模型、端点及权限保持固定，host仅接受登记的提示kind和评分目标。
+
+schema5可用`groups`记录两个不同、最多64字节、仅字母数字/横线/下划线的组标签；顺序始终是baseline/candidate，冻结进manifest、trial及请求路径。省略groups时旧C1/C2、V8/V8T序列保持。组名不决定执行模式：schema5请求固定为final-only、thinking enabled/high，无temperature或调查字段；响应按实际已校验请求的thinking模式审计。更换标签不需要修改Go白名单，也不能改变模型、端点、权限或计费规则。
 
 诊断库初始化会由PostgreSQL生成UUID。先只读查询实际`current_database()`及`diagnosis_database_identity.database_id`，再填入准备参数并与清单逐项核对；不能另生成一个UUID代替。数据库名最多63字节，超长配置在免费校验时拒绝。准备草案和失败痕迹保留，禁止用修改数据库身份绕过绑定。
 

@@ -101,10 +101,76 @@ def test_timing_probe_only_appends_critical_requirement_to_original_v8() -> None
     ] == [("V8T", 1), ("V8", 1), ("V8", 2), ("V8T", 2), ("V8T", 3), ("V8", 3)]
 
 
+def test_evidence_probe_only_adds_own_aggregate_ref_and_labels_do_not_change_mode(
+    tmp_path: Path,
+) -> None:
+    """A renamed pair keeps exact systems, facts and final-only request limits."""
+    package, registration, row = source_fixture()
+    timing = probe.load_probe_plan(probe.TIMING_PLAN)
+    plan = probe.load_probe_plan(probe.EVIDENCE_PLAN)
+    previous, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package, timing
+    )
+    bodies, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package, plan
+    )
+    assert bodies["V8T"] == previous["V8T"]
+    left, right = (json.loads(bodies[g]) for g in ("V8T", "V8TE"))
+    assert right["messages"][0]["content"] == (
+        probe.TIMING_SYSTEM
+        + "\nOUTSTANDING TIMING EVIDENCE:\n"
+        + probe.EVIDENCE_REQUIREMENT
+        + "\n"
+    )
+    right["messages"][0]["content"] = left["messages"][0]["content"]
+    assert right == left
+    plan["groups"] = ["A", "V5"]
+    path = tmp_path / "renamed.json"
+    probe.save(path, plan)
+    renamed, _ = probe.project_case(
+        row,
+        registration["bindings"][0],
+        registration["profile"],
+        package,
+        probe.load_probe_plan(path),
+    )
+    assert renamed == {"A": bodies["V8T"], "V5": bodies["V8TE"]}
+    assert probe.embedded_plan(plan)["groups"] == ["A", "V5"]
+    trials = probe.schedule(plan)
+    assert len(trials) == len({t["trial_id"] for t in trials}) == 12
+
+
+@pytest.mark.parametrize(
+    "groups",
+    [
+        [],
+        ["one"],
+        ["one", "two", "three"],
+        ["same", "same"],
+        ["one", "../two"],
+        ["one", "C:two"],
+        ["one", "two\\three"],
+        ["one", "a" * 65],
+    ],
+)
+def test_probe_labels_are_exactly_two_distinct_path_safe_names(
+    tmp_path: Path, groups: list[str]
+) -> None:
+    """A frozen label cannot widen files or acquire execution mode authority."""
+    plan = probe.read(probe.EVIDENCE_PLAN)
+    plan["groups"] = groups
+    path = tmp_path / "plan.json"
+    probe.save(path, plan)
+    with pytest.raises(EvidenceError, match="PROBE_PLAN_GROUPS"):
+        probe.load_probe_plan(path)
+
+
 @pytest.mark.parametrize(
     "mutation", ["kind", "duplicate", "unknown", "target", "repetitions", "extra"]
 )
-@pytest.mark.parametrize("plan_path", [probe.ABLATION_PLAN, probe.TIMING_PLAN])
+@pytest.mark.parametrize(
+    "plan_path", [probe.ABLATION_PLAN, probe.TIMING_PLAN, probe.EVIDENCE_PLAN]
+)
 def test_ablation_rejects_unregistered_plan(
     tmp_path: Path, mutation: str, plan_path: Path
 ) -> None:
@@ -205,7 +271,9 @@ def test_probe_rejects_invalid_original_evidence(mutation: str) -> None:
         )
 
 
-@pytest.mark.parametrize("plan_path", [None, probe.ABLATION_PLAN, probe.TIMING_PLAN])
+@pytest.mark.parametrize(
+    "plan_path", [None, probe.ABLATION_PLAN, probe.TIMING_PLAN, probe.EVIDENCE_PLAN]
+)
 def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
     tmp_path: Path, monkeypatch, plan_path: Path | None
 ) -> None:
@@ -277,7 +345,7 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
     assert all(r["outcome"] == "not_executed" for r in scored["rows"])
     assert scored["supports_candidate"] is False and scored["thresholds_met"] is False
     assert not any(scored["metrics"][g]["correct"] for g in groups)
-    if plan_path == probe.TIMING_PLAN:
+    if plan_path in {probe.TIMING_PLAN, probe.EVIDENCE_PLAN}:
         records = {
             t["trial_id"]: {
                 "state": "known",
@@ -299,7 +367,7 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
             )
             for improved_case, regressed_case, supported in (
                 (None, None, False),
-                ("DEV-026", None, False),
+                ("DEV-026", None, plan_path == probe.EVIDENCE_PLAN),
                 ("DEV-027", None, True),
                 ("DEV-027", "DEV-026", False),
             ):
@@ -310,9 +378,9 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
                         not (
                             trial["repetition"] == 1
                             and (
-                                trial["group"] == "V8"
+                                trial["group"] == groups[0]
                                 and trial["case_id"] == improved
-                                or trial["group"] == "V8T"
+                                or trial["group"] == groups[1]
                                 and trial["case_id"] == regressed
                             )
                         ),

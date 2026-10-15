@@ -16,7 +16,7 @@ func (f diagnosticRoundTripper) RoundTrip(r *http.Request) (*http.Response, erro
 }
 
 func TestSendPreservesThinkingModeAndMeteringForFinalOnlyGroups(t *testing.T) {
-	for _, group := range []string{"B", "V5", "V8", "V8C", "C1", "C2", "V8T"} {
+	for _, group := range []string{"B", "V5", "V8", "V8C", "C1", "C2", "V8T", "renamed-label"} {
 		for _, mode := range []string{"thinking", "empty_reasoning", "zero_usage", "overlap"} {
 			t.Run(group+"/"+mode, func(t *testing.T) {
 				value := responseFixture(mode != "empty_reasoning")
@@ -26,7 +26,7 @@ func TestSendPreservesThinkingModeAndMeteringForFinalOnlyGroups(t *testing.T) {
 				} else if mode == "overlap" {
 					details["reasoning_tokens"] = 31
 				}
-				raw, requestBody := encoded(t, value), []byte(`{"fixture":"no-network"}`)
+				raw, requestBody := encoded(t, value), []byte(`{"thinking":{"type":"enabled"}}`)
 				calls := 0
 				client := &http.Client{Transport: diagnosticRoundTripper(func(request *http.Request) (*http.Response, error) {
 					calls++
@@ -51,6 +51,26 @@ func TestSendPreservesThinkingModeAndMeteringForFinalOnlyGroups(t *testing.T) {
 					t.Fatalf("normal final-only response misclassified: %+v", report)
 				}
 			})
+		}
+	}
+}
+
+func TestSendThinkingAuditFollowsValidatedRequestNotTrialLabel(t *testing.T) {
+	raw := encoded(t, responseFixture(true))
+	calls := 0
+	client := &http.Client{Transport: diagnosticRoundTripper(func(_ *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(raw)), Header: make(http.Header)}, nil
+	})}
+	report, _ := send(context.Background(), client, []byte(`{"thinking":{"type":"disabled"}}`), "fixture-key", Trial{ID: "fixture-call", Group: "V8T"})
+	if calls != 1 || report.Stop != "unexpected_thinking" || report.Usage == nil {
+		t.Fatal("a label must not authorize thinking absent from the request")
+	}
+	for _, body := range []string{`{}`, `{"thinking":{"type":"other"}}`, `invalid`} {
+		before := calls
+		report, _ = send(context.Background(), client, []byte(body), "fixture-key", Trial{ID: "fixture-call", Group: "B"})
+		if calls != before || report.Stop == "" || report.Usage != nil {
+			t.Fatal("invalid request mode reached HTTP or lost conservative hold")
 		}
 	}
 }

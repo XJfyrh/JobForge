@@ -32,11 +32,11 @@ func TestRequestIdentityAndConfigurationClosed(t *testing.T) {
 			t.Fatal(err)
 		}
 		trial.RequestSHA256 = Digest(raw)
-		if _, err := requestBytes(root, trial); err != nil {
+		if _, err := requestBytes(root, trial, false); err != nil {
 			t.Fatal(group, err)
 		}
 		trial.RequestSHA256 = strings.Repeat("0", 64)
-		if _, err := requestBytes(root, trial); err == nil {
+		if _, err := requestBytes(root, trial, false); err == nil {
 			t.Fatal("changed bytes accepted")
 		}
 		for _, key := range []string{"stream", "temperature"} {
@@ -47,7 +47,7 @@ func TestRequestIdentityAndConfigurationClosed(t *testing.T) {
 				t.Fatal(err)
 			}
 			trial.RequestSHA256 = Digest(raw)
-			if _, err := requestBytes(root, trial); err == nil {
+			if _, err := requestBytes(root, trial, false); err == nil {
 				t.Fatal("missing parameter accepted", key)
 			}
 			body[key] = previous
@@ -58,11 +58,11 @@ func TestRequestIdentityAndConfigurationClosed(t *testing.T) {
 			t.Fatal(err)
 		}
 		trial.RequestSHA256 = Digest(raw)
-		if _, err := requestBytes(root, trial); err == nil {
+		if _, err := requestBytes(root, trial, false); err == nil {
 			t.Fatal("unequal capacity accepted")
 		}
 		trial.RequestFile = "../secret.json"
-		if _, err := requestBytes(root, trial); err == nil {
+		if _, err := requestBytes(root, trial, false); err == nil {
 			t.Fatal("path escaped request package")
 		}
 	}

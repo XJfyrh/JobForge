@@ -96,7 +96,7 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 		if settled {
 			continue
 		}
-		body, err := requestBytes(root, trial)
+		body, err := requestBytes(root, trial, m.SchemaVersion == 5)
 		if err != nil {
 			return err
 		}
@@ -157,6 +157,15 @@ func (h *protocolHealth) stop(ordinal int, outcome string) bool {
 
 func send(ctx context.Context, client *http.Client, body []byte, key string, trial Trial) (Report, []byte) {
 	r := Report{ResponseSHA256: Digest(nil), Outcome: "transport_unknown", Stop: "transport_unknown"}
+	var parameters chatRequest
+	if json.Unmarshal(body, &parameters) != nil ||
+		(parameters.Thinking.Type != "enabled" && parameters.Thinking.Type != "disabled") {
+		return r, nil
+	}
+	group := "A"
+	if parameters.Thinking.Type == "enabled" {
+		group = "B"
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.deepseek.com/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return r, nil
@@ -172,10 +181,6 @@ func send(ctx context.Context, client *http.Client, body []byte, key string, tri
 	if err != nil || len(raw) > maxResponseBytes {
 		r.ResponseSHA256 = Digest(raw)
 		return r, raw
-	}
-	group := trial.Group
-	if finalOnlyGroup(group) {
-		group = "B"
 	}
 	return ParseReport(raw, response.StatusCode, group, trial.ID), raw
 }

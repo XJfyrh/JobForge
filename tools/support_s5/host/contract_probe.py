@@ -50,14 +50,48 @@ TIMING_SYSTEM = (
     + RESTORED_CONTRACT.split("\n3. ", 1)[1]
 )
 TIMING_PLAN = Path(__file__).with_name("critical-timing-probe.json")
+EVIDENCE_KIND = "outstanding-timing-evidence"
+EVIDENCE_VERSION = "support-agent-prompt-v8-timing-evidence-c1"
+EVIDENCE_REQUIREMENT = "Every outstanding timing claim must cite E2#/delivery/events in its own refs: the full event list proves the absence of a delivered event. A delivery status, a single event or references on another claim cannot replace that aggregate reference."
+EVIDENCE_SYSTEM = (
+    TIMING_SYSTEM + "\nOUTSTANDING TIMING EVIDENCE:\n" + EVIDENCE_REQUIREMENT + "\n"
+)
+EVIDENCE_PLAN = Path(__file__).with_name("timing-evidence-probe.json")
+REGISTERED_PROBES: dict[str, dict[str, Any]] = {
+    "description-gap-ablation": {
+        "systems": (CANDIDATE_SYSTEM, ABLATION_SYSTEM),
+        "version": "support-agent-prompt-v8-contract-c2",
+        "groups": ("C1", "C2"),
+        "required_cases": {"DEV-016"},
+        "improvement_cases": {"DEV-016"},
+    },
+    TIMING_KIND: {
+        "systems": (FINAL_SYSTEM, TIMING_SYSTEM),
+        "version": TIMING_VERSION,
+        "groups": ("V8", "V8T"),
+        "required_cases": {"DEV-026", "DEV-027"},
+        "improvement_cases": {"DEV-027"},
+    },
+    EVIDENCE_KIND: {
+        "systems": (TIMING_SYSTEM, EVIDENCE_SYSTEM),
+        "version": EVIDENCE_VERSION,
+        "groups": ("V8T", "V8TE"),
+        "required_cases": {"DEV-026", "DEV-027"},
+        "improvement_cases": {"DEV-026", "DEV-027"},
+    },
+}
 
 
 def load_probe_plan(path: Path) -> dict[str, Any]:
-    """Limit configuration to two registered prompt questions and seen cases."""
+    """Keep registered prompt questions closed; labels grant no execution mode."""
     plan = read(path)
     need(
-        set(plan) == {"kind", "case_ids", "repetitions"}
-        and plan["kind"] in {"description-gap-ablation", TIMING_KIND},
+        set(plan)
+        in (
+            {"kind", "case_ids", "repetitions"},
+            {"kind", "case_ids", "repetitions", "groups"},
+        )
+        and plan["kind"] in REGISTERED_PROBES,
         "PROBE_PLAN_KIND",
     )
     cases = plan["case_ids"]
@@ -69,17 +103,26 @@ def load_probe_plan(path: Path) -> dict[str, Any]:
             for cid in cases
         )
         and len(set(cases)) == len(cases)
-        and (
-            {"DEV-026", "DEV-027"}.issubset(cases)
-            if plan["kind"] == TIMING_KIND
-            else "DEV-016" in cases
-        ),
+        and REGISTERED_PROBES[plan["kind"]]["required_cases"].issubset(cases),
         "PROBE_PLAN_CASES",
     )
     need(
         type(plan["repetitions"]) is int and plan["repetitions"] > 0,
         "PROBE_PLAN_REPETITIONS",
     )
+    if "groups" in plan:
+        groups = plan["groups"]
+        need(
+            isinstance(groups, list)
+            and len(groups) == 2
+            and all(
+                isinstance(g, str)
+                and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", g)
+                for g in groups
+            )
+            and groups[0] != groups[1],
+            "PROBE_PLAN_GROUPS",
+        )
     return plan
 
 
@@ -87,14 +130,17 @@ def probe_groups(plan: dict[str, Any] | None) -> tuple[str, str]:
     """Select the two registered systems without configuring model or execution."""
     if plan is None:
         return ("V8", "V8C")
-    return ("V8", "V8T") if plan["kind"] == TIMING_KIND else ("C1", "C2")
+    groups = plan.get("groups", REGISTERED_PROBES[plan["kind"]]["groups"])
+    return groups[0], groups[1]
 
 
 def embedded_plan(plan: dict[str, Any]) -> dict[str, Any]:
     """Keep the original schema5 description plan bytes backward compatible."""
     value = {k: plan[k] for k in ("case_ids", "repetitions")}
-    if plan["kind"] == TIMING_KIND:
+    if plan["kind"] in {TIMING_KIND, EVIDENCE_KIND}:
         value["kind"] = TIMING_KIND
+    if "groups" in plan or plan["kind"] == EVIDENCE_KIND:
+        value["groups"] = list(probe_groups(plan))
     return value
 
 
@@ -131,6 +177,9 @@ def probe_sources() -> dict[str, str]:
     )
     sources["tools/support_s5/host/critical-timing-probe.json"] = digest(
         TIMING_PLAN.read_bytes()
+    )
+    sources["tools/support_s5/host/timing-evidence-probe.json"] = digest(
+        EVIDENCE_PLAN.read_bytes()
     )
     return dict(sorted(sources.items()))
 
@@ -205,9 +254,7 @@ def project_case(
     systems = (
         (FINAL_SYSTEM, CANDIDATE_SYSTEM)
         if plan is None
-        else (FINAL_SYSTEM, TIMING_SYSTEM)
-        if plan["kind"] == TIMING_KIND
-        else (CANDIDATE_SYSTEM, ABLATION_SYSTEM)
+        else REGISTERED_PROBES[plan["kind"]]["systems"]
     )
     bodies = {}
     left = json.loads(baseline)
@@ -326,9 +373,7 @@ def prepare(
         "manifest_sha256": save(output / "manifest.json", manifest),
         "candidate_version": CANDIDATE_VERSION
         if plan is None
-        else TIMING_VERSION
-        if plan["kind"] == TIMING_KIND
-        else "support-agent-prompt-v8-contract-c2",
+        else REGISTERED_PROBES[plan["kind"]]["version"],
         "original_requests_verified": sum(len(p["original_requests"]) for p in proofs),
         "trials": len(trials),
         "paid_calls": 0,
@@ -429,17 +474,13 @@ def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
         in (
             FAILED_CASE_IDS
             if plan is None
-            else {"DEV-027"}
-            if plan["kind"] == TIMING_KIND
-            else {"DEV-016"}
+            else REGISTERED_PROBES[plan["kind"]]["improvement_cases"]
         )
     )
     return {
         "kind": "s5-v8-seen-contract-probe"
         if plan is None
-        else "s5-v8-critical-timing-completeness"
-        if plan["kind"] == TIMING_KIND
-        else "s5-v8-description-gap-ablation",
+        else "s5-v8-" + plan["kind"],
         "thresholds_met": False,
         "not_end_to_end": True,
         "manifest_sha256": digest((experiment / "manifest.json").read_bytes()),

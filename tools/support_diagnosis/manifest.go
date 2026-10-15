@@ -47,6 +47,7 @@ type Parent struct {
 // ProbePlan freezes a seen development cohort and every planned repetition.
 type ProbePlan struct {
 	Kind        string   `json:"kind,omitempty"`
+	Groups      []string `json:"groups,omitempty"`
 	CaseIDs     []string `json:"case_ids"`
 	Repetitions int      `json:"repetitions"`
 }
@@ -55,6 +56,16 @@ func (p *ProbePlan) valid(trials int) bool {
 	if p == nil || len(p.CaseIDs) == 0 || p.Repetitions <= 0 ||
 		trials%(2*len(p.CaseIDs)) != 0 || trials/(2*len(p.CaseIDs)) != p.Repetitions {
 		return false
+	}
+	if p.Groups != nil {
+		if len(p.Groups) != 2 || p.Groups[0] == p.Groups[1] {
+			return false
+		}
+		for _, group := range p.Groups {
+			if len(group) > 64 || !run.ValidIdentifier(group) || strings.ContainsAny(group, `./\:`) {
+				return false
+			}
+		}
 	}
 	seen := make(map[string]bool)
 	for _, id := range p.CaseIDs {
@@ -72,6 +83,16 @@ func (p *ProbePlan) valid(trials int) bool {
 	default:
 		return false
 	}
+}
+
+func (p *ProbePlan) groups() [2]string {
+	if len(p.Groups) == 2 {
+		return [2]string{p.Groups[0], p.Groups[1]}
+	}
+	if p.Kind == "critical-timing-completeness" {
+		return [2]string{"V8", "V8T"}
+	}
+	return [2]string{"C1", "C2"}
 }
 
 // Manifest contains no gold or execution-selected URL, model, or policy.
@@ -176,10 +197,7 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 		if m.SchemaVersion == 5 {
 			width := 2 * len(m.Probe.CaseIDs)
 			pair, position := index%width/2, index%2
-			groups := [2]string{"C1", "C2"}
-			if m.Probe.Kind == "critical-timing-completeness" {
-				groups = [2]string{"V8", "V8T"}
-			}
+			groups := m.Probe.groups()
 			repetition, caseID, group = index/width+1, m.Probe.CaseIDs[pair], groups[0]
 			if (pair+repetition-1+position)%2 == 1 {
 				group = groups[1]
@@ -189,7 +207,7 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 			t.ID != fmt.Sprintf("%s-%s-%d", caseID, group, repetition) {
 			return m, nil, ErrInvalid
 		}
-		if _, err := requestBytes(filepath.Dir(path), t); err != nil {
+		if _, err := requestBytes(filepath.Dir(path), t, m.SchemaVersion == 5); err != nil {
 			return m, nil, err
 		}
 	}
@@ -222,7 +240,7 @@ func finalOnlyGroup(group string) bool {
 	return false
 }
 
-func requestBytes(root string, t Trial) ([]byte, error) {
+func requestBytes(root string, t Trial, configuredFinal bool) ([]byte, error) {
 	if t.RequestFile != "requests/"+t.CaseID+"-"+t.Group+".json" {
 		return nil, ErrInvalid
 	}
@@ -232,7 +250,8 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		return nil, ErrInvalid
 	}
 	mode, effort := "disabled", ""
-	if t.Group == "B" || finalOnlyGroup(t.Group) {
+	finalOnly := configuredFinal || finalOnlyGroup(t.Group)
+	if t.Group == "B" || finalOnly {
 		mode, effort = "enabled", "high"
 	}
 	if p.Model != "deepseek-flash" || p.Thinking.Type != mode || p.ReasoningEffort != effort ||
@@ -241,16 +260,12 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		len(p.Messages[0].Content)+len(p.Messages[1].Content) > 65536 {
 		return nil, ErrInvalid
 	}
-	if finalOnlyGroup(t.Group) {
+	if finalOnly {
 		var facts map[string]json.RawMessage
 		var fields map[string]json.RawMessage
-		promptMarker := "OUTPUT ENVELOPE FOR THIS STEP:"
-		if t.Group != "V5" {
-			promptMarker = "This is the final adjudication, independent of any investigation draft."
-		}
-		validPrompt := strings.Contains(p.Messages[0].Content, promptMarker)
-		if t.Group != "V5" {
-			validPrompt = strings.HasPrefix(p.Messages[0].Content, promptMarker)
+		validPrompt := strings.HasPrefix(p.Messages[0].Content, "This is the final adjudication, independent of any investigation draft.")
+		if !configuredFinal && t.Group == "V5" {
+			validPrompt = strings.Contains(p.Messages[0].Content, "OUTPUT ENVELOPE FOR THIS STEP:")
 		}
 		if jsonstrict.Decode(raw, &fields) != nil || fields["temperature"] != nil ||
 			!validPrompt ||
