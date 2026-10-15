@@ -38,6 +38,7 @@
 - [S5 v8输出约束对照](agent-v3-s5-v8-contract-probe-2026-10-15.md)：12次全部执行，V8正确及完整证据4/6、候选5/6；候选DEV-016退化，未满足6/6，不晋升生产；[机器摘要](agent-v3-s5-v8-contract-probe-2026-10-15.json)。
 - [S5 v8单句删减对照](agent-v3-s5-v8-description-ablation-2026-10-15.md)：固定18次全部执行，C1/C2均正确及完整9/9、无当轮配对改善，删句收益未获证明；累计usage估算¥15.431865、闭账，未晋升；[机器摘要](agent-v3-s5-v8-description-ablation-2026-10-15.json)。
 - [S5 v8时效主张对照](agent-v3-s5-v8-critical-timing-2026-10-15.md)：固定12次全部执行，V8/V8T正确及完整2/6、3/6，候选未达6/6；定位6项timing自身事件集合引用缺失、1项整条timing缺失；[机器摘要](agent-v3-s5-v8-critical-timing-2026-10-15.json)。
+- [S5 v8独立引用对照](agent-v3-s5-v8-timing-evidence-2026-10-15.md)：固定12次，V8T正确/完整3/6、V8TE6/6且三次配对改善，支持精确提示候选实施与完整开发回归；累计usage估算¥16.203356、36库闭账；[机器摘要](agent-v3-s5-v8-timing-evidence-2026-10-15.json)。
 - [S5 首次Agent开发记录](agent-v3-s5-dev-agent-2026-10-07.md)：[原机器摘要](agent-v3-s5-dev-agent-2026-10-07.json)，保留当时40案结果；当前候选与正式配对见上方S5本轮报告。
 
 - [DeepSeek 接入调查、独立复审与环境阻塞](agent-v3-deepseek-and-blocker-2026-09-16.md)
