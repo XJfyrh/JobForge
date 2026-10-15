@@ -70,20 +70,54 @@ def test_ablation_changes_only_the_registered_sentence_and_preserves_pairs() -> 
     ] == [("C1", 1), ("C2", 1), ("C2", 2), ("C1", 2), ("C1", 3), ("C2", 3)]
 
 
+def test_timing_probe_only_appends_critical_requirement_to_original_v8() -> None:
+    """The narrower candidate must not carry C1's other two semantic changes."""
+    plan = probe.load_probe_plan(probe.TIMING_PLAN)
+    package, registration, row = source_fixture()
+    legacy, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package
+    )
+    bodies, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package, plan
+    )
+    assert bodies["V8"] == legacy["V8"]
+    left, right = (json.loads(bodies[g]) for g in ("V8", "V8T"))
+    text = right["messages"][0]["content"]
+    assert (
+        text
+        == FINAL_SYSTEM
+        + "\nCRITICAL AND TIMING COMPLETENESS:\n"
+        + (probe.RESTORED_CONTRACT.split("\n3. ", 1)[1])
+    )
+    assert "Missing relationships are hierarchical" not in text
+    assert probe.DESCRIPTION_REMINDER not in text
+    right["messages"][0]["content"] = left["messages"][0]["content"]
+    assert right == left
+    trials = probe.schedule(plan)
+    assert len(trials) == 12 and len({t["trial_id"] for t in trials}) == 12
+    assert {t["case_id"] for t in trials} == {"DEV-026", "DEV-027"}
+    assert [
+        (t["group"], t["repetition"]) for t in trials if t["case_id"] == "DEV-027"
+    ] == [("V8T", 1), ("V8", 1), ("V8", 2), ("V8T", 2), ("V8T", 3), ("V8", 3)]
+
+
 @pytest.mark.parametrize(
     "mutation", ["kind", "duplicate", "unknown", "target", "repetitions", "extra"]
 )
-def test_ablation_rejects_unregistered_plan(tmp_path: Path, mutation: str) -> None:
+@pytest.mark.parametrize("plan_path", [probe.ABLATION_PLAN, probe.TIMING_PLAN])
+def test_ablation_rejects_unregistered_plan(
+    tmp_path: Path, mutation: str, plan_path: Path
+) -> None:
     """Configuration cannot widen identities, protocol or endpoint authority."""
-    plan = probe.read(probe.ABLATION_PLAN)
+    plan = probe.read(plan_path)
     if mutation == "kind":
         plan["kind"] = "arbitrary"
     elif mutation == "duplicate":
-        plan["case_ids"][1] = "DEV-016"
+        plan["case_ids"][1] = plan["case_ids"][0]
     elif mutation == "unknown":
         plan["case_ids"][1] = "DEV-041"
     elif mutation == "target":
-        plan["case_ids"][0] = "DEV-015"
+        plan["case_ids"] = ["DEV-015"]
     elif mutation == "repetitions":
         plan["repetitions"] = True
     else:
@@ -171,16 +205,16 @@ def test_probe_rejects_invalid_original_evidence(mutation: str) -> None:
         )
 
 
-@pytest.mark.parametrize("configured", [False, True])
+@pytest.mark.parametrize("plan_path", [None, probe.ABLATION_PLAN, probe.TIMING_PLAN])
 def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
-    tmp_path: Path, monkeypatch, configured: bool
+    tmp_path: Path, monkeypatch, plan_path: Path | None
 ) -> None:
     """Unattempted trials stay in the fixed denominator and artifacts are immutable."""
     package, registration, row = source_fixture()
-    plan = probe.load_probe_plan(probe.ABLATION_PLAN) if configured else None
+    plan = probe.load_probe_plan(plan_path) if plan_path else None
     case_ids = probe.CASE_IDS if plan is None else plan["case_ids"]
     groups = probe.probe_groups(plan)
-    count = 18 if configured else 12
+    count = len(probe.schedule(plan))
     bodies, proof = probe.project_case(
         row, registration["bindings"][0], registration["profile"], package, plan
     )
@@ -218,7 +252,7 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
         ledger,
         "jobforge_s5_diagnosis_probe",
         "test",
-        probe.ABLATION_PLAN if configured else None,
+        plan_path,
     )
     assert prepared["paid_calls"] == 0 and prepared["trials"] == count
     manifest = probe.read(output / "manifest.json")
@@ -243,6 +277,53 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
     assert all(r["outcome"] == "not_executed" for r in scored["rows"])
     assert scored["supports_candidate"] is False and scored["thresholds_met"] is False
     assert not any(scored["metrics"][g]["correct"] for g in groups)
+    if plan_path == probe.TIMING_PLAN:
+        records = {
+            t["trial_id"]: {
+                "state": "known",
+                "known_cost": 0,
+                "reasoning_tokens": None,
+                "elapsed_ms": 1,
+            }
+            for t in manifest["trials"]
+        }
+        with monkeypatch.context() as observations:
+            observations.setattr(probe, "ledger_calls", lambda *_: records)
+            observations.setattr(
+                probe,
+                "score_final",
+                lambda value, *_: {
+                    k: value
+                    for k in ("protocol", "sources", "correct", "full_evidence")
+                },
+            )
+            for improved_case, regressed_case, supported in (
+                (None, None, False),
+                ("DEV-026", None, False),
+                ("DEV-027", None, True),
+                ("DEV-027", "DEV-026", False),
+            ):
+                observations.setattr(
+                    probe,
+                    "observed_final",
+                    lambda _, trial, __, improved=improved_case, regressed=regressed_case: (
+                        not (
+                            trial["repetition"] == 1
+                            and (
+                                trial["group"] == "V8"
+                                and trial["case_id"] == improved
+                                or trial["group"] == "V8T"
+                                and trial["case_id"] == regressed
+                            )
+                        ),
+                        "final",
+                        None,
+                    ),
+                )
+                assert (
+                    probe.score(batch, output, snapshot)["supports_candidate"]
+                    is supported
+                )
     descriptor = (
         Path(probe.__file__).parents[2] / "support_diagnosis/probe-contract.json"
     )

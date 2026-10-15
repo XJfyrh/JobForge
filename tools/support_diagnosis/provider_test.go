@@ -1,9 +1,59 @@
 package diagnosis
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"io"
+	"net/http"
 	"testing"
 )
+
+type diagnosticRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f diagnosticRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+func TestSendPreservesThinkingModeAndMeteringForFinalOnlyGroups(t *testing.T) {
+	for _, group := range []string{"B", "V5", "V8", "V8C", "C1", "C2", "V8T"} {
+		for _, mode := range []string{"thinking", "empty_reasoning", "zero_usage", "overlap"} {
+			t.Run(group+"/"+mode, func(t *testing.T) {
+				value := responseFixture(mode != "empty_reasoning")
+				details := value["usage"].(map[string]any)["completion_tokens_details"].(map[string]any)
+				if mode == "zero_usage" {
+					details["reasoning_tokens"] = 0
+				} else if mode == "overlap" {
+					details["reasoning_tokens"] = 31
+				}
+				raw, requestBody := encoded(t, value), []byte(`{"fixture":"no-network"}`)
+				calls := 0
+				client := &http.Client{Transport: diagnosticRoundTripper(func(request *http.Request) (*http.Response, error) {
+					calls++
+					body, err := io.ReadAll(request.Body)
+					if err != nil || !bytes.Equal(body, requestBody) || request.Method != http.MethodPost ||
+						request.URL.String() != "https://api.deepseek.com/chat/completions" ||
+						request.Header.Get("Authorization") != "Bearer fixture-key" {
+						t.Fatal("send changed the fixed request or provider binding")
+					}
+					return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(bytes.NewReader(raw)), Header: make(http.Header)}, nil
+				})}
+				report, observed := send(context.Background(), client, requestBody, "fixture-key", Trial{ID: "fixture-call", Group: group})
+				if calls != 1 || !bytes.Equal(observed, raw) || report.ResponseSHA256 != Digest(raw) {
+					t.Fatal("send must retain one physical response without retry")
+				}
+				if mode == "zero_usage" || mode == "overlap" {
+					if report.Stop == "" || report.Usage != nil {
+						t.Fatal("contradictory thinking usage must stop and preserve full hold")
+					}
+				} else if report.Stop != "" || report.Outcome != "final" || report.Usage == nil ||
+					report.Usage.Validate() != nil || report.ReasoningObserved != (mode == "thinking") {
+					t.Fatalf("normal final-only response misclassified: %+v", report)
+				}
+			})
+		}
+	}
+}
 
 func responseFixture(thinking bool) map[string]any {
 	message := map[string]any{"role": "assistant", "content": `{"type":"final","proposal":{}}`}

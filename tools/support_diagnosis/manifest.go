@@ -46,6 +46,7 @@ type Parent struct {
 
 // ProbePlan freezes a seen development cohort and every planned repetition.
 type ProbePlan struct {
+	Kind        string   `json:"kind,omitempty"`
 	CaseIDs     []string `json:"case_ids"`
 	Repetitions int      `json:"repetitions"`
 }
@@ -63,7 +64,14 @@ func (p *ProbePlan) valid(trials int) bool {
 		}
 		seen[id] = true
 	}
-	return seen["DEV-016"]
+	switch p.Kind {
+	case "", "description-gap-ablation":
+		return seen["DEV-016"]
+	case "critical-timing-completeness":
+		return seen["DEV-026"] && seen["DEV-027"]
+	default:
+		return false
+	}
 }
 
 // Manifest contains no gold or execution-selected URL, model, or policy.
@@ -168,9 +176,13 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 		if m.SchemaVersion == 5 {
 			width := 2 * len(m.Probe.CaseIDs)
 			pair, position := index%width/2, index%2
-			repetition, caseID, group = index/width+1, m.Probe.CaseIDs[pair], "C1"
+			groups := [2]string{"C1", "C2"}
+			if m.Probe.Kind == "critical-timing-completeness" {
+				groups = [2]string{"V8", "V8T"}
+			}
+			repetition, caseID, group = index/width+1, m.Probe.CaseIDs[pair], groups[0]
 			if (pair+repetition-1+position)%2 == 1 {
-				group = "C2"
+				group = groups[1]
 			}
 		}
 		if t.CaseID != caseID || t.Group != group || t.Repetition != repetition ||
@@ -202,6 +214,14 @@ type chatRequest struct {
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 }
 
+func finalOnlyGroup(group string) bool {
+	switch group {
+	case "V5", "V8", "V8C", "C1", "C2", "V8T":
+		return true
+	}
+	return false
+}
+
 func requestBytes(root string, t Trial) ([]byte, error) {
 	if t.RequestFile != "requests/"+t.CaseID+"-"+t.Group+".json" {
 		return nil, ErrInvalid
@@ -212,7 +232,7 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		return nil, ErrInvalid
 	}
 	mode, effort := "disabled", ""
-	if t.Group == "B" || t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" || t.Group == "C1" || t.Group == "C2" {
+	if t.Group == "B" || finalOnlyGroup(t.Group) {
 		mode, effort = "enabled", "high"
 	}
 	if p.Model != "deepseek-flash" || p.Thinking.Type != mode || p.ReasoningEffort != effort ||
@@ -221,7 +241,7 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		len(p.Messages[0].Content)+len(p.Messages[1].Content) > 65536 {
 		return nil, ErrInvalid
 	}
-	if t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" || t.Group == "C1" || t.Group == "C2" {
+	if finalOnlyGroup(t.Group) {
 		var facts map[string]json.RawMessage
 		var fields map[string]json.RawMessage
 		promptMarker := "OUTPUT ENVELOPE FOR THIS STEP:"

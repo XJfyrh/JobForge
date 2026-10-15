@@ -174,7 +174,7 @@ func send(ctx context.Context, client *http.Client, body []byte, key string, tri
 		return r, raw
 	}
 	group := trial.Group
-	if group == "V5" || group == "V8" || group == "V8C" || group == "C1" || group == "C2" {
+	if finalOnlyGroup(group) {
 		group = "B"
 	}
 	return ParseReport(raw, response.StatusCode, group, trial.ID), raw

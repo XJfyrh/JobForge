@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func probeManifestFixture(t *testing.T, schema int) (string, Manifest) {
+func probeManifestFixture(t *testing.T, schema int, kind string) (string, Manifest) {
 	t.Helper()
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "requests"), 0700); err != nil {
@@ -31,7 +31,10 @@ func probeManifestFixture(t *testing.T, schema int) (string, Manifest) {
 	cases, groups, repeats := []string{"DEV-003", "DEV-004", "DEV-016", "DEV-017", "DEV-026", "DEV-027"}, []string{"V8", "V8C"}, 1
 	if schema == 5 {
 		cases, groups, repeats = []string{"DEV-016", "DEV-017", "DEV-020"}, []string{"C1", "C2"}, 3
-		m.Probe = &ProbePlan{CaseIDs: cases, Repetitions: repeats}
+		if kind == "critical-timing-completeness" {
+			cases, groups = []string{"DEV-026", "DEV-027"}, []string{"V8", "V8T"}
+		}
+		m.Probe = &ProbePlan{Kind: kind, CaseIDs: cases, Repetitions: repeats}
 		m.Sources["probe_plan"] = m.RunnerSHA256
 	}
 	for repetition := 1; repetition <= repeats; repetition++ {
@@ -55,8 +58,21 @@ func probeManifestFixture(t *testing.T, schema int) (string, Manifest) {
 	return root, m
 }
 
-func TestContractProbeIsExactlyTwelveClosedFinalRequests(t *testing.T) {
-	root, m := probeManifestFixture(t, 4)
+func TestTwelveTrialProbesRejectProtocolOrScopeMutation(t *testing.T) {
+	for _, kind := range []string{"", "critical-timing-completeness"} {
+		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
+			schema := 4
+			if kind != "" {
+				schema = 5
+			}
+			checkTwelveTrialProbe(t, schema, kind)
+		})
+	}
+}
+
+func checkTwelveTrialProbe(t *testing.T, schema int, kind string) {
+	t.Helper()
+	root, m := probeManifestFixture(t, schema, kind)
 	path := filepath.Join(root, "manifest.json")
 	check := func(ok bool) {
 		t.Helper()
@@ -157,8 +173,17 @@ func TestContractProbeProtocolHealth(t *testing.T) {
 	}
 }
 
-func TestConfiguredAblationManifestBindsCohortAndRepetitions(t *testing.T) {
-	root, m := probeManifestFixture(t, 5)
+func TestConfiguredProbeManifestBindsKindCohortAndRepetitions(t *testing.T) {
+	for _, kind := range []string{"", "critical-timing-completeness"} {
+		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
+			checkConfiguredProbeManifest(t, kind)
+		})
+	}
+}
+
+func checkConfiguredProbeManifest(t *testing.T, kind string) {
+	t.Helper()
+	root, m := probeManifestFixture(t, 5, kind)
 	path := filepath.Join(root, "manifest.json")
 	check := func(ok bool) {
 		t.Helper()
@@ -178,17 +203,28 @@ func TestConfiguredAblationManifestBindsCohortAndRepetitions(t *testing.T) {
 	m.DatabaseName += "a"
 	check(false)
 	m.DatabaseName = originalName
-	for _, mutation := range []string{"missing_plan", "duplicate_case", "unknown_case", "missing_target", "repetitions", "order", "source", "old_schema", "group"} {
+	for _, mutation := range []string{"missing_plan", "kind", "duplicate_case", "unknown_case", "missing_target", "missing_control", "repetitions", "order", "source", "old_schema", "group"} {
+		if mutation == "missing_control" && kind == "" {
+			continue
+		}
 		original := encoded(t, m)
 		switch mutation {
 		case "missing_plan":
 			m.Probe = nil
+		case "kind":
+			m.Probe.Kind = "unregistered"
 		case "duplicate_case":
 			m.Probe.CaseIDs[1] = m.Probe.CaseIDs[0]
 		case "unknown_case":
 			m.Probe.CaseIDs[1] = "DEV-041"
 		case "missing_target":
-			m.Probe.CaseIDs[0] = "DEV-015"
+			if kind == "" {
+				m.Probe.CaseIDs[0] = "DEV-015"
+			} else {
+				m.Probe.CaseIDs[1] = "DEV-025"
+			}
+		case "missing_control":
+			m.Probe.CaseIDs[0] = "DEV-025"
 		case "repetitions":
 			m.Probe.Repetitions = 2
 		case "order":
@@ -198,7 +234,11 @@ func TestConfiguredAblationManifestBindsCohortAndRepetitions(t *testing.T) {
 		case "old_schema":
 			m.SchemaVersion = 4
 		case "group":
-			m.Trials[0].Group = "V8"
+			if kind == "" {
+				m.Trials[0].Group = "V8"
+			} else {
+				m.Trials[0].Group = "C1"
+			}
 		}
 		check(false)
 		m = Manifest{}
@@ -209,7 +249,16 @@ func TestConfiguredAblationManifestBindsCohortAndRepetitions(t *testing.T) {
 }
 
 func TestConfiguredProbeRequiresLiveAuthorizationDeadline(t *testing.T) {
-	root, m := probeManifestFixture(t, 5)
+	for _, kind := range []string{"", "critical-timing-completeness"} {
+		t.Run(fmt.Sprintf("kind=%q", kind), func(t *testing.T) {
+			checkConfiguredProbeDeadline(t, kind)
+		})
+	}
+}
+
+func checkConfiguredProbeDeadline(t *testing.T, kind string) {
+	t.Helper()
+	root, m := probeManifestFixture(t, 5, kind)
 	executable, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)

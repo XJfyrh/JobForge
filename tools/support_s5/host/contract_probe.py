@@ -42,14 +42,22 @@ CANDIDATE_SYSTEM = FINAL_SYSTEM + RESTORED_CONTRACT
 DESCRIPTION_REMINDER = " A vague actual problem description is an independent gap, not a downstream tracking field."
 ABLATION_SYSTEM = CANDIDATE_SYSTEM.replace(DESCRIPTION_REMINDER, "")
 ABLATION_PLAN = Path(__file__).with_name("description-probe.json")
+TIMING_KIND = "critical-timing-completeness"
+TIMING_VERSION = "support-agent-prompt-v8-critical-timing-c1"
+TIMING_SYSTEM = (
+    FINAL_SYSTEM
+    + "\nCRITICAL AND TIMING COMPLETENESS:\n"
+    + RESTORED_CONTRACT.split("\n3. ", 1)[1]
+)
+TIMING_PLAN = Path(__file__).with_name("critical-timing-probe.json")
 
 
 def load_probe_plan(path: Path) -> dict[str, Any]:
-    """Limit configuration to the registered C1 versus one-sentence C2 question."""
+    """Limit configuration to two registered prompt questions and seen cases."""
     plan = read(path)
     need(
         set(plan) == {"kind", "case_ids", "repetitions"}
-        and plan["kind"] == "description-gap-ablation",
+        and plan["kind"] in {"description-gap-ablation", TIMING_KIND},
         "PROBE_PLAN_KIND",
     )
     cases = plan["case_ids"]
@@ -61,7 +69,11 @@ def load_probe_plan(path: Path) -> dict[str, Any]:
             for cid in cases
         )
         and len(set(cases)) == len(cases)
-        and "DEV-016" in cases,
+        and (
+            {"DEV-026", "DEV-027"}.issubset(cases)
+            if plan["kind"] == TIMING_KIND
+            else "DEV-016" in cases
+        ),
         "PROBE_PLAN_CASES",
     )
     need(
@@ -73,7 +85,17 @@ def load_probe_plan(path: Path) -> dict[str, Any]:
 
 def probe_groups(plan: dict[str, Any] | None) -> tuple[str, str]:
     """Select the two registered systems without configuring model or execution."""
-    return ("V8", "V8C") if plan is None else ("C1", "C2")
+    if plan is None:
+        return ("V8", "V8C")
+    return ("V8", "V8T") if plan["kind"] == TIMING_KIND else ("C1", "C2")
+
+
+def embedded_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    """Keep the original schema5 description plan bytes backward compatible."""
+    value = {k: plan[k] for k in ("case_ids", "repetitions")}
+    if plan["kind"] == TIMING_KIND:
+        value["kind"] = TIMING_KIND
+    return value
 
 
 def experiment_plan(
@@ -91,7 +113,7 @@ def experiment_plan(
     )
     plan = load_probe_plan(path)
     need(
-        manifest["probe"] == {k: plan[k] for k in ("case_ids", "repetitions")},
+        manifest["probe"] == embedded_plan(plan),
         "PROBE_PLAN_BINDING",
     )
     return plan
@@ -106,6 +128,9 @@ def probe_sources() -> dict[str, str]:
     )
     sources["tools/support_s5/host/description-probe.json"] = digest(
         ABLATION_PLAN.read_bytes()
+    )
+    sources["tools/support_s5/host/critical-timing-probe.json"] = digest(
+        TIMING_PLAN.read_bytes()
     )
     return dict(sorted(sources.items()))
 
@@ -180,6 +205,8 @@ def project_case(
     systems = (
         (FINAL_SYSTEM, CANDIDATE_SYSTEM)
         if plan is None
+        else (FINAL_SYSTEM, TIMING_SYSTEM)
+        if plan["kind"] == TIMING_KIND
         else (CANDIDATE_SYSTEM, ABLATION_SYSTEM)
     )
     bodies = {}
@@ -294,11 +321,13 @@ def prepare(
         assert plan_path is not None
         (output / "probe-plan.json").write_bytes(plan_path.read_bytes())
         sources["probe_plan"] = digest((output / "probe-plan.json").read_bytes())
-        manifest["probe"] = {k: plan[k] for k in ("case_ids", "repetitions")}
+        manifest["probe"] = embedded_plan(plan)
     return {
         "manifest_sha256": save(output / "manifest.json", manifest),
         "candidate_version": CANDIDATE_VERSION
         if plan is None
+        else TIMING_VERSION
+        if plan["kind"] == TIMING_KIND
         else "support-agent-prompt-v8-contract-c2",
         "original_requests_verified": sum(len(p["original_requests"]) for p in proofs),
         "trials": len(trials),
@@ -396,11 +425,20 @@ def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
             if (b["case_id"], b["repetition"]) == (r["case_id"], r["repetition"])
         )["correct"]
         for r in groups[candidate_group]
-        if r["case_id"] in (FAILED_CASE_IDS if plan is None else {"DEV-016"})
+        if r["case_id"]
+        in (
+            FAILED_CASE_IDS
+            if plan is None
+            else {"DEV-027"}
+            if plan["kind"] == TIMING_KIND
+            else {"DEV-016"}
+        )
     )
     return {
         "kind": "s5-v8-seen-contract-probe"
         if plan is None
+        else "s5-v8-critical-timing-completeness"
+        if plan["kind"] == TIMING_KIND
         else "s5-v8-description-gap-ablation",
         "thresholds_met": False,
         "not_end_to_end": True,
