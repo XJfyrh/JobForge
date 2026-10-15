@@ -31,3 +31,11 @@ python -m tools.support_s5.host.workflow run --batch E:/CURRENT/NEW-BATCH --revi
 生成的 `checkpoints/NN` 保留全部逐案证据、score、累计账本和决策；批后保留 `evidence.json`、`score.json`、`closed-ledger.json`、`result.json`，费用标记为 observed-usage 估算。异常保留 `workflow-error.json` 和已有原始文件；清理失败保留启动锁，需要核对残留进程后人工处理。无自动重试、补样、旧名单续跑或自动版本开发。
 
 批后一次审阅全部结果并决定下一步。`engineering_complete` 与 `model_quality_passed` 分列；这里的模型门槛是开发回归，不能代替 S5 总体验收。修复后只审查差异；范围/候选/模型/费用/权限变化须形成新绑定。文档只维护当前状态和实际结果，历史证据不改写。
+
+## 已见输出约束诊断
+
+`python -m tools.support_s5.host.contract_probe` 仅用于[当前三案缺陷](../../../docs/evidence/agent-v3-s5-v8-contract-analysis-2026-10-15.md)的六案固定输入对照。`prepare` 复建原22次chat哈希，生成V8/V8C共12次请求；`score` 沿用原真值/来源谓词，保留全部12分母。两者不调用模型，不注册生产候选。通过诊断也不能代替完整开发回归。
+
+`run --experiment E:/CURRENT/EXPERIMENT --review E:/CURRENT/startup-review.json` 才启动原隔离Go诊断发送器。`startup-manifest.json` 必须绑定实际根目录、所有来源/请求/runner/私有配置摘要、干净提交、完整阶段库存及起止窗，并通过与开发批次相同的 `validate_review`。新诊断使用独立零调用库、共享stage锁和完整预留，禁止已尝试库重入。Go `--check --manifest ...` 可在无数据库、无模型调用时核对实际二进制和固定清单。
+
+诊断只改变final system，原生产V8和镜像内策略不变；费用仍每批¥4、累计¥28，不新增阶段次数或时间预算。授权有效窗传到Go请求context，父进程保留15秒结算宽限；unknown/full hold保留并留锁，不能把到期中断写成零费。

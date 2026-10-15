@@ -317,12 +317,12 @@ func TestLedgerCrashReservationCannotBeReplayed(t *testing.T) {
 }
 
 func TestReplayBatchCapCannotRollIntoAnotherAccount(t *testing.T) {
-	for _, schema := range []int{2, 3} {
+	for _, schema := range []int{2, 3, 4} {
 		t.Run(fmt.Sprint(schema), func(t *testing.T) {
 			pool := testPool(t)
 			m := testManifest()
 			m.SchemaVersion = schema
-			if schema == 3 {
+			if schema >= 3 {
 				m.CostCap = 28000000
 			}
 			l, _ := openTest(t, pool, m)
@@ -341,10 +341,10 @@ func TestReplayBatchCapCannotRollIntoAnotherAccount(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = l.NextBatch(ctx)
-			if schema == 3 && !errors.Is(err, run.ErrBudgetExhausted) || schema == 2 && err != nil {
+			if schema >= 3 && !errors.Is(err, run.ErrBudgetExhausted) || schema == 2 && err != nil {
 				t.Fatalf("schema %d rollover: %v", schema, err)
 			}
-			if schema == 3 {
+			if schema >= 3 {
 				if err := l.Reserve(ctx, batch, Trial{ID: "another"}, 2); !errors.Is(err, run.ErrBudgetExhausted) {
 					t.Fatalf("direct reservation bypass: %v", err)
 				}
@@ -354,5 +354,86 @@ func TestReplayBatchCapCannotRollIntoAnotherAccount(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestContractProbeKnownInvalidPrefixCannotReenter(t *testing.T) {
+	pool := testPool(t)
+	m := testManifest()
+	m.SchemaVersion, m.CostCap = 4, 28000000
+	bindTest(t, pool, &m)
+	raw := encoded(t, m)
+	ctx := context.Background()
+	l, err := OpenLedger(ctx, pool, m, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch, err := l.NextBatch(ctx)
+	if err != nil {
+		l.Close()
+		t.Fatal(err)
+	}
+	trial := Trial{ID: "DEV-003-V8-1", RequestSHA256: strings.Repeat("b", 64)}
+	if err := l.Reserve(ctx, batch, trial, 1); err != nil {
+		l.Close()
+		t.Fatal(err)
+	}
+	report := ParseReport(encoded(t, responseFixture(false)), 200, "B", trial.ID)
+	report.Outcome, report.Stop = "invalid_final", ""
+	if err := l.Settle(ctx, trial, report, 1); err != nil {
+		l.Close()
+		t.Fatal(err)
+	}
+	l.Close()
+	if reopened, err := OpenLedger(ctx, pool, m, raw); err == nil {
+		reopened.Close()
+		t.Fatal("known invalid prefix reset health state on reentry")
+	}
+	var calls, held int64
+	if err := pool.QueryRow(ctx, `select count(*) from diagnosis_calls where state='known'`).Scan(&calls); err != nil || calls != 1 {
+		t.Fatalf("original call changed: %d %v", calls, err)
+	}
+	if err := pool.QueryRow(ctx, `select held_cost_microyuan from budget_accounts where account_id=$1`, batch).Scan(&held); err != nil || held != 0 {
+		t.Fatalf("known usage not closed: %d %v", held, err)
+	}
+}
+
+func TestContractProbeSystemicShapeFailureSealsKnownLedger(t *testing.T) {
+	pool := testPool(t)
+	m := testManifest()
+	m.SchemaVersion, m.CostCap = 4, 28000000
+	l, _ := openTest(t, pool, m)
+	ctx := context.Background()
+	batch, err := l.NextBatch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var health protocolHealth
+	for ordinal := 1; ordinal <= 2; ordinal++ {
+		trial := Trial{ID: fmt.Sprintf("probe-%d", ordinal), RequestSHA256: strings.Repeat("b", 64)}
+		if err := l.Reserve(ctx, batch, trial, ordinal); err != nil {
+			t.Fatal(err)
+		}
+		report := ParseReport(encoded(t, responseFixture(false)), 200, "B", trial.ID)
+		if !probeProposalShape([]byte(`{}`), "open") {
+			report.Outcome = "invalid_final"
+		}
+		if health.stop(ordinal, report.Outcome) {
+			report.Stop = "systemic_protocol_failure"
+		}
+		if err := l.Settle(ctx, trial, report, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var stopped string
+	if err := pool.QueryRow(ctx, `select stopped_reason from diagnosis_experiments where experiment_id=$1`, l.m.ExperimentID).Scan(&stopped); err != nil || stopped != "systemic_protocol_failure" {
+		t.Fatalf("systemic failure not sealed: %q %v", stopped, err)
+	}
+	if err := l.Reserve(ctx, batch, Trial{ID: "forbidden-third"}, 3); err == nil {
+		t.Fatal("third request allowed after closed-shape systemic failure")
+	}
+	var held int64
+	if err := pool.QueryRow(ctx, `select held_cost_microyuan from budget_accounts where account_id=$1`, batch).Scan(&held); err != nil || held != 0 {
+		t.Fatalf("complete known failures must close their holds: %d %v", held, err)
 	}
 }

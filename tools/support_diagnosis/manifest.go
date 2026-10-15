@@ -79,7 +79,10 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 	if m.SchemaVersion == 3 {
 		costCap, trials = 28000000, 20
 	}
-	if (m.SchemaVersion != 1 && m.SchemaVersion != 2 && m.SchemaVersion != 3) || !run.ValidIdentifier(m.ExperimentID) ||
+	if m.SchemaVersion == 4 {
+		costCap, trials = 28000000, 12
+	}
+	if (m.SchemaVersion < 1 || m.SchemaVersion > 4) || !run.ValidIdentifier(m.ExperimentID) ||
 		!strings.HasPrefix(m.DatabaseName, "jobforge_s5_diagnosis_") || uuid.Validate(m.DatabaseID) != nil ||
 		m.MaxInputTokens != maxInputTokens || m.MaxOutputTokens != maxOutputTokens ||
 		m.PriorCost < 0 || m.PriorCost >= m.CostCap || m.CostCap != costCap || m.BatchCap != 4000000 ||
@@ -105,12 +108,27 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 			}
 		}
 	}
+	if m.SchemaVersion == 4 {
+		for _, key := range []string{"candidate_sources", "input_verification"} {
+			if !run.ValidHash(m.Sources[key]) {
+				return m, nil, ErrInvalid
+			}
+		}
+	}
 	for index, t := range m.Trials {
 		repetition, caseIndex := index/80+1, index%80/4
 		group := string("ABCD"[(caseIndex+repetition-1+index%4)%4])
 		caseID := fmt.Sprintf("S5V3-%03d", caseIndex+1)
 		if m.SchemaVersion == 3 {
 			repetition, group, caseID = 1, "V5", fmt.Sprintf("S5V3-%03d", index+1)
+		}
+		if m.SchemaVersion == 4 {
+			caseIDs := [...]string{"DEV-003", "DEV-004", "DEV-016", "DEV-017", "DEV-026", "DEV-027"}
+			pair, position := index/2, index%2
+			repetition, caseID, group = 1, caseIDs[pair], "V8"
+			if (pair+position)%2 == 1 {
+				group = "V8C"
+			}
 		}
 		if t.CaseID != caseID || t.Group != group || t.Repetition != repetition ||
 			t.ID != fmt.Sprintf("%s-%s-%d", caseID, group, repetition) {
@@ -151,7 +169,7 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		return nil, ErrInvalid
 	}
 	mode, effort := "disabled", ""
-	if t.Group == "B" || t.Group == "V5" {
+	if t.Group == "B" || t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" {
 		mode, effort = "enabled", "high"
 	}
 	if p.Model != "deepseek-flash" || p.Thinking.Type != mode || p.ReasoningEffort != effort ||
@@ -160,11 +178,19 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		len(p.Messages[0].Content)+len(p.Messages[1].Content) > 65536 {
 		return nil, ErrInvalid
 	}
-	if t.Group == "V5" {
+	if t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" {
 		var facts map[string]json.RawMessage
 		var fields map[string]json.RawMessage
+		promptMarker := "OUTPUT ENVELOPE FOR THIS STEP:"
+		if t.Group != "V5" {
+			promptMarker = "This is the final adjudication, independent of any investigation draft."
+		}
+		validPrompt := strings.Contains(p.Messages[0].Content, promptMarker)
+		if t.Group != "V5" {
+			validPrompt = strings.HasPrefix(p.Messages[0].Content, promptMarker)
+		}
 		if jsonstrict.Decode(raw, &fields) != nil || fields["temperature"] != nil ||
-			!strings.Contains(p.Messages[0].Content, "OUTPUT ENVELOPE FOR THIS STEP:") ||
+			!validPrompt ||
 			jsonstrict.Decode([]byte(p.Messages[1].Content), &facts) != nil || string(facts["final_stage"]) != "true" {
 			return nil, ErrInvalid
 		}

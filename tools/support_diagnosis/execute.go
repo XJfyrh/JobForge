@@ -37,8 +37,14 @@ func credential(path string) (string, error) {
 // Execute sends each frozen trial at most once, with PG authorization before HTTP.
 func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsPath string, progress io.Writer) error {
 	m, raw, err := LoadManifest(manifestPath)
-	if err != nil || (m.SchemaVersion != 2 && m.SchemaVersion != 3) {
+	if err != nil || (m.SchemaVersion != 2 && m.SchemaVersion != 3 && m.SchemaVersion != 4) {
 		return ErrInvalid
+	}
+	if m.SchemaVersion == 4 {
+		deadline, set := ctx.Deadline()
+		if !set || !deadline.After(time.Now()) {
+			return ErrInvalid
+		}
 	}
 	if err := VerifyBinary(m.RunnerSHA256); err != nil {
 		return err
@@ -73,11 +79,12 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, DisableKeepAlives: true}
 	defer transport.CloseIdleConnections()
 	timeout := 180 * time.Second
-	if m.SchemaVersion == 3 {
+	if m.SchemaVersion >= 3 {
 		timeout = 120 * time.Second
 	}
 	client := &http.Client{Transport: transport, Timeout: timeout,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return errors.New("redirect rejected") }}
+	var health protocolHealth
 	for index, trial := range m.Trials {
 		if ctx.Err() != nil {
 			return errors.New("diagnosis cancelled")
@@ -103,6 +110,13 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 		start := time.Now()
 		report, response := send(ctx, client, body, key, trial)
 		elapsed := time.Since(start).Milliseconds()
+		if m.SchemaVersion == 4 && report.Outcome == "final" && !probeFinalShape(body, response) {
+			report.Outcome = "invalid_final"
+		}
+		if m.SchemaVersion == 4 && report.Stop == "" && report.Usage != nil &&
+			health.stop(index+1, report.Outcome) {
+			report.Stop = "systemic_protocol_failure"
+		}
 		// Preserve billing even if local raw-body persistence fails after reception.
 		if err := writeRawNew(filepath.Join(root, "responses", trial.ID+".json"), response); err != nil {
 			report.Stop = "evidence_write_failed"
@@ -127,6 +141,20 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 	return nil
 }
 
+type protocolHealth struct{ consecutive, firstThree int }
+
+func (h *protocolHealth) stop(ordinal int, outcome string) bool {
+	if outcome == "invalid_final" || outcome == "incomplete_output" {
+		h.consecutive++
+		if ordinal <= 3 {
+			h.firstThree++
+		}
+	} else {
+		h.consecutive = 0
+	}
+	return h.consecutive >= 2 || h.firstThree >= 2
+}
+
 func send(ctx context.Context, client *http.Client, body []byte, key string, trial Trial) (Report, []byte) {
 	r := Report{ResponseSHA256: Digest(nil), Outcome: "transport_unknown", Stop: "transport_unknown"}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.deepseek.com/chat/completions", bytes.NewReader(body))
@@ -146,7 +174,7 @@ func send(ctx context.Context, client *http.Client, body []byte, key string, tri
 		return r, raw
 	}
 	group := trial.Group
-	if group == "V5" {
+	if group == "V5" || group == "V8" || group == "V8C" {
 		group = "B"
 	}
 	return ParseReport(raw, response.StatusCode, group, trial.ID), raw

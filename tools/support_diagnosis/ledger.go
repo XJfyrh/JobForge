@@ -100,6 +100,13 @@ func OpenLedger(ctx context.Context, pool *pgxpool.Pool, m Manifest, raw []byte)
 	if err := conn.QueryRow(ctx, `select count(*) from diagnosis_experiments where experiment_id<>$1`, m.ExperimentID).Scan(&count); err != nil || count != otherExperiments {
 		return fail(ErrInvalid)
 	}
+	// A new probe is one process lifetime. Even a fully known prefix must not
+	// silently restart the health counters or reopen a stopped observation list.
+	if m.SchemaVersion == 4 {
+		if err := conn.QueryRow(ctx, `select count(*) from diagnosis_calls`).Scan(&count); err != nil || count != 0 {
+			return fail(errors.New("contract probe already attempted; no automatic replay"))
+		}
+	}
 	if _, err := conn.Exec(ctx, `insert into diagnosis_experiments (experiment_id,manifest_sha256,manifest,prior_cost_microyuan,cost_cap_microyuan)
 		values($1,$2,$3,$4,$5) on conflict do nothing`, m.ExperimentID, Digest(raw), raw, m.PriorCost, m.CostCap); err != nil {
 		return fail(err)
@@ -190,7 +197,7 @@ func (l *Ledger) NextBatch(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if held != 0 || l.m.CostCap-l.m.PriorCost-used < upper.CostMicroyuan ||
-		l.m.SchemaVersion == 3 && l.m.BatchCap-used < upper.CostMicroyuan {
+		l.m.SchemaVersion >= 3 && l.m.BatchCap-used < upper.CostMicroyuan {
 		return "", run.ErrBudgetExhausted
 	}
 	var id string
@@ -209,7 +216,7 @@ func (l *Ledger) NextBatch(ctx context.Context) (string, error) {
 	id = uuid.NewString()
 	now := time.Now().UTC()
 	batchCap := min(l.m.BatchCap, l.m.CostCap-l.m.PriorCost-used)
-	if l.m.SchemaVersion == 3 {
+	if l.m.SchemaVersion >= 3 {
 		batchCap = min(batchCap, l.m.BatchCap-used)
 	}
 	err = store.CreateBudget(ctx, run.BudgetSpec{ID: id, Scope: "batch", Key: "diagnosis-" + id,
@@ -262,7 +269,7 @@ func (l *Ledger) Reserve(ctx context.Context, batch string, t Trial, ordinal int
 		return err
 	}
 	if l.m.PriorCost+total+upper.CostMicroyuan > l.m.CostCap ||
-		l.m.SchemaVersion == 3 && total+upper.CostMicroyuan > l.m.BatchCap {
+		l.m.SchemaVersion >= 3 && total+upper.CostMicroyuan > l.m.BatchCap {
 		return run.ErrBudgetExhausted
 	}
 	a, err = run.ReserveAccount(a, run.Usage{Chat: 1, PhysicalHTTP: 1, Tokens: upper.TotalTokens, CostMicroyuan: upper.CostMicroyuan})

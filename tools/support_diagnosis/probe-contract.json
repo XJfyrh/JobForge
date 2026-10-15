@@ -1,0 +1,102 @@
+{
+  "model_fields": [
+    "action",
+    "claims",
+    "conclusion",
+    "decision",
+    "requested_fields",
+    "target_ticket_status"
+  ],
+  "requested_fields": [
+    "ticket.order_id",
+    "order.delivery_id",
+    "delivery.usable_tracking_events",
+    "delivery.delivered_event",
+    "ticket.problem_description"
+  ],
+  "pointers": {
+    "T": [
+      "/order_id",
+      "/status",
+      "/subject",
+      "/description",
+      "/observed_at",
+      "/policy_version"
+    ],
+    "E1": [
+      "/missing",
+      "/missing_reason",
+      "/order/order_id",
+      "/order/delivery_id",
+      "/order/status",
+      "/order/ordered_at",
+      "/order/promised_delivery_at"
+    ],
+    "E2": [
+      "/missing",
+      "/missing_reason",
+      "/delivery/delivery_id",
+      "/delivery/order_id",
+      "/delivery/status",
+      "/delivery/events"
+    ]
+  },
+  "claim_variants": {
+    "timing": {
+      "test": [
+        "delivered_not_late",
+        "delivered_late",
+        "outstanding_not_overdue",
+        "outstanding_overdue_lt48",
+        "outstanding_overdue_ge48"
+      ],
+      "event_id": null
+    },
+    "dispute": {
+      "type": [
+        "non_receipt",
+        "wrong_address",
+        "unauthorized_recipient",
+        "unauthorized_safe_place"
+      ],
+      "delivered_event_id": null
+    },
+    "critical": {
+      "status": [
+        "lost",
+        "damaged",
+        "returned_to_sender"
+      ],
+      "event_id": null
+    },
+    "missing": {
+      "field": [
+        "ticket.order_id",
+        "order.delivery_id",
+        "delivery.usable_tracking_events",
+        "delivery.delivered_event",
+        "ticket.problem_description"
+      ]
+    },
+    "conflict": {
+      "type": [
+        "pre_handover",
+        "same_time",
+        "source_key",
+        "post_delivery",
+        "order_delivery"
+      ],
+      "event_ids": null
+    },
+    "correction": {
+      "recovery_event_id": null,
+      "corrected_event_id": null
+    },
+    "ticket_status": {
+      "mode": [
+        "informational_no_action",
+        "preserve_escalated"
+      ]
+    }
+  }
+}
