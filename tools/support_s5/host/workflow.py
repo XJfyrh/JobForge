@@ -13,15 +13,17 @@ from pathlib import Path
 from typing import Any
 
 from tools.support_evaluation.assemble import assemble, read, register, save_new, sha
-from tools.support_evaluation.evidence import load_package
 from tools.support_evaluation.export import atomic_json
 from tools.support_evaluation.launcher import validate_setup
 from tools.support_evaluation.score import usage_cost
 from tools.support_s5.freeze import ROOT
 from tools.support_s5.host import ledger
 from tools.support_s5.host.config import (
+    SEEN_V3_GUARDS,
     command,
     digest,
+    evaluation_files,
+    evaluation_package,
     load,
     validate_review,
     validate_sources,
@@ -197,7 +199,7 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
     )
     launch["config_sha256"]["health-gate.json"] = digest(prepared / "health-gate.json")
     atomic_json(prepared / "launch.json", launch)
-    registration = register(prepared, s5=True)
+    registration = register(prepared, package=evaluation_package(config), s5=True)
     profile = registration["profile"]
     for name, output_tokens in (("investigation", 1024), ("final", 16384)):
         expected = usage_cost(
@@ -266,6 +268,7 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
         )
     ]
     paths += list((batch / "state").rglob("prepared.json"))
+    paths += evaluation_files(config)
     plan = {
         "schema_version": 1,
         "workflow": "startup-review-v1",
@@ -286,6 +289,8 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
         "model_quality_passed": False,
         "bound_files": {str(p.resolve()): digest(p) for p in paths},
     }
+    if config["schema_version"] == 2:
+        plan["scope"] = "seen_v3_regression_not_unseen_acceptance"
     save_new(batch / "manifest.json", plan)
     return plan
 
@@ -346,7 +351,7 @@ def snapshot(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Use the existing assembler and strict scorer without quality rule changes."""
     audit(config, target, "after")
-    package = load_package()
+    package = evaluation_package(config)
     evidence = assemble(
         batch / "registration.json",
         archive(batch),
@@ -368,7 +373,13 @@ def snapshot(
     }
     save_new(target / "evidence.json", evidence)
     raw = (batch / "registration.json").read_bytes()
-    score = score_export(json.loads(raw), evidence, sha(raw), package=package)
+    score = score_export(
+        json.loads(raw),
+        evidence,
+        sha(raw),
+        package=package,
+        seen_diagnostic=config["schema_version"] == 2,
+    )
     save_new(target / "score.json", score)
     return evidence, score
 
@@ -676,7 +687,11 @@ def run(batch: Path, review: Path) -> None:
             )
             if quality_applies
             else None,
-            "scope": "development_regression_not_s5_overall_acceptance",
+            "scope": (
+                "seen_v3_regression_not_unseen_acceptance"
+                if config["schema_version"] == 2
+                else "development_regression_not_s5_overall_acceptance"
+            ),
             "score_sha256": digest(batch / "score.json"),
             "denominator": score["denominator"],
             "correct": score["correct_count"],
@@ -684,6 +699,15 @@ def run(batch: Path, review: Path) -> None:
             "ledger": closed["totals"],
             "post_batch_review": "pending",
         }
+        if config["schema_version"] == 2:
+            result["freeze_guard_cases"] = {
+                row["case_id"]: row["correct"] and row["full_case_evidence"]
+                for row in score["cases"]
+                if row["case_id"] in SEEN_V3_GUARDS
+            }
+            result["freeze_guard_cases_passed"] = set(
+                result["freeze_guard_cases"]
+            ) == set(SEEN_V3_GUARDS) and all(result["freeze_guard_cases"].values())
         if not quality_applies:
             result["baseline_collection_complete"] = (
                 score["denominator"] == config["policy"]["case_count"]

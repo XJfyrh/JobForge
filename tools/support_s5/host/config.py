@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from tools.support_evaluation.assemble import read, sha
+from tools.support_evaluation.evidence import Package
+from tools.support_evaluation.evidence import load_package as development_package
 from tools.support_s5.freeze import ROOT, source_hashes
+from tools.support_s5.package import ARTIFACT_NAMES, DATASET_V3
+from tools.support_s5.package import load_package as historical_package
 
 POLICY = {
     "case_count": 40,
@@ -18,6 +22,49 @@ POLICY = {
     "full_hold_microyuan": {"investigation": 2_105_344, "final": 2_228_224},
     "systemic_protocol": "two_consecutive_or_two_in_first_three",
 }
+SEEN_V3_POLICY = dict(
+    POLICY, case_count=20, minimum_correct=16, minimum_full_evidence=18
+)
+SEEN_V3_GUARDS = ("S5V3-004", "S5V3-018")
+SEEN_V3_MANIFEST_SHA256 = (
+    "6e3eea7581b3f2ba4a273a10656f4b42dcdc2bc07dd76a8a4063a7e69283203f"
+)
+SEEN_V3_FREEZE_SHA256 = (
+    "7eccbafe73e57aad84dee49b30eb7adce5267afb289fe11c7959a534cf7373d1"
+)
+
+
+def evaluation_package(config: dict[str, Any]) -> Package:
+    """Open only development40 or the explicit, already-seen original v3 package."""
+    if config["schema_version"] == 1:
+        return development_package()
+    scope = config["seen_v3"]
+    if set(scope) != {"package", "freeze"} or any(
+        not Path(scope[key]).is_absolute() for key in ("package", "freeze")
+    ):
+        raise ValueError("SEEN_V3_PACKAGE_BINDING")
+    root = Path(scope["package"])
+    if (
+        digest(root / "manifest.json") != SEEN_V3_MANIFEST_SHA256
+        or digest(Path(scope["freeze"])) != SEEN_V3_FREEZE_SHA256
+    ):
+        raise ValueError("SEEN_V3_ORIGINAL_BYTES_REQUIRED")
+    if read(root / "manifest.json")["dataset_id"] != DATASET_V3:
+        raise ValueError("SEEN_V3_PACKAGE_REQUIRED")
+    # The old freeze proves this seen package's provenance, not that the current
+    # candidate is frozen or that the cohort has become unseen again.
+    return historical_package(root, Path(scope["freeze"]), historical=True)
+
+
+def evaluation_files(config: dict[str, Any]) -> list[Path]:
+    """Bind every original historical artifact; none is mounted into the operator."""
+    if config["schema_version"] == 1:
+        return []
+    scope = config["seen_v3"]
+    return [Path(scope["freeze"])] + [
+        Path(scope["package"]) / name
+        for name in sorted(ARTIFACT_NAMES | {"manifest.json"})
+    ]
 
 
 def command(argv: list[str], *, raw: bytes | None = None) -> bytes:
@@ -36,6 +83,7 @@ def digest(path: Path) -> str:
 def load(path: Path) -> dict[str, Any]:
     """Read explicit paths; reject old-batch and unsupported workflow settings."""
     value = read(path)
+    schema = value.get("schema_version")
     required = {
         "schema_version",
         "question",
@@ -56,12 +104,11 @@ def load(path: Path) -> dict[str, Any]:
         "policy",
         "stage_lock",
     }
+    if schema == 2:
+        required.add("seen_v3")
+    expected_policy = SEEN_V3_POLICY if schema == 2 else POLICY
     policy = value.get("policy", {})
-    if (
-        set(value) != required
-        or value["schema_version"] != 1
-        or set(policy) != set(POLICY)
-    ):
+    if set(value) != required or schema not in {1, 2} or set(policy) != set(POLICY):
         raise ValueError("WORKFLOW_CONFIG")
     for key in (
         "case_count",
@@ -69,7 +116,7 @@ def load(path: Path) -> dict[str, Any]:
         "minimum_full_evidence",
         "systemic_protocol",
     ):
-        if policy[key] != POLICY[key]:
+        if policy[key] != expected_policy[key]:
             raise ValueError("QUALITY_POLICY_CHANGED")
     if any(
         type(policy[k]) is not int or not 0 < policy[k] <= POLICY[k]
@@ -82,8 +129,16 @@ def load(path: Path) -> dict[str, Any]:
         raise ValueError("FULL_RESERVATION")
     if not value["question"].strip() or not value["hypothesis"].strip():
         raise ValueError("EXPERIMENT_QUESTION")
-    if value["case_ids"] != [f"DEV-{i:03d}" for i in range(1, 41)]:
-        raise ValueError("DEVELOPMENT_LIST")
+    expected_cases = (
+        [f"DEV-{i:03d}" for i in range(1, 41)]
+        if schema == 1
+        else list(evaluation_package(value).cases)
+    )
+    if (
+        value["case_ids"] != expected_cases
+        or len(expected_cases) != policy["case_count"]
+    ):
+        raise ValueError("DEVELOPMENT_LIST" if schema == 1 else "SEEN_V3_LIST")
     for name in ("source", "build_receipt", "prior_ledger", "secrets", "stage_lock"):
         target = Path(value[name])
         if not target.is_absolute():
@@ -126,6 +181,33 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
     """Require a rebuilt clean source receipt, including the current audit fix."""
     source = read(Path(config["source"]))
     schema = source["definition"]["schema_version"]
+    if config["schema_version"] == 2:
+        definition = source["definition"]
+        root = Path(config["seen_v3"]["package"])
+        if (
+            schema != 18
+            or source["schema_version"] != 2
+            or definition["program"]["strategy"] != "support_agent_v1"
+            or definition["resources"]["dataset_id"] != DATASET_V3
+        ):
+            raise ValueError("SEEN_V3_SOURCE_BINDING")
+        for binding, relative, resource in (
+            (source["case_map"], "evaluation/case-map.jsonl", None),
+            (
+                source["runtime_data"]["manifest"],
+                "runtime/dataset-manifest.json",
+                "runtime_manifest_sha256",
+            ),
+            (source["runtime_data"]["seed"], "runtime/seed.json", "seed_sha256"),
+        ):
+            expected = digest(root / relative)
+            if (
+                Path(binding["path"]).resolve() != (root / relative).resolve()
+                or binding["sha256"] != expected
+                or resource is not None
+                and definition["resources"][resource] != expected
+            ):
+                raise ValueError("SEEN_V3_SOURCE_BINDING")
     build = read(Path(config["build_receipt"]))
     if schema not in {16, 17, 18} or build["sources"] != source_hashes(schema):
         raise ValueError("BUILD_SOURCES_CHANGED")

@@ -6,18 +6,27 @@ import copy
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from tools.support_evaluation.assemble import read, save_new
 from tools.support_s5.host import config, ledger, workflow
+from tools.support_s5.package import ARTIFACT_NAMES
 
 
 @pytest.mark.parametrize("failure", ["none", "lost_start", "cleanup", "no_export"])
-@pytest.mark.parametrize("schema", [16, 17, 18])
+@pytest.mark.parametrize(
+    "schema,cohort",
+    [(16, "dev"), (17, "dev"), (18, "dev"), (18, "seen"), (18, "seen_guard_failed")],
+)
 def test_prepare_run_and_restart_refusal_preserve_one_identity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str, schema: int
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+    schema: int,
+    cohort: str,
 ) -> None:
     """Real orchestration binds generated files; fake Docker never sends a request."""
     source_path, build_path, prior_path = (
@@ -31,6 +40,8 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     proof = tmp_path / "synthetic-proof.txt"
     proof.write_text("Offline fixture. No actual authorization or model execution.")
     fixed = schema == 17
+    seen = cohort != "dev"
+    count = 20 if seen else 40
     strategy = "support_fixed_v1" if fixed else "support_agent_v1"
     source = {
         "definition": {
@@ -63,10 +74,12 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     build = {"source_commit": "synthetic", "images": images}
     save_new(build_path, build)
     settings: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2 if seen else 1,
         "question": "One synthetic lifecycle?",
         "hypothesis": "One immutable attempt.",
-        "case_ids": [f"DEV-{i:03d}" for i in range(1, 41)],
+        "case_ids": [
+            f"{'S5V3' if seen else 'DEV'}-{i:03d}" for i in range(1, count + 1)
+        ],
         "source": str(source_path),
         "build_receipt": str(build_path),
         "prior_ledger": str(prior_path),
@@ -83,8 +96,21 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         "secrets": str(secret),
         "identity": {"batch_id": "synthetic"},
         "images": images,
-        "policy": copy.deepcopy(config.POLICY),
+        "policy": copy.deepcopy(config.SEEN_V3_POLICY if seen else config.POLICY),
     }
+    if seen:
+        original = tmp_path / "seen-originals"
+        for name in ARTIFACT_NAMES | {"manifest.json", "original-freeze.json"}:
+            path = original / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("Synthetic routing fixture; no authored formal cases.")
+        settings["seen_v3"] = {
+            "package": str(original),
+            "freeze": str(original / "original-freeze.json"),
+        }
+        package = SimpleNamespace(cases=dict.fromkeys(settings["case_ids"]))
+        monkeypatch.setattr(config, "evaluation_package", lambda _: package)
+        monkeypatch.setattr(workflow, "evaluation_package", lambda _: package)
     configuration = tmp_path / "config.json"
     save_new(configuration, settings)
     monkeypatch.setattr(config, "validate_sources", lambda _: build)
@@ -189,6 +215,16 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     plan = workflow.prepare(configuration, batch)
     assert plan["paid_release"] is False
     assert plan["batch_root"] == str(batch.resolve())
+    if seen:
+        assert plan["scope"] == "seen_v3_regression_not_unseen_acceptance"
+        assert all(
+            str(path.resolve()) in plan["bound_files"]
+            for path in config.evaluation_files(settings)
+        )
+        assert not any(
+            "seen-originals" in arg
+            for arg in workflow.commands(settings, batch)["launch"]
+        )
     assert (
         config.digest(batch / "prepared/health-gate.json")
         == read(batch / "prepared/launch.json")["config_sha256"]["health-gate.json"]
@@ -220,7 +256,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         def __init__(self, argv: list[str], **_: Any) -> None:
             launches.append(argv)
             containers[settings["container_prefix"] + "-paid"] = False
-            current["runs"] = 40
+            current["runs"] = count
 
         def poll(self) -> int:
             return 0
@@ -234,13 +270,23 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     def snapshot(
         _: Any, __: Any, target: Path
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        score = {
-            "correct_count": 8 if fixed else 39,
-            "full_case_evidence_count": 8 if fixed else 39,
+        score: dict[str, Any] = {
+            "correct_count": 19 if seen else 8 if fixed else 39,
+            "full_case_evidence_count": 19 if seen else 8 if fixed else 39,
             "hard_failure_cases": {"unauthorized_access": 0},
             "proposal_audit_complete": True,
-            "denominator": 40,
+            "denominator": count,
         }
+        if seen:
+            failed_id = "S5V3-004" if cohort == "seen_guard_failed" else "S5V3-020"
+            score["cases"] = [
+                {
+                    "case_id": case_id,
+                    "correct": case_id != failed_id,
+                    "full_case_evidence": case_id != failed_id,
+                }
+                for case_id in settings["case_ids"]
+            ]
         save_new(target / "score.json", score)
         return {}, score
 
@@ -273,6 +319,10 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     if fixed:
         assert result["baseline_collection_complete"] is True
         assert result["correct"] == 8
+    if seen:
+        assert result["scope"] == "seen_v3_regression_not_unseen_acceptance"
+        assert result["model_quality_passed"] is True
+        assert result["freeze_guard_cases_passed"] is (cohort != "seen_guard_failed")
     assert not Path(settings["stage_lock"]).exists()
     before = {
         p.relative_to(batch): p.read_bytes() for p in batch.rglob("*") if p.is_file()

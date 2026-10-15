@@ -55,3 +55,11 @@ schema5可用`groups`记录两个不同、最多64字节、仅字母数字/横�
 ## 已验证提示的新候选
 
 [独立引用对照](../../../docs/evidence/agent-v3-s5-v8-timing-evidence-2026-10-15.md)达到预登记支持条件后，Agent schema18 / `support-agent-prompt-v9`只将精确5,751字节final提示注册为新候选，复用v8调查、完整政策和executor5，旧schema16提示不变。新候选与Fixed17配对；两者仍具有同模型、工具/政策、数据和资源额度，Fixed保留原固定提示。冻结绑定全部三个已见正式集，新候选不能把旧集重新标为未见。完整40案需新库、新身份、实际重建镜像和一次联合启动审查；诊断通过不等于开发或S5质量达标。
+
+## 原已见v3完整回归
+
+配置schema1保留原DEV40行为。schema2只接受当前Agent18的原已见v3完整20案，增加`seen_v3`对象的两个绝对路径：`package`指向原包，`freeze`指向该包原冻结文件。source仍使用Go的schema2、原case-map/runtime摘要和已审资源；名单必须与原包全部20案顺序一致，policy固定为case_count20、minimum_correct16、minimum_full_evidence18，其余费用与健康规则保持。
+
+原freeze只证明历史包来源，不代表v9已冻结。入口钉住原manifest和freeze的字节SHA，拒绝同ID重标的新包；source的case-map、runtime manifest/seed路径和摘要以及definition资源摘要必须绑定同一原包。准备、组装和评分均显式使用该历史包，全部原件和freeze摘要进入新manifest；评分固定`seen_diagnostic=True`，kind为`s5-seen-diagnostic`且`thresholds_met=false`。包、gold和评分只在宿主，不挂入operator；不能通过新增historical开关、更换dataset或删减名单绕过未见集守卫。
+
+结果分别记录适用20案回归门槛和`freeze_guard_cases`（S5V3-004/018）。即使16/18通过，任一guard失败仍不能冻结；DEV-020另由同候选已接受开发结果证明。此模式不接受新未见集，不创建新案例，不自动冻结或重试；仍使用新身份和同一次具体启动审查。
