@@ -25,6 +25,7 @@ from tools.support_s5.host.config import (
     load,
     validate_review,
     validate_sources,
+    validate_worker_scope,
     verify_bound,
 )
 from tools.support_s5.host.health import (
@@ -210,6 +211,10 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
         if expected != config["policy"]["full_hold_microyuan"][name]:
             raise ValueError("FULL_RESERVATION_MISMATCH")
     save_new(batch / "registration.json", registration)
+    validate_worker_scope(
+        read(prepared / "worker.json"),
+        read(Path(config["secrets"]) / "worker.json"),
+    )
     generated = commands(config, batch)
     save_new(batch / "commands.json", generated)
     current = next(

@@ -9,7 +9,7 @@
 - `source` 是现有 Go `prepare-support` 接受的候选源文件；候选、模型/价格、资源、构建/数据/评分/价格收据均由该文件绑定。提示词修改只维护必要版本。
 - `build_receipt` 必须绑定当前干净提交的 `source_hashes(16/17/18)` 和四个固定 image ID。审计标签修复后必须重建，不能沿用旧 v8 镜像。构建仍复用现有 Dockerfile/构建流程。
 - `inventory` 明列全部历史控制库及一个新库，逐行指定 `container/user/database`，诊断库加 `diagnosis: true`。`prior_ledger` 指向最近完整历史账本；不能遗漏其中任何库或复用其库名。以最新完整阶段账本为准，包含所有已停止与零调用库，再加一个新库；原始文件不改写。已记载的容器/角色绑定不能改变，各历史库 known 不能下降；旧账本未记容器时通过这份受审清单一次明确，仍检查 known 连续性。合法 full hold 结算下降不受阻。
-- `secrets` 是私有目录，包含 `control.env`、`business.env`、`worker.json`、`driver.json`；控制 DSN、Worker 身份/凭据与新库、新 profile 保持一致。只记录文件摘要，不输出内容。网络、ollama 与 business-postgres 别名沿用现有部署，业务数据/索引事先准备。
+- `secrets` 是私有目录，包含 `control.env`、`business.env`、`worker.json`、`driver.json`；控制 DSN、Worker 身份/凭据与新库、新 profile 保持一致。Fixed无action origin，不携带Agent的action reader/writer密钥；准备时在创建控制库前检查租户与动作凭据范围。只记录文件摘要，不输出内容。网络、ollama 与 business-postgres 别名沿用现有部署，业务数据/索引事先准备。
 - `identity` 填入新的 profile、worker、batch、batch key、两租户预算 UUID 和 UTC 起点；既有准备命令生成六小时有效窗。`container_prefix` 使用唯一 `jobforge-s5-...` 名称。
 - 同一 S5 使用同一个绝对路径 `stage_lock`，包括并发会话。其旁的 `.inventory.json` 记录已启动身份及最新账本，在发送前登记、闭账后刷新；后启动的旧配置遗漏新库会被拒绝，须复核配置差异，不能删除或重建清单绕过。金额可收紧，当前上限每批 ¥4/累计 ¥28；`full_hold_microyuan` 须与登记价格重新计算结果一致。
 

@@ -148,6 +148,18 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
     return build
 
 
+def validate_worker_scope(worker: dict[str, Any], credentials: dict[str, Any]) -> None:
+    """Reject action credentials outside the prepared tenant execution scope."""
+    if set(worker["tenants"]) != set(credentials["tenants"]):
+        raise ValueError("WORKER_TENANT_BINDING")
+    for tenant, origins in worker["tenants"].items():
+        keys = credentials["tenants"][tenant]
+        if not origins.get("action_origin") and any(
+            keys.get(name) for name in ("action_reader_key", "action_writer_key")
+        ):
+            raise ValueError("UNEXPECTED_ACTION_CREDENTIALS")
+
+
 def validate_review(manifest: Path, review: Path) -> dict[str, Any]:
     """One startup review contains maintainer authorization and independent review."""
     value = read(review)

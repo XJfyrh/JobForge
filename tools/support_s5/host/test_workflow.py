@@ -173,6 +173,34 @@ def test_quality_role_rejects_mixed_registration(mutation: str) -> None:
         health.quality_gate_applies(value)
 
 
+@pytest.mark.parametrize(
+    "mode",
+    ["fixed_read_only", "agent_action", "extra_reader", "extra_writer", "tenant"],
+)
+def test_worker_action_scope_is_checked_without_starting_worker(mode: str) -> None:
+    """Fixed deployments reject copied action keys during free preparation."""
+    worker: dict[str, Any] = {"tenants": {"tenant-north": {}}}
+    credentials: dict[str, Any] = {"tenants": {"tenant-north": {}}}
+    if mode == "agent_action":
+        worker["tenants"]["tenant-north"]["action_origin"] = "http://synthetic:8096"
+        credentials["tenants"]["tenant-north"]["action_writer_key"] = "synthetic"
+    elif mode in {"extra_reader", "extra_writer"}:
+        name = "action_reader_key" if mode == "extra_reader" else "action_writer_key"
+        credentials["tenants"]["tenant-north"][name] = "synthetic"
+    elif mode == "tenant":
+        credentials["tenants"]["tenant-south"] = {}
+    if mode in {"extra_reader", "extra_writer", "tenant"}:
+        expected = (
+            "WORKER_TENANT_BINDING"
+            if mode == "tenant"
+            else "UNEXPECTED_ACTION_CREDENTIALS"
+        )
+        with pytest.raises(ValueError, match=expected):
+            config.validate_worker_scope(worker, credentials)
+    else:
+        config.validate_worker_scope(worker, credentials)
+
+
 def test_reservation_boundary_and_final_case() -> None:
     """Equality admits a full reservation; a finished list needs no next reserve."""
     _, _, sample = inputs()

@@ -27,6 +27,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     secret.mkdir()
     for name in ("worker.json", "driver.json", "control.env", "business.env"):
         (secret / name).write_text("synthetic; contains no real credentials")
+    (secret / "worker.json").write_text(json.dumps({"tenants": {}}))
     proof = tmp_path / "synthetic-proof.txt"
     proof.write_text("Offline fixture. No actual authorization or model execution.")
     fixed = schema == 17
@@ -134,7 +135,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
                 "worker.json",
                 "executor.json",
             ):
-                save_new(prepared / name, {"enabled_profiles": []})
+                save_new(prepared / name, {"enabled_profiles": [], "tenants": {}})
         elif argv[-1] == "inspect-support":
             return json.dumps(setup).encode()
         elif argv[-1] == "prepare-state":
