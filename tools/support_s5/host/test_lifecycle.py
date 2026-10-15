@@ -14,7 +14,7 @@ from tools.support_evaluation.assemble import read, save_new
 from tools.support_s5.host import config, ledger, workflow
 
 
-@pytest.mark.parametrize("failure", ["none", "lost_start", "cleanup"])
+@pytest.mark.parametrize("failure", ["none", "lost_start", "cleanup", "no_export"])
 def test_prepare_run_and_restart_refusal_preserve_one_identity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
 ) -> None:
@@ -199,7 +199,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
     launches: list[list[str]] = []
 
     class Process:
-        returncode = 0
+        returncode = 1 if failure == "no_export" else 0
 
         def __init__(self, argv: list[str], **_: Any) -> None:
             launches.append(argv)
@@ -229,7 +229,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
 
     monkeypatch.setattr(workflow, "snapshot", snapshot)
     if failure != "none":
-        with pytest.raises((TimeoutError, RuntimeError)):
+        with pytest.raises((TimeoutError, RuntimeError, ValueError)):
             workflow.run(batch, review_path)
         assert not (batch / "result.json").exists()
         assert (batch / "attempted.json").exists()
@@ -237,9 +237,16 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         if failure == "cleanup":
             assert (batch / "cleanup-error.json").exists()
             assert containers[settings["container_prefix"] + "-business"] is True
-        else:
+        elif failure == "lost_start":
             assert not any(containers.values())
             assert not launches
+        else:
+            assert (
+                read(batch / "workflow-error.json")["reason"]
+                == "LAUNCHER_FAILED_BEFORE_EXPORT"
+            )
+            assert not any(containers.values())
+            assert len(launches) == 1
         return
     workflow.run(batch, review_path)
     assert len(launches) == 1

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import time
 from datetime import UTC, datetime
@@ -132,7 +133,6 @@ def commands(config: dict[str, Any], batch: Path) -> dict[str, list[str]]:
         "--cpus",
         "2",
         image,
-        "launch",
     ]
     return {
         "bootstrap": disabled + ["bootstrap"],
@@ -635,6 +635,8 @@ def run(batch: Path, review: Path) -> None:
             if time.monotonic() >= deadline:
                 raise ValueError("ATTEMPT_CLOSURE_REQUIRED")
             time.sleep(2)
+        if process.returncode and not list((batch / "exports").glob("*/rows.json")):
+            raise ValueError("LAUNCHER_FAILED_BEFORE_EXPORT")
         _, score = snapshot(config, batch, batch)
         closed = ledger.collect(config["inventory"])
         result = {
@@ -665,7 +667,13 @@ def run(batch: Path, review: Path) -> None:
     except Exception as error:
         atomic_json(
             batch / "workflow-error.json",
-            {"error_category": type(error).__name__, "evidence_preserved": True},
+            {
+                "error_category": type(error).__name__,
+                "reason": str(error)
+                if re.fullmatch(r"[A-Z][A-Z0-9_]{0,95}", str(error))
+                else None,
+                "evidence_preserved": True,
+            },
         )
         raise
     finally:

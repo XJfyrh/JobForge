@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from jobforge_agent.business import POLICY_BUNDLE_ALIASES
 
-from tools.support_evaluation import driver
+from tools.support_evaluation import driver, launcher
 from tools.support_evaluation.assemble import read, save_new
 from tools.support_s5 import checkpoint
 from tools.support_s5.host import config, health, ledger, workflow
@@ -296,7 +296,7 @@ def test_commands_do_not_mount_gold_or_private_version_scripts(tmp_path: Path) -
     }
     commands = workflow.commands(settings, tmp_path)
     launch = commands["launch"]
-    assert "--init" in launch and launch[-1] == "launch"
+    assert "--init" in launch
     assert not any(
         word in " ".join(launch)
         for word in ("/operator", "gold", "host/", "registration.json")
@@ -306,3 +306,34 @@ def test_commands_do_not_mount_gold_or_private_version_scripts(tmp_path: Path) -
         "agent-worker" not in " ".join(commands[k])
         for k in ("bootstrap", "inspect", "prepare_state")
     )
+
+
+def test_generated_command_matches_actual_outer_launcher_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Use the launcher's parser, not a duplicate expectation of its arguments."""
+    import sys
+
+    settings: dict[str, Any] = {
+        "images": {
+            "s5_operator": "sha256:" + "a" * 64,
+            "business": "sha256:" + "b" * 64,
+        },
+        "container_prefix": "jobforge-s5-synthetic",
+        "secrets": str(tmp_path / "secrets"),
+        "network": "synthetic",
+    }
+    command = workflow.commands(settings, tmp_path)["launch"]
+    image_index = command.index(settings["images"]["s5_operator"])
+    save_new(tmp_path / "launch.json", {"synthetic": True})
+    monkeypatch.setattr(launcher, "CONFIG", tmp_path)
+    monkeypatch.setattr(sys, "argv", ["s5-launcher", *command[image_index + 1 :]])
+    observed = []
+
+    def start(manifest: Any, raw: bytes, *, s5: bool) -> int:
+        observed.append((manifest, s5))
+        return 0
+
+    monkeypatch.setattr(launcher, "launch", start)
+    assert launcher.main(s5=True) == 0
+    assert observed == [({"synthetic": True}, True)]
