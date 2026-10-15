@@ -1,0 +1,850 @@
+{
+  "schema_version": 1,
+  "kind": "s5-v8-description-ablation-result",
+  "recorded_at": "2026-10-15T08:09:32.590507+00:00",
+  "scope": "three_seen_cases_fixed_input_only_not_end_to_end",
+  "question": "Does removing only the extra independent-description reminder repair over-clarification on DEV-016 while preserving upstream-only missing relationship DEV-017 and genuine vague problem DEV-020?",
+  "source_commit": "36bb4043b37f6de3a278c278c609852c8e6af89e",
+  "candidate": "support-agent-prompt-v8-contract-c2",
+  "baseline": "support-agent-prompt-v8-contract-c1",
+  "identity": {
+    "experiment_id": "v8-description-ablation-identity-verified-20261015",
+    "database_name": "jobforge_s5_diagnosis_desc_7c255579c1294579b56e65b0cec337be",
+    "database_id": "de56937c-0225-4587-ad52-85d62184ee7b"
+  },
+  "manifest_sha256": "787e272233a94b8766b216ca3b45ea4bf0e80eec46f46e246b651fa7d06b294b",
+  "startup_manifest_sha256": "651fc66062388463683daba4b31fecae1e6df088b3ae6d0ea8ca9c12d5f9185f",
+  "authorized_policy": {
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "valid_until": "2026-10-15T13:54:46.309490+00:00",
+    "authorization": "direct standing maintainer delegation with concrete allocation and independent startup review"
+  },
+  "engineering_complete": true,
+  "model_quality_passed": false,
+  "s5_overall_accepted": false,
+  "candidate_promoted": false,
+  "original_denominator": 18,
+  "executed": 18,
+  "unique_trials": 18,
+  "unattempted": 0,
+  "new_production_runs": 0,
+  "metrics": {
+    "C1": {
+      "protocol": 9,
+      "sources": 9,
+      "correct": 9,
+      "full_evidence": 9
+    },
+    "C2": {
+      "protocol": 9,
+      "sources": 9,
+      "correct": 9,
+      "full_evidence": 9
+    }
+  },
+  "supports_candidate": false,
+  "candidate_support_criteria": {
+    "all_9_candidate_observations_correct": true,
+    "all_9_candidate_observations_full_evidence": true,
+    "at_least_one_fresh_DEV016_pair_improves": true,
+    "if_both_groups_pass": "inconclusive_benefit_not_proven",
+    "stability_or_full_development_acceptance": false
+  },
+  "interpretation": "inconclusive / deletion benefit not demonstrated",
+  "fresh_DEV016_paired_improvements": 0,
+  "prior_C1_failure_preserved": true,
+  "observed_failures": [],
+  "descriptive_group_statistics": {
+    "C1": {
+      "observations": 9,
+      "known_cost_microyuan": 165145,
+      "mean_wall_seconds": 12.885777777777777,
+      "mean_reasoning_tokens": 2024.4444444444443,
+      "input_tokens": 44859,
+      "cached_input_tokens": 39552,
+      "output_tokens": 19118,
+      "reasoning_tokens": 18220
+    },
+    "C2": {
+      "observations": 9,
+      "known_cost_microyuan": 272179,
+      "mean_wall_seconds": 20.022111111111112,
+      "mean_reasoning_tokens": 3309.1111111111113,
+      "input_tokens": 44715,
+      "cached_input_tokens": 32000,
+      "output_tokens": 30683,
+      "reasoning_tokens": 29782
+    }
+  },
+  "statistics_do_not_establish_stability_or_performance_effect": true,
+  "response_metadata": {
+    "unique_response_ids": 18,
+    "models": [
+      "deepseek-flash"
+    ],
+    "fingerprints": [
+      "aeb56401ca74e127821c4f9126dcb669"
+    ],
+    "finish_reasons": {
+      "stop": 18
+    },
+    "max_output_tokens": 6798,
+    "capacity": 16384
+  },
+  "financial_closure": {
+    "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+    "batch_known_microyuan": 437324,
+    "batch_held_microyuan": 0,
+    "group_known_microyuan": {
+      "C1": 165145,
+      "C2": 272179
+    },
+    "stage_known_microyuan": 15431865,
+    "stage_remaining_microyuan": 12568135,
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "per_call_full_reservation_microyuan": 2228224,
+    "every_call_tariff_ceiling_recomputed": true,
+    "each_next_full_hold_within_batch_and_stage_caps": true,
+    "unknown_chat_calls": 0,
+    "inflight": 0,
+    "unfinished_attempts": 0,
+    "held": 0
+  },
+  "cumulative": {
+    "database_count": 34,
+    "totals": {
+      "runs": 574,
+      "chat_calls": 2482,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 15431865,
+      "held": 0
+    }
+  },
+  "closure": {
+    "sender_exit_code": 0,
+    "stage_lock_released": true,
+    "runtime_post_batch_review": "pending",
+    "actual_review": "independently_accepted_for_report_and_financial_closure",
+    "historical_33_databases_unchanged": true
+  },
+  "validation": {
+    "recorded_at": "2026-10-15T07:46:35.290117+00:00",
+    "implementation_commit": "fdeb5f1",
+    "name_guard_fix_commit": "36bb4043b37f6de3a278c278c609852c8e6af89e",
+    "full_selected_exit_code": 0,
+    "full_selected_log_sha256": "2554d99f3a78dfe89a7933fbd6609ddf92be857f75cbc070a9f863c7e54ea483",
+    "real_PG_AOF_Redis_full_race_integration_seconds": 545.305,
+    "diagnosis_full_race_seconds": 18.856,
+    "latest_name_guard_real_PG_race_seconds": 18.54,
+    "latest_name_guard_log_sha256": "2f4c2d57bdf90d265944db233f5dab05c4bf7229e4825a2d466d01cd52adf9ac",
+    "related_python_passed": 278,
+    "total_python_passed": 2345,
+    "python_skips_not_accepted": 13,
+    "mypy_support_files": 40,
+    "image_contract": "passed",
+    "pure_lint": "passed",
+    "remote_CI": "not_run",
+    "dedicated_business_pgvector_acceptance": "not_claimed_missing_business_DSN",
+    "initial_quick_lint_failure": "2 missing docstrings fixed before passing quick and full checks",
+    "free_preparation_failure": "66-byte database name truncated to63; binding guard stopped before paid attempts; preserved zero-call DB and added explicit63-byte manifest guard",
+    "paid_calls": 0
+  },
+  "official_research": [
+    {
+      "url": "https://api-docs.deepseek.com/guides/thinking_mode/",
+      "sha256": "35350389e59872d3733f7b7f99f5485c6cbc95f1bc2a71a47ba3ecf30bd7a060",
+      "retrieved_at": "2026-10-15T08:06:28.151611+00:00"
+    },
+    {
+      "url": "https://api-docs.deepseek.com/guides/json_mode/",
+      "sha256": "f728a4dad99c2328c9c982b08c113f400abcc1a7eba238f08738f51a951d1b30",
+      "retrieved_at": "2026-10-15T08:06:28.388483+00:00"
+    }
+  ],
+  "next_hypothesis": {
+    "recommendation": "Close the deletion experiment without promoting C2 or adding replacement observations. A new prompt-only hypothesis that appends only RESTORED_CONTRACT item3 to original V8 is reasonable to preregister separately.",
+    "observed_basis": "DEV027 omitted its required timing claim in both the original v8 development final and the prior fresh V8 diagnostic final despite complete timing policy/facts. Prior V8 DEV026 already included critical plus timing and is a relevant control. The prior combined C1 gain cannot isolate item3.",
+    "proposed_seen_cohort": [
+      "DEV-026",
+      "DEV-027"
+    ],
+    "proposed_paired_repetitions": 3,
+    "proposed_fixed_observations": 12,
+    "proposed_support_criterion": "All six candidate observations correct and complete, plus at least one fresh same-repetition DEV027 paired improvement; otherwise fail or inconclusive.",
+    "new_scope_or_paid_manifest_accepted_by_this_review": false,
+    "requirements": "Freeze exact candidate bytes, fixed sequence, original inputs, fees, deadline and authorization allocation for a separate focused implementation/manifest startup review. No upstream-relationship or description reminder additions. Diagnostic support would still require an independently reviewed full development regression before quality acceptance."
+  },
+  "rows": [
+    {
+      "trial_id": "DEV-016-C1-1",
+      "case_id": "DEV-016",
+      "group": "C1",
+      "repetition": 1,
+      "request_sha256": "a15fe378d9668be5149f55a3cb23997de0ca9f3dda25341b2e99e06f6ff0d891",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4645,
+        "cached_input_tokens": 4480,
+        "output_tokens": 1443,
+        "reasoning_tokens": 1365
+      },
+      "known_cost_microyuan": 12054,
+      "elapsed_ms": 9067,
+      "response_sha256": "a884cab4e8e29b1796d492aff15b6761dc6704436a41ff678c30530c8ef2fc6c",
+      "ledger_report_sha256": "c86302389c90afdb178a34993076d00cfc8360cfde1f8b23c2a995d329ff29d1",
+      "report_file_sha256": "9722f9e777ac3ebb0ae118375508daf7f3cac7943d30286b3836b52737099e17",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:57:27.047428+00:00",
+      "settled_at": "2026-10-15T07:57:36.129923+00:00"
+    },
+    {
+      "trial_id": "DEV-016-C2-1",
+      "case_id": "DEV-016",
+      "group": "C2",
+      "repetition": 1,
+      "request_sha256": "6c03998fc299ba14cc86dd13830f2286473f6cfff829702dfbb46805d194cb55",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4629,
+        "cached_input_tokens": 1024,
+        "output_tokens": 1703,
+        "reasoning_tokens": 1625
+      },
+      "known_cost_microyuan": 20875,
+      "elapsed_ms": 10345,
+      "response_sha256": "7cbb9261e2c82ba9c7cd26e271786a178578520cec216a8d414341a0c11261c1",
+      "ledger_report_sha256": "33aec9d5f065b8d4cec216f1c82577f049e67a0a2baf45a8ae17b0fd6ba1dc9e",
+      "report_file_sha256": "c6897a3568d501e4150538bf4883b786034e1df7863bdfc3db29452c37ed0c1a",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:57:36.139909+00:00",
+      "settled_at": "2026-10-15T07:57:46.493092+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C2-1",
+      "case_id": "DEV-017",
+      "group": "C2",
+      "repetition": 1,
+      "request_sha256": "d11223774fdce5cd4a54041b248a2b0ac79a4fd83b4dfa36dec7423ec55fda90",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5162,
+        "cached_input_tokens": 1152,
+        "output_tokens": 2700,
+        "reasoning_tokens": 2598
+      },
+      "known_cost_microyuan": 29667,
+      "elapsed_ms": 15459,
+      "response_sha256": "de7da6b2c3f9df5369515a57a3f22d4bbcd7ab716d6265edf4d95a15a140c902",
+      "ledger_report_sha256": "5b6bf3c440368d88befa91eee85a98a92dfecb62499341062160da90747ec713",
+      "report_file_sha256": "fbffd6f2e2f9e3e41e079640bd5e2b43ebd512f57f2abed79c7f030878951f26",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:57:46.504295+00:00",
+      "settled_at": "2026-10-15T07:58:01.973461+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C1-1",
+      "case_id": "DEV-017",
+      "group": "C1",
+      "repetition": 1,
+      "request_sha256": "f8c08b032180ef944e2c37f80edb3e46db064b7109d59816e7981f67f2e2272b",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5178,
+        "cached_input_tokens": 4992,
+        "output_tokens": 1979,
+        "reasoning_tokens": 1887
+      },
+      "known_cost_microyuan": 16404,
+      "elapsed_ms": 12002,
+      "response_sha256": "5f4f974737230ce474cffb0b3310618a6fb2c1a81929642860a89f2d3415267a",
+      "ledger_report_sha256": "3291658d38fbb164099978084df3aa3ff06af885cd541a945f3fd3c8e6ef81ce",
+      "report_file_sha256": "a874b91d5e67c1ed57b5f93b9dfb6744aceaec41450ecdb7b736ef426ae799f3",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:58:01.985112+00:00",
+      "settled_at": "2026-10-15T07:58:13.998532+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C1-1",
+      "case_id": "DEV-020",
+      "group": "C1",
+      "repetition": 1,
+      "request_sha256": "fa22a309c0625ba3142918acd62ee69ba6d263a01b072e841d4cc87c719789cc",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5130,
+        "cached_input_tokens": 1152,
+        "output_tokens": 2559,
+        "reasoning_tokens": 2474
+      },
+      "known_cost_microyuan": 28475,
+      "elapsed_ms": 15850,
+      "response_sha256": "666a8aa840eaa4e37444ed93dc8a8e3206cf475352cf9dac99e0badf1c924b65",
+      "ledger_report_sha256": "69bf96677560d1217abea03a5b798862a0011e3ef5d1e7a6fe6e8288f97055fb",
+      "report_file_sha256": "20fa68cf4f9b8fee675685f1c7650b2a708d4fa887c7fdbf84c96487125c9649",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:58:14.010647+00:00",
+      "settled_at": "2026-10-15T07:58:29.871455+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C2-1",
+      "case_id": "DEV-020",
+      "group": "C2",
+      "repetition": 1,
+      "request_sha256": "b18c1ffb3b2d84a0fb0b8ecb05d1df20494e5f294dfe723adf351e398c704413",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true,
+        true
+      ],
+      "claim_coverage": [
+        true,
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5114,
+        "cached_input_tokens": 1152,
+        "output_tokens": 5499,
+        "reasoning_tokens": 5361
+      },
+      "known_cost_microyuan": 51963,
+      "elapsed_ms": 32671,
+      "response_sha256": "887d1d4b499d62589e3bb2c57a76da8e02b38c6b312ab169f0b0e0c7752848e8",
+      "ledger_report_sha256": "65ebc5885985c3aebcf76907a99346eb6444db666886dae7a43f65d429c0a6d7",
+      "report_file_sha256": "dfee9938d7dad4bacce5e5b24bdc29376f02f9e43676c2da750de9ef4d29ca3b",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:58:29.88306+00:00",
+      "settled_at": "2026-10-15T07:59:02.564463+00:00"
+    },
+    {
+      "trial_id": "DEV-016-C2-2",
+      "case_id": "DEV-016",
+      "group": "C2",
+      "repetition": 2,
+      "request_sha256": "6c03998fc299ba14cc86dd13830f2286473f6cfff829702dfbb46805d194cb55",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4629,
+        "cached_input_tokens": 4480,
+        "output_tokens": 1971,
+        "reasoning_tokens": 1892
+      },
+      "known_cost_microyuan": 16246,
+      "elapsed_ms": 11921,
+      "response_sha256": "ddfb0a545785e05c3d579396654589182984f7d2942ea272026f486f4ff24209",
+      "ledger_report_sha256": "5854a5bb8041967c5d993992ca1c699f8d88cbe136b01605af2d2715f7074f22",
+      "report_file_sha256": "a2741a320f4923b985854a0a3e0037c324c627d05fdbec75f6661d70e2af1c90",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:59:02.57665+00:00",
+      "settled_at": "2026-10-15T07:59:14.508021+00:00"
+    },
+    {
+      "trial_id": "DEV-016-C1-2",
+      "case_id": "DEV-016",
+      "group": "C1",
+      "repetition": 2,
+      "request_sha256": "a15fe378d9668be5149f55a3cb23997de0ca9f3dda25341b2e99e06f6ff0d891",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4645,
+        "cached_input_tokens": 4480,
+        "output_tokens": 528,
+        "reasoning_tokens": 445
+      },
+      "known_cost_microyuan": 4734,
+      "elapsed_ms": 4026,
+      "response_sha256": "c37ee5e712730f204042037ed9cd7d20a49ed54ea4d60f946f45ac09eb9ed693",
+      "ledger_report_sha256": "63b1c691cdb29862f02cdb0ee3fd341fd8934e3d16d1e7c4a5fe062cd2d73156",
+      "report_file_sha256": "6b114c4a496a06430901f9964989933b25bff6e1476058bbe60095227ee8eb62",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:59:14.519503+00:00",
+      "settled_at": "2026-10-15T07:59:18.556268+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C1-2",
+      "case_id": "DEV-017",
+      "group": "C1",
+      "repetition": 2,
+      "request_sha256": "f8c08b032180ef944e2c37f80edb3e46db064b7109d59816e7981f67f2e2272b",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5178,
+        "cached_input_tokens": 4992,
+        "output_tokens": 2107,
+        "reasoning_tokens": 2005
+      },
+      "known_cost_microyuan": 17428,
+      "elapsed_ms": 13045,
+      "response_sha256": "af4e05c286668bc638fa8afcaa0718640420a158bb59dbe5d4dc1ed465699d82",
+      "ledger_report_sha256": "8a8482eec1212c23e197eaf8d3ac4ae7e91ac0255da1598cc18844c960305da8",
+      "report_file_sha256": "e83a3f4f316ba8030ec751fb732b6b7e7bc13fe02d1b449d20b0b48f9d2f2cec",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:59:18.568446+00:00",
+      "settled_at": "2026-10-15T07:59:31.622285+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C2-2",
+      "case_id": "DEV-017",
+      "group": "C2",
+      "repetition": 2,
+      "request_sha256": "d11223774fdce5cd4a54041b248a2b0ac79a4fd83b4dfa36dec7423ec55fda90",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5162,
+        "cached_input_tokens": 4992,
+        "output_tokens": 1842,
+        "reasoning_tokens": 1749
+      },
+      "known_cost_microyuan": 15276,
+      "elapsed_ms": 11227,
+      "response_sha256": "0c7b5e628350fd0be55202beede6834f19a2695a71abfbf85514ab352299ec5c",
+      "ledger_report_sha256": "8f9ea9f84f6d852a08dddfbfcae067106791412c10b565a49c3a484dd384dff6",
+      "report_file_sha256": "8b604ccad06bb21423e75aeab28f46a1ad1db1a7e1d332d485b35a71dcf4d711",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:59:31.632928+00:00",
+      "settled_at": "2026-10-15T07:59:42.869563+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C2-2",
+      "case_id": "DEV-020",
+      "group": "C2",
+      "repetition": 2,
+      "request_sha256": "b18c1ffb3b2d84a0fb0b8ecb05d1df20494e5f294dfe723adf351e398c704413",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true,
+        true
+      ],
+      "claim_coverage": [
+        true,
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5114,
+        "cached_input_tokens": 4864,
+        "output_tokens": 6798,
+        "reasoning_tokens": 6654
+      },
+      "known_cost_microyuan": 55079,
+      "elapsed_ms": 38453,
+      "response_sha256": "b7f18de05c14340ec297098018318a9a10becc0eb2d1acfd153730a9a77dd557",
+      "ledger_report_sha256": "af4aeb6d5a53ea41ac8e3657d8730f2dbc965c339ba54a17db30a7a09ff7f3d7",
+      "report_file_sha256": "b4fa60313ce102a63d3c65d92affefb6b29419fffc46d37a7cf0e798e678f088",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T07:59:42.880537+00:00",
+      "settled_at": "2026-10-15T08:00:21.343958+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C1-2",
+      "case_id": "DEV-020",
+      "group": "C1",
+      "repetition": 2,
+      "request_sha256": "fa22a309c0625ba3142918acd62ee69ba6d263a01b072e841d4cc87c719789cc",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true,
+        true
+      ],
+      "claim_coverage": [
+        true,
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5130,
+        "cached_input_tokens": 4992,
+        "output_tokens": 2968,
+        "reasoning_tokens": 2825
+      },
+      "known_cost_microyuan": 24220,
+      "elapsed_ms": 17273,
+      "response_sha256": "e177d4e6f4cc64ea567e077fd3743a0eadd11d1fbcb68786fdfb5c7f1a611b70",
+      "ledger_report_sha256": "51b2e6400c9f2814f86ed0ff9d4c73bcd3310d4d6478bcace6e8f69cb4a5604f",
+      "report_file_sha256": "7966c4e28e24468aed4f7fa72c7a35639f69371bf1e5eff00f448925fb64cb3a",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:00:21.35435+00:00",
+      "settled_at": "2026-10-15T08:00:38.637138+00:00"
+    },
+    {
+      "trial_id": "DEV-016-C1-3",
+      "case_id": "DEV-016",
+      "group": "C1",
+      "repetition": 3,
+      "request_sha256": "a15fe378d9668be5149f55a3cb23997de0ca9f3dda25341b2e99e06f6ff0d891",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4645,
+        "cached_input_tokens": 4480,
+        "output_tokens": 2725,
+        "reasoning_tokens": 2646
+      },
+      "known_cost_microyuan": 22310,
+      "elapsed_ms": 16004,
+      "response_sha256": "8651405d9c57eb35c943e6d92af6e12d927170b27f35869c8577e25c2f09e286",
+      "ledger_report_sha256": "bea2470360d848881b4cd012160e4cabce97963aa363e6212636049a1910c3e0",
+      "report_file_sha256": "8b574a0a58de6ee73c92f64895e9bb354c8ce9ef83f421185d36a5886ea4f0d1",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:00:38.647836+00:00",
+      "settled_at": "2026-10-15T08:00:54.661242+00:00"
+    },
+    {
+      "trial_id": "DEV-016-C2-3",
+      "case_id": "DEV-016",
+      "group": "C2",
+      "repetition": 3,
+      "request_sha256": "6c03998fc299ba14cc86dd13830f2286473f6cfff829702dfbb46805d194cb55",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 4629,
+        "cached_input_tokens": 4480,
+        "output_tokens": 1583,
+        "reasoning_tokens": 1499
+      },
+      "known_cost_microyuan": 13142,
+      "elapsed_ms": 8914,
+      "response_sha256": "4c4aab3fe2a67c0e05c2d7c72461de546131f8872f509fa476d47cfe4a7fe851",
+      "ledger_report_sha256": "d4b7d7c3dba0315ea3acb625e4fa50d4f50939d0443d06c505d3dc64c98d1ad4",
+      "report_file_sha256": "dfebaee31c99f35f8cb3316ba04d26a9bf3ac3c036d104d4a02bee3895709136",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:00:54.671892+00:00",
+      "settled_at": "2026-10-15T08:01:03.594096+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C2-3",
+      "case_id": "DEV-017",
+      "group": "C2",
+      "repetition": 3,
+      "request_sha256": "d11223774fdce5cd4a54041b248a2b0ac79a4fd83b4dfa36dec7423ec55fda90",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5162,
+        "cached_input_tokens": 4992,
+        "output_tokens": 1936,
+        "reasoning_tokens": 1838
+      },
+      "known_cost_microyuan": 16028,
+      "elapsed_ms": 11777,
+      "response_sha256": "43489f3b492bec61d38e28087502262c0cef6fbbd76960dd9e06082f5bfa21b3",
+      "ledger_report_sha256": "9768124128cf92ab7a9bdd9bca286743b1da504a58170b824b8f3519c68fa5cf",
+      "report_file_sha256": "a070d65118b72314d8949b37863a70973bcf540b215ddc27dab47167e741be6c",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:01:03.604505+00:00",
+      "settled_at": "2026-10-15T08:01:15.392515+00:00"
+    },
+    {
+      "trial_id": "DEV-017-C1-3",
+      "case_id": "DEV-017",
+      "group": "C1",
+      "repetition": 3,
+      "request_sha256": "f8c08b032180ef944e2c37f80edb3e46db064b7109d59816e7981f67f2e2272b",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5178,
+        "cached_input_tokens": 4992,
+        "output_tokens": 2251,
+        "reasoning_tokens": 2153
+      },
+      "known_cost_microyuan": 18580,
+      "elapsed_ms": 13197,
+      "response_sha256": "1ae83f18aaeb5e18d1f03fd63b8f502d692dc3298de8ebba5d3573de62d21bf4",
+      "ledger_report_sha256": "1f0d21551cb1699ab94fbf059ac80edba42031abea1f58726892e6e2c866e705",
+      "report_file_sha256": "591277645e3d46f94dc5d49b4818775dacfe702b2eb22192103e4dd939b21b61",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:01:15.403684+00:00",
+      "settled_at": "2026-10-15T08:01:28.610142+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C1-3",
+      "case_id": "DEV-020",
+      "group": "C1",
+      "repetition": 3,
+      "request_sha256": "fa22a309c0625ba3142918acd62ee69ba6d263a01b072e841d4cc87c719789cc",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true,
+        true
+      ],
+      "claim_coverage": [
+        true,
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5130,
+        "cached_input_tokens": 4992,
+        "output_tokens": 2558,
+        "reasoning_tokens": 2420
+      },
+      "known_cost_microyuan": 20940,
+      "elapsed_ms": 15508,
+      "response_sha256": "882050b4b9add18967bac4e0474a61a6d7ebb47a7bbe2333421d2043934d3cff",
+      "ledger_report_sha256": "a549b22d334751e63e82a95029fa0916d73966f72c07aeda2f15778feeb0e1b8",
+      "report_file_sha256": "eb2fb459aa6afebe3d637fdb4095d478d85319964072e9ac3ab09acf9e34f058",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:01:28.620846+00:00",
+      "settled_at": "2026-10-15T08:01:44.138549+00:00"
+    },
+    {
+      "trial_id": "DEV-020-C2-3",
+      "case_id": "DEV-020",
+      "group": "C2",
+      "repetition": 3,
+      "request_sha256": "b18c1ffb3b2d84a0fb0b8ecb05d1df20494e5f294dfe723adf351e398c704413",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "claim_truth": [
+        true
+      ],
+      "claim_coverage": [
+        true
+      ],
+      "required_coverage": true,
+      "correct": true,
+      "full_evidence": true,
+      "outcome": "final",
+      "usage": {
+        "input_tokens": 5114,
+        "cached_input_tokens": 4864,
+        "output_tokens": 6651,
+        "reasoning_tokens": 6566
+      },
+      "known_cost_microyuan": 53903,
+      "elapsed_ms": 39432,
+      "response_sha256": "0501ffebb2bed4a463274e5a1506ce970bbb75446469bc2d9dc713a2460d62df",
+      "ledger_report_sha256": "c05c2e8eb67c4fc24707d629426559266e0d86be7c03ea56e976ddc943bce27e",
+      "report_file_sha256": "ab6714230c90fd7a371cdd292ebe45e1ccea14c9cd1215b54b0f9edf08ec6159",
+      "reservation_microyuan": 2228224,
+      "reserved_at": "2026-10-15T08:01:44.149406+00:00",
+      "settled_at": "2026-10-15T08:02:23.592535+00:00"
+    }
+  ],
+  "private_evidence_root": "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015",
+  "artifact_hashes": {
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\manifest.json": "787e272233a94b8766b216ca3b45ea4bf0e80eec46f46e246b651fa7d06b294b",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\startup-manifest.json": "651fc66062388463683daba4b31fecae1e6df088b3ae6d0ea8ca9c12d5f9185f",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\probe-plan.json": "d8a043bed17f8b17175ec12daf1abdab7342a3e6de3f60ffb2c2ffb57403c6fb",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\candidate-sources.json": "9933adae4c734e90b14c228c1b696efdd048e3d0ff817f7b1c793208650d8090",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\input-verification.json": "d2e28f32207b27c2b5cdc697300414962adb9ee7d95bc51f1e38be71b07e2194",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\score.json": "b70dc8dae16ab7798d2b5ccc8d4cb690ab0fc508eac7f5d8f25d78d5a826eff7",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\result.json": "00a99cc59b90a256bf86630b9312132c4315bb3c486c630d89999b220f6f9433",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\closed-ledger.json": "2ea3a0c611ed537586f08c7ca780abef3fa7ad6e265aa08d26487fae26fc50d4",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\sender-stdout.log": "0a213061c71ed5b9ba0f3abff64ffafefdf4a49f8aeedb1dc488199ad2edd289",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\sender-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\sender-exit.json": "57e400f1c61588925fb5d193f679692801bc6cdb4bc1f4dad4408295e5110131",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\attempted.json": "1a4345a10400441ac7fbc4d709278c4c9dee11619a226c9dda8ea37f9f3aaa54",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\v8-description-ablation-identity-verified-20261015\\ledger-export-1792051343604944800.json": "8aaaeac8b3a9d9ddfbc65386a76c175ce835797266464809419bda7cde35cb0a",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\standing-authorization.json": "92eb97083e5761cccc1ed4f9ce2d019b812df1908266aa0561a5449ffcce122a",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\budget-allocation-identity-verified.json": "a2ed280827e2d59da06e96853600b66ae1ab302c6826902b9826e02f091798d8",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\startup-review.authorized.json": "847a12d616f469d3965de4d5ddb33feaf8266fcd0676219a933f7e2d12f44f21",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\independent-startup-review.json": "d6ff98f95952b8a0f6e08da4a3e8da5a73adfc7a0660dd5aa2b0ca4265a060f9",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\independent-post-batch-review.json": "bcf44c7fa070d9ad37ff5e0967fafc1d0f8c4bb2fa8e34a96115832aba1c3896",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\reviewed-runner-build.json": "fafd9a8d6bb4b5a7bc5dfa9c2d4ed3f5444cdfe8918f3e7c55ebe6cbe87f9547",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\reviewed-runner-build-info.txt": "8e5f8968a5a890f5d9c673526267abc10b2f1e73caa986fed5302655dbe810db",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\database-identity-verification.json": "901bf3012a959205ab17523258d9571fd165b20a35a5afe51c0b49af3216bf9d",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\implementation-validation.json": "5a24a3a0e4cbc19b5d0fbd3405da8dee954d645dfafbdb0f18697fdad9e58b94",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\retrospective-analysis.json": "07345eb2f0b7e6e58daf9b3517045f04a972aa8e2872b230a0637833a03a6616",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\preparation-failure.json": "fc4ba5f96739a831c6f5c6e892ac2183c87c8c2660f2eee2d6030d9fc957c585",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\identity-mismatch-before-launch.json": "7849c4d9c832c4ca5650d6e843be9f2d4cf9b9a17f30b2a23e55235e24f13672",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\description-ablation-20261015\\manifest-check-identity-verified.json": "5e6b0a4ef999868c1db9b7bd905c9da2ef9c3e27a53682cbebcb5a5333aa2707"
+  }
+}

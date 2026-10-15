@@ -1,14 +1,14 @@
 # 当前状态与下一步
 
-2026-10-15 完成[v8输出约束固定对照](evidence/agent-v3-s5-v8-contract-probe-2026-10-15.md)：**工程能力完成，候选质量未达标**。六案12次全部执行，原V8正确和完整证据各4/6，候选V8C各5/6；候选DEV-016新增虚假`ticket.problem_description`缺失主张，未满足预登记6/6，不晋升生产。本批usage估算¥0.366486，32库累计574 Runs、2,464 chat、¥14.994541；held/unknown/在途/未结束attempt均0，发送器退出、stage锁释放，独立接受报告及费用闭账。
+2026-10-15 完成[v8单句删减对照](evidence/agent-v3-s5-v8-description-ablation-2026-10-15.md)：**工程能力完成，删句收益未获证明，S5质量仍未达标**。固定DEV-016/017/020，C1/C2各三次，共18次全部执行；两组正确和完整证据均9/9，但没有当轮DEV-016配对改善，未满足预登记支持条件，不晋升生产。上轮C1的DEV-016失败本轮未复现，不能据此认定修复或因果。本批usage估算¥0.437324，34库累计574 Runs、2,482 chat、¥15.431865，¥28余量¥12.568135；held/unknown/在途/未结束attempt均0，发送器退出、锁释放，独立接受报告及费用闭账。
 
-[原v8开发回归](evidence/agent-v3-s5-v8-development-2026-10-15.md)仍为原40分母正确和完整证据各24/40、3案质量失败、13案未执行；第27案后门槛不可达自动停发。上述固定输入诊断不能替代开发或正式验收，原评分及旧批不改写。下一步先离线澄清普通状态咨询与实际问题描述含糊的政策/既有语义边界，再决定是否值得提出新候选；不自动改版、重试或补样，生产协议和公开schema未变。
+[原v8开发回归](evidence/agent-v3-s5-v8-development-2026-10-15.md)仍为原40分母正确和完整证据各24/40、3案质量失败、13案未执行；第27案后门槛不可达自动停发。此前[六案12次输出约束对照](evidence/agent-v3-s5-v8-contract-probe-2026-10-15.md)候选5/6、DEV-016退化的结果保留。固定输入诊断不替代开发或正式验收，旧评分和批次不改写。下一步只验证原V8追加critical/必要timing完整性一条，固定DEV-026/027配对，具体清单另审；收益成立才实现并完整回归，不加入上游关系或描述提醒。
 
-维护者随后明确授权在原S5累计¥28内持续推进并自主分配合理预算，每批¥4及独立启动审查继续有效。离线复核40案谓词与冻结gold一致；发现C1在恢复层级要求时附带扩大了“含糊问题描述”的触发提醒。下一轮预定仅删除这一句，固定已见DEV-016/017/020、C1/C2各三次共18次，原始授权与具体预算分配共同绑定启动manifest；全部结果保留，批后复盘，无收益不晋升生产。
+维护者已明确授权在原S5累计¥28内持续推进并自主分配合理预算，每批¥4及独立启动审查继续有效，不重复等待逐批“可以”。离线40案谓词与冻结gold一致，未修改政策/gold。官方说明确认thinking忽略temperature，不能把0当作确定性开关；本轮两组均通过，删句组耗时/token更多，只作描述性观察。生产协议和公开schema未变。
 
 [共享工作流](../tools/support_s5/host/README.md)和[ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)已实现并通过独立审查。v8开发批验证一次启动审查后的逐案自动检查，第10案自动放行；普通质量失败继续，门槛不可达停止。本轮诊断的单次格式失败保存后继续，固定配对收集与候选支持判据分开。代码及manifest修复只复核差异；具体收费范围或金额变化仍须重新绑定审查。
 
-免费工程验证按既有证据复用：quick、固定Linux进程与三层镜像来源核验通过；诊断工具的全仓真实PG/AOF Redis race、最新诊断包真实PG race（15.611秒）、270项相关Python及mypy40文件通过，详见[分析报告](evidence/agent-v3-s5-v8-contract-analysis-2026-10-15.md)。结果整理不重复无新风险的PG/race。当前远程CI未运行，合并仍须最新head的 `CI required`；v8开发批OTLP未验收。S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。当前机制见[ADR-0038](adr/0038-policy-bundle-before-adjudication.md)，原[首案审计停发](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)及v7历史结论保留；正式冻结、Fixed、新未见集、恢复及演示未启动。
+免费工程验证复用已通过项：全仓真实PG/AOF Redis race（integration 545.305秒）、诊断包真实PG race 18.856秒、名称修复后定向race 18.540秒、278项相关/2,345项完整Python、Ruff/mypy40文件与镜像契约。13项环境skip不算验收，未声称专用业务pgvector层通过；准备期名称截断和UUID配置错误均在零收费调用时拦截并保留，最终实际身份核对一致。结果整理不重复无新风险的PG/race。远程CI未运行，合并仍须最新head的 `CI required`；v8开发批OTLP未验收。S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。当前机制见[ADR-0038](adr/0038-policy-bundle-before-adjudication.md)，原[首案审计停发](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)及v7历史结论保留；正式冻结、Fixed、新未见集、恢复及演示未启动。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|
