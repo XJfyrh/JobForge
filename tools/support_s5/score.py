@@ -27,6 +27,7 @@ from tools.support_evaluation.evidence import (
 from tools.support_evaluation.score import CASE_FIELDS, ZERO_USAGE, evaluate_case
 from tools.support_evaluation.validate_data import parse_json, sha256
 from tools.support_s5.package import (
+    DATASET_V4,
     DATASETS,
     SEEN_DATASETS,
     load_package,
@@ -115,6 +116,10 @@ def score_export(
     bounded(registered, MAX_REGISTRATION)
     bounded(evidence, MAX_EVIDENCE)
     bindings = registration(registered, package, s5=True)
+    need(
+        not seen_diagnostic or registered["dataset_version"] != DATASET_V4,
+        "UNSEEN_DIAGNOSTIC_FORBIDDEN",
+    )
     if registered["dataset_version"] in DATASETS and not seen_diagnostic:
         from tools.support_s5.freeze import validate_blueprint
 

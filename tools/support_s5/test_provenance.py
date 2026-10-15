@@ -152,12 +152,26 @@ def test_unseen_v5_cohort_binds_every_prior_formal(
             prior_families(BOUND_V4, review, freeze)
 
 
-def test_unbound_unseen_cohort_is_not_admitted() -> None:
-    """While no cohort is authored, no unseen dataset can load at all."""
-    assert package.DATASET_V4 is None
-    assert (
-        package.DATASETS == package.SEEN_DATASETS == {DATASET, DATASET_V2, DATASET_V3}
-    )
+def test_current_v4_admission_preserves_the_three_seen_cohorts() -> None:
+    """Binding an id authors no cases and never reclassifies old formal cohorts."""
+    assert package.DATASET_V4 == "support-s5-2026-10-15-v4"
+    assert package.SEEN_DATASETS == {DATASET, DATASET_V2, DATASET_V3}
+    assert package.DATASETS == package.SEEN_DATASETS | {package.DATASET_V4}
+
+
+@pytest.mark.parametrize("pair", [(18, 17), (16, 17), (13, 12), (18, 12)])
+def test_v4_package_requires_current_frozen_pair(pair: tuple[int, int]) -> None:
+    """Cohort admission does not widen historical freeze candidates."""
+    freeze = {
+        "candidate_blueprint": {"schema_version": pair[0]},
+        "baseline_blueprint": {"schema_version": pair[1]},
+    }
+    assert package.DATASET_V4 is not None
+    if pair == (18, 17):
+        package.require_unseen_dataset(package.DATASET_V4, freeze)
+    else:
+        with pytest.raises(EvidenceError, match="V4_FREEZE_SCOPE"):
+            package.require_unseen_dataset(package.DATASET_V4, freeze)
 
 
 @pytest.mark.parametrize(
@@ -172,8 +186,7 @@ def test_unknown_dataset_fails_closed_instead_of_yielding_no_prior_families(
     review = v4_review(packages)
     with pytest.raises(EvidenceError, match="UNKNOWN_DATASET_PRIOR_FAMILIES"):
         prior_families(dataset, review, freeze)
-    # Binding the id is what makes the same input admissible; nothing else does.
-    assert package.DATASET_V4 is None
+    assert dataset != package.DATASET_V4
 
 
 def test_first_unseen_cohort_v1_has_no_prior_formal_and_still_loads() -> None:

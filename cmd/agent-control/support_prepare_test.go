@@ -224,8 +224,8 @@ func TestPrepareS5ExternalReviewedDataDoesNotReplaceDevelopment(t *testing.T) {
 	for _, candidate := range []struct {
 		schema  int
 		dataset string
-	}{{5, run.SupportS5DatasetID}, {8, run.SupportS5V2DatasetID}, {10, run.SupportS5V3DatasetID}} {
-		t.Run(candidate.dataset, func(t *testing.T) {
+	}{{5, run.SupportS5DatasetID}, {8, run.SupportS5V2DatasetID}, {10, run.SupportS5V3DatasetID}, {17, run.SupportS5V4DatasetID}, {18, run.SupportS5V4DatasetID}} {
+		t.Run(fmt.Sprintf("%s-schema%d", candidate.dataset, candidate.schema), func(t *testing.T) {
 			testPrepareExternalReviewedData(t, candidate.schema, candidate.dataset)
 		})
 	}
@@ -239,6 +239,32 @@ func testPrepareExternalReviewedData(t *testing.T, schema int, dataset string) {
 	source.Definition.Model.ObservedOn, source.Definition.Price.ObservedOn = "2026-10-07", "2026-10-07"
 	source.Definition.Model.MessageContentBytes, source.Definition.Model.RequestBodyBytes = 65536, 131072
 	source.Definition.Resources.DatasetID = dataset
+	if schema == 17 || schema == 18 {
+		d := &source.Definition
+		d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-15", "2026-10-15"
+		promptFile := "support_agent_v8.py"
+		d.Program.PromptVersion = run.SupportFixedPromptV2
+		if schema == 18 {
+			promptFile = "support_agent_v9.py"
+			d.Program.Strategy, d.Program.Adapter, d.Program.PromptVersion = run.SupportAgentStrategy, "support-agent-v1", run.SupportAgentPromptV9
+			d.Program.RecoveryPolicy, d.Program.ApprovalPolicy = run.ConfirmedUncommittedRecovery, run.TicketResolutionApprovalPolicy
+			d.Program.DecisionSchema = run.SupportAgentDecisionSchema
+			decision, err := os.ReadFile(filepath.Join(o.Repo, "api/support/agent-v1/schema.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			d.Program.DecisionSchemaSHA256 = supportSHA256(decision)
+			d.Action = &run.SupportActionDefinition{Operation: "apply_ticket_resolution", Origin: "http://business:8092", KeyID: "synthetic", PublicKeySHA256: strings.Repeat("a", 64)}
+		}
+		prompt, err := os.ReadFile(filepath.Join(o.Repo, "python/jobforge_agent", promptFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		d.Program.PromptSHA256 = supportSHA256(prompt)
+		final := d.Model
+		final.Thinking, final.ReasoningEffort, final.MaxTokens, final.ResponseBodyBytes = "enabled", "high", 16384, 1048576
+		d.FinalModel = &final
+	}
 	root := filepath.Dir(o.Source)
 	developmentPath := filepath.Join(o.Repo, "examples", "support-agent", "runtime", "seed.json")
 	original, err := os.ReadFile(developmentPath)

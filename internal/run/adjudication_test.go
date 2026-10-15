@@ -64,6 +64,21 @@ func TestTimingEvidencePromptRequiresItsOwnDeploymentVersion(t *testing.T) {
 	}
 }
 
+func TestUnseenV4IsLimitedToCurrentBundlePair(t *testing.T) {
+	for _, schema := range []int{11, 12, 13, 14, 15, 16, 17, 18} {
+		d := adjudicationDefinition(schema)
+		d.Resources.DatasetID = SupportS5V4DatasetID
+		p, err := BuildSupportProfile("v4-admission", d)
+		if schema == 17 || schema == 18 {
+			if err != nil || ValidateSupportProfile(p) != nil || !p.PolicyBundleEnabled() {
+				t.Fatal("current pair rejected reviewed dataset admission", schema, err)
+			}
+		} else if err == nil {
+			t.Fatal("historical candidate widened to new dataset", schema)
+		}
+	}
+}
+
 func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
 	for _, schema := range []int{11, 12, 13, 14, 15, 16, 17, 18} {
 		p := adjudicationProfile(t, schema)

@@ -30,6 +30,8 @@ const (
 	SupportAgentPromptV2 = "support-agent-prompt-v2"
 	// SupportS5V3DatasetID identifies the cohort created after both seen sets.
 	SupportS5V3DatasetID = "support-s5-2026-10-08-v3"
+	// SupportS5V4DatasetID is admitted only by the current Agent18/Fixed17 pair.
+	SupportS5V4DatasetID = "support-s5-2026-10-15-v4"
 	// SupportAgentPromptV3 selects policy-condition review in schema 9.
 	SupportAgentPromptV3 = "support-agent-prompt-v3"
 	// SupportFixedComparisonExecutorVersion grants the same bounded chat input
@@ -273,6 +275,9 @@ func (d SupportDefinition) validate() error {
 	}
 	if d.SchemaVersion == 9 || d.SchemaVersion == 10 || d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 17 || d.SchemaVersion == 18 {
 		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID || r.DatasetID == SupportS5V3DatasetID
+	}
+	if d.SchemaVersion == 17 || d.SchemaVersion == 18 {
+		validDataset = validDataset || r.DatasetID == SupportS5V4DatasetID
 	}
 	if m != expected || p.ProposalSchema != SupportProposalSchema || !validDataset ||
 		r.PolicyVersion != SupportPolicyVersion || r.ObservedAt != SupportObservedAt ||

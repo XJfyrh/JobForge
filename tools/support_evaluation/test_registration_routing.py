@@ -20,6 +20,7 @@ FORMAL = (
     "support-s5-2026-10-08-v3",
 )
 STRATEGIES = ("support_agent_v1", "support_fixed_v1")
+V4 = "support-s5-2026-10-15-v4"
 
 
 def prepared(root: Path, dataset: str, strategy: str, count: int) -> Package:
@@ -41,6 +42,17 @@ def prepared(root: Path, dataset: str, strategy: str, count: int) -> Package:
     )
     profile["definition"]["program"]["strategy"] = strategy
     profile["definition"]["resources"]["dataset_id"] = dataset
+    if dataset == V4:
+        agent = strategy == "support_agent_v1"
+        profile["definition"]["schema_version"] = 18 if agent else 17
+        profile["executor_version"] = (
+            "linux-v2-adjudication-runtime-5"
+            if agent
+            else "linux-v2-fixed-adjudication-runtime-2"
+        )
+        profile["max_output_tokens"] = 16384
+        profile["family_token_limit"] = 12610560
+        profile["provider_audit_policy"] = "deepseek-audit-v2"
     limits = base["bindings"][0]["budget_limits"]
     control = {
         "profiles": [profile],
@@ -79,7 +91,7 @@ def prepared(root: Path, dataset: str, strategy: str, count: int) -> Package:
 
 @pytest.mark.parametrize("strategy", STRATEGIES)
 @pytest.mark.parametrize(
-    "dataset,count", [(v, 20) for v in FORMAL] + [(DATASET_VERSION, 40)]
+    "dataset,count", [(v, 20) for v in (*FORMAL, V4)] + [(DATASET_VERSION, 40)]
 )
 def test_s5_register_routes_formal20_and_development40(
     tmp_path: Path, dataset: str, count: int, strategy: str
@@ -96,7 +108,7 @@ def test_s5_register_routes_formal20_and_development40(
 @pytest.mark.parametrize("strategy", STRATEGIES)
 @pytest.mark.parametrize(
     "dataset,count",
-    [(v, count) for v in FORMAL for count in (19, 21, 40)]
+    [(v, count) for v in (*FORMAL, V4) for count in (19, 21, 40)]
     + [(DATASET_VERSION, 20), (DATASET_VERSION, 39)],
 )
 def test_s5_register_rejects_wrong_case_count(
@@ -114,3 +126,42 @@ def test_s5_register_rejects_unknown_dataset(tmp_path: Path, strategy: str) -> N
     package = prepared(tmp_path, "support-s5-unknown", strategy, 20)
     with pytest.raises(EvidenceError, match="^DATA_VERSION$"):
         register(tmp_path, package=package, s5=True)
+
+
+@pytest.mark.parametrize("strategy", STRATEGIES)
+@pytest.mark.parametrize("mutation", ["schema", "executor"])
+def test_v4_registration_rejects_historical_or_relabelled_profiles(
+    tmp_path: Path, strategy: str, mutation: str
+) -> None:
+    """Neither an old schema nor an old executor can acquire new-cohort access."""
+    package = prepared(tmp_path, V4, strategy, 20)
+    path = tmp_path / "control.disabled.json"
+    value = json.loads(path.read_bytes())
+    profile = value["profiles"][0]
+    if mutation == "schema":
+        profile["definition"]["schema_version"] = (
+            16 if strategy == "support_agent_v1" else 12
+        )
+    else:
+        profile["executor_version"] = "linux-v2-adjudication-runtime-4"
+    path.write_bytes(json.dumps(value).encode())
+    launch = json.loads((tmp_path / "launch.json").read_bytes())
+    launch["config_sha256"][path.name] = sha(path.read_bytes())
+    (tmp_path / "launch.json").write_bytes(json.dumps(launch).encode())
+    with pytest.raises(EvidenceError, match="^V4_PROFILE_SCOPE$"):
+        register(tmp_path, package=package, s5=True)
+
+
+@pytest.mark.parametrize("strategy", STRATEGIES)
+@pytest.mark.parametrize("seen", [False, True])
+def test_v4_scoring_cannot_omit_freeze_or_use_historical_mode(
+    tmp_path: Path, strategy: str, seen: bool
+) -> None:
+    """Empty evidence never reaches scoring through either freeze bypass."""
+    from tools.support_s5.score import score_export
+
+    package = prepared(tmp_path, V4, strategy, 20)
+    value = register(tmp_path, package=package, s5=True)
+    code = "UNSEEN_DIAGNOSTIC_FORBIDDEN" if seen else "FORMAL_FREEZE_REQUIRED"
+    with pytest.raises(EvidenceError, match=f"^{code}$"):
+        score_export(value, {}, "a" * 64, package=package, seen_diagnostic=seen)

@@ -131,7 +131,7 @@ func prepareSupportFiles(o supportPrepareOptions) (map[string][]byte, error) {
 	if err != nil || d.SchemaVersion == 1 && o.BatchCostMicroyuan > 5000000 {
 		return nil, errors.New("invalid fixed support definition or S1 cost limit")
 	}
-	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID || d.Resources.DatasetID == run.SupportS5V3DatasetID
+	newDataset := d.Resources.DatasetID == run.SupportS5DatasetID || d.Resources.DatasetID == run.SupportS5V2DatasetID || d.Resources.DatasetID == run.SupportS5V3DatasetID || d.Resources.DatasetID == run.SupportS5V4DatasetID
 	if newDataset != (source.SchemaVersion == 2 && source.CaseMap != nil && source.RuntimeData != nil) ||
 		!newDataset && (source.SchemaVersion != 1 || source.CaseMap != nil || source.RuntimeData != nil) {
 		return nil, errors.New("S5 registration requires its separately reviewed case map")

@@ -24,14 +24,10 @@ from tools.support_evaluation.validate_data import (
 DATASET = "support-s5-2026-10-07-v1"
 DATASET_V2 = "support-s5-2026-10-07-v2"
 DATASET_V3 = "support-s5-2026-10-08-v3"
-# The ADR-0034 candidate (Agent schema 13 / Fixed schema 12) has no unseen cohort
-# yet, so its dataset id cannot be a literal here. Bind it explicitly in the
-# reviewed change that authors the package; while it is None no unseen cohort is
-# admitted at all, and prior_families() rejects rather than returning nothing.
-# Binding it here is necessary but not sufficient: the same id must also be
-# registered in tools/support_evaluation/evidence.py, internal/run/support_profile.go
-# and the api/support/s5-agent-v5 + s5-fixed-v4 dataset_id enums.
-DATASET_V4: str | None = None
+# Admission for current Agent18/Fixed17 only. This does not author a cohort:
+# actual unseen cases must be created after the clean candidate freeze. Keep
+# preparation, registration and current profile enums in sync with this id.
+DATASET_V4: str | None = "support-s5-2026-10-15-v4"
 SEEN_DATASETS = {DATASET, DATASET_V2, DATASET_V3}
 DATASETS: set[str] = {*SEEN_DATASETS, DATASET_V3}
 if DATASET_V4 is not None:
@@ -302,6 +298,12 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
 
 def require_unseen_dataset(dataset: str, freeze: dict[str, Any]) -> None:
     """A new candidate cannot turn an already seen cohort into acceptance data."""
+    if DATASET_V4 is not None and dataset == DATASET_V4:
+        need(
+            freeze.get("candidate_blueprint", {}).get("schema_version") == 18
+            and freeze.get("baseline_blueprint", {}).get("schema_version") == 17,
+            "V4_FREEZE_SCOPE",
+        )
     if freeze.get("candidate_blueprint", {}).get("schema_version") in {
         13,
         14,

@@ -243,6 +243,7 @@ def registration(
                 "support-s5-2026-10-07-v1",
                 "support-s5-2026-10-07-v2",
                 "support-s5-2026-10-08-v3",
+                "support-s5-2026-10-15-v4",
             }
             if s5
             else {DATASET_VERSION}
@@ -281,6 +282,20 @@ def registration(
             type(profile[key]) is str
             and IDENTIFIER.fullmatch(profile[key]) is not None,
             "PROFILE_BINDING",
+        )
+    if s5 and value["dataset_version"] == "support-s5-2026-10-15-v4":
+        need(
+            type(value["strategy_blueprint"]) is dict
+            and (
+                value["strategy_blueprint"].get("schema_version"),
+                profile["strategy"],
+                profile["executor_version"],
+            )
+            in {
+                (18, "support_agent_v1", "linux-v2-adjudication-runtime-5"),
+                (17, "support_fixed_v1", "linux-v2-fixed-adjudication-runtime-2"),
+            },
+            "V4_PROFILE_SCOPE",
         )
     need(
         digest(profile["profile_hash"]) and digest(profile["price_hash"]),
@@ -435,6 +450,7 @@ def registration(
                 "support-s5-2026-10-07-v1",
                 "support-s5-2026-10-07-v2",
                 "support-s5-2026-10-08-v3",
+                "support-s5-2026-10-15-v4",
             }
             else 40
         ),
