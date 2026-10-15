@@ -1,12 +1,10 @@
 # 当前状态与下一步
 
-2026-10-15 v8 执行：维护者已批准 Agent 完整 DEV-001～040、本次总计至多 ¥4（S5累计仍¥28）。首次启动因共享宿主命令误传 `launch` 参数，在创建Worker前退出；40案全未提交，0Run/0chat/费用0，全部容器已退出，旧批封存。修复只移除外层多余参数并保留无导出时的启动失败原因；真实已安装入口、38项定向检查及Linux29项通过，独立差异复核接受。后继保持原候选/名单/模型/费用/权限，用新身份准备；不重开旧批、不补样，模型完整质量仍未测得。本次证据在仓库外 `E:/JobForgeEvidence/s5-2026-10-07/v8-20261015`。
+2026-10-15 v8 开发回归已闭账：**工程能力完成，模型质量未达标**。原40分母正确和完整证据各24/40，DEV-004/017/027质量失败，DEV-028～040未执行；第27案后完整证据最多37/40，自动停发。四类硬失败0，27案政策与最终输入闭合，业务无写入。新增usage估算¥1.415685，31库累计¥14.628055，held/unknown/在途/未结束attempt均0，全部收费及配套进程退出。[本轮报告与机器摘要](evidence/agent-v3-s5-v8-development-2026-10-15.md)保留启动零调用失败、窄修复及新身份承接原授权的证据；旧批不重开、不重试或补样。下一步先分析已见失败的最小问题，不直接开发新版本。
 
-2026-10-15 工作流改造：**工程能力已实现并通过独立审查，模型质量仍未达标**。新开发批次使用[共享配置入口](../tools/support_s5/host/README.md)和 [ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)，复用准备、校验、执行、导出与严格评分；启动审查绑定具体范围/金额，之后逐案自动健康检查，第10案不再人工暂停。旧批次及原始证据保留，不补诊断、不自动开发新候选。本轮未启动收费，v8 下一步仍是新身份完整40案的具体启动审查。
+[共享工作流](../tools/support_s5/host/README.md)和[ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)已实现并通过独立审查。本轮实际验证一次启动审查后的逐案自动检查，第10案自动放行；普通质量失败继续，门槛不可达停止。代码及manifest修复只复核差异；具体收费范围或金额变化仍须重新绑定审查。
 
-免费验证：本地 quick 通过；S5/评测/审批/恢复相关套件 **578通过、5项Windows平台跳过**，这5项已连同新工作流在固定Linux容器补验（共27通过）；三层镜像边界与已安装源码核对通过（Approval 23、S5 10个文件），Ruff全仓、mypy 47个文件、文档链接及diff检查通过。独立主审发现的目录绑定、历史费用连续性、过时准备清单、失联清理和宿主依赖问题均已修复并完成差异复核。没有改动Go可靠性实现，不重复已有全量PG/race验证；当前改动的远程CI未运行，合并仍须最新head的 `CI required`。29个历史库已只读复核，547 Runs /2346 chat，observed-usage估算¥13.212370，held/unknown/在途/未结束attempt均0；新清单和验证记录保存在仓库外 `E:/JobForgeEvidence/s5-2026-10-07/workflow-20261015`。
-
-v8 质量进展（2026-10-14）：已接受阶段为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）；S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并。当前 v8 按 [ADR-0038](adr/0038-policy-bundle-before-adjudication.md)先读取完整政策，再执行同能力单次终裁；[免费机制](evidence/agent-v3-s5-v8-mechanism-2026-10-13.md)已验证。[首轮新身份开发回归](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)在首案后因资源审计标签错误停发：原正确与完整证据各1/40、39未执行；实际授权请求经独立复算确认，记录器已修复，原结果保留。累计 usage 估算¥13.212370，held、unknown、在途调用、未结束attempt均0。下一步是修复源码与镜像绑定后的新身份完整40案及具体manifest审查；不续跑停止批次、不接受v8完整质量或正式冻结。v7开发38/40及已见004截断失败、018未验证的历史结论不变。本页维护实现状态；契约见[产品索引](product/README.md)和[ADR索引](adr/README.md)，分层结果见[证据索引](evidence/README.md)。
+免费工程验证按既有证据复用：quick、相关Python套件、固定Linux进程与三层镜像来源核验通过；启动修复的38项定向检查、Linux29项及静态检查通过，没有Go可靠性新改动，不重复全量PG/race。当前远程CI未运行，合并仍须最新head的 `CI required`；本批OTLP未验收。S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。当前机制见[ADR-0038](adr/0038-policy-bundle-before-adjudication.md)，原[首案审计停发](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)及v7历史结论保留；正式冻结、Fixed、新未见集、恢复及演示未启动。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|

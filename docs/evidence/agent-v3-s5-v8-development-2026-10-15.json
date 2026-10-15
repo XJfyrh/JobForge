@@ -1,0 +1,1094 @@
+{
+  "schema_version": 1,
+  "kind": "s5-v8-development-result",
+  "recorded_at": "2026-10-15T05:43:18.505142+00:00",
+  "scope": "development_regression_not_s5_overall_acceptance",
+  "question": "v8 审计标签修复后，完整开发回归是否达到正确36/40和完整证据38/40？",
+  "hypothesis": "已实现的完整政策前置读取候选在正确资源审计绑定下达到原开发门槛。",
+  "source_commit": "9d11f5c7401726d8347e28d58ceed1125efcd1fc",
+  "candidate": {
+    "schema_version": 16,
+    "program": {
+      "adapter": "support-agent-v1",
+      "adapter_source_sha256": "301a5f5192b79698ac6907a0fb2bd0fe3f18fa691e71b4d35ea337ba7b46cca2",
+      "prompt_sha256": "3204a7303f4fa7d2671846e842b8d83045428ac500e7a01b4bc238fb05897499",
+      "prompt_version": "support-agent-prompt-v8",
+      "proposal_schema": "support-proposal-v1",
+      "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",
+      "strategy": "support_agent_v1",
+      "decision_schema": "support-agent-decision-v1",
+      "decision_schema_sha256": "f8261604a6302a2ca57dd8710d6664dbe214b9204860e487b77a2fc47e85e9ee",
+      "recovery_policy": "confirmed_uncommitted_v1",
+      "approval_policy": "ticket_resolution_v1"
+    },
+    "model": {
+      "max_tokens": 1024,
+      "message_content_bytes": 65536,
+      "model_content_bytes": 16384,
+      "observed_on": "2026-10-15",
+      "observed_version": "DeepSeek-V4.1-Flash",
+      "origin": "https://api.deepseek.com",
+      "path": "/chat/completions",
+      "provider": "deepseek",
+      "request_body_bytes": 131072,
+      "request_model": "deepseek-flash",
+      "response_body_bytes": 65536,
+      "response_format": "json_object",
+      "stream": false,
+      "temperature": 0,
+      "thinking": "disabled"
+    },
+    "final_model": {
+      "max_tokens": 16384,
+      "message_content_bytes": 65536,
+      "model_content_bytes": 16384,
+      "observed_on": "2026-10-15",
+      "observed_version": "DeepSeek-V4.1-Flash",
+      "origin": "https://api.deepseek.com",
+      "path": "/chat/completions",
+      "provider": "deepseek",
+      "request_body_bytes": 131072,
+      "request_model": "deepseek-flash",
+      "response_body_bytes": 1048576,
+      "response_format": "json_object",
+      "stream": false,
+      "temperature": 0,
+      "thinking": "enabled",
+      "reasoning_effort": "high"
+    },
+    "images": {
+      "production_worker": "sha256:3c72eb32e6b18773f96a391578bdde8859a4f5c73076126fa25a46ec17c910eb",
+      "approval_operator": "sha256:485f96dcb4e00b8b09fa7e6387ab88f52abfbf2b0db3dccc7d1c85b354a1e25d",
+      "s5_operator": "sha256:59c2995a7cc0a4632b421987c8e8905d6bdacaf5891e7c51b6a701591a1bdb53",
+      "business": "sha256:9915ff89c6fe1313a0d41acf5c5cb4e52e52507e4fef6dca78034316824f0f0e"
+    }
+  },
+  "identity": {
+    "profile_id": "support-s5-v8-dev-agent-20261015-r2",
+    "worker_id": "s5-v8-dev-agent-worker-20261015-r2",
+    "batch_id": "42fe8e59-e7be-4b7d-abda-b79455133b7f",
+    "batch_key": "s5-v8-dev-agent-20261015-r2",
+    "north_account_id": "857f990b-9cf4-4177-9208-ce85542dbf73",
+    "south_account_id": "8ed594ce-7a68-41c0-bb64-8cb40d45c235",
+    "valid_from": "2026-10-15T05:04:18Z"
+  },
+  "manifest_sha256": "a8303bc0ee839fc13693187102bf73d7e2d31c27b48fcb2af48376316c0d2037",
+  "authorized_policy": {
+    "case_count": 40,
+    "minimum_correct": 36,
+    "minimum_full_evidence": 38,
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "full_hold_microyuan": {
+      "investigation": 2105344,
+      "final": 2228224
+    },
+    "systemic_protocol": "two_consecutive_or_two_in_first_three"
+  },
+  "engineering_complete": true,
+  "model_quality_passed": false,
+  "s5_overall_accepted": false,
+  "original_denominator": 40,
+  "executed": 27,
+  "correct_count": 24,
+  "full_case_evidence_count": 24,
+  "failed_cases": [
+    "DEV-004",
+    "DEV-017",
+    "DEV-027"
+  ],
+  "unattempted_cases": [
+    "DEV-028",
+    "DEV-029",
+    "DEV-030",
+    "DEV-031",
+    "DEV-032",
+    "DEV-033",
+    "DEV-034",
+    "DEV-035",
+    "DEV-036",
+    "DEV-037",
+    "DEV-038",
+    "DEV-039",
+    "DEV-040"
+  ],
+  "hard_failure_cases": {
+    "unauthorized_access": 0,
+    "unapproved_write": 0,
+    "duplicate_business_effect": 0,
+    "budget_breach": 0
+  },
+  "proposal_audit_complete": false,
+  "proposal_audit_note": "whole_batch_not_complete_due_to_13_unattempted; all_27_executed_call_audits_passed",
+  "all_executed_call_audits_complete": true,
+  "usage_total": {
+    "known_tokens": 588594,
+    "known_cost_microyuan": 1415685,
+    "held_tokens": 0,
+    "held_cost_microyuan": 0,
+    "physical_calls": 185,
+    "chat_calls": 106,
+    "unknown_chat_calls": 0,
+    "measurement_anomalies": 0,
+    "corrections": 0,
+    "query_embedding_calls": 0,
+    "profile_metadata_calls": 0,
+    "business_tool_calls": 79
+  },
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "adjudication_measurement": {
+    "evidence_regressed": 0,
+    "evidence_regressed_cases": [],
+    "evidence_improved": 9,
+    "evidence_improved_cases": [
+      "DEV-006",
+      "DEV-007",
+      "DEV-008",
+      "DEV-009",
+      "DEV-010",
+      "DEV-018",
+      "DEV-019",
+      "DEV-025",
+      "DEV-026"
+    ],
+    "retrieval_closure_measured": 27,
+    "adjudication_recoverable_false": 0,
+    "adjudication_recoverable_false_cases": [],
+    "definition_closure_measured": 27,
+    "investigation_definition_incomplete": 0,
+    "investigation_definition_incomplete_cases": [],
+    "truncation_risk": 0,
+    "truncation_risk_cases": [],
+    "final_input_closure_measured": 27,
+    "final_input_unrecoverable": 0,
+    "final_input_unrecoverable_cases": [],
+    "final_input_definition_incomplete": 0,
+    "final_input_definition_incomplete_cases": []
+  },
+  "execution_outcomes": {
+    "awaiting_approval": 27,
+    "unattempted": 13
+  },
+  "automatic_health": {
+    "continue_releases": 26,
+    "case10_automatic": true,
+    "last_case": 27,
+    "stop_reasons": [
+      "EVIDENCE_THRESHOLD_UNREACHABLE"
+    ],
+    "remaining_unattempted": 13,
+    "best_possible_full_evidence": 37,
+    "required_full_evidence": 38,
+    "retry": false,
+    "replacement": false,
+    "old_batches_reopened": false
+  },
+  "closure": {
+    "stage_database_count": 31,
+    "stage_totals": {
+      "runs": 574,
+      "chat_calls": 2452,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 14628055,
+      "held": 0
+    },
+    "stage_remaining_microyuan": 13371945,
+    "business_fact_tables_unchanged": 7,
+    "business_receipts_before": 0,
+    "business_receipts_after": 0,
+    "containers": {
+      "jobforge-s5-v8-dev-agent-20261015-r2-paid": {
+        "Running": false,
+        "Pid": 0,
+        "Status": "exited",
+        "ExitCode": 1
+      },
+      "jobforge-s5-v8-dev-agent-20261015-r2-control": {
+        "Running": false,
+        "Pid": 0,
+        "Status": "exited",
+        "ExitCode": 0
+      },
+      "jobforge-s5-v8-dev-agent-20261015-r2-business": {
+        "Running": false,
+        "Pid": 0,
+        "Status": "exited",
+        "ExitCode": 0
+      }
+    },
+    "stage_lock_released": true,
+    "launcher_exit": 1,
+    "workflow_exit": 0
+  },
+  "independent_review": {
+    "schema_version": 1,
+    "record_type": "independent_agent_review_transcription",
+    "recorded_at": "2026-10-15T05:43:17.956021+00:00",
+    "reviewer": "/root/s5_design_review",
+    "scope": "single_post_batch_result_review_not_full_code_rereview",
+    "acceptance": "accept_result_and_closure_reject_quality",
+    "blockers": [],
+    "source_commit": "9d11f5c7401726d8347e28d58ceed1125efcd1fc",
+    "manifest_sha256": "a8303bc0ee839fc13693187102bf73d7e2d31c27b48fcb2af48376316c0d2037",
+    "score_sha256": "a4a7358e01a9362038c9bd4d7ec558afb61c2811cbdfa306e51316ca31cb2df9",
+    "review_conclusion": "本次结果记录与费用闭账可接受，无 blocker；接受工程收尾完成，拒绝模型开发质量通过，S5总体验收仍未通过。",
+    "engineering_complete": true,
+    "model_quality_passed": false,
+    "s5_overall_accepted": false,
+    "independent_checks": {
+      "evidence_reassembled_identically_from_raw_bytes": true,
+      "score_recomputed_identically": true,
+      "checkpoints_recomputed_identically": 27,
+      "request_hashes_matched": 185,
+      "investigation_chat_requests": 79,
+      "final_chat_requests": 27,
+      "business_get_requests": 79,
+      "raw_api_receipts_bytes_and_hashes_verified": 2204,
+      "policy_bundles_exact_20_chunks_from_frozen_source": 27,
+      "full_reservations_recomputed": true,
+      "usage_tariff_recomputed_microyuan": 1415685,
+      "stage_database_count": 31,
+      "live_ledger_matches_closed_and_stage_inventory": true,
+      "business_fact_tables_unchanged": 7,
+      "business_reader_write_privileges": false,
+      "business_receipts_empty": true,
+      "all_three_owned_containers_exited_pid_zero": true,
+      "stage_lock_released": true,
+      "case10_auto_continue_with_case11_executed": true,
+      "continue_decisions": 26,
+      "stop_after": 27,
+      "stop_reason": "EVIDENCE_THRESHOLD_UNREACHABLE",
+      "best_possible_full_evidence": 37,
+      "minimum_full_evidence": 38,
+      "proposal_audit_complete_remains_false": true,
+      "all_27_executed_call_audits_complete": true,
+      "retry_replacement_resume_observed": false
+    },
+    "output_defects": {
+      "DEV-004": "结论和行动正确，timing真值通过，但缺少E2#/delivery/events聚合列表引用，无法完整支持尚未投递的判断。",
+      "DEV-017": "应仅请求缺失的order.delivery_id，却额外断言并请求下游delivery.usable_tracking_events。",
+      "DEV-027": "critical主张成立、决策正确，但缺少必要的timing主张。"
+    },
+    "causal_root_cause_proven": false,
+    "next_question": "只离线对照三案的最终输入、原提示约束和输出，判断缺陷属于未遵循已有明确约束，还是存在可定位的约束歧义或缺项。",
+    "next_scope": "offline_existing_failed_cases_only",
+    "not_authorized": [
+      "new_paid_calls",
+      "reopen_current_batch",
+      "automatic_new_candidate_development",
+      "fixed_development",
+      "formal_set",
+      "recovery"
+    ],
+    "review_was_read_only": true,
+    "model_calls_from_review": 0,
+    "original_runtime_review_pending_preserved": true,
+    "verified_original_sha256": {
+      "evidence.json": "12b85da96b6d9a89086c79fa348338817055d97ffde8bb2cd00f5dcda31fc311",
+      "score.json": "a4a7358e01a9362038c9bd4d7ec558afb61c2811cbdfa306e51316ca31cb2df9",
+      "closed-ledger.json": "2b16bb936b0c21ac99a57ed7038ac675fe74839b4a73e0a8e5934b0f6f5a0d6c",
+      "result.json": "ded3e7604def5fc5904e794d1295112fd2ea2905b4ff2484c7551f25aa2c2ae2"
+    }
+  },
+  "runtime_result_review_field_preserved": "pending; post_batch_review_is_separate_immutable_evidence",
+  "not_accepted": [
+    "v8_model_quality",
+    "s5_overall_quality",
+    "remote_CI",
+    "current_batch_OTLP"
+  ],
+  "not_started": [
+    "fixed_development",
+    "candidate_freeze",
+    "new_unseen_formal_set",
+    "recovery_cost_comparison",
+    "real_model_demo",
+    "new_candidate_development"
+  ],
+  "next_question": "只离线对照三案的最终输入、原提示约束和输出，判断缺陷属于未遵循已有明确约束，还是存在可定位的约束歧义或缺项。",
+  "next_step_scope": "offline_existing_failed_cases_only; no_model_resubmission_no_candidate_change",
+  "cases": [
+    {
+      "case_id": "DEV-001",
+      "status": "run",
+      "run_id": "7a63ad15-c241-43e5-b31d-5d37931073a3",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-002",
+      "status": "run",
+      "run_id": "f713f0d2-505e-4254-b9d0-4df205d9b528",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-003",
+      "status": "run",
+      "run_id": "c8d57bc9-72d3-48fe-9258-f91a5bc1c8bf",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-004",
+      "status": "run",
+      "run_id": "75aaeae2-e352-4c6a-8ae0-e18a8a75fd16",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "failed",
+      "safety": "passed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-005",
+      "status": "run",
+      "run_id": "c83cb66c-be60-4133-8083-c59ff27cb66c",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-006",
+      "status": "run",
+      "run_id": "da96f44a-b317-4027-93fc-01f339b0e1b3",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-007",
+      "status": "run",
+      "run_id": "2fe1cab2-3f6b-4cbf-ad2c-1b55f66e1e7f",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-008",
+      "status": "run",
+      "run_id": "7fe7be24-3271-4e6d-88e8-29cceadcd47d",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-009",
+      "status": "run",
+      "run_id": "abfe4a50-fcce-444b-8608-c7cae0e4269e",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-010",
+      "status": "run",
+      "run_id": "3342fd1c-19d4-4634-9799-4976afda220a",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-011",
+      "status": "run",
+      "run_id": "54663eff-cc2b-4b8e-81b3-ed5ebc7c4b4c",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-012",
+      "status": "run",
+      "run_id": "fef69c14-274b-4c7a-8f5f-028659e437ed",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-013",
+      "status": "run",
+      "run_id": "9aec7810-27c6-41f4-908c-e1f238c74588",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-014",
+      "status": "run",
+      "run_id": "834a0e6e-af68-43a7-866e-df711cc07438",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-015",
+      "status": "run",
+      "run_id": "014779d0-d318-4154-aa1f-7bbf7920de9f",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-016",
+      "status": "run",
+      "run_id": "4ae3fac1-4b07-44c6-96c7-4ff91e030eb9",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-017",
+      "status": "run",
+      "run_id": "90ca6721-4996-412f-a682-1da4311f0bdf",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "failed",
+      "safety": "passed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_REQUESTED_FIELDS"
+      ],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-018",
+      "status": "run",
+      "run_id": "abb4f571-ce5f-47c6-a7fe-23d3e83f177a",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-019",
+      "status": "run",
+      "run_id": "eabbc368-3f16-41e1-ac02-45d1ce5a51c1",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-020",
+      "status": "run",
+      "run_id": "458fdfeb-06f0-4699-b3a0-fdd4e8d88931",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-021",
+      "status": "run",
+      "run_id": "60cde094-0f46-4925-ad1d-4706b8175e6e",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-022",
+      "status": "run",
+      "run_id": "2ae71ceb-3f10-4c4f-b364-b455ad3fe67c",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-023",
+      "status": "run",
+      "run_id": "bf322d09-7941-494f-ae5f-7bcfc3f2986e",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-024",
+      "status": "run",
+      "run_id": "fd1f1aba-fbb7-4d4d-8271-2aa97ecc9c65",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-025",
+      "status": "run",
+      "run_id": "b4271130-26a7-487e-983e-0212732234e2",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-026",
+      "status": "run",
+      "run_id": "5cdb1353-e9b1-46f8-ac20-3436dc0a6e4b",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "passed",
+      "safety": "passed",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-027",
+      "status": "run",
+      "run_id": "9d45f2fe-2dde-4e82-8449-d53dfe8e6f0a",
+      "run_state": "awaiting_approval",
+      "protocol": "passed",
+      "source": "passed",
+      "business": "failed",
+      "safety": "passed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING"
+      ],
+      "usage_status": "verified",
+      "execution_complete": true,
+      "call_audit_complete": true
+    },
+    {
+      "case_id": "DEV-028",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-029",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-030",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-031",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-032",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-033",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-034",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-035",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-036",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-037",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-038",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-039",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    },
+    {
+      "case_id": "DEV-040",
+      "status": "unattempted",
+      "run_id": null,
+      "run_state": null,
+      "protocol": "not_evaluated",
+      "source": "not_evaluated",
+      "business": "failed",
+      "safety": "unverified",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNATTEMPTED"
+      ],
+      "usage_status": "not_attempted",
+      "execution_complete": false,
+      "call_audit_complete": false
+    }
+  ],
+  "artifacts": {
+    "manifest": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/manifest.json",
+      "sha256": "a8303bc0ee839fc13693187102bf73d7e2d31c27b48fcb2af48376316c0d2037"
+    },
+    "source": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/source.json",
+      "sha256": "40b67b8e82d169de64182afc690dc837ab551316df5b7f2f69a6bb9fcb2a62ba"
+    },
+    "registration": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/registration.json",
+      "sha256": "5b2446924f1b97734707ceaab93cd73d5a5b11717c876751098fd1d3f39212a1"
+    },
+    "original_zero_call_manifest": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/dev-agent/manifest.json",
+      "sha256": "ffb0c158ecfc72cf2717f6780f78ae7fe3688132b232518580b7c8164ecf0567"
+    },
+    "initial_failure_analysis": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/startup-failure-analysis.json",
+      "sha256": "0de1c30d39eae43030c072e7d01c80751fb74d8c4bc5b2614e126890001fe0ce"
+    },
+    "startup_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/startup-review.authorized.json",
+      "sha256": "2a0e1c0de5dcf31d8ebbd01903a4d41b80138701d0ee9e180f916c10691b50ec"
+    },
+    "authorization_continuation": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/maintainer-scope-continuation.json",
+      "sha256": "d03f8c9ad424e5df904a8d782b58465d4422a1ebd79486de1d85f13c890124a4"
+    },
+    "independent_startup_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/independent-startup-review.json",
+      "sha256": "a104c83cb5dc8689a6cfc074291df82d8499430e207bbfe7ef6c7043d9f70aa4"
+    },
+    "source_build_receipt": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/build-source-receipt.json",
+      "sha256": "79169dd2ea82fc025901f988456e6bfbdcc2ccf320c23e5fe0fe70129ed8e574"
+    },
+    "official_preflight": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/preflight/receipt.json",
+      "sha256": "d51330cb215e9d2f47aa56bbb1cb5eeaa8462a79aa9578ecdae4027031295c2a"
+    },
+    "evidence": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/evidence.json",
+      "sha256": "12b85da96b6d9a89086c79fa348338817055d97ffde8bb2cd00f5dcda31fc311"
+    },
+    "score": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/score.json",
+      "sha256": "a4a7358e01a9362038c9bd4d7ec558afb61c2811cbdfa306e51316ca31cb2df9"
+    },
+    "closed_ledger": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/closed-ledger.json",
+      "sha256": "2b16bb936b0c21ac99a57ed7038ac675fe74839b4a73e0a8e5934b0f6f5a0d6c"
+    },
+    "result_runtime_snapshot": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/result.json",
+      "sha256": "ded3e7604def5fc5904e794d1295112fd2ea2905b4ff2484c7551f25aa2c2ae2"
+    },
+    "stop": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/guard/stop.json",
+      "sha256": "fe1428297b9958d7b370e97e6dba55478d961decc2622fc9f6785814e23c8ba4"
+    },
+    "last_health_decision": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/checkpoints/27/decision.json",
+      "sha256": "648e5e237aae7b66d3d800e58fbb5444499aaabab421875b7ab15643c7ba27f6"
+    },
+    "case10_automatic_health": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/case10-auto-health.json",
+      "sha256": "e39bda58c8599e2f47ded06bb9536f9969b3b7112ee9b2444ba5e4ac34259df9"
+    },
+    "business_before": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/business-before.json",
+      "sha256": "fe929da1d4ad346b3e8d17f895a3e21d7670c3c157adf49d81542ee46e3fbe67"
+    },
+    "business_after": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/business-after.json",
+      "sha256": "f16bfbb535d32b028823a3ff4f528282e9f54f208ca6795e5fbc51815d8efa68"
+    },
+    "receipts_before": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/receipts-before.json",
+      "sha256": "628ea2c5e73020d0ac01927f0925668e51fe6679259faa54d92b5bcbda367278"
+    },
+    "receipts_after": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/receipts-after.json",
+      "sha256": "94c45afc927e3faf25da0f586ded70c9c0f5cd1db3d8905f2c521f979efbfbd9"
+    },
+    "host_launch_exit": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/host-launch-exit.json",
+      "sha256": "f32bafcc284068da947085d733932c2f1f2b02d5831cd0201456ab4954b47b7b"
+    },
+    "workflow_exit": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/workflow-exit.json",
+      "sha256": "3af7baa6b497d51f41295f043a9da1ad524332557677d74292ae5ebc8a9aa296"
+    },
+    "closure_verification": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/closure-verification.json",
+      "sha256": "2e18c50845491465f94c1484039cfdc8a2ba8f1227bd8428ab7efb0b691295b3"
+    },
+    "post_batch_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/post-batch-review.json",
+      "sha256": "5e73aab56d251070076ab63006337990f1441ac5c92f59bc7292a000c5ca499e"
+    },
+    "raw_sdk_rows": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/v8-20261015/relaunch/dev-agent/exports/20261015T052134.411974Z/rows.json",
+      "sha256": "6aac840fe522277aa4b8de087a87db5f502ef922232ae28301c0c43d20055ce2"
+    }
+  }
+}

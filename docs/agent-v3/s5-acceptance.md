@@ -8,7 +8,7 @@
 
 ## 验收矩阵
 
-当前 v8 按 [ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 实现 schema16/17：先读取完整20段政策，再独立单次终裁，Agent/Fixed 使用相同终裁输入合同。[机制验证](../evidence/agent-v3-s5-v8-mechanism-2026-10-13.md)已完成；[首轮开发回归](../evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)因资源审计标签错误首案后停发，原正确/完整证据各1/40、39未执行，审计记录器已修复。工程实现与模型质量分别记录，v8 完整质量未通过。下一步直接准备新身份完整40案的合并启动审查，不补诊断，不续跑停止批次；每批 ¥4、累计 ¥28 不变。
+当前 v8 按 [ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 实现 schema16/17：先读取完整20段政策，再独立单次终裁，Agent/Fixed 使用相同终裁输入合同。[机制验证](../evidence/agent-v3-s5-v8-mechanism-2026-10-13.md)及[新开发批次](../evidence/agent-v3-s5-v8-development-2026-10-15.md)分别记录工程与质量结果；开发因完整证据门槛不可达自动停发，质量未通过。当前状态与下一步统一见[状态页](../status.md)，原[首案审计停发](../evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)保持不变；不续跑停止批次，每批 ¥4、累计 ¥28 不变。
 
 历史 v7 候选按 [ADR-0037](../adr/0037-status-policy-read-prerequisite.md) 实施状态政策前置读取（schema 15），保留 ADR-0036 的一次可选补证。[v7 完整开发40案](../evidence/agent-v3-s5-v7-development-2026-10-13.md)正确与完整证据均38/40、硬失败0，独立接受为开发达标。随后[原已见v3回归](../evidence/agent-v3-s5-v7-seen-v3-2026-10-13.md)在004首次thinking耗尽输出容量、未提交final后停发；P05.1缺失且补证入口可用。原20分母3通过、1失败、16未执行，018未验证；四类硬失败0。累计usage估算¥13.165020、held 0。未正式冻结，不续跑停止批次；后继按 ADR-0038 实施，旧停止批次保持不变。schema15禁止已见集重标正式，新未见集尚未创建。
 
@@ -29,7 +29,7 @@
 | S5-15 | 无模型控制开销、checkpoint提交p95和恢复耗时 | 有限固定机器/样本/并发测量，原始数值与环境 | 100次只读p95 17.184ms；33次CommitStep RPC p95 151.262ms；自然恢复31.015秒 |
 | S5-13 | 适用工程检查及最新 head 的 `CI required` | 按完整差异由检查选择器选择 build/vet/lint/race/PG/Linux/Python/SQL/Buf/observability/链接检查 | 已有本地证据按各报告保留；当前改动的检查状态见[状态页](../status.md)，远程见[PR检查](https://github.com/XJfyrh/JobForge/pull/61/checks) |
 | S5-14 | 当前文档、简短成果与演示可按实际证据复核 | README/导航/状态/架构/开发/测试/操作/证据索引 | 当前文档与三分钟脚本已更新；实模演示待运行 |
-| S5-16 | 逐案可判定性：主张级与证据级配对回退、**两种**检索闭合、终裁推理余量分别可见，且跨案汇总在受审代码内 | `adjudication_stages` 的 `claim_level_delta`、marker两种闭合、`reasoning_budget`和实际 `final_input_closure`，以及 `score.py` 的 `adjudication_measurement`；当前摘要schema3，逐调用容量/期限与两阶段闭合分列，不改验收口径 | v7开发调查40案、最终输入39案已测且后者闭合，026无final不计通过。已见回归调查4案已测，004缺定义且截断风险1；最终输入仅3案已测且闭合，004不计通过，原20分母保留。 |
+| S5-16 | 逐案可判定性：主张级与证据级配对回退、**两种**检索闭合、终裁推理余量分别可见，且跨案汇总在受审代码内 | `adjudication_stages` 的 `claim_level_delta`、marker两种闭合、`reasoning_budget`和实际 `final_input_closure`，以及 `score.py` 的 `adjudication_measurement`；当前摘要schema3，逐调用容量/期限与两阶段闭合分列，不改验收口径 | v8已执行27案的调查与最终输入均闭合，无测得截断风险；3案仍质量失败，13未执行不计通过。原评分与批后独立复算见[v8报告](../evidence/agent-v3-s5-v8-development-2026-10-15.md)。 |
 
 ## 审查点与执行顺序
 
