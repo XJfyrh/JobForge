@@ -51,6 +51,9 @@ func setupAdjudicationProfileHarness(t *testing.T, fixed bool, agentSchema int) 
 	if agentSchema == 16 {
 		d.Program.PromptVersion = agentrun.SupportAgentPromptV8
 	}
+	if agentSchema == 18 {
+		d.Program.PromptVersion = agentrun.SupportAgentPromptV9
+	}
 	if fixed {
 		d.SchemaVersion, d.Program.PromptVersion = 12, agentrun.SupportPromptVersion
 		if agentSchema == 17 {

@@ -302,7 +302,13 @@ def load_package(root: Path, freeze_path: Path, *, historical: bool = False) -> 
 
 def require_unseen_dataset(dataset: str, freeze: dict[str, Any]) -> None:
     """A new candidate cannot turn an already seen cohort into acceptance data."""
-    if freeze.get("candidate_blueprint", {}).get("schema_version") in {13, 14, 15, 16}:
+    if freeze.get("candidate_blueprint", {}).get("schema_version") in {
+        13,
+        14,
+        15,
+        16,
+        18,
+    }:
         need(dataset not in SEEN_DATASETS, "SEEN_DATASET_NOT_UNSEEN")
 
 

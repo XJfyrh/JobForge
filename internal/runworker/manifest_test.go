@@ -74,3 +74,17 @@ func TestManifestPromptSelectorCannotUpgradeHistoricalProfiles(t *testing.T) {
 		}
 	}
 }
+
+func TestTimingEvidencePromptReusesOnlyTheBundleExecutor(t *testing.T) {
+	m := Manifest{SchemaVersion: 2, ExecutorVersion: run.SupportAdjudicationV5ExecutorVersion,
+		Profiles: []ManifestProfile{{ProfileID: "timing-v9", ProfileHash: strings.Repeat("a", 64), AdapterID: "support-agent-v1", PromptVersion: run.SupportAgentPromptV9}}}
+	if err := m.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for _, executor := range []string{run.SupportAdjudicationV4ExecutorVersion, run.SupportFixedBundleExecutorVersion} {
+		m.ExecutorVersion = executor
+		if m.Validate() == nil {
+			t.Fatal("new prompt acquired a different execution capability")
+		}
+	}
+}

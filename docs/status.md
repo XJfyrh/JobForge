@@ -2,9 +2,9 @@
 
 2026-10-15完成[v8独立引用对照](evidence/agent-v3-s5-v8-timing-evidence-2026-10-15.md)：**工程执行完成，窄提示假设获支持，S5质量尚未达标**。固定026/027各三对共12次，V8T正确和完整各3/6，V8TE各6/6、三次当轮配对改善；基线三项失败仅缺timing自身完整事件集合引用。独立从原响应与PG复算、363项绑定及费用闭账一致，接受进入该精确5,751字节prompt的新候选实现与完整开发回归；不声称稳定性或全40质量通过。
 
-本批新增usage估算¥0.347589，36库累计574 Runs、2,506 chat、¥16.203356，原¥28余量¥11.796644；held/unknown/在途/未结束attempt均0，sender退出、锁释放。[原v8开发](evidence/agent-v3-s5-v8-development-2026-10-15.md)仍24/40、3失败及13未执行，旧批不重开；[C1退化](evidence/agent-v3-s5-v8-contract-probe-2026-10-15.md)、[删句收益未证明](evidence/agent-v3-s5-v8-description-ablation-2026-10-15.md)和[仅补时效主张未达标](evidence/agent-v3-s5-v8-critical-timing-2026-10-15.md)结论保留。下一步仅注册已验证final提示的新版本，保留v8调查、完整政策、executor5及Fixed17基线，新身份完整40案另做一次联合启动审查，不加入未证明的上游关系或描述提醒。
+本批新增usage估算¥0.347589，36库累计574 Runs、2,506 chat、¥16.203356，原¥28余量¥11.796644；held/unknown/在途/未结束attempt均0，sender退出、锁释放。[原v8开发](evidence/agent-v3-s5-v8-development-2026-10-15.md)仍24/40、3失败及13未执行，旧批不重开；[C1退化](evidence/agent-v3-s5-v8-contract-probe-2026-10-15.md)、[删句收益未证明](evidence/agent-v3-s5-v8-description-ablation-2026-10-15.md)和[仅补时效主张未达标](evidence/agent-v3-s5-v8-critical-timing-2026-10-15.md)结论保留。已实现schema18 / prompt-v9薄适配器，精确采用已验证final提示，复用v8调查、完整政策与executor5，保留Fixed17基线；免费验证及新身份完整40案启动准备进行中，具体manifest仍须独立联合审查。
 
-维护者已明确授权在原S5累计¥28内持续推进并自主分配合理预算，每批¥4及独立启动审查继续有效，不重复等待逐批“可以”。离线40案谓词与冻结gold一致，未修改政策/gold。官方说明确认thinking忽略temperature，不能把0当作确定性开关；上一轮删句对照两组均9/9，删句组耗时/token更多，只作描述性观察。生产协议和公开schema未变。
+维护者已明确授权在原S5累计¥28内持续推进并自主分配合理预算，每批¥4及独立启动审查继续有效，不重复等待逐批“可以”。离线40案谓词与冻结gold一致，未修改政策/gold。官方说明确认thinking忽略temperature，不能把0当作确定性开关；上一轮删句对照两组均9/9，删句组耗时/token更多，只作描述性观察。生产输出协议和执行权限不变；新候选只增加必要的部署提示版本。
 
 [共享工作流](../tools/support_s5/host/README.md)和[ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)已实现并通过独立审查。v8开发批验证一次启动审查后的逐案自动检查，第10案自动放行；普通质量失败继续，门槛不可达停止。本轮诊断的单次格式失败保存后继续，固定配对收集与候选支持判据分开。代码及manifest修复只复核差异；具体收费范围或金额变化仍须重新绑定审查。
 

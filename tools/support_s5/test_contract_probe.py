@@ -101,6 +101,13 @@ def test_timing_probe_only_appends_critical_requirement_to_original_v8() -> None
     ] == [("V8T", 1), ("V8", 1), ("V8", 2), ("V8T", 2), ("V8T", 3), ("V8", 3)]
 
 
+def test_production_v9_uses_exact_supported_evidence_candidate() -> None:
+    """Registration follows the diagnostic bytes, with no other C1 clauses."""
+    from jobforge_agent.support_agent_v9 import FINAL_SYSTEM as V9_SYSTEM
+
+    assert V9_SYSTEM == probe.EVIDENCE_SYSTEM
+
+
 def test_evidence_probe_only_adds_own_aggregate_ref_and_labels_do_not_change_mode(
     tmp_path: Path,
 ) -> None:

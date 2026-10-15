@@ -127,7 +127,7 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
     source = read(Path(config["source"]))
     schema = source["definition"]["schema_version"]
     build = read(Path(config["build_receipt"]))
-    if schema not in {16, 17} or build["sources"] != source_hashes(schema):
+    if schema not in {16, 17, 18} or build["sources"] != source_hashes(schema):
         raise ValueError("BUILD_SOURCES_CHANGED")
     if (
         build["source_state"] != "clean-commit"

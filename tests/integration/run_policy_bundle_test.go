@@ -64,7 +64,7 @@ func bundleAtFinal(t *testing.T, h *runHarness, claimed agentrun.ClaimedRun) age
 }
 
 func TestRunPolicyBundleBothStrategies(t *testing.T) {
-	for _, schema := range []int{16, 17} {
+	for _, schema := range []int{16, 17, 18} {
 		t.Run(fmt.Sprint(schema), func(t *testing.T) {
 			h := setupAdjudicationProfileHarness(t, schema == 17, schema)
 			claimed := bundleAtRead(t, h, true)

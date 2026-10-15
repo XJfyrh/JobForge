@@ -39,7 +39,7 @@ func bundleFixture(t *testing.T) (SnapshotBinding, []Step, StepResult) {
 }
 
 func TestPolicyBundleBothGraphsAndOldIsolation(t *testing.T) {
-	for _, schema := range []int{16, 17} {
+	for _, schema := range []int{16, 17, 18} {
 		t.Run(string(rune('A'+schema-16)), func(t *testing.T) {
 			p := adjudicationProfile(t, schema)
 			snapshot, reads, bundle := bundleFixture(t)

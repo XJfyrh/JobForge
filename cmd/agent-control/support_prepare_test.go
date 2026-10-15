@@ -102,8 +102,8 @@ func TestPrepareSharedChatCapPreservesDefaultAndTenantFamilyLimits(t *testing.T)
 
 func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 	o, source := supportPrepareFixture(t)
-	for _, schema := range []int{7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} {
-		agent := schema == 7 || schema == 9 || schema == 11 || schema == 13 || schema == 14 || schema == 15 || schema == 16
+	for _, schema := range []int{7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18} {
+		agent := schema == 7 || schema == 9 || schema == 11 || schema == 13 || schema == 14 || schema == 15 || schema == 16 || schema == 18
 		d := source.Definition
 		if agent {
 			raw, err := os.ReadFile(filepath.Join(o.Repo, "deploy", "support-recovery.source.example.json"))
@@ -133,6 +133,10 @@ func TestPrepareCandidatePromptSourceAndManifestBinding(t *testing.T) {
 			if schema == 16 {
 				d.Program.PromptVersion = run.SupportAgentPromptV8
 				promptFile = "support_agent_v8.py"
+			}
+			if schema == 18 {
+				d.Program.PromptVersion = run.SupportAgentPromptV9
+				promptFile = "support_agent_v9.py"
 			}
 			if schema == 14 || schema == 15 {
 				d.Program.PromptVersion = run.SupportAgentPromptV6

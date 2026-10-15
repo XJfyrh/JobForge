@@ -207,6 +207,10 @@ def test_first_unseen_cohort_v1_has_no_prior_formal_and_still_loads() -> None:
         (True, 14),
         (False, 15),
         (True, 15),
+        (False, 16),
+        (True, 16),
+        (False, 18),
+        (True, 18),
         (False, 9),
     ],
 )
@@ -241,7 +245,7 @@ def test_rebound_seen_manifest_is_not_unseen_for_schema_13(
     }
     (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setattr(freeze_module, "validate", lambda _: None)
-    if schema in {13, 14, 15, 16} and not historical:
+    if schema in {13, 14, 15, 16, 18} and not historical:
         with pytest.raises(EvidenceError, match="SEEN_DATASET_NOT_UNSEEN"):
             package.load_package(tmp_path, freeze_path, historical=historical)
     else:
@@ -252,7 +256,7 @@ def test_rebound_seen_manifest_is_not_unseen_for_schema_13(
 
 @pytest.mark.parametrize("dataset", sorted(package.SEEN_DATASETS))
 @pytest.mark.parametrize("strategy", ["support_agent_v1", "support_fixed_v1"])
-@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+@pytest.mark.parametrize("schema", [13, 14, 15, 16, 18])
 def test_direct_formal_score_cannot_bypass_seen_dataset_guard(
     monkeypatch: pytest.MonkeyPatch,
     dataset: str,

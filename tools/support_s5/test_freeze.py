@@ -177,13 +177,13 @@ def create(
     )
 
 
-@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+@pytest.mark.parametrize("schema", [13, 14, 15, 16, 18])
 def test_candidate_binds_all_three_seen_formals(
     inputs: SimpleNamespace,
     schema: int,
 ) -> None:
     """ADR-0034's candidate freezes, and formal v3 is bound as seen too."""
-    receipt = create(inputs, schema, 17 if schema == 16 else 12, V1, V2, V3)
+    receipt = create(inputs, schema, 17 if schema in {16, 18} else 12, V1, V2, V3)
     assert receipt["status"] == "frozen_before_unseen_creation"
     assert receipt["source_commit"] == HEAD and receipt["thresholds"] == THRESHOLDS
     packages = receipt["seen_formal_packages"]
@@ -202,14 +202,14 @@ def test_candidate_binds_all_three_seen_formals(
 
 
 @pytest.mark.parametrize("omitted", [V1, V2, V3])
-@pytest.mark.parametrize("schema", [13, 14, 15, 16])
+@pytest.mark.parametrize("schema", [13, 14, 15, 16, 18])
 def test_candidate_requires_every_seen_formal_manifest(
     inputs: SimpleNamespace, omitted: str, schema: int
 ) -> None:
     """An omitted prior cohort is a missing provenance, never a silent pass."""
     present = tuple(dataset for dataset in (V1, V2, V3) if dataset != omitted)
     with pytest.raises(EvidenceError, match="SEEN_FORMAL_PROVENANCE_REQUIRED"):
-        create(inputs, schema, 17 if schema == 16 else 12, *present)
+        create(inputs, schema, 17 if schema in {16, 18} else 12, *present)
 
 
 @pytest.mark.parametrize(
@@ -229,6 +229,7 @@ def test_candidate_requires_every_seen_formal_manifest(
         (11, 12, (V1, V2), "COMPARISON_PROFILE_MISMATCH"),
         (13, 11, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (16, 12, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
+        (18, 12, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (15, 17, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (12, 13, (V1, V2, V3), "COMPARISON_PROFILE_MISMATCH"),
         (13, 12, (V1, V2), "SEEN_FORMAL_PROVENANCE_REQUIRED"),
@@ -295,7 +296,7 @@ def test_source_hashes_bind_the_v5_deployment_definition_and_prompt() -> None:
         assert sources[path] == sha256((ROOT / path).read_bytes())
 
 
-@pytest.mark.parametrize("schema", [16, 17])
+@pytest.mark.parametrize("schema", [16, 17, 18])
 def test_bundle_source_hashes_bind_execution_protocol_and_generated_wire(
     schema: int,
 ) -> None:

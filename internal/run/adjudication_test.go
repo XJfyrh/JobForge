@@ -35,6 +35,9 @@ func adjudicationDefinition(schema int) SupportDefinition {
 		if schema == 16 {
 			d.Program.PromptVersion = SupportAgentPromptV8
 		}
+		if schema == 18 {
+			d.Program.PromptVersion = SupportAgentPromptV9
+		}
 		d.Program.RecoveryPolicy, d.Program.ApprovalPolicy = ConfirmedUncommittedRecovery, TicketResolutionApprovalPolicy
 		d.Action = &SupportActionDefinition{Operation: business.ResolutionOperation, Origin: "http://business:8092", KeyID: "test-key", PublicKeySHA256: strings.Repeat("a", 64)}
 	}
@@ -50,11 +53,22 @@ func adjudicationProfile(t *testing.T, schema int) Profile {
 	return p
 }
 
+func TestTimingEvidencePromptRequiresItsOwnDeploymentVersion(t *testing.T) {
+	old := adjudicationDefinition(16)
+	newer := adjudicationDefinition(18)
+	old.Program.PromptVersion, newer.Program.PromptVersion = SupportAgentPromptV9, SupportAgentPromptV8
+	for _, d := range []SupportDefinition{old, newer} {
+		if _, err := BuildSupportProfile("mixed-prompt", d); err == nil {
+			t.Fatal("prompt silently changed an existing deployment")
+		}
+	}
+}
+
 func TestAdjudicationFrozenStepBudgetAndCompatibility(t *testing.T) {
-	for _, schema := range []int{11, 12, 13, 14, 15, 16, 17} {
+	for _, schema := range []int{11, 12, 13, 14, 15, 16, 17, 18} {
 		p := adjudicationProfile(t, schema)
 		agent, executor := schema != 12 && schema != 17, SupportFixedAdjudicationExecutorVersion
-		if schema == 16 {
+		if schema == 16 || schema == 18 {
 			executor = SupportAdjudicationV5ExecutorVersion
 		}
 		if schema == 17 {

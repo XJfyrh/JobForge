@@ -12,6 +12,8 @@ import (
 const (
 	// SupportAgentPromptV8 uses complete policy evidence and one final-only call.
 	SupportAgentPromptV8 = "support-agent-prompt-v8"
+	// SupportAgentPromptV9 clarifies claim completeness and own evidence in schema 18.
+	SupportAgentPromptV9 = "support-agent-prompt-v9"
 	// SupportFixedPromptV2 binds the fixed graph to the same final-only contract.
 	SupportFixedPromptV2 = "support-fixed-prompt-v2"
 	// SupportAdjudicationV5ExecutorVersion reads policy before investigation.

@@ -21,6 +21,7 @@ from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
 from jobforge_agent.support_agent_v6 import SupportAgentV6Adapter
 from jobforge_agent.support_agent_v7 import SupportAgentV7Adapter
 from jobforge_agent.support_agent_v8 import SupportAgentV8Adapter
+from jobforge_agent.support_agent_v9 import SupportAgentV9Adapter
 from runtime_fixture_registry import MechanismAdapter
 
 PROFILE = {
@@ -158,6 +159,8 @@ def test_production_support_requires_matching_manifest_identity(
         ("support-agent-prompt-v7", ADJUDICATION_V3_EXECUTOR_VERSION, False),
         ("support-agent-prompt-v6", ADJUDICATION_V4_EXECUTOR_VERSION, False),
         ("support-agent-prompt-v8", ADJUDICATION_V5_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v9", ADJUDICATION_V5_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v9", ADJUDICATION_V4_EXECUTOR_VERSION, False),
         ("support-agent-prompt-v8", ADJUDICATION_V4_EXECUTOR_VERSION, False),
         ("support-agent-prompt-v7", ADJUDICATION_V5_EXECUTOR_VERSION, False),
     ],
@@ -189,7 +192,9 @@ def test_manifest_selects_only_registered_adjudication_version(
     args = ("support-agent-v1", "candidate", "a" * 64, executor)
     if valid:
         expected = (
-            SupportAgentV8Adapter
+            SupportAgentV9Adapter
+            if prompt == "support-agent-prompt-v9"
+            else SupportAgentV8Adapter
             if executor == ADJUDICATION_V5_EXECUTOR_VERSION
             else SupportAgentV7Adapter
             if executor == ADJUDICATION_V4_EXECUTOR_VERSION

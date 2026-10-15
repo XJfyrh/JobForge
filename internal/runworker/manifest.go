@@ -84,6 +84,7 @@ func (m Manifest) Validate() error {
 			p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV6 && m.ExecutorVersion == run.SupportAdjudicationV3ExecutorVersion ||
 			p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV7 && m.ExecutorVersion == run.SupportAdjudicationV4ExecutorVersion ||
 			p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV8 && m.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion ||
+			p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV9 && m.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion ||
 			p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportFixedPromptV2 && m.ExecutorVersion == run.SupportFixedBundleExecutorVersion ||
 			p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion
 		if (m.ExecutorVersion == run.SupportAdjudicationExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV2ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV3ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV4ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion || m.ExecutorVersion == run.SupportFixedBundleExecutorVersion || m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion) && m.SchemaVersion != 2 {

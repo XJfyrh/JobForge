@@ -23,11 +23,12 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 	if os.Getenv("JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS") != "1" {
 		t.Skip("requires fixed Linux image, init and real PostgreSQL; skip is not acceptance")
 	}
-	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid", "adjudication", "adjudication_empty", "adjudication_truncated", "adjudication_oversize", "adjudication_long", "adjudication_cancel", "adjudication_supplement", "adjudication_supplement_empty", "adjudication_supplement_cancel", "adjudication_status", "adjudication_status_empty", "adjudication_status_supplement", "adjudication_status_cancel", "adjudication_bundle", "adjudication_bundle_fixed", "adjudication_bundle_cancel"} {
+	for _, mode := range []string{"dynamic", "correction_then_dynamic", "duplicate", "correction_then_later_invalid", "correction_invalid", "adjudication", "adjudication_empty", "adjudication_truncated", "adjudication_oversize", "adjudication_long", "adjudication_cancel", "adjudication_supplement", "adjudication_supplement_empty", "adjudication_supplement_cancel", "adjudication_status", "adjudication_status_empty", "adjudication_status_supplement", "adjudication_status_cancel", "adjudication_bundle", "adjudication_bundle_fixed", "adjudication_bundle_cancel", "adjudication_bundle_v9", "adjudication_bundle_v9_cancel"} {
 		t.Run(mode, func(t *testing.T) {
 			adjudication := strings.HasPrefix(mode, "adjudication")
 			bundle := strings.HasPrefix(mode, "adjudication_bundle")
 			fixedBundle := mode == "adjudication_bundle_fixed"
+			v9 := strings.HasPrefix(mode, "adjudication_bundle_v9")
 			statusPolicy := strings.HasPrefix(mode, "adjudication_status")
 			supplement := strings.HasPrefix(mode, "adjudication_supplement") || mode == "adjudication_status_supplement"
 			cancelFinal := strings.HasSuffix(mode, "_cancel")
@@ -37,6 +38,9 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 					schema := 16
 					if fixedBundle {
 						schema = 17
+					}
+					if v9 {
+						schema = 18
 					}
 					h = setupAdjudicationProfileHarness(t, fixedBundle, schema)
 				} else if statusPolicy {
@@ -70,6 +74,9 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 			}
 			if bundle {
 				manifest.Profiles[0].PromptVersion = agentrun.SupportAgentPromptV8
+				if v9 {
+					manifest.Profiles[0].PromptVersion = agentrun.SupportAgentPromptV9
+				}
 				if fixedBundle {
 					manifest.Profiles[0].PromptVersion, manifest.Profiles[0].AdapterID = agentrun.SupportFixedPromptV2, "support-fixed-v1"
 				}
@@ -189,6 +196,10 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				}
 				thinking := adjudication && (n == len(decisions) || supplement && n == len(decisions)-1)
 				if req.Header.Get("Authorization") != "Bearer synthetic-provider-key" || n > len(decisions) || (!((supplement || statusPolicy || bundle) && thinking) && !strings.Contains(string(body["messages"]), "previous_tools")) {
+					f.reject(w)
+					return
+				}
+				if v9 && thinking && (!strings.Contains(string(body["messages"]), "CRITICAL AND TIMING COMPLETENESS:") || !strings.Contains(string(body["messages"]), "OUTSTANDING TIMING EVIDENCE:")) {
 					f.reject(w)
 					return
 				}

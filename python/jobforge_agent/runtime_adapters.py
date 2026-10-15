@@ -106,6 +106,11 @@ def _manifest_profiles(
             ) not in {
                 (
                     "support-agent-v1",
+                    "support-agent-prompt-v9",
+                    "linux-v2-adjudication-runtime-5",
+                ),
+                (
+                    "support-agent-v1",
                     "support-agent-prompt-v8",
                     "linux-v2-adjudication-runtime-5",
                 ),
@@ -212,6 +217,10 @@ def resolve_adapter(
         from jobforge_agent.support_agent_v8 import SupportAgentV8Adapter
 
         return SupportAgentV8Adapter()
+    if matched[0].get("prompt_version") == "support-agent-prompt-v9":
+        from jobforge_agent.support_agent_v9 import SupportAgentV9Adapter
+
+        return SupportAgentV9Adapter()
     if matched[0].get("prompt_version") == "support-fixed-prompt-v2":
         from jobforge_agent.support_agent_v8 import SupportFixedV2Adapter
 

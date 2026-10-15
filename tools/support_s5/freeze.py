@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # schema 11/12 pair is deliberately absent: admitting it would change existing
 # rejection behaviour for schema 11, and ADR-0034 supersedes that candidate.
 SCHEMA_PAIRS = frozenset(
-    {(6, 5), (7, 8), (9, 10), (13, 12), (14, 12), (15, 12), (16, 17)}
+    {(6, 5), (7, 8), (9, 10), (13, 12), (14, 12), (15, 12), (16, 17), (18, 17)}
 )
 
 
@@ -51,10 +51,11 @@ def source_hashes(schema_version: int | None = None) -> dict[str, str]:
         "api/support/s5-agent-v6",
         "api/support/s5-agent-v7",
         "api/support/s5-agent-v8",
+        "api/support/s5-agent-v9",
         "api/support/s5-fixed-v5",
         "api/support/agent-v2",
     )
-    if schema_version in {16, 17}:
+    if schema_version in {16, 17, 18}:
         directories += (
             "internal/runprotocol/v2",
             "internal/runinput",
@@ -175,25 +176,25 @@ def create(
     # package is seen too, so it can never serve as the unseen acceptance set.
     agent_schema: int = agent["schema_version"]
     seen = {}
-    if agent_schema in {7, 9, 13, 14, 15, 16}:
+    if agent_schema in {7, 9, 13, 14, 15, 16, 18}:
         need(seen_formal_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_manifest is not None
         seen = seen_package(seen_formal_manifest, "support-s5-2026-10-07-v1")
     need(
-        agent_schema in {9, 13, 14, 15, 16} or seen_formal_v2_manifest is None,
+        agent_schema in {9, 13, 14, 15, 16, 18} or seen_formal_v2_manifest is None,
         "SEEN_FORMAL_PROVENANCE_SCOPE",
     )
     need(
-        agent_schema in {13, 14, 15, 16} or seen_formal_v3_manifest is None,
+        agent_schema in {13, 14, 15, 16, 18} or seen_formal_v3_manifest is None,
         "SEEN_FORMAL_PROVENANCE_SCOPE",
     )
     seen_v2 = {}
-    if agent_schema in {9, 13, 14, 15, 16}:
+    if agent_schema in {9, 13, 14, 15, 16, 18}:
         need(seen_formal_v2_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_v2_manifest is not None
         seen_v2 = seen_package(seen_formal_v2_manifest, "support-s5-2026-10-07-v2")
     seen_v3 = {}
-    if agent_schema in {13, 14, 15, 16}:
+    if agent_schema in {13, 14, 15, 16, 18}:
         need(seen_formal_v3_manifest is not None, "SEEN_FORMAL_PROVENANCE_REQUIRED")
         assert seen_formal_v3_manifest is not None
         seen_v3 = seen_package(seen_formal_v3_manifest, "support-s5-2026-10-08-v3")
