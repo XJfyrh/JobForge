@@ -38,4 +38,6 @@ python -m tools.support_s5.host.workflow run --batch E:/CURRENT/NEW-BATCH --revi
 
 `run --experiment E:/CURRENT/EXPERIMENT --review E:/CURRENT/startup-review.json` 才启动原隔离Go诊断发送器。`startup-manifest.json` 必须绑定实际根目录、所有来源/请求/runner/私有配置摘要、干净提交、完整阶段库存及起止窗，并通过与开发批次相同的 `validate_review`。新诊断使用独立零调用库、共享stage锁和完整预留，禁止已尝试库重入。Go `--check --manifest ...` 可在无数据库、无模型调用时核对实际二进制和固定清单。
 
+`prepare --plan tools/support_s5/host/description-probe.json` 复用同一入口生成C1/C2单句删减对照：配置固定DEV-016/017/020，各组三次，共18次；C1原字节保留，C2仅删除“问题描述是独立缺口”的额外提醒。私有诊断manifest5绑定名单和重复数，沿用deadline、结构健康检查、PG禁止重入及费用守卫，旧manifest4语义保持不变。候选须全部9次正确且完整，并至少一次DEV-016当轮配对改善；两组都通过时不宣称增益。固定配对完成与候选支持判据分开。
+
 诊断只改变final system，原生产V8和镜像内策略不变；费用仍每批¥4、累计¥28，不新增阶段次数或时间预算。授权有效窗传到Go请求context，父进程保留15秒结算宽限；unknown/full hold保留并留锁，不能把到期中断写成零费。

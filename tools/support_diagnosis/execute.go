@@ -37,10 +37,10 @@ func credential(path string) (string, error) {
 // Execute sends each frozen trial at most once, with PG authorization before HTTP.
 func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsPath string, progress io.Writer) error {
 	m, raw, err := LoadManifest(manifestPath)
-	if err != nil || (m.SchemaVersion != 2 && m.SchemaVersion != 3 && m.SchemaVersion != 4) {
+	if err != nil || m.SchemaVersion < 2 || m.SchemaVersion > 5 {
 		return ErrInvalid
 	}
-	if m.SchemaVersion == 4 {
+	if m.SchemaVersion >= 4 {
 		deadline, set := ctx.Deadline()
 		if !set || !deadline.After(time.Now()) {
 			return ErrInvalid
@@ -110,10 +110,10 @@ func Execute(ctx context.Context, pool *pgxpool.Pool, manifestPath, credentialsP
 		start := time.Now()
 		report, response := send(ctx, client, body, key, trial)
 		elapsed := time.Since(start).Milliseconds()
-		if m.SchemaVersion == 4 && report.Outcome == "final" && !probeFinalShape(body, response) {
+		if m.SchemaVersion >= 4 && report.Outcome == "final" && !probeFinalShape(body, response) {
 			report.Outcome = "invalid_final"
 		}
-		if m.SchemaVersion == 4 && report.Stop == "" && report.Usage != nil &&
+		if m.SchemaVersion >= 4 && report.Stop == "" && report.Usage != nil &&
 			health.stop(index+1, report.Outcome) {
 			report.Stop = "systemic_protocol_failure"
 		}
@@ -174,7 +174,7 @@ func send(ctx context.Context, client *http.Client, body []byte, key string, tri
 		return r, raw
 	}
 	group := trial.Group
-	if group == "V5" || group == "V8" || group == "V8C" {
+	if group == "V5" || group == "V8" || group == "V8C" || group == "C1" || group == "C2" {
 		group = "B"
 	}
 	return ParseReport(raw, response.StatusCode, group, trial.ID), raw

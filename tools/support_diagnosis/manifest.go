@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -43,6 +44,28 @@ type Parent struct {
 	CompletedTrials int    `json:"completed_trials"`
 }
 
+// ProbePlan freezes a seen development cohort and every planned repetition.
+type ProbePlan struct {
+	CaseIDs     []string `json:"case_ids"`
+	Repetitions int      `json:"repetitions"`
+}
+
+func (p *ProbePlan) valid(trials int) bool {
+	if p == nil || len(p.CaseIDs) == 0 || p.Repetitions <= 0 ||
+		trials%(2*len(p.CaseIDs)) != 0 || trials/(2*len(p.CaseIDs)) != p.Repetitions {
+		return false
+	}
+	seen := make(map[string]bool)
+	for _, id := range p.CaseIDs {
+		n, err := strconv.Atoi(strings.TrimPrefix(id, "DEV-"))
+		if err != nil || n < 1 || n > 40 || id != fmt.Sprintf("DEV-%03d", n) || seen[id] {
+			return false
+		}
+		seen[id] = true
+	}
+	return seen["DEV-016"]
+}
+
 // Manifest contains no gold or execution-selected URL, model, or policy.
 type Manifest struct {
 	SchemaVersion   int               `json:"schema_version"`
@@ -60,6 +83,7 @@ type Manifest struct {
 	Pricing         run.Pricing       `json:"pricing"`
 	Trials          []Trial           `json:"trials"`
 	Parent          *Parent           `json:"parent,omitempty"`
+	Probe           *ProbePlan        `json:"probe,omitempty"`
 }
 
 // Digest preserves the exact request, response and manifest bytes.
@@ -82,7 +106,15 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 	if m.SchemaVersion == 4 {
 		costCap, trials = 28000000, 12
 	}
-	if (m.SchemaVersion < 1 || m.SchemaVersion > 4) || !run.ValidIdentifier(m.ExperimentID) ||
+	if m.SchemaVersion == 5 {
+		if !m.Probe.valid(len(m.Trials)) {
+			return m, nil, ErrInvalid
+		}
+		costCap, trials = 28000000, len(m.Trials)
+	} else if m.Probe != nil {
+		return m, nil, ErrInvalid
+	}
+	if (m.SchemaVersion < 1 || m.SchemaVersion > 5) || !run.ValidIdentifier(m.ExperimentID) ||
 		!strings.HasPrefix(m.DatabaseName, "jobforge_s5_diagnosis_") || uuid.Validate(m.DatabaseID) != nil ||
 		m.MaxInputTokens != maxInputTokens || m.MaxOutputTokens != maxOutputTokens ||
 		m.PriorCost < 0 || m.PriorCost >= m.CostCap || m.CostCap != costCap || m.BatchCap != 4000000 ||
@@ -108,12 +140,15 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 			}
 		}
 	}
-	if m.SchemaVersion == 4 {
+	if m.SchemaVersion >= 4 {
 		for _, key := range []string{"candidate_sources", "input_verification"} {
 			if !run.ValidHash(m.Sources[key]) {
 				return m, nil, ErrInvalid
 			}
 		}
+	}
+	if m.SchemaVersion == 5 && !run.ValidHash(m.Sources["probe_plan"]) {
+		return m, nil, ErrInvalid
 	}
 	for index, t := range m.Trials {
 		repetition, caseIndex := index/80+1, index%80/4
@@ -128,6 +163,14 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 			repetition, caseID, group = 1, caseIDs[pair], "V8"
 			if (pair+position)%2 == 1 {
 				group = "V8C"
+			}
+		}
+		if m.SchemaVersion == 5 {
+			width := 2 * len(m.Probe.CaseIDs)
+			pair, position := index%width/2, index%2
+			repetition, caseID, group = index/width+1, m.Probe.CaseIDs[pair], "C1"
+			if (pair+repetition-1+position)%2 == 1 {
+				group = "C2"
 			}
 		}
 		if t.CaseID != caseID || t.Group != group || t.Repetition != repetition ||
@@ -169,7 +212,7 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		return nil, ErrInvalid
 	}
 	mode, effort := "disabled", ""
-	if t.Group == "B" || t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" {
+	if t.Group == "B" || t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" || t.Group == "C1" || t.Group == "C2" {
 		mode, effort = "enabled", "high"
 	}
 	if p.Model != "deepseek-flash" || p.Thinking.Type != mode || p.ReasoningEffort != effort ||
@@ -178,7 +221,7 @@ func requestBytes(root string, t Trial) ([]byte, error) {
 		len(p.Messages[0].Content)+len(p.Messages[1].Content) > 65536 {
 		return nil, ErrInvalid
 	}
-	if t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" {
+	if t.Group == "V5" || t.Group == "V8" || t.Group == "V8C" || t.Group == "C1" || t.Group == "C2" {
 		var facts map[string]json.RawMessage
 		var fields map[string]json.RawMessage
 		promptMarker := "OUTPUT ENVELOPE FOR THIS STEP:"

@@ -4,6 +4,8 @@
 
 [原v8开发回归](evidence/agent-v3-s5-v8-development-2026-10-15.md)仍为原40分母正确和完整证据各24/40、3案质量失败、13案未执行；第27案后门槛不可达自动停发。上述固定输入诊断不能替代开发或正式验收，原评分及旧批不改写。下一步先离线澄清普通状态咨询与实际问题描述含糊的政策/既有语义边界，再决定是否值得提出新候选；不自动改版、重试或补样，生产协议和公开schema未变。
 
+维护者随后明确授权在原S5累计¥28内持续推进并自主分配合理预算，每批¥4及独立启动审查继续有效。离线复核40案谓词与冻结gold一致；发现C1在恢复层级要求时附带扩大了“含糊问题描述”的触发提醒。下一轮预定仅删除这一句，固定已见DEV-016/017/020、C1/C2各三次共18次，原始授权与具体预算分配共同绑定启动manifest；全部结果保留，批后复盘，无收益不晋升生产。
+
 [共享工作流](../tools/support_s5/host/README.md)和[ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)已实现并通过独立审查。v8开发批验证一次启动审查后的逐案自动检查，第10案自动放行；普通质量失败继续，门槛不可达停止。本轮诊断的单次格式失败保存后继续，固定配对收集与候选支持判据分开。代码及manifest修复只复核差异；具体收费范围或金额变化仍须重新绑定审查。
 
 免费工程验证按既有证据复用：quick、固定Linux进程与三层镜像来源核验通过；诊断工具的全仓真实PG/AOF Redis race、最新诊断包真实PG race（15.611秒）、270项相关Python及mypy40文件通过，详见[分析报告](evidence/agent-v3-s5-v8-contract-analysis-2026-10-15.md)。结果整理不重复无新风险的PG/race。当前远程CI未运行，合并仍须最新head的 `CI required`；v8开发批OTLP未验收。S5正式质量未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。当前机制见[ADR-0038](adr/0038-policy-bundle-before-adjudication.md)，原[首案审计停发](evidence/agent-v3-s5-v8-audit-stop-2026-10-14.md)及v7历史结论保留；正式冻结、Fixed、新未见集、恢复及演示未启动。

@@ -39,6 +39,61 @@ def test_diagnostic_shape_descriptor_matches_unchanged_contract() -> None:
     assert json.loads(path.read_bytes()) == expected
 
 
+def test_ablation_changes_only_the_registered_sentence_and_preserves_pairs() -> None:
+    """C2 removes one extra reminder; facts, original C1 and limits remain exact."""
+    plan = probe.load_probe_plan(probe.ABLATION_PLAN)
+    package, registration, row = source_fixture()
+    legacy, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package
+    )
+    bodies, _ = probe.project_case(
+        row, registration["bindings"][0], registration["profile"], package, plan
+    )
+    assert bodies["C1"] == legacy["V8C"]
+    assert probe.CANDIDATE_SYSTEM.count(probe.DESCRIPTION_REMINDER) == 1
+    left, right = (json.loads(bodies[g]) for g in ("C1", "C2"))
+    assert right["messages"][0]["content"] == left["messages"][0]["content"].replace(
+        probe.DESCRIPTION_REMINDER, ""
+    )
+    right["messages"][0]["content"] = left["messages"][0]["content"]
+    assert right == left
+    trials = probe.schedule(plan)
+    assert len(trials) == 18 and len({t["trial_id"] for t in trials}) == 18
+    assert {t["case_id"] for t in trials} == {"DEV-016", "DEV-017", "DEV-020"}
+    assert all(
+        sum(t["case_id"] == cid and t["group"] == group for t in trials) == 3
+        for cid in plan["case_ids"]
+        for group in ("C1", "C2")
+    )
+    assert [
+        (t["group"], t["repetition"]) for t in trials if t["case_id"] == "DEV-016"
+    ] == [("C1", 1), ("C2", 1), ("C2", 2), ("C1", 2), ("C1", 3), ("C2", 3)]
+
+
+@pytest.mark.parametrize(
+    "mutation", ["kind", "duplicate", "unknown", "target", "repetitions", "extra"]
+)
+def test_ablation_rejects_unregistered_plan(tmp_path: Path, mutation: str) -> None:
+    """Configuration cannot widen identities, protocol or endpoint authority."""
+    plan = probe.read(probe.ABLATION_PLAN)
+    if mutation == "kind":
+        plan["kind"] = "arbitrary"
+    elif mutation == "duplicate":
+        plan["case_ids"][1] = "DEV-016"
+    elif mutation == "unknown":
+        plan["case_ids"][1] = "DEV-041"
+    elif mutation == "target":
+        plan["case_ids"][0] = "DEV-015"
+    elif mutation == "repetitions":
+        plan["repetitions"] = True
+    else:
+        plan["endpoint"] = "arbitrary"
+    path = tmp_path / "plan.json"
+    probe.save(path, plan)
+    with pytest.raises(EvidenceError):
+        probe.load_probe_plan(path)
+
+
 def source_fixture():
     """Bind synthetic exported calls to the real v8 adapter, not the probe."""
     package, registration, row = bundle_fixture(fixed=False)
@@ -116,17 +171,22 @@ def test_probe_rejects_invalid_original_evidence(mutation: str) -> None:
         )
 
 
+@pytest.mark.parametrize("configured", [False, True])
 def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, configured: bool
 ) -> None:
     """Unattempted trials stay in the fixed denominator and artifacts are immutable."""
     package, registration, row = source_fixture()
+    plan = probe.load_probe_plan(probe.ABLATION_PLAN) if configured else None
+    case_ids = probe.CASE_IDS if plan is None else plan["case_ids"]
+    groups = probe.probe_groups(plan)
+    count = 18 if configured else 12
     bodies, proof = probe.project_case(
-        row, registration["bindings"][0], registration["profile"], package
+        row, registration["bindings"][0], registration["profile"], package, plan
     )
-    projected = {cid: bodies for cid in probe.CASE_IDS}
-    proofs = [dict(proof, case_id=cid) for cid in probe.CASE_IDS]
-    monkeypatch.setattr(probe, "projections", lambda _: (projected, proofs))
+    projected = {cid: bodies for cid in case_ids}
+    proofs = [dict(proof, case_id=cid) for cid in case_ids]
+    monkeypatch.setattr(probe, "projections", lambda *_: (projected, proofs))
     monkeypatch.setattr(probe, "load_package", lambda: package)
     batch = tmp_path / "original"
     batch.mkdir()
@@ -151,14 +211,21 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
     )
     output = tmp_path / "experiment"
     prepared = probe.prepare(
-        batch, output, runner, preflight, ledger, "jobforge_s5_diagnosis_probe", "test"
+        batch,
+        output,
+        runner,
+        preflight,
+        ledger,
+        "jobforge_s5_diagnosis_probe",
+        "test",
+        probe.ABLATION_PLAN if configured else None,
     )
-    assert prepared["paid_calls"] == 0 and prepared["trials"] == 12
+    assert prepared["paid_calls"] == 0 and prepared["trials"] == count
     manifest = probe.read(output / "manifest.json")
-    assert {
-        g: sum(t["group"] == g for t in manifest["trials"]) for g in ("V8", "V8C")
-    } == {"V8": 6, "V8C": 6}
-    assert len({t["trial_id"] for t in manifest["trials"]}) == 12
+    assert {g: sum(t["group"] == g for t in manifest["trials"]) for g in groups} == {
+        g: count // 2 for g in groups
+    }
+    assert len({t["trial_id"] for t in manifest["trials"]}) == count
     snapshot = tmp_path / "export.json"
     probe.save(
         snapshot,
@@ -172,10 +239,10 @@ def test_probe_fixes_schedule_and_never_scores_missing_trials_as_passed(
         },
     )
     scored = probe.score(batch, output, snapshot)
-    assert scored["denominator"] == 12 and len(scored["rows"]) == 12
+    assert scored["denominator"] == count and len(scored["rows"]) == count
     assert all(r["outcome"] == "not_executed" for r in scored["rows"])
     assert scored["supports_candidate"] is False and scored["thresholds_met"] is False
-    assert not any(scored["metrics"][g]["correct"] for g in ("V8", "V8C"))
+    assert not any(scored["metrics"][g]["correct"] for g in groups)
     descriptor = (
         Path(probe.__file__).parents[2] / "support_diagnosis/probe-contract.json"
     )

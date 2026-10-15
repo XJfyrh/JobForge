@@ -102,7 +102,7 @@ func OpenLedger(ctx context.Context, pool *pgxpool.Pool, m Manifest, raw []byte)
 	}
 	// A new probe is one process lifetime. Even a fully known prefix must not
 	// silently restart the health counters or reopen a stopped observation list.
-	if m.SchemaVersion == 4 {
+	if m.SchemaVersion >= 4 {
 		if err := conn.QueryRow(ctx, `select count(*) from diagnosis_calls`).Scan(&count); err != nil || count != 0 {
 			return fail(errors.New("contract probe already attempted; no automatic replay"))
 		}

@@ -1,4 +1,4 @@
-"""Prepare a six-case prompt-only probe; never register a production candidate."""
+"""Prepare configured seen-case prompt probes, outside production candidates."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 import copy
 import json
 import os
+import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,62 @@ CLAIM COMPLETENESS AND EVIDENCE REVIEW:
 3. An active critical finding needs BOTH a critical claim and a separate timing claim when timing is supported by the captured facts. The critical claim establishes the exception; the timing claim establishes whether the promise was missed. A future promise still needs its outstanding_not_overdue timing claim even when the critical exception makes the conclusion insufficient. Each claim needs its own supporting fields and policy. Do not add timing to a conflict or dispute merely to fill slots.
 """
 CANDIDATE_SYSTEM = FINAL_SYSTEM + RESTORED_CONTRACT
+DESCRIPTION_REMINDER = " A vague actual problem description is an independent gap, not a downstream tracking field."
+ABLATION_SYSTEM = CANDIDATE_SYSTEM.replace(DESCRIPTION_REMINDER, "")
+ABLATION_PLAN = Path(__file__).with_name("description-probe.json")
+
+
+def load_probe_plan(path: Path) -> dict[str, Any]:
+    """Limit configuration to the registered C1 versus one-sentence C2 question."""
+    plan = read(path)
+    need(
+        set(plan) == {"kind", "case_ids", "repetitions"}
+        and plan["kind"] == "description-gap-ablation",
+        "PROBE_PLAN_KIND",
+    )
+    cases = plan["case_ids"]
+    need(
+        isinstance(cases, list)
+        and bool(cases)
+        and all(
+            isinstance(cid, str) and re.fullmatch(r"DEV-(00[1-9]|0[1-3][0-9]|040)", cid)
+            for cid in cases
+        )
+        and len(set(cases)) == len(cases)
+        and "DEV-016" in cases,
+        "PROBE_PLAN_CASES",
+    )
+    need(
+        type(plan["repetitions"]) is int and plan["repetitions"] > 0,
+        "PROBE_PLAN_REPETITIONS",
+    )
+    return plan
+
+
+def probe_groups(plan: dict[str, Any] | None) -> tuple[str, str]:
+    """Select the two registered systems without configuring model or execution."""
+    return ("V8", "V8C") if plan is None else ("C1", "C2")
+
+
+def experiment_plan(
+    manifest: dict[str, Any], experiment: Path
+) -> dict[str, Any] | None:
+    """Bind the declared cohort to the original reviewed configuration bytes."""
+    need(manifest["schema_version"] in (4, 5), "PROBE_MANIFEST_VERSION")
+    if manifest["schema_version"] == 4:
+        need("probe" not in manifest, "PROBE_PLAN_UNEXPECTED")
+        return None
+    path = experiment / "probe-plan.json"
+    need(
+        digest(path.read_bytes()) == manifest["sources"]["probe_plan"],
+        "PROBE_PLAN_HASH",
+    )
+    plan = load_probe_plan(path)
+    need(
+        manifest["probe"] == {k: plan[k] for k in ("case_ids", "repetitions")},
+        "PROBE_PLAN_BINDING",
+    )
+    return plan
 
 
 def probe_sources() -> dict[str, str]:
@@ -47,21 +104,26 @@ def probe_sources() -> dict[str, str]:
     sources["tools/support_diagnosis/probe-contract.json"] = digest(
         descriptor.read_bytes()
     )
+    sources["tools/support_s5/host/description-probe.json"] = digest(
+        ABLATION_PLAN.read_bytes()
+    )
     return dict(sorted(sources.items()))
 
 
-def schedule() -> list[dict[str, Any]]:
-    """Fix all twelve observations and balance the order of the two prompts."""
+def schedule(plan: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Fix every observation before sending and alternate prompt order."""
+    groups = probe_groups(plan)
     return [
         {
-            "trial_id": f"{cid}-{group}-1",
+            "trial_id": f"{cid}-{group}-{repetition}",
             "case_id": cid,
             "group": group,
-            "repetition": 1,
+            "repetition": repetition,
             "request_file": f"requests/{cid}-{group}.json",
         }
-        for index, cid in enumerate(CASE_IDS)
-        for group in (("V8", "V8C") if index % 2 == 0 else ("V8C", "V8"))
+        for repetition in range(1, 2 if plan is None else plan["repetitions"] + 1)
+        for index, cid in enumerate(CASE_IDS if plan is None else plan["case_ids"])
+        for group in (groups if (index + repetition - 1) % 2 == 0 else groups[::-1])
     ]
 
 
@@ -70,6 +132,7 @@ def project_case(
     binding: dict[str, Any],
     profile: dict[str, Any],
     package: Package,
+    plan: dict[str, Any] | None = None,
 ) -> tuple[dict[str, bytes], dict[str, Any]]:
     """Verify every historical chat before changing only the final system text."""
     need(
@@ -112,19 +175,29 @@ def project_case(
             baseline = request.body
     if baseline is None:
         raise ValueError("PROBE_FINAL_MISSING")
-    candidate_messages = copy.deepcopy(list(messages))
-    need(candidate_messages[0]["content"] == FINAL_SYSTEM, "PROBE_BASELINE_PROMPT")
-    candidate_messages[0] = {"role": "system", "content": CANDIDATE_SYSTEM}
-    candidate = prepare_chat_request(candidate_messages, context=context).body
-    left, right = json.loads(baseline), json.loads(candidate)
-    right["messages"][0]["content"] = left["messages"][0]["content"]
-    need(left == right, "PROBE_CHANGED_NON_PROMPT_INPUT")
-    return {"V8": baseline, "V8C": candidate}, {
+    need(messages[0]["content"] == FINAL_SYSTEM, "PROBE_BASELINE_PROMPT")
+    groups = probe_groups(plan)
+    systems = (
+        (FINAL_SYSTEM, CANDIDATE_SYSTEM)
+        if plan is None
+        else (CANDIDATE_SYSTEM, ABLATION_SYSTEM)
+    )
+    bodies = {}
+    left = json.loads(baseline)
+    for group, system in zip(groups, systems, strict=True):
+        projected_messages = copy.deepcopy(list(messages))
+        projected_messages[0] = {"role": "system", "content": system}
+        raw = prepare_chat_request(projected_messages, context=context).body
+        right = json.loads(raw)
+        right["messages"][0]["content"] = left["messages"][0]["content"]
+        need(left == right, "PROBE_CHANGED_NON_PROMPT_INPUT")
+        bodies[group] = raw
+    return bodies, {
         "case_id": row["case_id"],
         "source_run_id": row["run"]["run_id"],
         "original_requests": verified,
-        "baseline_request_sha256": digest(baseline),
-        "candidate_request_sha256": digest(candidate),
+        "baseline_request_sha256": digest(bodies[groups[0]]),
+        "candidate_request_sha256": digest(bodies[groups[1]]),
         "user_message_sha256": digest(left["messages"][1]["content"].encode()),
     }
 
@@ -143,15 +216,16 @@ def inputs(batch: Path) -> tuple[Package, dict[str, Any], dict[str, Any]]:
 
 def projections(
     batch: Path,
+    plan: dict[str, Any] | None = None,
 ) -> tuple[dict[str, dict[str, bytes]], list[dict[str, Any]]]:
     """Return the predetermined failed/control cohort; never select by new scores."""
     package, registration, evidence = inputs(batch)
     bindings = {r["case_id"]: r for r in registration["bindings"]}
     cases = {r["case_id"]: r for r in evidence["cases"]}
     projected, proofs = {}, []
-    for cid in CASE_IDS:
+    for cid in CASE_IDS if plan is None else plan["case_ids"]:
         bodies, proof = project_case(
-            cases[cid], bindings[cid], registration["profile"], package
+            cases[cid], bindings[cid], registration["profile"], package, plan
         )
         projected[cid] = bodies
         proofs.append(proof)
@@ -166,9 +240,11 @@ def prepare(
     prior_ledger: Path,
     database_name: str,
     database_id: str,
+    plan_path: Path | None = None,
 ) -> dict[str, Any]:
     """Freeze requests and a cost proposal; this is not a paid authorization."""
-    projected, proofs = projections(batch)
+    plan = None if plan_path is None else load_probe_plan(plan_path)
+    projected, proofs = projections(batch) if plan is None else projections(batch, plan)
     checks, ledger = read(preflight), read(prior_ledger)
     need(checks["ready"] is True, "PROBE_PREFLIGHT")
     need(
@@ -180,10 +256,14 @@ def prepare(
     )
     output.mkdir(exist_ok=False)
     (output / "requests").mkdir()
-    trials = schedule()
+    trials = schedule(plan)
     for trial in trials:
         raw = projected[trial["case_id"]][trial["group"]]
-        (output / trial["request_file"]).write_bytes(raw)
+        path = output / trial["request_file"]
+        if path.exists():
+            need(path.read_bytes() == raw, "PROBE_REPEATED_REQUEST_CHANGED")
+        else:
+            path.write_bytes(raw)
         trial["request_sha256"] = digest(raw)
     sources = {
         "original_evidence": digest((batch / "evidence.json").read_bytes()),
@@ -195,7 +275,7 @@ def prepare(
         "input_verification": save(output / "input-verification.json", proofs),
     }
     manifest = {
-        "schema_version": 4,
+        "schema_version": 4 if plan is None else 5,
         "experiment_id": output.name,
         "database_name": database_name,
         "database_id": database_id,
@@ -210,9 +290,16 @@ def prepare(
         "pricing": checks["pricing"],
         "trials": trials,
     }
+    if plan is not None:
+        assert plan_path is not None
+        (output / "probe-plan.json").write_bytes(plan_path.read_bytes())
+        sources["probe_plan"] = digest((output / "probe-plan.json").read_bytes())
+        manifest["probe"] = {k: plan[k] for k in ("case_ids", "repetitions")}
     return {
         "manifest_sha256": save(output / "manifest.json", manifest),
-        "candidate_version": CANDIDATE_VERSION,
+        "candidate_version": CANDIDATE_VERSION
+        if plan is None
+        else "support-agent-prompt-v8-contract-c2",
         "original_requests_verified": sum(len(p["original_requests"]) for p in proofs),
         "trials": len(trials),
         "paid_calls": 0,
@@ -221,10 +308,10 @@ def prepare(
 
 
 def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
-    """Keep all twelve trials and require all failures repaired with no control loss."""
+    """Keep every planned trial and require complete candidate observations."""
     manifest = read(experiment / "manifest.json")
-    need(manifest["schema_version"] == 4, "PROBE_MANIFEST_VERSION")
-    expected = schedule()
+    plan = experiment_plan(manifest, experiment)
+    expected = schedule(plan)
     need(
         [
             {k: t[k] for k in e}
@@ -253,7 +340,7 @@ def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
         read(experiment / "candidate-sources.json") == probe_sources(),
         "PROBE_CODE_CHANGED",
     )
-    projected, proofs = projections(batch)
+    projected, proofs = projections(batch) if plan is None else projections(batch, plan)
     need(proofs == read(experiment / "input-verification.json"), "PROBE_PROOF_CHANGED")
     records = ledger_calls(
         manifest, digest((experiment / "manifest.json").read_bytes()), read(ledger_path)
@@ -286,8 +373,10 @@ def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
                 "reasoning_budget": observation_budget(record),
             }
         )
+    baseline_group, candidate_group = probe_groups(plan)
     groups = {
-        group: [r for r in rows if r["group"] == group] for group in ("V8", "V8C")
+        group: [r for r in rows if r["group"] == group]
+        for group in (baseline_group, candidate_group)
     }
     metrics = {
         g: {
@@ -296,27 +385,33 @@ def score(batch: Path, experiment: Path, ledger_path: Path) -> dict[str, Any]:
         }
         for g, group in groups.items()
     }
-    complete = len(records) == 12 and all(
+    complete = len(records) == len(expected) and all(
         r["state"] == "known" for r in records.values()
     )
     improved = any(
         r["correct"]
-        and not next(b for b in groups["V8"] if b["case_id"] == r["case_id"])["correct"]
-        for r in groups["V8C"]
-        if r["case_id"] in FAILED_CASE_IDS
+        and not next(
+            b
+            for b in groups[baseline_group]
+            if (b["case_id"], b["repetition"]) == (r["case_id"], r["repetition"])
+        )["correct"]
+        for r in groups[candidate_group]
+        if r["case_id"] in (FAILED_CASE_IDS if plan is None else {"DEV-016"})
     )
     return {
-        "kind": "s5-v8-seen-contract-probe",
+        "kind": "s5-v8-seen-contract-probe"
+        if plan is None
+        else "s5-v8-description-gap-ablation",
         "thresholds_met": False,
         "not_end_to_end": True,
         "manifest_sha256": digest((experiment / "manifest.json").read_bytes()),
-        "denominator": 12,
+        "denominator": len(expected),
         "metrics": metrics,
         "supports_candidate": complete
-        and metrics["V8C"]["correct"] == 6
-        and metrics["V8C"]["full_evidence"] == 6
+        and metrics[candidate_group]["correct"] == len(expected) // 2
+        and metrics[candidate_group]["full_evidence"] == len(expected) // 2
         and improved,
-        "interpretation": "all_3_failures_repaired_all_3_controls_pass_and_live_paired_improvement_required; one_observation_per_cell_not_stability_proof",
+        "interpretation": "all_candidate_observations_correct_and_full_with_fresh_paired_improvement_required; not_stability_proof",
         "known_cost_microyuan": sum(r["known_cost"] or 0 for r in records.values()),
         "held_cost_microyuan": sum(
             r["reserved_cost"] for r in records.values() if r["state"] != "known"
@@ -349,7 +444,7 @@ def run(experiment: Path, review: Path) -> dict[str, Any]:
     )
     settings = read(Path(plan["settings"]))
     manifest = read(experiment / "manifest.json")
-    need(manifest["schema_version"] == 4, "PROBE_MANIFEST_VERSION")
+    experiment_plan(manifest, experiment)
     need(not (experiment / "attempted.json").exists(), "PROBE_ALREADY_ATTEMPTED")
     lock = Path(settings["stage_lock"])
     head = Path(str(lock) + ".inventory.json")
@@ -472,12 +567,12 @@ def run(experiment: Path, review: Path) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Only offline preparation/scoring; the existing Go sender owns paid HTTP."""
+    """Prepare/score offline or invoke the reviewed Go sender for paid HTTP."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("prepare", "score", "run"))
     parser.add_argument("--batch", type=Path)
     parser.add_argument("--output", type=Path)
-    for name in ("runner", "preflight", "prior-ledger", "experiment", "ledger"):
+    for name in ("runner", "preflight", "prior-ledger", "experiment", "ledger", "plan"):
         parser.add_argument("--" + name, type=Path)
     parser.add_argument("--database-name")
     parser.add_argument("--database-id")
@@ -512,6 +607,7 @@ def main() -> None:
                     args.prior_ledger,
                     args.database_name,
                     args.database_id,
+                    args.plan,
                 )
             )
         )
