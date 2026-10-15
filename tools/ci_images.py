@@ -136,6 +136,7 @@ def main() -> None:
             "/app/examples/support-agent/evaluation",
             "/app/tools/support_s5/replay.py",
             "/app/tools/support_s5/guard.py",
+            "/app/tools/support_s5/host",
             "/app/tools/support_diagnosis",
         ],
     )

@@ -1,5 +1,7 @@
 # S5 公平对照与冻结
 
+新开发批次使用[配置驱动的共享工作流](host/README.md)和 [ADR-0039](../../docs/adr/0039-s5-startup-review-and-automatic-health.md)：一次启动审查，逐案自动健康检查，第 10 案自动继续；质量失败与安全停发分开。下文旧版本的执行顺序与暂停条件保留作历史背景，新批次以 ADR-0039 为准。当前 v8 已实现，直接准备完整开发回归，不补诊断。本次工作流改造不授权收费。
+
 当前候选按 [ADR-0038](../../docs/adr/0038-policy-bundle-before-adjudication.md) 实现完整政策前置读取：Agent schema16 / prompt-v8 / executor5，Fixed schema17 / prompt-v2 / fixed-executor2。Go 在任何模型调用前执行 `read_policy_bundle`，一次业务 HTTP 取得授权快照索引全部 20 段，无 embedding；工具上限 32 KiB，原搜索仍 top-3/8 KiB。调查保留事实读取选择，final 使用同一提示、事实与完整政策，不带初稿、工具额度或补证分支；只接受嵌套 final envelope，不做格式重试。每 Run 仍为 8 工具/12 chat/44 物理调用，两策略均为一次 16,384 completion / 120 秒终裁，family token 12,610,560。完整政策可读不代表业务质量通过。
 
 新冻结只接受 `(16,17)`，绑定三个已见正式包。build receipt 必须使用 `source_hashes(16)`，在旧集合外纳入 `internal/runprotocol/v2`、`internal/runinput`、executor v2 schema 与生成的 Agent RPC 代码；正式冻结仍要求干净提交。新未见集尚未创建，`DATASET_V4` 尚未绑定；届时同步 `s5-agent-v8` / `s5-fixed-v5` 的登记路由与 dataset 枚举。

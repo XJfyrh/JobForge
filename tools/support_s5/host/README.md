@@ -1,0 +1,33 @@
+# 新批次共享工作流
+
+当前入口仅用于 v8 schema16/17 的完整开发 40 案，规则见 [ADR-0039](../../../docs/adr/0039-s5-startup-review-and-automatic-health.md)。它取代逐版本复制的 `prepare_phase.py`、`manifest_checks.py`、`ledger.py`、`run_phase.py` 和私有 operator wrapper。历史脚本及证据只读保留；旧批次不迁移、不续跑。
+
+先完成一个明确假设的最小诊断，收益成立才实现并完整回归；v8 已完成实现，直接回归。固定输入诊断复用现有 `tools.support_diagnosis`，冻结复用 `tools.support_s5.freeze`，不增加新平台或阶段次数/时间预算。
+
+在仓库根目录激活开发 `.venv`（或用 `.venv/Scripts/python.exe`）。共享宿主入口明确加载本 checkout 的 `python`、`sdk/python` 源码，避免旧批次已安装包漂移；不依赖 pytest 或额外 `PYTHONPATH`。配置从 [example.config.json](example.config.json) 复制到仓库外的当前工作目录，填入真实路径及预先确定的范围：
+
+- `source` 是现有 Go `prepare-support` 接受的候选源文件；候选、模型/价格、资源、构建/数据/评分/价格收据均由该文件绑定。提示词修改只维护必要版本。
+- `build_receipt` 必须绑定当前干净提交的 `source_hashes(16/17)` 和四个固定 image ID。审计标签修复后必须重建，不能沿用旧 v8 镜像。构建仍复用现有 Dockerfile/构建流程。
+- `inventory` 明列全部历史控制库及一个新库，逐行指定 `container/user/database`，诊断库加 `diagnosis: true`。`prior_ledger` 指向最近完整历史账本；不能遗漏其中任何库或复用其库名。以当前暂停状态为起点是 29 个历史库，再加新库；原始文件不改写。已记载的容器/角色绑定不能改变，各历史库 known 不能下降；旧账本未记容器时通过这份受审清单一次明确，仍检查 known 连续性。合法 full hold 结算下降不受阻。
+- `secrets` 是私有目录，包含 `control.env`、`business.env`、`worker.json`、`driver.json`；控制 DSN、Worker 身份/凭据与新库、新 profile 保持一致。只记录文件摘要，不输出内容。网络、ollama 与 business-postgres 别名沿用现有部署，业务数据/索引事先准备。
+- `identity` 填入新的 profile、worker、batch、batch key、两租户预算 UUID 和 UTC 起点；既有准备命令生成六小时有效窗。`container_prefix` 使用唯一 `jobforge-s5-...` 名称。
+- 同一 S5 使用同一个绝对路径 `stage_lock`，包括并发会话。其旁的 `.inventory.json` 记录已启动身份及最新账本，在发送前登记、闭账后刷新；后启动的旧配置遗漏新库会被拒绝，须复核配置差异，不能删除或重建清单绕过。金额可收紧，当前上限每批 ¥4/累计 ¥28；`full_hold_microyuan` 须与登记价格重新计算结果一致。
+
+```powershell
+python -m tools.support_s5.host.workflow prepare --config E:/CURRENT/config.json --output E:/CURRENT/NEW-BATCH
+```
+
+`prepare` 生成新目录、新身份的 prepared 配置、登记、固定 Docker 命令、账本和 `manifest.json`；创建新控制库并 bootstrap disabled，准备原 launcher 的单次启动状态。它不启动 Worker、不提交 Run、不调用模型。失败时保留准备痕迹，不能覆盖原目录/数据库重试；先查明原因，必要时用新身份准备。它不自动生成新候选、诊断结论或正式保留集。
+
+维护者批准 manifest 的具体范围和金额，独立审查核对实现、免费检查及 manifest；将实际意见转录到 [example.startup-review.json](example.startup-review.json) 的结构，附原始授权/审查证据路径和 SHA-256。这份 JSON 是证据绑定记录，不能替代人实际作出的授权或独立审查，也不自带签名认证。工作流方案的批准不能填作具体收费批准。
+
+```powershell
+python -m tools.support_s5.host.workflow check --batch E:/CURRENT/NEW-BATCH --review E:/CURRENT/startup-review.json
+python -m tools.support_s5.host.workflow run --batch E:/CURRENT/NEW-BATCH --review E:/CURRENT/startup-review.json
+```
+
+`check` 只核对摘要和版本；`run` 才启动批准的批次。健康检查覆盖每案，包括第 10 案，自动释放下一案。容器仅收到身份/哈希及 continue/stop，不收到 gold 或分数；任何宿主检查异常都不会放行下一案。普通错答、引用不全、一次已闭账格式失败计为质量失败；unknown、身份/来源异常、未经批准写入、政策包实际缺段、门槛不可达或预定义系统性失败停发。每次模型调用仍由 Go/PostgreSQL 许可和完整预留保护。
+
+生成的 `checkpoints/NN` 保留全部逐案证据、score、累计账本和决策；批后保留 `evidence.json`、`score.json`、`closed-ledger.json`、`result.json`，费用标记为 observed-usage 估算。异常保留 `workflow-error.json` 和已有原始文件；清理失败保留启动锁，需要核对残留进程后人工处理。无自动重试、补样、旧名单续跑或自动版本开发。
+
+批后一次审阅全部结果并决定下一步。`engineering_complete` 与 `model_quality_passed` 分列；这里的模型门槛是开发回归，不能代替 S5 总体验收。修复后只审查差异；范围/候选/模型/费用/权限变化须形成新绑定。文档只维护当前状态和实际结果，历史证据不改写。

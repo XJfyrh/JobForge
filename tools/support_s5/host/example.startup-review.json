@@ -1,0 +1,15 @@
+{
+  "manifest_sha256": "REPLACE_WITH_MANIFEST_SHA256",
+  "maintainer": {
+    "identity": "REPLACE_WITH_ACTUAL_MAINTAINER",
+    "decision": "pending",
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "evidence": {"path": "E:/CURRENT/actual-maintainer-authorization.txt", "sha256": "REPLACE"}
+  },
+  "independent_review": {
+    "identity": "REPLACE_WITH_ACTUAL_REVIEWER",
+    "decision": "pending",
+    "evidence": {"path": "E:/CURRENT/actual-independent-review.txt", "sha256": "REPLACE"}
+  }
+}

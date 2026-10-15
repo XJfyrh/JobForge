@@ -272,7 +272,7 @@ def export_known(
     atomic_json(target / "rows.json", {"schema_version": 1, "cases": rows})
 
 
-def main(*, s5: bool = False) -> int:
+def main(*, s5: bool = False, driver_type: type[Driver] = Driver) -> int:
     """The launch mode is invoked only by the fixed parent supervisor."""
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("launch", "export"))
@@ -297,7 +297,7 @@ def main(*, s5: bool = False) -> int:
                 raise BatchStopped("ORIGINAL_EXPORT_REQUIRED")
             export_known(manifest, args.original, output, keys)
         else:
-            driver = Driver(
+            driver = driver_type(
                 manifest,
                 output,
                 keys,
