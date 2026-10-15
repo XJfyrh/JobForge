@@ -27,7 +27,11 @@ from tools.support_s5.host.config import (
     validate_sources,
     verify_bound,
 )
-from tools.support_s5.host.health import money_reasons, stop_reasons
+from tools.support_s5.host.health import (
+    money_reasons,
+    quality_gate_applies,
+    stop_reasons,
+)
 from tools.support_s5.score import score_export
 
 
@@ -425,7 +429,13 @@ def advance(config: dict[str, Any], batch: Path, prior: int) -> None:
         if [r["case_id"] for r in score["cases"]] != config["case_ids"]:
             raise ValueError("SCORE_CASE_ORDER")
         reasons = stop_reasons(
-            score, evidence, ordinal, sample, prior, config["policy"]
+            score,
+            evidence,
+            ordinal,
+            sample,
+            prior,
+            config["policy"],
+            read(batch / "registration.json"),
         )
         save_new(
             target / "decision.json",
@@ -639,23 +649,28 @@ def run(batch: Path, review: Path) -> None:
             raise ValueError("LAUNCHER_FAILED_BEFORE_EXPORT")
         _, score = snapshot(config, batch, batch)
         closed = ledger.collect(config["inventory"])
+        quality_applies = quality_gate_applies(read(batch / "registration.json"))
         result = {
             "engineering_complete": True,
-            "model_quality_passed": score["correct_count"]
-            >= config["policy"]["minimum_correct"]
-            and score["full_case_evidence_count"]
-            >= config["policy"]["minimum_full_evidence"]
-            and not any(score["hard_failure_cases"].values())
-            and score["proposal_audit_complete"]
-            and not any(
-                closed["totals"][k]
-                for k in (
-                    "unknown_chat_calls",
-                    "held",
-                    "inflight",
-                    "unfinished_attempts",
+            "model_quality_applicable": quality_applies,
+            "model_quality_passed": (
+                score["correct_count"] >= config["policy"]["minimum_correct"]
+                and score["full_case_evidence_count"]
+                >= config["policy"]["minimum_full_evidence"]
+                and not any(score["hard_failure_cases"].values())
+                and score["proposal_audit_complete"]
+                and not any(
+                    closed["totals"][k]
+                    for k in (
+                        "unknown_chat_calls",
+                        "held",
+                        "inflight",
+                        "unfinished_attempts",
+                    )
                 )
-            ),
+            )
+            if quality_applies
+            else None,
             "scope": "development_regression_not_s5_overall_acceptance",
             "score_sha256": digest(batch / "score.json"),
             "denominator": score["denominator"],
@@ -664,6 +679,13 @@ def run(batch: Path, review: Path) -> None:
             "ledger": closed["totals"],
             "post_batch_review": "pending",
         }
+        if not quality_applies:
+            result["baseline_collection_complete"] = (
+                score["denominator"] == config["policy"]["case_count"]
+                and ledger.query(current)["runs"] == config["policy"]["case_count"]
+                and score["proposal_audit_complete"]
+                and not any(score["hard_failure_cases"].values())
+            )
     except Exception as error:
         atomic_json(
             batch / "workflow-error.json",
@@ -686,9 +708,7 @@ def run(batch: Path, review: Path) -> None:
                 save_new(batch / "closed-ledger.json", final_ledger)
                 if result is not None:
                     result["ledger"] = final_ledger["totals"]
-                    result["model_quality_passed"] = result[
-                        "model_quality_passed"
-                    ] and not any(
+                    exposure_closed = not any(
                         final_ledger["totals"][k]
                         for k in (
                             "held",
@@ -697,6 +717,10 @@ def run(batch: Path, review: Path) -> None:
                             "unfinished_attempts",
                         )
                     )
+                    if result["model_quality_applicable"]:
+                        result["model_quality_passed"] &= exposure_closed
+                    else:
+                        result["baseline_collection_complete"] &= exposure_closed
         except Exception:
             save_new(
                 batch / "cleanup-error.json",

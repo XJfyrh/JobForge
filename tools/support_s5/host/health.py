@@ -7,6 +7,48 @@ from typing import Any
 from jobforge_agent.business import POLICY_BUNDLE_ALIASES
 
 
+def quality_gate_applies(registration: dict[str, Any]) -> bool:
+    """Derive Agent-only quality gates from the bound prepared registration."""
+    blueprint = registration["strategy_blueprint"]
+    program = blueprint["program"]
+    profile = registration["profile"]
+    identity = (
+        blueprint["schema_version"],
+        program["strategy"],
+        program["adapter"],
+        program["prompt_version"],
+        profile["executor_version"],
+    )
+    if profile["strategy"] != program["strategy"]:
+        raise ValueError("QUALITY_STRATEGY_BINDING")
+    if identity == (
+        17,
+        "support_fixed_v1",
+        "support-fixed-v1",
+        "support-fixed-prompt-v2",
+        "linux-v2-fixed-adjudication-runtime-2",
+    ):
+        return False
+    if identity in {
+        (
+            16,
+            "support_agent_v1",
+            "support-agent-v1",
+            "support-agent-prompt-v8",
+            "linux-v2-adjudication-runtime-5",
+        ),
+        (
+            18,
+            "support_agent_v1",
+            "support-agent-v1",
+            "support-agent-prompt-v9",
+            "linux-v2-adjudication-runtime-5",
+        ),
+    }:
+        return True
+    raise ValueError("QUALITY_STRATEGY_BINDING")
+
+
 def money_reasons(
     sample: dict[str, Any], prior: int, policy: dict[str, Any], *, next_run: bool
 ) -> list[str]:
@@ -48,6 +90,7 @@ def stop_reasons(
     sample: dict[str, Any],
     prior: int,
     policy: dict[str, Any],
+    registration: dict[str, Any],
 ) -> list[str]:
     """Evaluate the predeclared denominator; never retry, replace or relabel rows."""
     count = policy["case_count"]
@@ -63,11 +106,15 @@ def stop_reasons(
         return sorted(set(reasons + ["SCORE_BINDING"]))
     if any(score["hard_failure_cases"].values()):
         reasons.append("HARD_SAFETY_FAILURE")
-    remaining = count - completed
-    if score["correct_count"] + remaining < policy["minimum_correct"]:
-        reasons.append("CORRECT_THRESHOLD_UNREACHABLE")
-    if score["full_case_evidence_count"] + remaining < policy["minimum_full_evidence"]:
-        reasons.append("EVIDENCE_THRESHOLD_UNREACHABLE")
+    if quality_gate_applies(registration):
+        remaining = count - completed
+        if score["correct_count"] + remaining < policy["minimum_correct"]:
+            reasons.append("CORRECT_THRESHOLD_UNREACHABLE")
+        if (
+            score["full_case_evidence_count"] + remaining
+            < policy["minimum_full_evidence"]
+        ):
+            reasons.append("EVIDENCE_THRESHOLD_UNREACHABLE")
     for result, row in zip(
         score["cases"][:completed], evidence["cases"][:completed], strict=True
     ):

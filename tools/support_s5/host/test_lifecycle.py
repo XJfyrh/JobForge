@@ -15,8 +15,9 @@ from tools.support_s5.host import config, ledger, workflow
 
 
 @pytest.mark.parametrize("failure", ["none", "lost_start", "cleanup", "no_export"])
+@pytest.mark.parametrize("schema", [16, 17, 18])
 def test_prepare_run_and_restart_refusal_preserve_one_identity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str, schema: int
 ) -> None:
     """Real orchestration binds generated files; fake Docker never sends a request."""
     source_path, build_path, prior_path = (
@@ -28,9 +29,18 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         (secret / name).write_text("synthetic; contains no real credentials")
     proof = tmp_path / "synthetic-proof.txt"
     proof.write_text("Offline fixture. No actual authorization or model execution.")
+    fixed = schema == 17
+    strategy = "support_fixed_v1" if fixed else "support_agent_v1"
     source = {
         "definition": {
-            "schema_version": 16,
+            "schema_version": schema,
+            "program": {
+                "strategy": strategy,
+                "adapter": "support-fixed-v1" if fixed else "support-agent-v1",
+                "prompt_version": "support-fixed-prompt-v2"
+                if fixed
+                else f"support-agent-prompt-v{8 if schema == 16 else 9}",
+            },
             "model": {"request_model": "synthetic"},
             "final_model": {"request_model": "synthetic"},
         },
@@ -143,7 +153,12 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         workflow,
         "register",
         lambda *a, **k: {
+            "strategy_blueprint": source["definition"],
             "profile": {
+                "strategy": strategy,
+                "executor_version": "linux-v2-fixed-adjudication-runtime-2"
+                if fixed
+                else "linux-v2-adjudication-runtime-5",
                 "max_input_tokens": 1048576,
                 "pricing": {
                     "input_miss_microyuan": 2000000,
@@ -151,7 +166,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
                     "output_microyuan": 8000000,
                     "denominator": 1000000,
                 },
-            }
+            },
         },
     )
     current: dict[str, Any] = {
@@ -204,6 +219,7 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         def __init__(self, argv: list[str], **_: Any) -> None:
             launches.append(argv)
             containers[settings["container_prefix"] + "-paid"] = False
+            current["runs"] = 40
 
         def poll(self) -> int:
             return 0
@@ -218,8 +234,8 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         _: Any, __: Any, target: Path
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         score = {
-            "correct_count": 39,
-            "full_case_evidence_count": 39,
+            "correct_count": 8 if fixed else 39,
+            "full_case_evidence_count": 8 if fixed else 39,
             "hard_failure_cases": {"unauthorized_access": 0},
             "proposal_audit_complete": True,
             "denominator": 40,
@@ -250,7 +266,12 @@ def test_prepare_run_and_restart_refusal_preserve_one_identity(
         return
     workflow.run(batch, review_path)
     assert len(launches) == 1
-    assert read(batch / "result.json")["model_quality_passed"] is True
+    result = read(batch / "result.json")
+    assert result["model_quality_applicable"] is not fixed
+    assert result["model_quality_passed"] is (None if fixed else True)
+    if fixed:
+        assert result["baseline_collection_complete"] is True
+        assert result["correct"] == 8
     assert not Path(settings["stage_lock"]).exists()
     before = {
         p.relative_to(batch): p.read_bytes() for p in batch.rglob("*") if p.is_file()

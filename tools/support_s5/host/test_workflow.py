@@ -16,6 +16,30 @@ from tools.support_s5 import checkpoint
 from tools.support_s5.host import config, health, ledger, workflow
 
 
+def registration(schema: int = 16) -> dict[str, Any]:
+    """Represent only the already registered Agent16/18 and Fixed17 identities."""
+    fixed = schema == 17
+    strategy = "support_fixed_v1" if fixed else "support_agent_v1"
+    return {
+        "strategy_blueprint": {
+            "schema_version": schema,
+            "program": {
+                "strategy": strategy,
+                "adapter": "support-fixed-v1" if fixed else "support-agent-v1",
+                "prompt_version": "support-fixed-prompt-v2"
+                if fixed
+                else f"support-agent-prompt-v{8 if schema == 16 else 9}",
+            },
+        },
+        "profile": {
+            "strategy": strategy,
+            "executor_version": "linux-v2-fixed-adjudication-runtime-2"
+            if fixed
+            else "linux-v2-adjudication-runtime-5",
+        },
+    }
+
+
 def inputs(
     completed: int = 10,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -83,11 +107,13 @@ def inputs(
         "identity",
         "unknown",
         "unreachable",
+        "correct_unreachable",
         "systemic",
         "full_hold",
     ],
 )
-def test_health_distinguishes_quality_from_mechanism(failure: str) -> None:
+@pytest.mark.parametrize("schema", [16, 17, 18])
+def test_health_distinguishes_quality_from_mechanism(failure: str, schema: int) -> None:
     """Bad claims/one format failure continue; unsafe or unreachable batches stop."""
     score, evidence, sample = inputs()
     expected = None
@@ -105,7 +131,10 @@ def test_health_distinguishes_quality_from_mechanism(failure: str) -> None:
         expected = "UNKNOWN_USAGE"
     elif failure == "unreachable":
         score["full_case_evidence_count"] = 7
-        expected = "EVIDENCE_THRESHOLD_UNREACHABLE"
+        expected = "EVIDENCE_THRESHOLD_UNREACHABLE" if schema != 17 else None
+    elif failure == "correct_unreachable":
+        score["correct_count"] = 5
+        expected = "CORRECT_THRESHOLD_UNREACHABLE" if schema != 17 else None
     elif failure == "full_hold":
         sample["known"] = 4_000_000 - 2_228_224 + 1
         expected = "INSUFFICIENT_FULL_RESERVATION"
@@ -116,10 +145,32 @@ def test_health_distinguishes_quality_from_mechanism(failure: str) -> None:
             expected = "SYSTEMIC_PROTOCOL_FAILURE"
     original = copy.deepcopy((score, evidence, sample))
     reasons = health.stop_reasons(
-        score, evidence, 10, sample, 13_212_370, config.POLICY
+        score, evidence, 10, sample, 13_212_370, config.POLICY, registration(schema)
     )
     assert (expected in reasons) if expected else not reasons
     assert (score, evidence, sample) == original
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["schema", "strategy", "adapter", "prompt", "executor", "profile_strategy"],
+)
+def test_quality_role_rejects_mixed_registration(mutation: str) -> None:
+    """Relabeling one field cannot exempt a candidate from its quality gate."""
+    value = registration(17)
+    blueprint, profile = value["strategy_blueprint"], value["profile"]
+    if mutation == "schema":
+        blueprint["schema_version"] = 18
+    elif mutation in {"strategy", "adapter"}:
+        blueprint["program"][mutation] = "support_agent_v1"
+    elif mutation == "prompt":
+        blueprint["program"]["prompt_version"] = "support-agent-prompt-v9"
+    elif mutation == "executor":
+        profile["executor_version"] = "linux-v2-adjudication-runtime-5"
+    else:
+        profile["strategy"] = "support_agent_v1"
+    with pytest.raises(ValueError, match="QUALITY_STRATEGY_BINDING"):
+        health.quality_gate_applies(value)
 
 
 def test_reservation_boundary_and_final_case() -> None:
@@ -146,6 +197,7 @@ def test_case_ten_releases_automatically_and_cannot_reopen(
         "cases": [{"ordinal": i, "case_id": f"DEV-{i:03d}"} for i in range(1, 41)],
     }
     save_new(batch / "prepared/launch.json", launch)
+    save_new(batch / "registration.json", registration())
     monkeypatch.setattr(driver, "CONFIG", batch / "prepared")
     monkeypatch.setattr(checkpoint, "GUARD", batch / "guard")
     instance = checkpoint.CheckpointDriver(launch, batch / "exports/one", {})

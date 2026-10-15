@@ -30,6 +30,8 @@ python -m tools.support_s5.host.workflow run --batch E:/CURRENT/NEW-BATCH --revi
 
 生成的 `checkpoints/NN` 保留全部逐案证据、score、累计账本和决策；批后保留 `evidence.json`、`score.json`、`closed-ledger.json`、`result.json`，费用标记为 observed-usage 估算。异常保留 `workflow-error.json` 和已有原始文件；清理失败保留启动锁，需要核对残留进程后人工处理。无自动重试、补样、旧名单续跑或自动版本开发。
 
+36/40正确、38/40完整证据及其可达上界是Agent候选门槛。已验证注册为schema17 / `support_fixed_v1` / prompt-v2 / fixed-executor2的基线收集完整40案，不按Agent分数提前停止；其余安全、费用、绑定、政策包及系统性格式停发规则相同。角色由绑定的prepared注册源推导，无配置开关。Fixed结果记录`model_quality_applicable=false`、`model_quality_passed=null`和独立的`baseline_collection_complete`，低分不称候选质量通过。
+
 批后一次审阅全部结果并决定下一步。`engineering_complete` 与 `model_quality_passed` 分列；这里的模型门槛是开发回归，不能代替 S5 总体验收。修复后只审查差异；范围/候选/模型/费用/权限变化须形成新绑定。文档只维护当前状态和实际结果，历史证据不改写。
 
 ## 已见输出约束诊断
