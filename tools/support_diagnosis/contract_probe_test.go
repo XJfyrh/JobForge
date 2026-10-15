@@ -171,6 +171,13 @@ func TestConfiguredAblationManifestBindsCohortAndRepetitions(t *testing.T) {
 		}
 	}
 	check(true)
+	originalName := m.DatabaseName
+	prefix := "jobforge_s5_diagnosis_"
+	m.DatabaseName = prefix + strings.Repeat("a", 63-len(prefix))
+	check(true)
+	m.DatabaseName += "a"
+	check(false)
+	m.DatabaseName = originalName
 	for _, mutation := range []string{"missing_plan", "duplicate_case", "unknown_case", "missing_target", "repetitions", "order", "source", "old_schema", "group"} {
 		original := encoded(t, m)
 		switch mutation {

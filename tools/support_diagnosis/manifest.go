@@ -115,7 +115,7 @@ func LoadManifest(path string) (Manifest, []byte, error) {
 		return m, nil, ErrInvalid
 	}
 	if (m.SchemaVersion < 1 || m.SchemaVersion > 5) || !run.ValidIdentifier(m.ExperimentID) ||
-		!strings.HasPrefix(m.DatabaseName, "jobforge_s5_diagnosis_") || uuid.Validate(m.DatabaseID) != nil ||
+		!strings.HasPrefix(m.DatabaseName, "jobforge_s5_diagnosis_") || len(m.DatabaseName) > 63 || uuid.Validate(m.DatabaseID) != nil ||
 		m.MaxInputTokens != maxInputTokens || m.MaxOutputTokens != maxOutputTokens ||
 		m.PriorCost < 0 || m.PriorCost >= m.CostCap || m.CostCap != costCap || m.BatchCap != 4000000 ||
 		m.Pricing.Denominator != 1000000 || m.Pricing.InputMissMicroyuan != 2000000 ||
