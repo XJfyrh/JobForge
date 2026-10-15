@@ -1,0 +1,553 @@
+{
+  "schema_version": 1,
+  "kind": "s5-v8-seen-contract-probe-result",
+  "recorded_at": "2026-10-15T06:46:47.327283+00:00",
+  "scope": "six_seen_cases_fixed_input_only_not_end_to_end",
+  "question": "Only restore three omitted output requirements: repair the three seen failures while retaining three matched controls.",
+  "source_commit": "e6c176afd280dffd904e8b9c8199edb0869085a4",
+  "candidate": "support-agent-prompt-v8-contract-c1",
+  "identity": {
+    "experiment_id": "v8-contract-c1-reviewed-20261015",
+    "database_name": "jobforge_s5_diagnosis_contract_db3bf9d6115d4dbe87d0481b95c29446",
+    "database_id": "31124062-86d8-4aa7-9daa-655f212d9f2d"
+  },
+  "manifest_sha256": "20ece6d556d14c44fd5c0f2de455e3f7607c804d2840fdb9f87c171caa313e50",
+  "startup_manifest_sha256": "088a22b1737f4d67fc80157930e03bccd0b08f16352f17f821e2f2383794b4ff",
+  "authorized_policy": {
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "valid_until": "2026-10-15T12:29:58.847447+00:00"
+  },
+  "engineering_complete": true,
+  "model_quality_passed": false,
+  "s5_overall_accepted": false,
+  "candidate_promoted": false,
+  "cohort_case_count": 6,
+  "original_denominator": 12,
+  "executed": 12,
+  "unique_trials": 12,
+  "unattempted": 0,
+  "new_production_runs": 0,
+  "metrics": {
+    "V8": {
+      "protocol": 5,
+      "sources": 5,
+      "correct": 4,
+      "full_evidence": 4
+    },
+    "V8C": {
+      "protocol": 6,
+      "sources": 6,
+      "correct": 5,
+      "full_evidence": 5
+    }
+  },
+  "supports_candidate": false,
+  "candidate_support_criteria": {
+    "candidate_correct_required": 6,
+    "candidate_full_evidence_required": 6,
+    "fresh_paired_improvement_on_original_failure_required": true
+  },
+  "observed_failures": [
+    {
+      "trial_id": "DEV-017-V8-1",
+      "outcome": "invalid_final",
+      "defect": "decision is the illegal enum insufficient; the output also requests delivery.usable_tracking_events although only order.delivery_id is missing",
+      "classification": "single auditable protocol failure; retained and subsequent fixed trials continued"
+    },
+    {
+      "trial_id": "DEV-027-V8-1",
+      "outcome": "final",
+      "defect": "valid critical claim and correct decision, but the separately required timing claim is absent",
+      "classification": "quality failure"
+    },
+    {
+      "trial_id": "DEV-016-V8C-1",
+      "outcome": "final",
+      "defect": "only ticket.order_id is missing; the candidate adds a false missing ticket.problem_description claim and requests that extra field",
+      "classification": "candidate quality failure and regression of a fresh V8 passing control"
+    }
+  ],
+  "interpretation": "The candidate improved two fresh failing observations but regressed DEV-016. Its 5-of-6 result fails the declared 6-of-6 rule; DEV-004 passed in both groups. One observation per cell is not a stability or production-benefit proof.",
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "usage_total": {
+    "input_tokens": 59928,
+    "cached_input_tokens": 34556,
+    "output_tokens": 39294,
+    "reasoning_tokens": 37781
+  },
+  "cost_by_group_microyuan": {
+    "V8": 172096,
+    "V8C": 194390
+  },
+  "usage_cost_microyuan": 366486,
+  "held_cost_microyuan": 0,
+  "stage_remaining_microyuan": 13005459,
+  "closure": {
+    "database_count": 32,
+    "totals": {
+      "runs": 574,
+      "chat_calls": 2464,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 14994541,
+      "held": 0
+    },
+    "sender_exit_code": 0,
+    "shared_stage_lock_released": true,
+    "systemic_format_stop_triggered": false,
+    "all_12_usage_known": true,
+    "no_retry_or_replacement": true,
+    "old_31_database_counts_and_costs_unchanged": true
+  },
+  "independent_review": {
+    "status": "independently_accepted_for_report_and_financial_closure",
+    "recorded_at": "2026-10-15T06:45:02.809761+00:00",
+    "accepted": {
+      "original_report_and_score": true,
+      "engineering_completion_and_financial_closure": true,
+      "model_benefit_sufficient_for_production": false,
+      "candidate_quality": false,
+      "development_or_formal_acceptance": false,
+      "stability": false,
+      "automatic_promotion": false
+    }
+  },
+  "runtime_result_review_field_preserved": "post_batch_review=pending; actual review stored separately",
+  "original_v8_development_result_preserved": {
+    "denominator": 40,
+    "correct": 24,
+    "full_evidence": 24,
+    "quality_failures": 3,
+    "unattempted": 13
+  },
+  "not_accepted": [
+    "candidate_quality_or_production_promotion",
+    "development_or_formal_acceptance",
+    "stability",
+    "platform_invoice_settlement"
+  ],
+  "not_started": [
+    "successor_candidate",
+    "production_promotion",
+    "full_development_rerun",
+    "formal_or_unseen_batch"
+  ],
+  "next_question": "Separate an ordinary status inquiry from a vague actual problem under unchanged P03 and existing reviewed semantic anchors; review this boundary offline before proposing another candidate.",
+  "observations": [
+    {
+      "trial_id": "DEV-003-V8-1",
+      "case_id": "DEV-003",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-003-V8.json",
+      "request_sha256": "688735059e63bd298e0b308e6c290646e9935fe2feb46cba7660088806ae2564",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5082,
+        "cached_input_tokens": 4864,
+        "output_tokens": 2402,
+        "reasoning_tokens": 2284
+      },
+      "known_cost_microyuan": 19847,
+      "elapsed_ms": 13479,
+      "response_sha256": "b881d4b7f0b15dd2f1fcb4c136cccd8e1b036d3cdde871561bb82f82bb6974f7",
+      "report_sha256": "6d794d722b4328d320e9ef6bce3b889d914624805d72c64b73ce9e0bd9abdb71",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-003-V8C-1",
+      "case_id": "DEV-003",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-003-V8C.json",
+      "request_sha256": "463942944469aadfe5e64148c1a1b14d2c492ff30cfa1a957aaa343efd4ca844",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5352,
+        "cached_input_tokens": 768,
+        "output_tokens": 3431,
+        "reasoning_tokens": 3322
+      },
+      "known_cost_microyuan": 36647,
+      "elapsed_ms": 19600,
+      "response_sha256": "65a11070abd78462dfb1f38fa1ceeeabdedd736627883cba486a59ab542b2e38",
+      "report_sha256": "8460cf2f5f8896e592e54b0ea8e1998592720b36c478cf3c4e201bf3826545f6",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-004-V8C-1",
+      "case_id": "DEV-004",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-004-V8C.json",
+      "request_sha256": "26f0a7f3307b441672b35c52d333c654adfba04288ae2111e0c028acbcc8a2c8",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5130,
+        "cached_input_tokens": 1152,
+        "output_tokens": 1811,
+        "reasoning_tokens": 1703
+      },
+      "known_cost_microyuan": 22491,
+      "elapsed_ms": 10825,
+      "response_sha256": "16367eb2692f9f8bdcab2140b04b3a70caf83d52089ecfe0c65bfdd66e9615ae",
+      "report_sha256": "d54dcb003c4c510e0edb69a87f1f8f5bbcd2f39e62acbf588ec2a2e0267674be",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-004-V8-1",
+      "case_id": "DEV-004",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-004-V8.json",
+      "request_sha256": "eb9c4ea36a76495aff557bfaae6e8c3048242dbb22d6a42cf80d1360c26e4c62",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 4860,
+        "cached_input_tokens": 4608,
+        "output_tokens": 1806,
+        "reasoning_tokens": 1688
+      },
+      "known_cost_microyuan": 15137,
+      "elapsed_ms": 10278,
+      "response_sha256": "66b04b64e992fcceeccbe680b31a8df6e667842730e650463dfcc42021112422",
+      "report_sha256": "9f7b679725e8de11218cffb2b51daa70e30b086f9c443b40645adb2e1afbcf36",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-016-V8-1",
+      "case_id": "DEV-016",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-016-V8.json",
+      "request_sha256": "a357920fdb3b204a43e40dfa46e5fa159ef9f34128929f1184de3bc9258e687e",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 4375,
+        "cached_input_tokens": 4224,
+        "output_tokens": 1865,
+        "reasoning_tokens": 1776
+      },
+      "known_cost_microyuan": 15391,
+      "elapsed_ms": 11573,
+      "response_sha256": "d4a1ac355fb955aae6d069cf62412a479c6c34b7f2fb0dccab0e6ab9f71b2248",
+      "report_sha256": "ce44ce8bf1670ca0fee07fcfe8cc3ca26be91bc2a01d3b5bad010a1066a28838",
+      "requested_fields": [
+        "ticket.order_id"
+      ]
+    },
+    {
+      "trial_id": "DEV-016-V8C-1",
+      "case_id": "DEV-016",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-016-V8C.json",
+      "request_sha256": "a15fe378d9668be5149f55a3cb23997de0ca9f3dda25341b2e99e06f6ff0d891",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": false,
+      "full_evidence": false,
+      "usage": {
+        "input_tokens": 4645,
+        "cached_input_tokens": 1152,
+        "output_tokens": 3770,
+        "reasoning_tokens": 3652
+      },
+      "known_cost_microyuan": 37193,
+      "elapsed_ms": 22666,
+      "response_sha256": "845308518ca62e1d4e0b342cc47e35227af402ad603201ae69fcb74f5274d54e",
+      "report_sha256": "93f1578629f810863afe2903dc6ac22885592fb4b8b419fe2928a56cd7fb46a0",
+      "requested_fields": [
+        "ticket.order_id",
+        "ticket.problem_description"
+      ]
+    },
+    {
+      "trial_id": "DEV-017-V8C-1",
+      "case_id": "DEV-017",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-017-V8C.json",
+      "request_sha256": "f8c08b032180ef944e2c37f80edb3e46db064b7109d59816e7981f67f2e2272b",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5178,
+        "cached_input_tokens": 1152,
+        "output_tokens": 1726,
+        "reasoning_tokens": 1622
+      },
+      "known_cost_microyuan": 21907,
+      "elapsed_ms": 9584,
+      "response_sha256": "8ad096d6a13e0e3ad85354c9476a408ec876941611485a648ef503108928c539",
+      "report_sha256": "5bf6d09a5d8c00a9e3582ec64874c4eeaff81fa5a6d5a852472211776ce03b7f",
+      "requested_fields": [
+        "order.delivery_id"
+      ]
+    },
+    {
+      "trial_id": "DEV-017-V8-1",
+      "case_id": "DEV-017",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-017-V8.json",
+      "request_sha256": "6714f341aa1678f9ecf53853798b9de25eb2d8eb41a44c6152d2ec2f4a13be88",
+      "outcome": "invalid_final",
+      "protocol": false,
+      "sources": false,
+      "action": false,
+      "conclusion": false,
+      "correct": false,
+      "full_evidence": false,
+      "usage": {
+        "input_tokens": 4908,
+        "cached_input_tokens": 4736,
+        "output_tokens": 2950,
+        "reasoning_tokens": 2773
+      },
+      "known_cost_microyuan": 24134,
+      "elapsed_ms": 16562,
+      "response_sha256": "278bbefe882476a78973c3525cfdeb743c955d48f1dddc35f22bf52232ff082f",
+      "report_sha256": "f584231ebd514dffa623472a56d7c11c5b16d27358a635247a0447b2d36c9c27",
+      "requested_fields": null
+    },
+    {
+      "trial_id": "DEV-026-V8-1",
+      "case_id": "DEV-026",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-026-V8.json",
+      "request_sha256": "9e1afa3a8136ec18ded8589a24c748913c049a71ca01f0fbafc3b6dbd1cd9c97",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 4866,
+        "cached_input_tokens": 4732,
+        "output_tokens": 8931,
+        "reasoning_tokens": 8763
+      },
+      "known_cost_microyuan": 71906,
+      "elapsed_ms": 48112,
+      "response_sha256": "4345a96f1aff3f3152a36e176745b93a97d79616645dfe9e609a115f8d4360b1",
+      "report_sha256": "c7c667102783e6917c1bf67a38266f087df956ae73fe688fd1ab499a56f80339",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-026-V8C-1",
+      "case_id": "DEV-026",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-026-V8C.json",
+      "request_sha256": "758afb30fc18ae039dbe4b2bd4af6e0be222d64049b0c10e974aa8577b1f6a03",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5136,
+        "cached_input_tokens": 1152,
+        "output_tokens": 4396,
+        "reasoning_tokens": 4237
+      },
+      "known_cost_microyuan": 43183,
+      "elapsed_ms": 25059,
+      "response_sha256": "54f27387c79990c95b98b4df8d916a265b89cd6159e7c7898ab03f26e3a79f49",
+      "report_sha256": "64102a63ce82d2fb89ba206803b9c608911c76f5c4d02a46a91aa8bd1b99ef94",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-027-V8C-1",
+      "case_id": "DEV-027",
+      "group": "V8C",
+      "repetition": 1,
+      "request_file": "requests/DEV-027-V8C.json",
+      "request_sha256": "f48392693f72246cbcc85470b0b6ea927f3ba1c0eb5d017e78ca4b6a242a8a20",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": true,
+      "full_evidence": true,
+      "usage": {
+        "input_tokens": 5333,
+        "cached_input_tokens": 1152,
+        "output_tokens": 3070,
+        "reasoning_tokens": 2917
+      },
+      "known_cost_microyuan": 32969,
+      "elapsed_ms": 18306,
+      "response_sha256": "18467caa673a535b965ca13ade15bf877102eb56414816c9a8226d4e68e0249e",
+      "report_sha256": "217a5ee313d20a87c65153da00d841756f0d9824f6a2e0b1d02797f44977272c",
+      "requested_fields": []
+    },
+    {
+      "trial_id": "DEV-027-V8-1",
+      "case_id": "DEV-027",
+      "group": "V8",
+      "repetition": 1,
+      "request_file": "requests/DEV-027-V8.json",
+      "request_sha256": "00499d1c6ccaf415d24a2b0d4812f4d8ff8a56cbaccf39f4a6973a10d87d5383",
+      "outcome": "final",
+      "protocol": true,
+      "sources": true,
+      "action": true,
+      "conclusion": true,
+      "correct": false,
+      "full_evidence": false,
+      "usage": {
+        "input_tokens": 5063,
+        "cached_input_tokens": 4864,
+        "output_tokens": 3136,
+        "reasoning_tokens": 3044
+      },
+      "known_cost_microyuan": 25681,
+      "elapsed_ms": 19557,
+      "response_sha256": "e2a37265260a5a4b4efb0a553df231bda985156f7880020775a03c442d5a47a0",
+      "report_sha256": "4e533e27e558b252f7edadba7b11717d830b8a61619bebd5c8b30cca03c115d1",
+      "requested_fields": []
+    }
+  ],
+  "artifacts": {
+    "manifest": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/manifest.json",
+      "sha256": "20ece6d556d14c44fd5c0f2de455e3f7607c804d2840fdb9f87c171caa313e50"
+    },
+    "startup_manifest": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/startup-manifest.json",
+      "sha256": "088a22b1737f4d67fc80157930e03bccd0b08f16352f17f821e2f2383794b4ff"
+    },
+    "authorized_startup_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/startup-review.authorized.json",
+      "sha256": "fcb43ec54f0c5a12fe005edb13a301faaddd505fa882a2e5a2ca53c9f2039570"
+    },
+    "maintainer_authorization": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/maintainer-authorization.json",
+      "sha256": "e9ebe2c6589235ac6fd0c7f44dc8017ae703ef6efa51840fe60b64f1b758ee5d"
+    },
+    "independent_startup_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/independent-startup-review.json",
+      "sha256": "80439a262635e731b19ac347569773a0f5507da53dff8a7111d5173df48697ce"
+    },
+    "independent_post_batch_review": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/independent-post-batch-review.json",
+      "sha256": "98307131f30848d034626511cee7ba85d1dbd5325ab873bdbb3b59d849cb140b"
+    },
+    "score": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/score.json",
+      "sha256": "64722bbf6c2e52ef0c2dda86d090ebef634127a169c04b114c5423e9064a0867"
+    },
+    "closed_ledger": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/closed-ledger.json",
+      "sha256": "b549b4db70a8fbe0f627188fec35658db1a3bd55b312dc95599f8a4107f32229"
+    },
+    "result": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/result.json",
+      "sha256": "00a99cc59b90a256bf86630b9312132c4315bb3c486c630d89999b220f6f9433"
+    },
+    "sender_exit": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/sender-exit.json",
+      "sha256": "9c6f1fa2494637945f40f13afce7bf2fb1c7214033e1610875263237b4a8f857"
+    },
+    "sender_progress": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/sender-stdout.log",
+      "sha256": "4690d06ad217bdf4f37631cfb3176bc6599ef884421f2e147029a46887697241"
+    },
+    "sender_stderr": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/sender-stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "attempted": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/attempted.json",
+      "sha256": "c7c5deba7a1f934dbdd71b2f7aff102c045a6ed02ef7cc377096ac428820bd4c"
+    },
+    "input_verification": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/input-verification.json",
+      "sha256": "ccd6e589ac15313c2034b1f9b4e62f07bd77dadde4ff69170899654782cb1a81"
+    },
+    "candidate_sources": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/candidate-sources.json",
+      "sha256": "9ce38692ec9a877473c93c3fe2370af6f3e3ce3491e326571f22e0ed4a04d448"
+    },
+    "clean_runner_build": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/clean-runner-build.json",
+      "sha256": "7b01624e4bff1f709699cdce7be467c4b89d00b5cc6c826f9bb82527c36a4271"
+    },
+    "manifest_check": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/manifest-check-clean.json",
+      "sha256": "0c700c7f2f93ce07fd4b597dc26f37a94e09dad42a02e33683b1962b6fa4788c"
+    },
+    "analysis": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/post-batch-analysis.json",
+      "sha256": "cc33363df4ef490da6b8ecf6de7418b62dba0790aaa19125c5c98a66a69f329c"
+    },
+    "preflight": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/preflight/receipt.json",
+      "sha256": "8a91deeb5f6cf80cc5091dd2d8d10b67a02d44677709719f1b882404e5257ec0"
+    },
+    "prior_ledger": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/preflight/prior-ledger.json",
+      "sha256": "3930e7c6a545699227e9183b0e521eda86affabd5974f8b826789c10ed71df2c"
+    },
+    "startup_ledger": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/startup-ledger-clean-32.json",
+      "sha256": "6060478eb51ddcdf9212902db3d428ce7faf9bd64cb7722b35816fd78219fe62"
+    },
+    "implementation_validation": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/implementation-validation.json",
+      "sha256": "d2fbc596e6379ca9ee457399f76d65918aeed73ebdb23d10e73bb3a15dea4f44"
+    },
+    "pg_export": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/contract-probe-20261015/v8-contract-c1-reviewed-20261015/ledger-export-1792046529062180900.json",
+      "sha256": "e1892d2b1a9561fbcb16b6b9de37040ea4a75ff4403b0cfdc7535f2f2f8eba7f"
+    }
+  }
+}
