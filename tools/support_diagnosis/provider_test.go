@@ -21,9 +21,10 @@ func TestSendPreservesThinkingModeAndMeteringForFinalOnlyGroups(t *testing.T) {
 			t.Run(group+"/"+mode, func(t *testing.T) {
 				value := responseFixture(mode != "empty_reasoning")
 				details := value["usage"].(map[string]any)["completion_tokens_details"].(map[string]any)
-				if mode == "zero_usage" {
+				switch mode {
+				case "zero_usage":
 					details["reasoning_tokens"] = 0
-				} else if mode == "overlap" {
+				case "overlap":
 					details["reasoning_tokens"] = 31
 				}
 				raw, requestBody := encoded(t, value), []byte(`{"thinking":{"type":"enabled"}}`)
