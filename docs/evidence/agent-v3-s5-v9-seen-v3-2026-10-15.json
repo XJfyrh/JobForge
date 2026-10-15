@@ -1,0 +1,966 @@
+{
+  "schema_version": 1,
+  "kind": "original-seen-v3-regression-report",
+  "recorded_at": "2026-10-15T12:01:01.001675+00:00",
+  "source_commit": "a07321f8f24f94a8ce6632c3339c0d864caa6874",
+  "candidate": {
+    "adapter": "support-agent-v1",
+    "adapter_source_sha256": "b8724f17a35419a7ddb62650323bf1d2c1092dd801f8c8dc2f6ff6fa89ee9f4f",
+    "prompt_sha256": "0e3a000e011b23e3fc1c8097a48fd6053c8b7606bc87d29dfbf00ec3b7edf26c",
+    "prompt_version": "support-agent-prompt-v9",
+    "proposal_schema": "support-proposal-v1",
+    "proposal_schema_sha256": "a70d335407b98510e51c558c4ff4e9c25274e986e5368a8f66209130953074ce",
+    "strategy": "support_agent_v1",
+    "decision_schema": "support-agent-decision-v1",
+    "decision_schema_sha256": "f8261604a6302a2ca57dd8710d6664dbe214b9204860e487b77a2fc47e85e9ee",
+    "recovery_policy": "confirmed_uncommitted_v1",
+    "approval_policy": "ticket_resolution_v1"
+  },
+  "scope": "Original all20 known V3, fresh identity, one attempt per case; not unseen acceptance or S5 overall acceptance.",
+  "result": {
+    "engineering_complete": true,
+    "model_quality_applicable": true,
+    "model_quality_passed": true,
+    "scope": "seen_v3_regression_not_unseen_acceptance",
+    "score_sha256": "75b6de952ed238093035536ded01b8fee479e0951718ce5c560924a2f5d2d6c6",
+    "denominator": 20,
+    "correct": 19,
+    "full_evidence": 19,
+    "ledger": {
+      "runs": 674,
+      "chat_calls": 2782,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 20454773,
+      "held": 0
+    },
+    "post_batch_review": "pending",
+    "freeze_guard_cases": {
+      "S5V3-004": true,
+      "S5V3-018": true
+    },
+    "freeze_guard_cases_passed": true
+  },
+  "seen_diagnostic": {
+    "kind": "s5-seen-diagnostic",
+    "thresholds_met": false,
+    "full_denominator": 20,
+    "executed": 20,
+    "correct": 19,
+    "full_case_evidence": 19,
+    "hard_failure_cases": {
+      "unauthorized_access": 0,
+      "unapproved_write": 0,
+      "duplicate_business_effect": 0,
+      "budget_breach": 0
+    }
+  },
+  "freeze_guards": {
+    "DEV-020": {
+      "correct": true,
+      "full_case_evidence": true,
+      "investigation_recoverable": true,
+      "investigation_definition_complete": true,
+      "final_recoverable": true,
+      "final_definition_complete": true
+    },
+    "S5V3-004": {
+      "correct": true,
+      "full_case_evidence": true,
+      "investigation_recoverable": true,
+      "investigation_definition_complete": true,
+      "final_recoverable": true,
+      "final_definition_complete": true
+    },
+    "S5V3-018": {
+      "correct": true,
+      "full_case_evidence": true,
+      "investigation_recoverable": true,
+      "investigation_definition_complete": true,
+      "final_recoverable": true,
+      "final_definition_complete": true
+    }
+  },
+  "usage": {
+    "known_tokens": 519307,
+    "known_cost_microyuan": 1593948,
+    "held_tokens": 0,
+    "held_cost_microyuan": 0,
+    "physical_calls": 140,
+    "chat_calls": 80,
+    "unknown_chat_calls": 0,
+    "measurement_anomalies": 0,
+    "corrections": 0,
+    "query_embedding_calls": 0,
+    "profile_metadata_calls": 0,
+    "business_tool_calls": 60
+  },
+  "closure": {
+    "recorded_at": "2026-10-15T11:58:51.861582+00:00",
+    "containers": [
+      {
+        "name": "jobforge-s5-v9-seen-v3-isolated-20261015-business",
+        "status": "exited",
+        "running": false,
+        "pid": 0
+      },
+      {
+        "name": "jobforge-s5-v9-seen-v3-isolated-20261015-control",
+        "status": "exited",
+        "running": false,
+        "pid": 0
+      },
+      {
+        "name": "jobforge-s5-v9-seen-v3-isolated-20261015-paid",
+        "status": "exited",
+        "running": false,
+        "pid": 0
+      }
+    ],
+    "stage_lock_released": true,
+    "batch_known_plus_held_peak_microyuan": 3717073,
+    "stage_known_plus_held_peak_microyuan": 22577898,
+    "budget_caps_microyuan": {
+      "batch": 4000000,
+      "stage": 28000000
+    },
+    "workflow_exit": 0,
+    "ledger": {
+      "runs": 674,
+      "chat_calls": 2782,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 20454773,
+      "held": 0
+    },
+    "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+    "remaining_stage_microyuan": 7545227,
+    "execution_outcomes": {
+      "awaiting_approval": 19,
+      "succeeded": 1
+    },
+    "active_seconds_sum": 814.177043,
+    "failure_analysis": {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\failure-analysis.json",
+      "sha256": "d4923e02beab8c178bddb0cc9de912446c82381dae986b0bcb30cace4c3dafe5"
+    }
+  },
+  "old40_database_counts_unchanged": true,
+  "adjudication_measurement": {
+    "evidence_regressed": 0,
+    "evidence_regressed_cases": [],
+    "evidence_improved": 13,
+    "evidence_improved_cases": [
+      "S5V3-001",
+      "S5V3-002",
+      "S5V3-003",
+      "S5V3-004",
+      "S5V3-005",
+      "S5V3-006",
+      "S5V3-008",
+      "S5V3-011",
+      "S5V3-012",
+      "S5V3-014",
+      "S5V3-016",
+      "S5V3-017",
+      "S5V3-018"
+    ],
+    "retrieval_closure_measured": 20,
+    "adjudication_recoverable_false": 0,
+    "adjudication_recoverable_false_cases": [],
+    "definition_closure_measured": 20,
+    "investigation_definition_incomplete": 0,
+    "investigation_definition_incomplete_cases": [],
+    "truncation_risk": 0,
+    "truncation_risk_cases": [],
+    "final_input_closure_measured": 20,
+    "final_input_unrecoverable": 0,
+    "final_input_unrecoverable_cases": [],
+    "final_input_definition_incomplete": 0,
+    "final_input_definition_incomplete_cases": []
+  },
+  "failure_analysis": {
+    "case_id": "S5V3-020",
+    "classification": "ordinary_quality_failure_not_policy_mechanism",
+    "actual_ticket_status": "escalated",
+    "actual_final_action": "escalate",
+    "actual_final_conclusion": "insufficient",
+    "top_level_expected_fields_match": true,
+    "unsupported_claim": {
+      "kind": "ticket_status",
+      "mode": "preserve_escalated",
+      "source_coverage": true,
+      "predicate": false
+    },
+    "supported_claims": [
+      "critical",
+      "critical",
+      "timing"
+    ],
+    "predicate_precondition": "Existing claim_truth accepts preserve_escalated only when captured status=escalated AND expected action=record_conclusion; current critical-priority action is escalate.",
+    "observed_error": "Branch-inapplicable status claim; captured escalated status itself is true.",
+    "prompt_hypothesis": "V9 explicitly names captured-status necessity but does not state the record_conclusion-only branch in its short ticket_status definition. This is a candidate prompt-precision hypothesis, not proof of the model internal cause.",
+    "evidence_complete": true,
+    "investigation_and_final_policy_closure_complete": true,
+    "format_failure": false,
+    "unknown": false,
+    "automatic_retry_or_version_development": false,
+    "proposed_next_step": "Keep V9 if independent review accepts existing19/20 and guard gates; record residual quality and proceed toward separately reviewed new freeze/unseen20. No new prompt/version or scoring relaxation."
+  },
+  "observability": {
+    "recorded_at": "2026-10-15T11:55:04.760433+00:00",
+    "kind": "actual-closed-batch-OTLP-association",
+    "source_evidence": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\evidence.json",
+    "source_evidence_sha256": "aaaa7e4a578daba5b0be9b0d052f063ee98444d06f30f1399540d4af58aa0c51",
+    "collector_source": "E:\\JobForgeEvidence\\s5-2026-10-07\\verify_actual_otlp.py",
+    "collector_source_sha256": "3818010874e4b5808b8f6ce43c95395a09e4c92546d07f30a406f4eb24515119",
+    "executed_runs": 20,
+    "passed_runs": 20,
+    "all_passed": true,
+    "expected_physical_calls": 140,
+    "model_calls_from_this_collection": 0,
+    "link_rule": "FOLLOWS_FROM target may be control run.http; follow CHILD_OF ancestry to original sdk.run.submit."
+  },
+  "free_validation": {
+    "related_python_passed": 390,
+    "mypy_source_files": 41,
+    "quick": "passed",
+    "docs": "passed",
+    "full_Go_race_and_Linux": "reused acceptedV9 proof; no new production/concurrency risk",
+    "remote_CI": "not_run"
+  },
+  "credential_preparation": "Old unstarted0-call preparation retained;8localHTTPcredentials replaced in fresh same-role successor; matched old19containers allStopped/Pid0; no supplier/action credentials exposed. Values excluded.",
+  "case_results": [
+    {
+      "case_id": "S5V3-001",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 23521,
+        "known_cost_microyuan": 60781,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-002",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 30715,
+        "known_cost_microyuan": 117265,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-003",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 29426,
+        "known_cost_microyuan": 106929,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-004",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 24948,
+        "known_cost_microyuan": 69809,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-005",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 22554,
+        "known_cost_microyuan": 51389,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-006",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 22361,
+        "known_cost_microyuan": 51389,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-007",
+      "run_state": "succeeded",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "ticket_status",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 22975,
+        "known_cost_microyuan": 57189,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-008",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 21590,
+        "known_cost_microyuan": 45561,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-009",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 22035,
+        "known_cost_microyuan": 49795,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-010",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 24315,
+        "known_cost_microyuan": 67553,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-011",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 23831,
+        "known_cost_microyuan": 62721,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-012",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 24729,
+        "known_cost_microyuan": 68603,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-013",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 29570,
+        "known_cost_microyuan": 108309,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-014",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 3,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 29509,
+        "known_cost_microyuan": 106933,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-015",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 26625,
+        "known_cost_microyuan": 83807,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-016",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 22671,
+        "known_cost_microyuan": 53909,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-017",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 30724,
+        "known_cost_microyuan": 119215,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-018",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 29245,
+        "known_cost_microyuan": 105853,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-019",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 25489,
+        "known_cost_microyuan": 75733,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    },
+    {
+      "case_id": "S5V3-020",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 3,
+          "kind": "ticket_status",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 32474,
+        "known_cost_microyuan": 131205,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 7,
+        "chat_calls": 4,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      }
+    }
+  ],
+  "source_artifact_sha256": {
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\config.json": "ffb1ce58c94ee088fd92fc13c4bb294de2cfde320626f1236b634794f56f454c",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\source.json": "85b36b338b966927a52572f45306ab7242fcdcc13c515e79e96c54546db72a0a",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\build-source-receipt.json": "cc5492e6e106fe534abbdcdbcca93a60a3a21bbb80f19a24af10cb886508f3e0",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\implementation-validation.json": "653ffae9ee28b61cf0481b71e3765812e39c5fc47da25f0fb0be2ca687f1df34",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\budget-allocation.json": "61e7b4893c9c8f5b2c2733c0527d09e3ad3e62b7f1975c3943dc69ecddadfd6c",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\independent-startup-review.json": "9c2d031fa5cba9b065d008b673faf79ee72a145c5af8cc2d66ce10fea2a697b3",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\startup-review.authorized.json": "838714b8ee3d1e6b62f309efc4f40e2b250d2a9185f21c01f3d9d1578323fe22",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\attempts.json": "6807a7ca7fc06b35e714783f275df55ea009805a599ee002b68bf553cb92dc7d",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\post-batch-closure.json": "19d7800c749bc80151c7d14b76113a03b4a88001c9adb08bbdfc7def9548d04f",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\failure-analysis.json": "d4923e02beab8c178bddb0cc9de912446c82381dae986b0bcb30cace4c3dafe5",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\private-preparation.json": "d4ad59175b2a9fcf8bd33cec6b6e9a4590831d11e63f5b5f9df3a8e09413f318",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\manifest.json": "1107e016be265c1fbeb054f9b7b80aaabb41f4f68c04de06f5730d29b886111b",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\registration.json": "a8a04cf6b931caec8b1a0d8c6e6c2bfd0eb03917c6b607afbfa026488f0d089f",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\evidence.json": "aaaa7e4a578daba5b0be9b0d052f063ee98444d06f30f1399540d4af58aa0c51",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\score.json": "75b6de952ed238093035536ded01b8fee479e0951718ce5c560924a2f5d2d6c6",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\result.json": "927db4bee2f20f4efc20873fcd14da8ba4c1f363b1d1b04f99a4bd1f7ff0cf3d",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\closed-ledger.json": "fd0c44d80a1ad2b1f214ed46843bde9305503cf5c5aedf4f06a35bebc4a85a49",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\business-before.json": "cc88938036596abc6e6c68bb3fa5d963f91cf3328c8687835a49108279374fbb",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\business-after.json": "20f61962b08c33514a274effea72580236c59c996770b74fae5666c6cc56ab42",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\receipts-before.json": "c28e337b7150e2335242ef19531919d5ceb15e160cbb96b058e874768314f067",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\seen-v3-agent\\receipts-after.json": "dd4852229e2d777806aadf818bfc3f6d527188082c98b9f4ff4477c04cbc5c15",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\observability\\post-batch\\summary.json": "bdeee1ef577338056fef6c05903e90c8d3860712244cc7d7611c2e8f7a71855c",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-20261015\\dev-agent\\score.json": "6978371bc524e445f1acc45a419e58fbe86bbe3f39eda3c8f50b561cc8bdac00",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-20261015\\dev-agent\\registration.json": "26db7c125c8a4c25bdd690f6adf1142724d5664ee87a4055796aad3c8cc899fd"
+  },
+  "post_batch_review": {
+    "decision": "accepted",
+    "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-seen-v3-isolated-20261015\\independent-post-batch-review.json",
+    "sha256": "3fe4f851db3a614fd72ee1f9aad4209e061f542d6bc036ad9c772ba5a9c551fd",
+    "original_runtime_result_pending_preserved": true
+  },
+  "next_step_proposed": "Keep V9 under passedexistinggates. Free reviewed V4 admission/currentfreeze guard automation, clean rebuild/freeze before any actual new unseen cases; next paidmanifest separately reviewed under standing grant."
+}

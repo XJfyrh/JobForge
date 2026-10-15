@@ -1,14 +1,16 @@
 # 当前状态与下一步
 
-2026-10-15完成[v9/Fixed17完整开发对照](evidence/agent-v3-s5-v9-fixed-development-2026-10-15.md)：**工程执行完成，Agent开发质量达标，完整Fixed基线已收集，S5总体验收待完成**。两组均执行原40案，Agent正确/完整39/40、Fixed34/40，四类硬失败均0；独立批后审阅accepted，逐案配对胜6/平33/负1。Fixed记录质量门槛不适用，不将34/40标为候选通过。
+2026-10-15完成[v9原已见V3完整20案回归](evidence/agent-v3-s5-v9-seen-v3-2026-10-15.md)：**工程执行完成，开发与已见守卫达标，S5总体验收待完成**。20案全部执行，正确/完整证据各19/20，硬失败0，独立批后审阅accepted。004/018及同候选开发DEV-020均正确、证据完整，调查和最终输入的可引用/定义闭合均通过；已见报告thresholds_met保持false，不替代未见验收。
 
-schema18 / `support-agent-prompt-v9`采用[独立引用对照](evidence/agent-v3-s5-v8-timing-evidence-2026-10-15.md)支持的5,751字节final提示，复用v8调查、完整政策与executor5；Fixed17保留原4,945字节提示和固定图。模型/final参数、政策/数据/gold与family上限逐项相同。Agent本轮多5案正确、增加估算¥0.750189（约1.787倍费用），不作为稳定性或因果隔离结论。下一步保持v9候选，完整运行原已见v3的20案，核S5V3-004/018及已通过的DEV-020冻结守卫；开发39/40不替代该前置。守卫与开发证据独立接受后才冻结并创建新未见正式集。
+唯一失败020的实际工单确为escalated、顶层行动/结论正确；模型额外附加preserve_escalated，但既有评分只在record_conclusion分支接受该主张，本例严重异常优先action=escalate。政策/来源齐全、协议和计量通过；这是残余质量失败，无重试、补样、gold或评分放宽。保留v9，接续V4准入、冻结自动守卫、干净镜像/新freeze；冻结后才创建并独立审查新未见20案。当前未创建新正式集。
 
-Fixed本批新增observed-usage估算¥0.953640，39库累计654 Runs、2,702 chat、**¥18.860825**，原¥28余量**¥9.139175**；held/unknown/在途/未结束attempt均0，历史38库计数不变，三容器退出、锁释放、业务写入0。本批/阶段峰值¥3.149400/¥21.056585，完整预留未突破¥4/¥28。维护者已授权原累计¥28内持续推进并自主分配合理预算；每批¥4及独立联合启动审查继续有效，不重复等待逐批“可以”。
+此前[完整开发对照](evidence/agent-v3-s5-v9-fixed-development-2026-10-15.md)Agent39/40、Fixed34/40，逐案配对胜6/平33/负1，完整基线已接受；Fixed不套Agent候选门槛。schema18/prompt-v9为5,751字节final提示，Fixed17/prompt-v2为4,945字节，各用原注册提示，模型/final参数、政策与资源额度相同。独立工程改动可单独交付，S5仍须满足正式质量及后续恢复/演示要求。
 
-[共享工作流](../tools/support_s5/host/README.md)按[ADR-0039](adr/0039-s5-startup-review-and-automatic-health.md)逐案自动检查，第10案自动放行，普通质量失败继续；Fixed不套Agent质量淘汰门槛，安全/费用/身份/政策/系统性停发保留。旧Fixed启动因多余动作密钥在SDK前失败，0/40执行、费用0，原attempt封存。新批移除多余动作权限，补建库前自动校验，并用原生产Worker、合成凭据及disabled专用PG完成真实注册；随后40案执行完毕，未重试或补样。
+本批20Runs/80chat/140实际HTTP，新增observed-usage估算¥1.593948。41库累计674Runs/2,782chat、**¥20.454773**，原¥28余量**¥7.545227**；held/unknown/在途/未结束attempt全0，原40库计数不变，业务未写入、receipts0、三容器退出且锁释放。批次/阶段known+held峰值¥3.717073/¥22.577898，未突破¥4/¥28。维护者持续授权原累计¥28内自主合理分配，每笔具体manifest仍一次独立启动审查，不重复等待逐批“可以”。
 
-免费验证通过64项host、356项相关Python、mypy40文件、quick、文档及实际Worker注册链；无生产/Go并发/模型/评分变化，复用[v9完整真实PG/AOF Redis race及Linux成功/取消检查](evidence/agent-v3-s5-v9-development-2026-10-15.md)，初始失败保留。两组80个实际Run/430次物理调用OTLP关联完整，原始trace与来源哈希均独立核验；未以观测结果回填模型分数。远程CI未运行，合并仍须最新head的 `CI required`。
+[共享工作流](../tools/support_s5/host/README.md)已实际完成20案自动检查，第10案自动继续，普通质量失败按原分母记录。来源缺陷在免费阶段修复：原V3 manifest/freeze字节钉住，case-map/runtime及资源摘要同包绑定。一次本地审查工具误输出8个测试HTTP凭据，原零调用准备封存；新身份仅替换同租户/权限的HTTP凭据，核对59容器、19个旧值匹配均Stopped/Pid0，无供应商/动作凭据泄露。历史原件和零调用库均保留。
+
+已见入口390项相关Python、mypy41文件、quick/docs通过；V4免费准入限定Agent18/Fixed17，旧schema不能接纳，新正式评分不能绕过freeze或使用seen模式，640项相关Python通过、4项Linux专用进程测试在Windows跳过未计通过，mypy两域、quick及Go路由race通过。原真实PG/AOF Redis race及Linux机制证明按风险复用，新镜像构建与冻结尚待完成；远程CI未运行。开发及本批累计100实际Run/570物理调用OTLP关联已独立核验。
 
 S5正式质量尚未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。[原v8开发](evidence/agent-v3-s5-v8-development-2026-10-15.md)及其他历史失败/未尝试不改写，旧批不重开。当前开发通过不代表已完成正式冻结、新未见集、恢复对照或演示。
 
