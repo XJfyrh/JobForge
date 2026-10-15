@@ -1,6 +1,6 @@
 # 新批次共享工作流
 
-当前入口用于完整政策候选 schema16/17/18 的完整开发 40 案，规则见 [ADR-0039](../../../docs/adr/0039-s5-startup-review-and-automatic-health.md)。它取代逐版本复制的 `prepare_phase.py`、`manifest_checks.py`、`ledger.py`、`run_phase.py` 和私有 operator wrapper。历史脚本及证据只读保留；旧批次不迁移、不续跑。
+当前入口用于完整政策候选 schema16/17/18 的完整开发40案、当前Agent18原已见V3完整20案及当前Agent18/Fixed17新冻结V4正式20案，规则见 [ADR-0039](../../../docs/adr/0039-s5-startup-review-and-automatic-health.md)。它取代逐版本复制的 `prepare_phase.py`、`manifest_checks.py`、`ledger.py`、`run_phase.py` 和私有 operator wrapper。历史脚本及证据只读保留；旧批次不迁移、不续跑。
 
 先完成一个明确假设的最小诊断，收益成立才实现并完整回归；v8 已完成实现，直接回归。固定输入诊断复用现有 `tools.support_diagnosis`，冻结复用 `tools.support_s5.freeze`，不增加新平台或阶段次数/时间预算。
 
@@ -63,3 +63,11 @@ schema5可用`groups`记录两个不同、最多64字节、仅字母数字/横�
 原freeze只证明历史包来源，不代表v9已冻结。入口钉住原manifest和freeze的字节SHA，拒绝同ID重标的新包；source的case-map、runtime manifest/seed路径和摘要以及definition资源摘要必须绑定同一原包。准备、组装和评分均显式使用该历史包，全部原件和freeze摘要进入新manifest；评分固定`seen_diagnostic=True`，kind为`s5-seen-diagnostic`且`thresholds_met=false`。包、gold和评分只在宿主，不挂入operator；不能通过新增historical开关、更换dataset或删减名单绕过未见集守卫。
 
 结果分别记录适用20案回归门槛和`freeze_guard_cases`（S5V3-004/018）。即使16/18通过，任一guard失败仍不能冻结；DEV-020另由同候选已接受开发结果证明。此模式不接受新未见集，不创建新案例，不自动冻结或重试；仍使用新身份和同一次具体启动审查。
+
+## 当前冻结与未见V4
+
+当前Agent18冻结会自动核对独立审阅中的两个完整开发报告及原V3完整回归。`development_registrations`按两个strategy记录`{path,sha256}`，`seen_regression`分别绑定`report`和`registration`；全部字节摘要及strategy blueprint必须匹配冻结候选。Agent开发36/40、38/40与已见16/20、18/20门槛不变；Fixed只要求完整基线，不套Agent门槛。DEV-020和S5V3-004/018须正确、证据完整且调查/最终的可引用和定义闭合均实际测得并通过。缺失、unattempted、unknown或硬失败拒绝冻结。该校验落实既有前置，不创建新案例。
+
+配置schema3使用`formal_v4: {package, freeze}`两个绝对路径，只接受`support-s5-2026-10-15-v4`及当前18/17配对。包加载固定为严格非历史模式，核验当前freeze、创建顺序、全部三已见包和开发家族新颖性；source的case-map、runtime manifest/seed及资源摘要绑定同一新包。建库前核source blueprint，生成登记后再核实际blueprint，评分显式传入freeze且`seen_diagnostic=false`。不能用schema2、旧dataset、historical开关或缺freeze替代正式验收。
+
+仍完整20名单、16正确/18完整证据及原安全/费用/系统性规则，Fixed沿用完整基线角色。新包和freeze原件进入manifest字节绑定，gold/评分仅在宿主；operator挂载与执行权限不扩展。代码提交、实际镜像构建与新freeze先完成，再创建并独立审查实际未见20案和具体收费manifest。

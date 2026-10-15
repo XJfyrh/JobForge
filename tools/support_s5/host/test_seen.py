@@ -16,11 +16,12 @@ from tools.support_s5.package import DATASET_V3
 
 
 @pytest.mark.parametrize("mutation", ["none", "reverse", "drop", "threshold"])
+@pytest.mark.parametrize("schema", [2, 3])
 def test_seen_config_binds_complete_order_and_fixed_quality_gates(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str, schema: int
 ) -> None:
-    """The seen mode cannot select cases or weaken its predeclared20-row gates."""
-    ids = [f"S5V3-{i:03d}" for i in range(1, 21)]
+    """Neither20-row mode can select cases or weaken predeclared quality gates."""
+    ids = [f"{'UNIT' if schema == 3 else 'S5V3'}-{i:03d}" for i in range(1, 21)]
     monkeypatch.setattr(
         config,
         "evaluation_package",
@@ -28,7 +29,7 @@ def test_seen_config_binds_complete_order_and_fixed_quality_gates(
     )
     save_new(tmp_path / "prior.json", {"phases": []})
     settings: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": schema,
         "question": "Synthetic guard?",
         "hypothesis": "Original whole list.",
         "case_ids": ids.copy(),
@@ -56,7 +57,7 @@ def test_seen_config_binds_complete_order_and_fixed_quality_gates(
         },
         "policy": dict(config.SEEN_V3_POLICY),
         "stage_lock": str(tmp_path / "stage.lock"),
-        "seen_v3": {
+        "formal_v4" if schema == 3 else "seen_v3": {
             "package": str(tmp_path / "original"),
             "freeze": str(tmp_path / "original-freeze.json"),
         },
@@ -64,10 +65,10 @@ def test_seen_config_binds_complete_order_and_fixed_quality_gates(
     expected = None
     if mutation == "reverse":
         settings["case_ids"].reverse()
-        expected = "SEEN_V3_LIST"
+        expected = "FORMAL_V4_LIST" if schema == 3 else "SEEN_V3_LIST"
     elif mutation == "drop":
         settings["case_ids"].pop()
-        expected = "SEEN_V3_LIST"
+        expected = "FORMAL_V4_LIST" if schema == 3 else "SEEN_V3_LIST"
     elif mutation == "threshold":
         settings["policy"]["minimum_full_evidence"] = 17
         expected = "QUALITY_POLICY_CHANGED"
@@ -200,7 +201,7 @@ def test_only_original_seen_v3_can_use_historical_loading(
         calls.append((root, freeze, historical))
         return package
 
-    monkeypatch.setattr(config, "historical_package", load)
+    monkeypatch.setattr(config, "reviewed_package", load)
     if mutation == "none":
         assert config.evaluation_package(settings) is package
         assert calls == [(original, Path(scope["freeze"]), True)]
@@ -210,23 +211,30 @@ def test_only_original_seen_v3_can_use_historical_loading(
         assert not calls
 
 
-def test_seen_snapshot_cannot_fall_back_to_development_or_formal_scoring(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("schema", [2, 3])
+def test_snapshot_cannot_fall_back_to_another_cohort_or_scoring_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, schema: int
 ) -> None:
-    """Both assembler and scorer receive the same explicit historical package."""
+    """Assembler and scorer receive the same package and its matching strict mode."""
     batch, output = tmp_path / "batch", tmp_path / "output"
     batch.mkdir()
     output.mkdir()
     save_new(batch / "registration.json", {"synthetic": True})
     (batch / "receipts-before.json").write_text("{}")
     package = SimpleNamespace(cases={})
-    settings = {"schema_version": 2}
+    settings = {"schema_version": schema}
+    frozen = {"synthetic": "frozen-metadata"} if schema == 3 else None
+    monkeypatch.setattr(workflow, "evaluation_freeze", lambda _: frozen)
     monkeypatch.setattr(workflow, "evaluation_package", lambda _: package)
     monkeypatch.setattr(workflow, "archive", lambda _: tmp_path / "original-sdk")
     monkeypatch.setattr(
         workflow, "audit", lambda *a: (output / "receipts-after.json").write_text("{}")
     )
     calls = []
+    expected = {
+        "kind": "s5-unseen-quality" if schema == 3 else "s5-seen-diagnostic",
+        "thresholds_met": schema == 3,
+    }
 
     def assemble(*args: Any, **kwargs: Any) -> dict[str, Any]:
         assert kwargs == {"package": package, "s5": True}
@@ -234,19 +242,19 @@ def test_seen_snapshot_cannot_fall_back_to_development_or_formal_scoring(
         return {}
 
     def score(*args: Any, **kwargs: Any) -> dict[str, Any]:
-        assert kwargs == {"package": package, "seen_diagnostic": True}
+        assert kwargs == {
+            "package": package,
+            "freeze": frozen,
+            "seen_diagnostic": schema == 2,
+        }
         calls.append("score")
-        return {"kind": "s5-seen-diagnostic", "thresholds_met": False}
+        return expected
 
     monkeypatch.setattr(workflow, "assemble", assemble)
     monkeypatch.setattr(workflow, "score_export", score)
     _, report = workflow.snapshot(settings, batch, output)
     assert calls == ["assemble", "score"]
-    assert (
-        report
-        == read(output / "score.json")
-        == {"kind": "s5-seen-diagnostic", "thresholds_met": False}
-    )
+    assert report == read(output / "score.json") == expected
 
 
 @pytest.mark.parametrize("mutation", ["none", "unreachable", "unknown", "bundle"])

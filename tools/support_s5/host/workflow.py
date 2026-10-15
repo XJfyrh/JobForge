@@ -16,13 +16,14 @@ from tools.support_evaluation.assemble import assemble, read, register, save_new
 from tools.support_evaluation.export import atomic_json
 from tools.support_evaluation.launcher import validate_setup
 from tools.support_evaluation.score import usage_cost
-from tools.support_s5.freeze import ROOT
+from tools.support_s5.freeze import ROOT, validate_blueprint
 from tools.support_s5.host import ledger
 from tools.support_s5.host.config import (
     SEEN_V3_GUARDS,
     command,
     digest,
     evaluation_files,
+    evaluation_freeze,
     evaluation_package,
     load,
     validate_review,
@@ -200,6 +201,13 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
     launch["config_sha256"]["health-gate.json"] = digest(prepared / "health-gate.json")
     atomic_json(prepared / "launch.json", launch)
     registration = register(prepared, package=evaluation_package(config), s5=True)
+    frozen = evaluation_freeze(config)
+    if frozen is not None:
+        validate_blueprint(
+            frozen,
+            registration["profile"]["strategy"],
+            registration["strategy_blueprint"],
+        )
     profile = registration["profile"]
     for name, output_tokens in (("investigation", 1024), ("final", 16384)):
         expected = usage_cost(
@@ -291,6 +299,8 @@ def prepare(config_path: Path, batch: Path) -> dict[str, Any]:
     }
     if config["schema_version"] == 2:
         plan["scope"] = "seen_v3_regression_not_unseen_acceptance"
+    elif config["schema_version"] == 3:
+        plan["scope"] = "unseen_v4_formal_acceptance"
     save_new(batch / "manifest.json", plan)
     return plan
 
@@ -378,6 +388,7 @@ def snapshot(
         evidence,
         sha(raw),
         package=package,
+        freeze=evaluation_freeze(config),
         seen_diagnostic=config["schema_version"] == 2,
     )
     save_new(target / "score.json", score)
@@ -688,9 +699,11 @@ def run(batch: Path, review: Path) -> None:
             if quality_applies
             else None,
             "scope": (
-                "seen_v3_regression_not_unseen_acceptance"
-                if config["schema_version"] == 2
-                else "development_regression_not_s5_overall_acceptance"
+                {
+                    1: "development_regression_not_s5_overall_acceptance",
+                    2: "seen_v3_regression_not_unseen_acceptance",
+                    3: "unseen_v4_formal_acceptance",
+                }[config["schema_version"]]
             ),
             "score_sha256": digest(batch / "score.json"),
             "denominator": score["denominator"],

@@ -13,7 +13,9 @@ from typing import Any
 from tools.support_approval.plan import source_hashes as approval_sources
 from tools.support_evaluation.assemble import read, save_new, sha
 from tools.support_evaluation.evidence import need
+from tools.support_evaluation.validate_data import DATASET_VERSION
 from tools.support_evaluation.validate_data import ROOT as DATA_ROOT
+from tools.support_s5.package import DATASET_V3
 from tools.support_s5.score import THRESHOLDS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -90,6 +92,101 @@ def blueprint(definition: dict[str, Any]) -> dict[str, Any]:
     return value
 
 
+def validate_current_regressions(
+    review: dict[str, Any],
+    definitions: dict[str, dict[str, Any]],
+    reports: dict[str, dict[str, Any]],
+) -> None:
+    """Enforce the existing v9 development and three known-case freeze gates."""
+
+    def bound(reference: dict[str, Any]) -> dict[str, Any]:
+        need(set(reference) == {"path", "sha256"}, "REGRESSION_RECEIPT_REQUIRED")
+        raw = Path(reference["path"]).read_bytes()
+        need(sha(raw) == reference["sha256"], "REGRESSION_RECEIPT_CHANGED")
+        value: dict[str, Any] = json.loads(raw)
+        return value
+
+    def complete(
+        report: dict[str, Any], count: int, minimum: tuple[int, int] | None
+    ) -> None:
+        rows = report.get("cases", [])
+        need(
+            report.get("denominator") == count
+            and len(rows) == count
+            and len({r["case_id"] for r in rows}) == count
+            and all(r.get("status") == "run" for r in rows)
+            and report.get("proposal_audit_complete") is True
+            and report.get("usage_complete") is True
+            and bool(report.get("hard_failure_cases"))
+            and not any(report["hard_failure_cases"].values()),
+            "REGRESSION_INCOMPLETE",
+        )
+        if minimum is not None:
+            need(
+                report.get("correct_count") == sum(r["correct"] for r in rows)
+                and report.get("full_case_evidence_count")
+                == sum(r["full_case_evidence"] for r in rows)
+                and report["correct_count"] >= minimum[0]
+                and report["full_case_evidence_count"] >= minimum[1],
+                "REGRESSION_QUALITY_GATE",
+            )
+
+    def registration(
+        reference: dict[str, Any], report: dict[str, Any], strategy: str
+    ) -> None:
+        registered = bound(reference)
+        need(
+            reference["sha256"] == report["registration_sha256"]
+            and registered["profile"]["strategy"] == strategy
+            and registered["dataset_version"] == report["dataset_version"]
+            and registered["strategy_blueprint"] == blueprint(definitions[strategy]),
+            "REGRESSION_CANDIDATE_CHANGED",
+        )
+
+    registrations = review.get("development_registrations", {})
+    need(set(registrations) == set(definitions), "REGRESSION_RECEIPT_REQUIRED")
+    for strategy, report in reports.items():
+        need(report["dataset_version"] == DATASET_VERSION, "DEVELOPMENT_DATASET")
+        registration(registrations[strategy], report, strategy)
+        complete(report, 40, (36, 38) if strategy == "support_agent_v1" else None)
+    seen = review.get("seen_regression", {})
+    need(set(seen) == {"report", "registration"}, "REGRESSION_RECEIPT_REQUIRED")
+    report = bound(seen["report"])
+    need(
+        report["kind"] == "s5-seen-diagnostic"
+        and report["dataset_version"] == DATASET_V3
+        and report["strategy"] == "support_agent_v1"
+        and report["thresholds_met"] is False,
+        "SEEN_REGRESSION_SCOPE",
+    )
+    registration(seen["registration"], report, "support_agent_v1")
+    complete(report, 20, (16, 18))
+    for selected, case_ids in (
+        (reports["support_agent_v1"], ("DEV-020",)),
+        (report, ("S5V3-004", "S5V3-018")),
+    ):
+        rows = {r["case_id"]: r for r in selected["cases"]}
+        for case_id in case_ids:
+            row = rows.get(case_id, {})
+            stages = row.get("adjudication_stages", {})
+            final = stages.get("final_input_closure") or {}
+            need(
+                row.get("correct") is True
+                and row.get("full_case_evidence") is True
+                and stages.get("retrieval_closure", {}).get("adjudication_recoverable")
+                is True
+                and stages.get("definition_closure", {}).get(
+                    "investigation_definition_complete"
+                )
+                is True
+                and final.get("retrieval_closure", {}).get("adjudication_recoverable")
+                is True
+                and final.get("definition_closure", {}).get("definition_complete")
+                is True,
+                "KNOWN_CASE_FREEZE_GUARD",
+            )
+
+
 def validate(value: dict[str, Any]) -> None:
     """A changed strategy/scorer/build source requires a new candidate freeze."""
     need(
@@ -122,7 +219,7 @@ def create(
     seen_formal_v2_manifest: Path | None = None,
     seen_formal_v3_manifest: Path | None = None,
 ) -> dict[str, Any]:
-    """No formal cases are read, generated or executed by candidate freeze."""
+    """Freeze verified source and regressions before opening new unseen cases."""
     status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, check=True
     ).stdout
@@ -137,10 +234,12 @@ def create(
     review = read(development_review)
     need(review["status"] == "independently_accepted", "DEVELOPMENT_REVIEW_REQUIRED")
     strategies = set()
+    reports = {}
     for path in review["reports"]:
         report_raw = Path(path).read_bytes()
         report = json.loads(report_raw)
         strategies.add(report["strategy"])
+        reports[report["strategy"]] = report
         need(
             sha(report_raw) == review["reports"][path]
             and report["kind"] == "s5-development-regression"
@@ -171,6 +270,12 @@ def create(
         and agent["resources"] == fixed["resources"],
         "COMPARISON_PROFILE_MISMATCH",
     )
+    if agent["schema_version"] == 18:
+        validate_current_regressions(
+            review,
+            {"support_agent_v1": agent, "support_fixed_v1": fixed},
+            reports,
+        )
     # Each schema binds exactly the formal cohorts already seen when it was
     # proposed. ADR-0034's schema 13 therefore binds v1+v2+v3: the third formal
     # package is seen too, so it can never serve as the unseen acceptance set.

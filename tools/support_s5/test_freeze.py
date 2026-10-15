@@ -114,21 +114,15 @@ def inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         return SimpleNamespace(stdout=b"" if command[1] == "status" else HEAD.encode())
 
     monkeypatch.setattr(freeze.subprocess, "run", run)
-    reports = {}
-    for strategy in ("support_agent_v1", "support_fixed_v1"):
-        path = write_json(
-            tmp_path / f"{strategy}.json",
-            {
-                "kind": "s5-development-regression",
-                "strategy": strategy,
-                "denominator": 40,
-                "proposal_audit_complete": True,
-            },
-        )
-        reports[str(path)] = sha256(path.read_bytes())
+    from tools.support_s5.test_freeze_gates import qualifying_review
+
+    current_review = qualifying_review(
+        tmp_path,
+        {"support_agent_v1": definition(18), "support_fixed_v1": definition(17)},
+    )
     review = write_json(
         tmp_path / "development-review.json",
-        {"status": "independently_accepted", "reports": reports},
+        current_review,
     )
     build = write_json(
         tmp_path / "build-receipt.json",

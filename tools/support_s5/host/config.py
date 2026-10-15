@@ -9,9 +9,9 @@ from typing import Any
 from tools.support_evaluation.assemble import read, sha
 from tools.support_evaluation.evidence import Package
 from tools.support_evaluation.evidence import load_package as development_package
-from tools.support_s5.freeze import ROOT, source_hashes
-from tools.support_s5.package import ARTIFACT_NAMES, DATASET_V3
-from tools.support_s5.package import load_package as historical_package
+from tools.support_s5.freeze import ROOT, blueprint, source_hashes, validate_blueprint
+from tools.support_s5.package import ARTIFACT_NAMES, DATASET_V3, DATASET_V4
+from tools.support_s5.package import load_package as reviewed_package
 
 POLICY = {
     "case_count": 40,
@@ -25,6 +25,7 @@ POLICY = {
 SEEN_V3_POLICY = dict(
     POLICY, case_count=20, minimum_correct=16, minimum_full_evidence=18
 )
+FORMAL_POLICY = dict(SEEN_V3_POLICY)
 SEEN_V3_GUARDS = ("S5V3-004", "S5V3-018")
 SEEN_V3_MANIFEST_SHA256 = (
     "6e3eea7581b3f2ba4a273a10656f4b42dcdc2bc07dd76a8a4063a7e69283203f"
@@ -35,15 +36,25 @@ SEEN_V3_FREEZE_SHA256 = (
 
 
 def evaluation_package(config: dict[str, Any]) -> Package:
-    """Open only development40 or the explicit, already-seen original v3 package."""
+    """Keep development, original-seen and current-frozen-unseen routes distinct."""
     if config["schema_version"] == 1:
         return development_package()
-    scope = config["seen_v3"]
+    formal = config["schema_version"] == 3
+    scope = config["formal_v4" if formal else "seen_v3"]
     if set(scope) != {"package", "freeze"} or any(
         not Path(scope[key]).is_absolute() for key in ("package", "freeze")
     ):
-        raise ValueError("SEEN_V3_PACKAGE_BINDING")
+        raise ValueError(
+            "FORMAL_V4_PACKAGE_BINDING" if formal else "SEEN_V3_PACKAGE_BINDING"
+        )
     root = Path(scope["package"])
+    if formal:
+        if (
+            DATASET_V4 is None
+            or read(root / "manifest.json")["dataset_id"] != DATASET_V4
+        ):
+            raise ValueError("FORMAL_V4_PACKAGE_REQUIRED")
+        return reviewed_package(root, Path(scope["freeze"]), historical=False)
     if (
         digest(root / "manifest.json") != SEEN_V3_MANIFEST_SHA256
         or digest(Path(scope["freeze"])) != SEEN_V3_FREEZE_SHA256
@@ -53,14 +64,23 @@ def evaluation_package(config: dict[str, Any]) -> Package:
         raise ValueError("SEEN_V3_PACKAGE_REQUIRED")
     # The old freeze proves this seen package's provenance, not that the current
     # candidate is frozen or that the cohort has become unseen again.
-    return historical_package(root, Path(scope["freeze"]), historical=True)
+    return reviewed_package(root, Path(scope["freeze"]), historical=True)
+
+
+def evaluation_freeze(config: dict[str, Any]) -> dict[str, Any] | None:
+    """Only a current unseen batch may supply an acceptance freeze to scoring."""
+    return (
+        read(Path(config["formal_v4"]["freeze"]))
+        if config["schema_version"] == 3
+        else None
+    )
 
 
 def evaluation_files(config: dict[str, Any]) -> list[Path]:
     """Bind every original historical artifact; none is mounted into the operator."""
     if config["schema_version"] == 1:
         return []
-    scope = config["seen_v3"]
+    scope = config["formal_v4" if config["schema_version"] == 3 else "seen_v3"]
     return [Path(scope["freeze"])] + [
         Path(scope["package"]) / name
         for name in sorted(ARTIFACT_NAMES | {"manifest.json"})
@@ -106,9 +126,11 @@ def load(path: Path) -> dict[str, Any]:
     }
     if schema == 2:
         required.add("seen_v3")
-    expected_policy = SEEN_V3_POLICY if schema == 2 else POLICY
+    elif schema == 3:
+        required.add("formal_v4")
+    expected_policy = SEEN_V3_POLICY if schema in {2, 3} else POLICY
     policy = value.get("policy", {})
-    if set(value) != required or schema not in {1, 2} or set(policy) != set(POLICY):
+    if set(value) != required or schema not in {1, 2, 3} or set(policy) != set(POLICY):
         raise ValueError("WORKFLOW_CONFIG")
     for key in (
         "case_count",
@@ -138,7 +160,9 @@ def load(path: Path) -> dict[str, Any]:
         value["case_ids"] != expected_cases
         or len(expected_cases) != policy["case_count"]
     ):
-        raise ValueError("DEVELOPMENT_LIST" if schema == 1 else "SEEN_V3_LIST")
+        raise ValueError(
+            {1: "DEVELOPMENT_LIST", 2: "SEEN_V3_LIST", 3: "FORMAL_V4_LIST"}[schema]
+        )
     for name in ("source", "build_receipt", "prior_ledger", "secrets", "stage_lock"):
         target = Path(value[name])
         if not target.is_absolute():
@@ -181,16 +205,24 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
     """Require a rebuilt clean source receipt, including the current audit fix."""
     source = read(Path(config["source"]))
     schema = source["definition"]["schema_version"]
-    if config["schema_version"] == 2:
+    if config["schema_version"] in {2, 3}:
         definition = source["definition"]
-        root = Path(config["seen_v3"]["package"])
+        formal = config["schema_version"] == 3
+        scope = config["formal_v4" if formal else "seen_v3"]
+        root = Path(scope["package"])
+        permitted = (
+            {(18, "support_agent_v1"), (17, "support_fixed_v1")}
+            if formal
+            else {(18, "support_agent_v1")}
+        )
+        error = "FORMAL_V4_SOURCE_BINDING" if formal else "SEEN_V3_SOURCE_BINDING"
         if (
-            schema != 18
+            (schema, definition["program"]["strategy"]) not in permitted
             or source["schema_version"] != 2
-            or definition["program"]["strategy"] != "support_agent_v1"
-            or definition["resources"]["dataset_id"] != DATASET_V3
+            or definition["resources"]["dataset_id"]
+            != (DATASET_V4 if formal else DATASET_V3)
         ):
-            raise ValueError("SEEN_V3_SOURCE_BINDING")
+            raise ValueError(error)
         for binding, relative, resource in (
             (source["case_map"], "evaluation/case-map.jsonl", None),
             (
@@ -207,7 +239,13 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
                 or resource is not None
                 and definition["resources"][resource] != expected
             ):
-                raise ValueError("SEEN_V3_SOURCE_BINDING")
+                raise ValueError(error)
+        if formal:
+            frozen = evaluation_freeze(config)
+            assert frozen is not None
+            validate_blueprint(
+                frozen, definition["program"]["strategy"], blueprint(definition)
+            )
     build = read(Path(config["build_receipt"]))
     if schema not in {16, 17, 18} or build["sources"] != source_hashes(schema):
         raise ValueError("BUILD_SOURCES_CHANGED")
