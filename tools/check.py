@@ -58,7 +58,8 @@ def commands(check: str, base: str) -> list[list[str]]:
         ]
     if check == "python-lint":
         # Preserve the existing suite boundaries and their pytest configurations.
-        result = [py + ["pytest", *paths] for paths in PYTHON_TESTS] + [
+        result = [py + ["tools.package_licenses", "--check"]]
+        result += [py + ["pytest", *paths] for paths in PYTHON_TESTS] + [
             py + ["ruff", "check", "."],
             py + ["ruff", "format", "--check", "."],
             py + ["mypy", "sdk/python"],
