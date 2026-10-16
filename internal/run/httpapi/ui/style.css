@@ -2028,6 +2028,9 @@ input, select {
   font-size: 12px;
   color: #607b91;
 }
+.rowtime {
+  white-space: normal;
+}
 .reconcile-action {
   margin-top: 20px;
 }
