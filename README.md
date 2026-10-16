@@ -1,18 +1,34 @@
 # JobForge
 
-JobForge 是以 PostgreSQL 为事实源的持久 Agent 执行后端。Go 管理 Run、租约、步骤提交和预算；受监管的 Python 执行器按登记策略读取业务证据、调用模型并生成可审阅方案。交付保证为 at-least-once，外部副作用须业务幂等。
+**把工单、订单、物流与政策证据整理成可审阅的售后方案，经人工批准后记录到工单。**
 
-当前主线是 Agent v3，已交付固定客服流程、有界 Agent、步骤恢复和人工审批写入。S5新增同源任务页面、可导出观测链路及内容留存/恢复工具，已完成未见正式质量、原11项恢复对照和实际人工审批/唯一回执恢复验证；工程能力与模型质量分别记录。结果、演示与交付检查见[当前状态](docs/status.md)。
+[![CI](https://github.com/XJfyrh/JobForge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/XJfyrh/JobForge/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/XJfyrh/JobForge?include_prereleases)](https://github.com/XJfyrh/JobForge/releases)
 
-## 从这里开始
+[观看三分钟演示](https://github.com/XJfyrh/JobForge/releases/download/v0.1.0-preview.1/jobforge-demo.mp4) · [开始免费 Run](docs/quickstart.md) · [业务边界](docs/support-overview.md) · [工程亮点](docs/engineering.md) · [English](README.en.md)
 
-- [文档导航](docs/README.md)：按接入、开发、排障和契约查找内容。
-- [本地开发](docs/development.md)：准备工具、构建，启动无收费 profile 的控制服务。
-- [Run API 与 SDK](docs/agent-v3/runs.md)：提交、查询、取消、重试和调用账本。
-- [架构与执行权](docs/architecture.md)：控制库、业务库、Go/Python 边界。
-- [页面与运维](docs/agent-v3/operations.md)：同源任务页面、v3 观测、内容清理、停写恢复与演示。
-- [贡献与验证](CONTRIBUTING.md)：协作要求和按改动选择检查。
+[![任务工作台：方案、依据与实际更新结果（隔离测试数据）](docs/images/workbench.jpg)](https://github.com/XJfyrh/JobForge/releases/tag/v0.1.0-preview.1)
+
+Go/PostgreSQL管理执行权、步骤、恢复、人工审批与费用；Python执行登记的Agent单步。交付为at-least-once，外部副作用通过业务幂等和回执核对。
+
+| 已核验结果 | 证据与范围 |
+|---|---|
+| Agent正确 **18/20**，完整证据 **18/20** | [V9未见正式集](docs/evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)，2026-10-16；两案失败保留，非生产准确率 |
+| Fixed各 **11/20**；配对胜8 / 平11 / 负1 | 同一正式集；两流程及提示存在已记录差异，不归因于单一算法 |
+| 业务提交后丢失响应，恢复确认唯一回执 | [真实故障演示](docs/evidence/agent-v3-s5-closeout-2026-10-16.md)，模型无重放；不宣称恢复节费 |
+
+当前动作限于保存结论、待补充或人工跟进标记。所有业务写入须人工批准；人工跟进标记没有连接外部派单系统，不自动关闭工单、退款、付款或发送客户消息。
+
+## 按任务进入
+
+- 体验与接入：[Quickstart](docs/quickstart.md)、[SDK/HTTP示例](examples/run-api/README.md)、[Run API](docs/agent-v3/runs.md)、[OpenAPI](api/run/v2/openapi.yaml)。
+- 评估部署：[适用性与配置](docs/deployment.md)、[架构](docs/architecture.md)、[术语表](docs/glossary.md)。
+- 参与贡献：[第一次贡献](CONTRIBUTING.md)、[近期路线图](ROADMAP.md)。
+- 深入核验：[当前状态](docs/status.md)、[文档导航](docs/README.md)、[验收证据](docs/evidence/README.md)。
+
+免费体验的模型响应、向量和费用为模拟；Run、审批与回执经过隔离的真实Go/PostgreSQL/Python路径。正式模型质量由原冻结候选的验收报告证明。
 
 已有 Job API 及本地 Ollama Agent/RAG 示例继续可用，使用[旧 Job 路径](docs/legacy/README.md)；它们与 v3 的 Run 服务分开启动。
 
-代码采用 [Apache-2.0](LICENSE)。安全问题按 [SECURITY.md](SECURITY.md) 私密报告。
+代码采用 [Apache-2.0](LICENSE)，界面第三方资源保留[各自许可](internal/run/httpapi/ui/assets/README.md)。安全问题按 [SECURITY.md](SECURITY.md) 私密报告。

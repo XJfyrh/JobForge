@@ -7,6 +7,11 @@ info:
     return 404; missing role in own tenant returns 403. No model endpoint, fees, tenant, lease or arbitrary
     code can be supplied. SDK performs no hidden retry, redirect, polling or protected-reference fetch.
     ADR-0026 adds separate approver decisions, receipt-only reconciliation and effect/action-call views. No public business-write endpoint exists.
+servers:
+- url: http://127.0.0.1:8093
+  description: Local control service; profiles and budgets must be registered
+- url: http://127.0.0.1:8195
+  description: Isolated free demo; model responses, vectors and ledger amounts are synthetic
 security:
 - BearerAuth: []
 paths:
@@ -1128,6 +1133,13 @@ components:
       - failed
       - cancelled
     SubmitRun:
+      examples:
+      - schema_version: 1
+        ticket_id: ticket-1
+        business_request_key: curl-hello-1
+        profile_id: approval-joint-synthetic-v1
+        budget_batch_id: contract-batch
+        run_timeout_seconds: 3600
       type: object
       additionalProperties: false
       required:
@@ -1209,6 +1221,10 @@ components:
           maxLength: 2048
       description: Execution errors remain data on HTTP 200 GET responses.
     ErrorEnvelope:
+      examples:
+      - error:
+          code: RESULT_EXPIRED
+          message: synthetic contract error
       type: object
       additionalProperties: false
       required:
@@ -1646,6 +1662,155 @@ components:
         for later approved actions. Nullable fields are always present. No Worker credentials, execution
         token or raw business inputs are exposed.
     RunSubmission:
+      examples:
+      - run:
+          run_id: 11111111-1111-4111-8111-111111111111
+          tenant_id: contract-a
+          business_request_id: 22222222-2222-4222-8222-222222222222
+          business_request_key: contract-intent
+          ticket_id: T01
+          retry_of_run_id: null
+          profile_id: contract-profile-v1
+          profile_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          budget_batch_id: contract-batch
+          snapshot_id: 33333333-3333-4333-8333-333333333333
+          snapshot_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          version_vector:
+            schema_version: 1
+            ticket:
+              id: T01
+              revision: 1
+            order:
+              id: null
+              exists: false
+              revision: null
+            delivery:
+              id: null
+              exists: false
+              aggregate_revision: null
+            policy:
+              version: policy-v1
+              revision: 1
+              corpus_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            index:
+              id: 44444444-4444-4444-8444-444444444444
+              profile_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+              content_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          state: ready
+          outcome: null
+          error: null
+          attempt_no: 0
+          recovery_count: 0
+          cursor_version: 0
+          run_timeout_seconds: 3600
+          run_deadline: '2026-09-16T09:00:00Z'
+          attempt_deadline: null
+          lease_until: null
+          next_attempt_at: null
+          permission_expires_at: null
+          proposal_ref: null
+          stop_reason: null
+          cancel_requested_at: null
+          created_at: '2026-09-16T08:00:00Z'
+          updated_at: '2026-09-16T08:00:00Z'
+          terminal_at: null
+          content_purged_at: null
+          budget:
+            family:
+              scope: family
+              id: 22222222-2222-4222-8222-222222222222
+              limits:
+                chat: 12
+                logical_tools: 8
+                query_embedding: 8
+                profile_metadata_http: 16
+                business_tool_http: 8
+                physical_http: 44
+                protocol_corrections: 1
+                tokens: 1000000
+                cost_microyuan: 1000000
+              used:
+                chat: 0
+                logical_tools: 0
+                query_embedding: 0
+                profile_metadata_http: 0
+                business_tool_http: 0
+                physical_http: 0
+                protocol_corrections: 0
+                tokens: 0
+                cost_microyuan: 0
+              frozen: false
+              known_tokens: 0
+              known_cost_microyuan: 0
+              held_tokens: 0
+              held_cost_microyuan: 0
+            tenant:
+              scope: tenant
+              id: contract-a
+              limits:
+                chat: 12
+                logical_tools: 8
+                query_embedding: 8
+                profile_metadata_http: 16
+                business_tool_http: 8
+                physical_http: 44
+                protocol_corrections: 1
+                tokens: 1000000
+                cost_microyuan: 1000000
+              used:
+                chat: 0
+                logical_tools: 0
+                query_embedding: 0
+                profile_metadata_http: 0
+                business_tool_http: 0
+                physical_http: 0
+                protocol_corrections: 0
+                tokens: 0
+                cost_microyuan: 0
+              frozen: false
+              known_tokens: 0
+              known_cost_microyuan: 0
+              held_tokens: 0
+              held_cost_microyuan: 0
+            batch:
+              scope: batch
+              id: contract-batch
+              limits:
+                chat: 12
+                logical_tools: 8
+                query_embedding: 8
+                profile_metadata_http: 16
+                business_tool_http: 8
+                physical_http: 44
+                protocol_corrections: 1
+                tokens: 1000000
+                cost_microyuan: 1000000
+              used:
+                chat: 0
+                logical_tools: 0
+                query_embedding: 0
+                profile_metadata_http: 0
+                business_tool_http: 0
+                physical_http: 0
+                protocol_corrections: 0
+                tokens: 0
+                cost_microyuan: 0
+              frozen: false
+              known_tokens: 0
+              known_cost_microyuan: 0
+              held_tokens: 0
+              held_cost_microyuan: 0
+            run_usage:
+              chat: 0
+              logical_tools: 0
+              query_embedding: 0
+              profile_metadata_http: 0
+              business_tool_http: 0
+              physical_http: 0
+              protocol_corrections: 0
+              tokens: 0
+              cost_microyuan: 0
+        reused: false
       type: object
       additionalProperties: false
       required:
@@ -2251,6 +2416,10 @@ components:
         including LF <=256KiB. Late reports may change future captures. Batch reason may be shared but no
         foreign triggering identifiers are returned.
     ApprovalRequest:
+      examples:
+      - schema_version: 1
+        decision: approve
+        proposal_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       type: object
       additionalProperties: false
       required:
@@ -2274,6 +2443,32 @@ components:
     ApprovalProposal:
       $ref: ../../support/v1/schema.json#/$defs/persistedProposal
     ApprovalView:
+      examples:
+      - run_id: 00000000-0000-4000-8000-000000000001
+        status: pending
+        proposal_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        proposal_ref: run-proposal:00000000-0000-4000-8000-000000000001
+        proposal:
+          decision: proposal
+          action: record_conclusion
+          conclusion: on_time
+          requested_fields: []
+          target_ticket_status: escalated
+          summary: 'Synthetic <resolution> & Unicode 例子
+            '
+          claims:
+          - kind: ticket_status
+            mode: preserve_escalated
+            refs:
+            - evidence_ref: business-evidence:fixture:ticket
+              source_pointer: /ticket/status
+          evidence_refs:
+          - business-evidence:fixture:ticket
+        permission_expires_at: '2026-10-05T01:00:00Z'
+        approval_id: null
+        actor_id: null
+        decided_at: null
+        available: true
       type: object
       additionalProperties: false
       required:
@@ -2386,6 +2581,30 @@ components:
         retain_until: *id004
         receipt_hash: *id001
     EffectView:
+      examples:
+      - state: applied
+        operation_id: 00000000-0000-4000-8000-000000000001
+        authorization_hash: 51996a29dd83cdcd4eec10a21cb2f1db4744b9149ad2439d04d71028c3d44112
+        effect_version: 1
+        receipt_ref: action-receipt:00000000-0000-4000-8000-000000000001
+        receipt:
+          schema_version: 1
+          tenant_id: tenant-north
+          operation_id: 00000000-0000-4000-8000-000000000001
+          business_request_id: 00000000-0000-4000-8000-000000000001
+          authorization_hash: 51996a29dd83cdcd4eec10a21cb2f1db4744b9149ad2439d04d71028c3d44112
+          proposal_hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          parameters_hash: 763213ce723b5e1d7fe13d87348dec7a1de4927667500db22a64b231a42f991c
+          approval_id: 00000000-0000-4000-8000-000000000001
+          ticket_id: ticket-1
+          before_revision: 1
+          after_revision: 2
+          ticket_status: escalated
+          applied_at: 1791158400000001
+          retain_until: 1793750400000001
+          receipt_hash: 49c661f16ef83c72b351e9440ad6872bb78582d71bcc74113127ddb2ca1c3651
+        source: worker_query
+        observed_at: '2026-10-05T00:00:01Z'
       type: object
       additionalProperties: false
       required:

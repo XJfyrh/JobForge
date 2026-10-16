@@ -306,6 +306,16 @@ jobs:
       - name: Coordinator ordering with the real Linux clock
         if: matrix.shard == 'core'
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
+      - name: Free local Run through public HTTP and independent approval
+        if: matrix.shard == 'core'
+        run: |
+          docker tag jobforge-agent-runtime:integration jobforge-hello-ci-demo:latest
+          docker compose -p jobforge-hello-ci -f deploy/demo/compose.yaml build web
+          docker compose -p jobforge-hello-ci -f deploy/demo/compose.yaml up -d --no-build --wait
+          python -m tools.demo_smoke
+      - name: Stop owned free demo
+        if: always() && matrix.shard == 'core'
+        run: docker compose -p jobforge-hello-ci -f deploy/demo/compose.yaml stop
       - name: Real PostgreSQL, business actions, gRPC and process faults
         env:
           SHARD: ${{ matrix.shard }}

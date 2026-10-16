@@ -53,7 +53,10 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0039](0039-s5-startup-review-and-automatic-health.md) | S5 一次启动审查与自动健康检查 | Accepted（后续新批次；不放行具体收费） | 2026-10-15 |
 | [ADR-0040](0040-s5-evidence-and-validation-consistency.md) | S5 证据绑定与验收一致性 | Accepted（随本 PR 合并生效） | 2026-10-16 |
 | [ADR-0041](0041-business-workbench-presentation.md) | 业务工作台与部署处理方式 | Accepted（随本 PR 合并生效） | 2026-10-16 |
+| [ADR-0042](0042-public-preview-and-isolated-demo.md) | 公开预览与隔离免费演示 | Accepted（随本 PR 合并生效） | 2026-10-16 |
 
 ## 增量适用范围
+
+[ADR-0042](0042-public-preview-and-isolated-demo.md)补充公开预览、许可打包及隔离免费体验，沿用既有执行、审批和费用合同。
 
 ADR-0018/0019 的确认形状按 ADR-0020 升级，仅适用于新审计 profile；其余流程与清理边界仍有效。ADR-0021 的首批授权由 0022/0023 增补；ADR-0024 仅对 S2 profile 调整固定图/终结判断及 S1 专属准入，ADR-0025 仅对 schema 3/S3 profile 增补有限未提交恢复与进程丢失分类。各精确取代条款以原 ADR 为准，历史正文和旧 profile 不升级。

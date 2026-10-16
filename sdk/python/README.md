@@ -8,6 +8,8 @@ python -m pip install './sdk/python[dev]'
 
 ## Run v2
 
+可运行的[首次Run](../../docs/quickstart.md)及[提交/审阅/回执脚本与HTTP合集](../../examples/run-api/README.md)使用统一环境变量。本文保留SDK方法和合同说明。
+
 `RunClient` 对应 [OpenAPI 源](../../api/run/v2/openapi.yaml) 和 [Run 指南](../../docs/agent-v3/runs.md)；旧 `JobForgeClient` 仍可独立使用。Run 控制服务必须事先登记不可变 profile、业务快照依赖和授权预算批次；默认不启用收费模型。schema 4 的审批与结论记录见[审批指南](../../docs/agent-v3/approval.md)。
 
 ```python

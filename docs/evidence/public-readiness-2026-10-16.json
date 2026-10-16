@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "new_paid_calls": 0,
+  "windows_warm_start": {
+    "platform": "Windows Docker Desktop, Linux containers",
+    "cached_images": true,
+    "seconds": 12.094
+  },
+  "windows_final_http_smoke": {
+    "cloud_calls": 0,
+    "model": "synthetic",
+    "run_id": "ccb93fcf-5528-436c-be03-f1cb3f36faf8",
+    "submit_to_proposal_seconds": 6.594,
+    "total_seconds": 7.797,
+    "receipt_hash": "e4b74dd40732bbfa82fc3172844a76543f970526bac47216a57500744b0aec47",
+    "checks": [
+      "401",
+      "reader_403",
+      "submit_replay",
+      "operator_approval_403",
+      "wrong_hash_409",
+      "approval_replay",
+      "real_receipt",
+      "reconcile_same_receipt"
+    ]
+  },
+  "initial_http_smoke": {
+    "run_id": "801e6011-461a-4cde-bef4-4c2880c91ff3",
+    "proposal_seconds": 5.656,
+    "total_seconds": 6.875,
+    "receipt_hash": "6d4d35f3db6d97b247091a835a1339659ec66f326764c783bc6a159f2c2e0b4d"
+  },
+  "real_readonly_views_sha256": "7f78100886fdc5d10da56512c1cde94d5b59587621780788d3fc2f13dd64198b",
+  "real_readonly_views_unchanged_after_recording": true,
+  "standalone_sdist_rebuilds": [
+    {
+      "sdist": "jobforge-0.1.0.tar.gz",
+      "rebuild": "pass",
+      "license_expression": "Apache-2.0",
+      "license_bytes_equal": true
+    },
+    {
+      "sdist": "jobforge_agent-0.1.0.tar.gz",
+      "rebuild": "pass",
+      "license_expression": "Apache-2.0",
+      "license_bytes_equal": true
+    }
+  ],
+  "video": {
+    "schema_version": 1,
+    "date": "2026-10-16",
+    "duration_seconds": 180,
+    "speed": 1,
+    "new_paid_model_calls": 0,
+    "ui_baseline_commit": "fe6dd385c4f1592b4f174b5372972c69b15fcd80",
+    "real_run_id": "f26f2b0f-8a75-44ec-bd7c-6869e1bc1665",
+    "synthetic_run_id": "a87ede28-0103-47cb-b625-e7eb59584bde",
+    "segments": [
+      {
+        "source": "cover.png",
+        "source_sha256": "e0aaf5e51a58bdd14566f33004ea0b1c4d924a164f227d6cca2e968399f086e3",
+        "source_start_seconds": 0,
+        "duration_seconds": 20,
+        "timeline_start_seconds": 0,
+        "kind": "title"
+      },
+      {
+        "source": "real-ui-hd.webm",
+        "source_sha256": "f6c7a239398f3371744d53475f12a286ab8bf7833a2a51de7c3e24ca4237e37a",
+        "source_start_seconds": 65,
+        "duration_seconds": 20,
+        "timeline_start_seconds": 20,
+        "kind": "real_readonly"
+      },
+      {
+        "source": "real-ui-hd.webm",
+        "source_sha256": "f6c7a239398f3371744d53475f12a286ab8bf7833a2a51de7c3e24ca4237e37a",
+        "source_start_seconds": 0,
+        "duration_seconds": 12,
+        "timeline_start_seconds": 40,
+        "kind": "real_readonly"
+      },
+      {
+        "source": "real-ui-hd.webm",
+        "source_sha256": "f6c7a239398f3371744d53475f12a286ab8bf7833a2a51de7c3e24ca4237e37a",
+        "source_start_seconds": 22,
+        "duration_seconds": 12,
+        "timeline_start_seconds": 52,
+        "kind": "real_readonly"
+      },
+      {
+        "source": "real-ui-hd.webm",
+        "source_sha256": "f6c7a239398f3371744d53475f12a286ab8bf7833a2a51de7c3e24ca4237e37a",
+        "source_start_seconds": 42,
+        "duration_seconds": 16,
+        "timeline_start_seconds": 64,
+        "kind": "real_readonly"
+      },
+      {
+        "source": "approval-ui-hd.webm",
+        "source_sha256": "ae393a093f30c7da794772eec380e3e5bdab13955266d77e12066b8dbacebfbc",
+        "source_start_seconds": 38,
+        "duration_seconds": 45,
+        "timeline_start_seconds": 80,
+        "kind": "synthetic_mechanism"
+      },
+      {
+        "source": "approval-and-recovery.webm",
+        "source_sha256": "835e4336408c6da7c3c430598185ed217199b08ee68bd6d49f4562a64ea38c40",
+        "source_start_seconds": 55,
+        "duration_seconds": 20,
+        "timeline_start_seconds": 125,
+        "kind": "historical_fault"
+      },
+      {
+        "source": "final-readonly-view.webm",
+        "source_sha256": "b49566d37d4b45b649125141b76413dc978f552c97dc26e063792b7d264bb606",
+        "source_start_seconds": 10,
+        "duration_seconds": 15,
+        "timeline_start_seconds": 145,
+        "kind": "historical_readonly"
+      },
+      {
+        "source": "outro.png",
+        "source_sha256": "0a95454d9d55b085fd27f11cdcb4da9dbff656b4890e314c883d313387647318",
+        "source_start_seconds": 0,
+        "duration_seconds": 20,
+        "timeline_start_seconds": 160,
+        "kind": "title"
+      }
+    ],
+    "notes": [
+      "Excerpts are not continuous wall-clock time. No video speed-up.",
+      "Old 1280x900 recordings remove only 180px gray recorder padding, preserving the 1280x720 browser viewport.",
+      "Database replay used GET-only API and PostgreSQL transaction_read_only=on, with no worker/scanner/executable profiles.",
+      "The original zero-byte SDK recording remains preserved; no model run was issued to replace it."
+    ],
+    "video_sha256": "342d85d70cc42407de552bf9066d09eb09bde341a9647179a164cdfd7b0f240a"
+  }
+}

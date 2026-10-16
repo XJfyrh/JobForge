@@ -151,6 +151,9 @@ func approvalSyntheticProvider(t *testing.T, chats *atomic.Int32, repeat ...bool
 			w.WriteHeader(400)
 			return
 		}
+		if os.Getenv("JOBFORGE_PUBLIC_DEMO") == "1" {
+			decisions[4] = strings.ReplaceAll(strings.ReplaceAll(decisions[4], `"action":"escalate"`, `"action":"record_conclusion"`), `"target_ticket_status":"escalated"`, `"target_ticket_status":"open"`)
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"id": "synthetic-s4-chat", "object": "chat.completion", "created": 1, "model": "deepseek-flash", "system_fingerprint": "fp_synthetic_s4", "choices": []any{map[string]any{"index": 0, "finish_reason": "stop", "logprobs": nil, "message": map[string]any{"role": "assistant", "content": decisions[n]}}}, "usage": map[string]any{"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "prompt_cache_hit_tokens": 2, "prompt_cache_miss_tokens": 8}})
 	})
 	for _, address := range []string{"127.0.0.1:11434", "127.0.0.1:18093"} {
@@ -171,7 +174,7 @@ func TestRunApprovalExecutorRealBusinessNaturalRecovery(t *testing.T) {
 		t.Skip("requires fixed Linux --init, real control PG, pgvector business PG and installed SDK")
 	}
 	modes := []string{"normal", "commit_loss"}
-	if os.Getenv("JOBFORGE_S5_REVIEW_DIR") != "" {
+	if os.Getenv("JOBFORGE_S5_REVIEW_DIR") != "" || os.Getenv("JOBFORGE_PUBLIC_DEMO") == "1" {
 		modes = []string{"review"}
 	}
 	for _, mode := range modes {
@@ -288,6 +291,10 @@ func TestRunApprovalExecutorRealBusinessNaturalRecovery(t *testing.T) {
 			approvalSyntheticProvider(t, &chats, mode == "review")
 			gateway, _ := recoveryExecutorGateway(t, h, "")
 			if mode == "review" {
+				if os.Getenv("JOBFORGE_PUBLIC_DEMO") == "1" {
+					publicDemoEnvironment(t, h, server, gateway)
+					return
+				}
 				s5ReviewEnvironment(t, h, server, gateway, admin, &lose)
 				return
 			}
