@@ -242,10 +242,10 @@ def chat_barrier(
             or audit is None
             or audit["identity_state"] != "compatible"
             or audit["mode_state"]
-            != (
-                "thinking"
+            not in (
+                {"thinking", "nonthinking"}
                 if adjudication and call["step_kind"] == "model_proposal"
-                else "nonthinking"
+                else {"nonthinking"}
             )
             or adjudication
             and audit.get("schema_version")

@@ -121,6 +121,11 @@ def test_v9_final_audit_mode_and_known_protocol_failure_stay_distinct() -> None:
     call["step_kind"] = "model_proposal"
     call["provider_audit"].update(schema_version=2, mode_state="thinking")
     assert driver.chat_barrier(evidence, adjudication=True)
+    call["provider_audit"]["mode_state"] = "nonthinking"
+    assert driver.chat_barrier(evidence, adjudication=True)
+    call["provider_audit"]["mode_state"] = "unexpected"
+    assert not driver.chat_barrier(evidence, adjudication=True)
+    call["provider_audit"]["mode_state"] = "thinking"
     assert not driver.chat_barrier(evidence, committed=True, adjudication=True)
     assert not driver.chat_barrier(evidence)
     for field, value in (("usage_known", False), ("held_cost_microyuan", 1)):
@@ -150,9 +155,7 @@ def test_v9_launch_retains_unreached_format_failure_and_stops_systemic_repetitio
         profile_id="recovery",
         profile_hash="a" * 64,
     )
-    for row, spec in zip(
-        value["runs"], plan.V9_SPECS, strict=True
-    ):
+    for row, spec in zip(value["runs"], plan.V9_SPECS, strict=True):
         row["boundary"] = spec[2]
         row["binding"]["ticket_id"] = "ticket"
     evidence = correction()

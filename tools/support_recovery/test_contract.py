@@ -164,9 +164,10 @@ def test_v9_cumulative_authorization_and_full_next_reservation() -> None:
         )
     assert driver.stage_remaining({"schema_version": 3}, release) == -17_994_187
     closed = dict(prior, batch_frozen=True, execution_closed=True)
-    assert driver.stage_remaining(
-        value, dict(release, prior_batch_exposure=[closed])
-    ) == 5_005_813
+    assert (
+        driver.stage_remaining(value, dict(release, prior_batch_exposure=[closed]))
+        == 5_005_813
+    )
     for changed in (
         dict(closed, execution_closed=False),
         dict(closed, unknown_chat_calls=1),
