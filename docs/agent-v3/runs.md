@@ -1,5 +1,7 @@
 # Run API、SDK 与调用账本
 
+第一次接入先看[免费Run](../quickstart.md)与[SDK/curl合集](../../examples/run-api/README.md)。配置、端口和期限集中见[部署参考](../deployment.md)，术语见[术语表](../glossary.md)。
+
 本页说明控制服务接入、持久步骤与预算排障。合同为 [PRD v0.9](../product/JobForge_PRD_v0.9.md)、[ADR-0017](../adr/0017-run-admission-and-call-ledger.md)及[供应商审计](provider-audit.md)；当前交付与真实验收统一见[状态页](../status.md)。
 
 S5 的 Run 响应新增 `terminal_at` 和 `content_purged_at`，身份查询为 `GET /v2/identity`。终态内容过窗后 steps/result/GET及POST approval 返回 `410 RESULT_EXPIRED`，旧 Submit 重放返回 `410 REQUEST_EXPIRED`；Run 状态、费用和独立效果仍可查询。SDK 提供对应的过窗异常；清理条件与命令见[数据操作](operations.md#终态内容清理)。

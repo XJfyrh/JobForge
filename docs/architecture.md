@@ -4,6 +4,10 @@ Agent v3 以 PostgreSQL 保存 Run、attempt、步骤、许可和预算事实。
 
 ## 组件与数据边界
 
+![Agent v3组件与执行权](images/agent-v3-architecture.drawio.svg)
+
+工程取舍与故障时序见[工程亮点](engineering.md)，平台及运维范围见[部署参考](deployment.md)。
+
 | 组件 | 职责 | 入口 |
 |---|---|---|
 | `agent-control` | `/v2/runs`、AgentService RPC、恢复扫描；提交步骤和审计/预算事务 | [Run 指南](agent-v3/runs.md) |

@@ -34,6 +34,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 /.pytest_tmp/
+/.playwright-cli/
 .mypy_cache/
 .ruff_cache/
 .coverage

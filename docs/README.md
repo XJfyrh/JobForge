@@ -5,6 +5,8 @@
 | 要做什么 | 从哪里开始 | 按需深入 |
 |---|---|---|
 | 理解项目 | [架构](architecture.md) | [产品契约索引](product/README.md)、[ADR 索引](adr/README.md) |
+| 首次体验 | [免费Run](quickstart.md) | [SDK/HTTP示例](../examples/run-api/README.md)、[公开演示](demo.md) |
+| 判断业务与部署范围 | [业务边界](support-overview.md) | [部署参考](deployment.md)、[工程亮点](engineering.md)、[术语表](glossary.md) |
 | 准备环境、构建 | [开发指南](development.md) | [贡献要求](../CONTRIBUTING.md)、[编码规范](code-standards.md) |
 | 接入 Run API/SDK | [Run 指南](agent-v3/runs.md) | [Python SDK](../sdk/python/README.md)、[OpenAPI](../api/run/v2/openapi.yaml)、[Proto](../proto/README.md) |
 | 准备业务数据与检索 | [业务依赖](agent-v3/business.md) | [开发语料](../examples/support-agent/README.md) |

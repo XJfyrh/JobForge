@@ -1,0 +1,62 @@
+# Explicitly synthetic, disposable, loopback-only preview; never a production profile.
+name: jobforge-hello
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    volumes:
+      - demo-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [demo]
+  demo:
+    build:
+      context: ../..
+      dockerfile: tools/agentruntimecheck/Dockerfile
+      target: integration-check
+    init: true
+    environment:
+      JOBFORGE_TEST_DSN: postgres://demo:demo@postgres:5432/demo?sslmode=disable
+      JOBFORGE_BUSINESS_TEST_DSN: postgres://demo:demo@postgres:5432/demo?sslmode=disable
+      JOBFORGE_PUBLIC_DEMO: "1"
+    command: ["/app/integration.test", "-test.v", "-test.run=^TestRunApprovalExecutorRealBusinessNaturalRecovery$", "-test.timeout=95m"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8093/demo.json',timeout=2).read()"]
+      interval: 2s
+      timeout: 3s
+      retries: 90
+      start_period: 10s
+    stop_grace_period: 20s
+    networks: [demo]
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/demo/Dockerfile.web
+    init: true
+    ports:
+      - "127.0.0.1:${JOBFORGE_DEMO_PORT:-8195}:8080"
+    depends_on:
+      demo: {condition: service_healthy}
+    networks: [demo, ingress]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/demo.json',timeout=2).read()"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  demo-pg:
+networks:
+  demo:
+    internal: true
+  ingress:

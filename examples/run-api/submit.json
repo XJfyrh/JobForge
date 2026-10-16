@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "ticket_id": "ticket-1",
+  "business_request_key": "curl-hello-1",
+  "profile_id": "approval-joint-synthetic-v1",
+  "budget_batch_id": "contract-batch",
+  "run_timeout_seconds": 3600
+}

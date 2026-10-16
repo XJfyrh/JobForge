@@ -10,6 +10,9 @@ from typing import Any
 
 import pytest
 import yaml  # type: ignore[import-untyped]  # Test-only OpenAPI YAML loader.
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 from jobforge import run_models
 
@@ -64,6 +67,30 @@ def check_schema(value: Any, schema: dict[str, Any]) -> None:
         assert value in schema["enum"]
     if "const" in schema:
         assert value == schema["const"]
+
+
+def test_public_examples_match_the_reviewed_schema() -> None:
+    """Published examples must be valid requests/responses, not prose placeholders."""
+    base = (SOURCE / "openapi.yaml").as_uri()
+    registry: Registry[Any] = Registry().with_resource(
+        base, Resource.from_contents(OPENAPI, default_specification=DRAFT202012)
+    )
+    for path in SOURCE.parents[1].rglob("*.json"):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(value, dict) and "$schema" in value:
+            registry = registry.with_resource(
+                path.as_uri(),
+                Resource.from_contents(value, default_specification=DRAFT202012),
+            )
+    for name, schema in OPENAPI["components"]["schemas"].items():
+        for example in schema.get("examples", []):
+            Draft202012Validator(
+                {"$ref": base + "#/components/schemas/" + name}, registry=registry
+            ).validate(example)
+    request = json.loads(
+        (SOURCE.parents[2] / "examples/run-api/submit.json").read_text(encoding="utf-8")
+    )
+    check_schema(request, OPENAPI["components"]["schemas"]["SubmitRun"])
 
 
 @pytest.mark.parametrize(

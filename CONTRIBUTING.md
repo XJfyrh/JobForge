@@ -4,7 +4,17 @@
 
 ## 工作流与提交
 
-从最新 `main` 创建短分支，名称用 `XJfyrh/<type>/<short-description>`。保持提交聚焦，不混入无关格式化/重构；发起 PR，说明问题、结果、相关影响和实际验证。评审与必需检查通过后 squash merge，日常不直接推送 `main`。
+外部贡献者先fork仓库，从最新 `main` 创建 `<type>/<short-description>` 短分支，例如 `docs/explain-receipts`。维护者可以保留个人前缀，它不是公共贡献要求。保持提交聚焦，不混入无关格式化/重构；发起 PR，说明问题、结果、相关影响和实际验证。评审与必需检查通过后 squash merge，日常不直接推送 `main`。
+
+## 第一次文档贡献
+
+准备Git和Python后，可用约15分钟完成一次小修改；安装、下载和等待CI的时间另计，不需要Docker、数据库或模型环境。
+
+1. 从[英文部署摘要](https://github.com/XJfyrh/JobForge/issues/65)、[取消/retry示例](https://github.com/XJfyrh/JobForge/issues/66)或[迟到确认例子](https://github.com/XJfyrh/JobForge/issues/67)选一个 `good first issue`，按其范围与验收条件修改当前指南。
+2. 从fork创建上述短分支，修改后在仓库根目录执行 `python -m tools.ci_docs`，检查引用、锚点和Linux大小写。
+3. 执行 `git diff --check`，提交并向 `main` 发PR，写明改动与实际检查结果。
+
+术语见[术语表](docs/glossary.md)，后续方向见[路线图](ROADMAP.md)。修改政策、PRD、ADR、gold或机器证据需要按其契约维护，不作为普通文案重排。代码改动按下文运行相应局部检查。
 
 提交使用 Conventional Commits：`type(scope): 简短描述`，scope 按需。type 为 `feat/fix/docs/refactor/test/perf/build/ci/chore/style/revert`，小写英文；描述默认简体中文，PR 内语言一致，尽量不超过 72 字符且末尾无句号。不兼容变更用 `!` 和 `BREAKING CHANGE:` 说明影响。
 
