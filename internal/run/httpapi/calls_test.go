@@ -138,6 +138,19 @@ func callEvidenceFixtures() map[string]run.CallsResponse {
 			response.BatchFrozen, response.BatchStopCode = true, callPtr(run.BatchStopCode("PROVIDER_IDENTITY_INVALID"))
 		}
 		values[name] = response
+		if name == "recorded" {
+			audit, usage := audit, usage
+			audit.SchemaVersion, audit.ModeState, audit.ReasoningTokens = 2, run.ProviderModeThinking, callPtr(int64(4))
+			audit.AuditHash = audit.Hash()
+			receipt, _ := audit.ReceiptHash(base.PhysicalCallID)
+			usage.ReceiptHash = receipt
+			usage.UsageHash = usage.Hash()
+			call.ProviderAudit, call.AuditHash, call.ObservedUsage, call.SettledUsage = &audit, &audit.AuditHash, &usage, &usage
+			call.ReportHash = callPtr(run.CallReport{Usage: &usage, ProviderAudit: &audit}.Hash(run.ReportBinding{
+				ExecutionBindingHash: strings.Repeat("d", 64), PhysicalCallID: base.PhysicalCallID, ParameterHash: base.ParameterHash,
+				Subcall: run.SubcallChat, ExpectedResponseModel: "deepseek-flash"}))
+			values["thinking"] = wrap(call)
+		}
 	}
 	empty := wrap(base)
 	empty.Items = []run.CallView{}

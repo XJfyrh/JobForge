@@ -13,10 +13,10 @@ from typing import Any
 from tools.support_approval.plan import source_hashes as approval_sources
 from tools.support_evaluation.assemble import read, save_new, sha
 from tools.support_evaluation.evidence import need
+from tools.support_evaluation.s5_policy import FORMAL_POLICY, POLICY, THRESHOLDS
 from tools.support_evaluation.validate_data import DATASET_VERSION
 from tools.support_evaluation.validate_data import ROOT as DATA_ROOT
 from tools.support_s5.package import DATASET_V3
-from tools.support_s5.score import THRESHOLDS
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -148,7 +148,13 @@ def validate_current_regressions(
     for strategy, report in reports.items():
         need(report["dataset_version"] == DATASET_VERSION, "DEVELOPMENT_DATASET")
         registration(registrations[strategy], report, strategy)
-        complete(report, 40, (36, 38) if strategy == "support_agent_v1" else None)
+        complete(
+            report,
+            POLICY["case_count"],
+            (POLICY["minimum_correct"], POLICY["minimum_full_evidence"])
+            if strategy == "support_agent_v1"
+            else None,
+        )
     seen = review.get("seen_regression", {})
     need(set(seen) == {"report", "registration"}, "REGRESSION_RECEIPT_REQUIRED")
     report = bound(seen["report"])
@@ -160,7 +166,11 @@ def validate_current_regressions(
         "SEEN_REGRESSION_SCOPE",
     )
     registration(seen["registration"], report, "support_agent_v1")
-    complete(report, 20, (16, 18))
+    complete(
+        report,
+        FORMAL_POLICY["case_count"],
+        (FORMAL_POLICY["minimum_correct"], FORMAL_POLICY["minimum_full_evidence"]),
+    )
     for selected, case_ids in (
         (reports["support_agent_v1"], ("DEV-020",)),
         (report, ("S5V3-004", "S5V3-018")),
@@ -243,7 +253,7 @@ def create(
         need(
             sha(report_raw) == review["reports"][path]
             and report["kind"] == "s5-development-regression"
-            and report["denominator"] == 40
+            and report["denominator"] == POLICY["case_count"]
             and report["proposal_audit_complete"],
             "ACTUAL_DEVELOPMENT_REGRESSION_REQUIRED",
         )

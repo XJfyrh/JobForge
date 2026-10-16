@@ -22,7 +22,7 @@ S5 operator 设置 `JOBFORGE_AGENT_WORKER_METRICS_ADDR=0.0.0.0:6064`，启动器
 
 每个 attempt 新建有限根 span，link 到原 Submit trace，以 Run ID / attempt_no 关联审批后继续及租约恢复。人工等待时没有常驻 span。`run.python.execute` 由 Go guardian 计时，覆盖真实进程启动至清理；`run.external_http` 的 Python 调用由已核验 IPC 的 permit→observation 区间桥接，缺失 observation 保持 unknown，许可本身不证明已发送。实际业务 HTTP 继续传播 TraceContext。该实现没有新增 Python IPC 消息或 Python collector 通道。
 
-指标标签只使用固定 route/method、状态、步骤/调用类别和错误分类。Run、租户、审批者和调用 ID 仅作 trace 属性。PG 快照失败时面板保持缺失并触发 snapshot 告警；不得把缺失数据填成零。family/tenant/batch 是重叠预算范围，不能相加当成总支出。账本 known 是按登记费率估算的用量费用，held 是暂占额度；不是供应商已结算账单。
+指标标签只使用固定 route/method、状态、步骤/调用类别和错误分类；步骤 kind 使用协议 snake_case。Run、租户、审批者和调用 ID 仅作 trace 属性。PG 完整快照每15秒最多刷新一次，查询超时2秒，成功及失败均缓存；刷新失败时不输出旧快照或部分数据，面板保持缺失并触发 snapshot 告警。`jobforge_run_recoveries` 是保留 Run 恢复次数之和的 gauge，告警按 delta 检测净增长。family/tenant/batch 是重叠预算范围，不能相加当成总支出。账本 known 是按登记费率估算的用量费用，held 是暂占额度；不是供应商已结算账单。
 
 ## 终态内容清理
 

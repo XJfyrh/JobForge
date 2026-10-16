@@ -1808,6 +1808,16 @@ components:
         tenant authorization and are not fetched automatically.
     ProviderAudit:
       type: object
+      allOf:
+      - if:
+          properties:
+            mode_state:
+              const: thinking
+          required: [mode_state]
+        then:
+          properties:
+            schema_version:
+              const: 2
       additionalProperties: false
       required:
       - schema_version
@@ -1828,9 +1838,7 @@ components:
       properties:
         schema_version:
           type: integer
-          minimum: 0
-          maximum: 9007199254740991
-          const: 1
+          enum: [1, 2]
         provider:
           type: string
           enum:
@@ -1904,6 +1912,7 @@ components:
           type: string
           enum:
           - nonthinking
+          - thinking
           - unexpected
           - invalid
           - unavailable

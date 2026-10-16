@@ -155,13 +155,13 @@ async function detail(id) {
   const version = ++detailVersion, started = epoch;
   selected = null; el("detail").hidden = true;
   const run = await api(`/v2/runs/${id}`);
-  const [result, approval, effect, calls, actionCalls, steps] = await Promise.all([
+  const [result, approval, effect] = await Promise.all([
     part(`/v2/runs/${id}/result`), part(`/v2/runs/${id}/approval`), part(`/v2/runs/${id}/effect`),
-    part(`/v2/runs/${id}/calls`), part(`/v2/runs/${id}/action-calls`),
-    allSteps(id).then(value => ({ value, error: null })).catch(error => { if (["SESSION_CHANGED", "UNAUTHORIZED"].includes(error.code)) throw error; return { value: null, error: error.code }; })
   ]);
+  // A saved proposal without an approval record still needs its committed step.
+  const steps = run.proposal_ref && !approval.value?.proposal ? await stepPart(id) : { value: null, error: null };
   if (version !== detailVersion || started !== epoch) return;
-  selected = { run, approval: approval.value, effect: effect.value };
+  selected = { run, approval: approval.value, effect: effect.value, version, steps, stepRequest: null, ledgerRequest: null };
   el("detail").hidden = false; el("run-facts").replaceChildren(); el("run-technical").replaceChildren();
   fact("工单", run.ticket_id); fact("处理进度", stateNames[run.state] ?? `未知状态：${run.state}`);
   if (run.error) fact("处理失败原因", `${errors[run.error.code] ?? "处理未完成"} (${run.error.code})`);
@@ -186,7 +186,19 @@ async function detail(id) {
   el("cancel").hidden = identity.role !== "operator" || !states.has(run.state) || terminal.has(run.state);
   const family = run.budget?.family;
   text("cost", `本次业务请求累计：用量费用估算 ${money(family?.known_cost_microyuan)} · 暂占额度 ${money(family?.held_cost_microyuan)} · 费用额度 ${money(family?.limits?.cost_microyuan)}。${family?.frozen === true ? "额度已冻结，需核对费用后才能继续。" : family?.frozen === false ? "额度未冻结。" : "额度状态待确认。"}`);
-  json("ledger", { budget: run.budget, calls: calls.error ?? calls.value, action_calls: actionCalls.error ?? actionCalls.value });
+  json("ledger", { budget: run.budget });
+  renderSteps(steps);
+  if (el("ledger-details").open) await loadLedger();
+  if (version !== detailVersion || started !== epoch) return;
+  if (el("execution-details").open) await loadSteps();
+}
+
+async function stepPart(id) {
+  try { return { value: await allSteps(id), error: null }; }
+  catch (error) { if (["SESSION_CHANGED", "UNAUTHORIZED"].includes(error.code)) throw error; return { value: null, error: error.code }; }
+}
+
+function renderSteps(steps) {
   el("steps").replaceChildren(); text("steps-error", steps.error ? `步骤内容不可用：${steps.error}` : "");
   for (const step of steps.value ?? []) {
     const item = document.createElement("details"), summary = document.createElement("summary"), output = document.createElement("pre"), reference = document.createElement("p");
@@ -194,6 +206,26 @@ async function detail(id) {
     reference.textContent = `结果引用：${step.output_ref} · 提交 hash：${step.commit_hash}`;
     output.textContent = JSON.stringify(step.output, null, 2); item.append(summary, reference, output); el("steps").append(item);
   }
+}
+
+async function loadSteps() {
+  const target = selected;
+  if (!target || target.steps.value !== null || target.steps.error) return;
+  if (!target.stepRequest) target.stepRequest = stepPart(target.run.run_id);
+  const steps = await target.stepRequest;
+  if (selected !== target || target.version !== detailVersion) return;
+  target.steps = steps; renderSteps(steps);
+}
+
+async function loadLedger() {
+  const target = selected;
+  if (!target) return;
+  if (!target.ledgerRequest) target.ledgerRequest = Promise.all([
+    part(`/v2/runs/${target.run.run_id}/calls`), part(`/v2/runs/${target.run.run_id}/action-calls`)
+  ]);
+  const [calls, actionCalls] = await target.ledgerRequest;
+  if (selected !== target || target.version !== detailVersion) return;
+  json("ledger", { budget: target.run.budget, calls: calls.error ?? calls.value, action_calls: actionCalls.error ?? actionCalls.value });
 }
 
 async function command(kind) {
@@ -230,3 +262,5 @@ el("more").addEventListener("click", () => guard(() => list(true)));
 el("refresh").addEventListener("click", () => guard(async () => { await list(); if (selected) await detail(selected.run.run_id); }));
 el("reload-detail").addEventListener("click", () => guard(() => selected && detail(selected.run.run_id)));
 for (const kind of ["approve", "reject", "cancel", "reconcile"]) el(kind).addEventListener("click", () => guard(() => command(kind)));
+el("ledger-details").addEventListener("toggle", () => { if (el("ledger-details").open) guard(loadLedger); });
+el("execution-details").addEventListener("toggle", () => { if (el("execution-details").open) guard(loadSteps); });

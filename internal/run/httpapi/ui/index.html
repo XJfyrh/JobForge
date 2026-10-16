@@ -44,8 +44,8 @@
       <section><h3>处理方案</h3><p id="result"></p><dl id="proposal-facts" class="facts"></dl><details><summary>核对事实与来源</summary><div id="claims"></div></details><details><summary>方案技术详情</summary><pre id="proposal"></pre></details><p id="proposal-error"></p></section>
       <section><h3>人工审批</h3><p id="approval"></p><p id="approval-context"></p><div id="approval-actions" hidden><button id="approve">批准此方案</button><button id="reject" class="danger">拒绝此方案</button></div></section>
       <section><h3>工单更新结果</h3><p id="effect"></p><dl id="receipt-facts" class="facts"></dl><details><summary>回执技术详情</summary><pre id="receipt"></pre></details><button id="reconcile" class="secondary" hidden>核对处理结果</button></section>
-      <section><h3>费用与额度</h3><p id="cost"></p><p>用量费用按本次登记费率估算。暂占额度包含进行中及用量尚未确认的调用。</p><details><summary>预算与调用技术详情</summary><pre id="ledger"></pre></details></section>
-      <details><summary>执行技术详情</summary><dl id="run-technical" class="facts"></dl><p id="steps-error"></p><div id="steps"></div></details>
+      <section><h3>费用与额度</h3><p id="cost"></p><p>用量费用按本次登记费率估算。暂占额度包含进行中及用量尚未确认的调用。</p><details id="ledger-details"><summary>预算与调用技术详情</summary><pre id="ledger"></pre></details></section>
+      <details id="execution-details"><summary>执行技术详情</summary><dl id="run-technical" class="facts"></dl><p id="steps-error"></p><div id="steps"></div></details>
       <section><h3>操作</h3><button id="cancel" class="danger" hidden>取消后续处理</button></section>
     </article>
   </main>

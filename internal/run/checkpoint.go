@@ -340,7 +340,9 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 				var order struct {
 					Missing bool `json:"missing"`
 				}
-				_ = json.Unmarshal(result.Content, &order)
+				if err := json.Unmarshal(result.Content, &order); err != nil {
+					return decision, ErrStepConflict
+				}
 				if order.Missing {
 					decision.NextKind = "model_proposal"
 				}

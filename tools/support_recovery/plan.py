@@ -13,6 +13,7 @@ from tools.support_evaluation.assemble import register, save_new
 from tools.support_evaluation.driver import instant
 from tools.support_evaluation.evidence import fingerprint, load_package, read_json
 from tools.support_evaluation.export import json_bytes
+from tools.support_evaluation.s5_policy import POLICY
 
 ROOT = Path(__file__).resolve().parents[2]
 SPECS = (
@@ -97,7 +98,8 @@ def freeze(config: Path, replacement: str, *, s5: bool = False) -> dict[str, Any
         ]["chat"]
         > 132
         or any(
-            row["limits"]["cost_microyuan"] > (4_000_000 if s5 else 5_000_000)
+            row["limits"]["cost_microyuan"]
+            > (POLICY["batch_cap_microyuan"] if s5 else 5_000_000)
             for row in control["budgets"]
         )
         or (
@@ -171,7 +173,7 @@ def validate(plan: dict[str, Any], *, check_sources: bool = True) -> None:
         or (
             not (
                 type(plan["max_cost_microyuan"]) is int
-                and 0 < plan["max_cost_microyuan"] <= 4_000_000
+                and 0 < plan["max_cost_microyuan"] <= POLICY["batch_cap_microyuan"]
             )
             if plan["schema_version"] in {2, 3, 4}
             else plan["max_cost_microyuan"] != 5_000_000

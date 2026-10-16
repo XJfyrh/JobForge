@@ -19,7 +19,7 @@ const (
 
 // ApprovalEnabled checks the complete immutable capability, not a pending state.
 func (p Profile) ApprovalEnabled() bool {
-	if p.ExecutorVersion == SupportAdjudicationExecutorVersion || p.ExecutorVersion == SupportAdjudicationV2ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV3ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV4ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV5ExecutorVersion {
+	if IsAgentAdjudicationExecutor(p.ExecutorVersion) {
 		return p.FinalAdjudicationEnabled()
 	}
 	d, err := DecodeSupportDefinition(p.Definition)

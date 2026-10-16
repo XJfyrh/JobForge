@@ -30,7 +30,7 @@ class VisibleText(HTMLParser):
             self.parts.append(data.strip())
 
 
-def old_ledgers(root: Path) -> dict[str, Any]:
+def old_ledgers(root: Path, inventory: Path) -> dict[str, Any]:
     """Refresh every original batch once, without reading secrets or resetting data."""
     old = read(root / "final-20261008/cumulative-stage-ledger.json")
     plans = [{"phase": p["phase"], "database": p["database"]} for p in old["phases"]]
@@ -40,6 +40,15 @@ def old_ledgers(root: Path) -> dict[str, Any]:
         )
     if len({p["database"] for p in plans}) != len(plans) or len(plans) != 20:
         raise ValueError("unexpected prior database inventory")
+    hosts = read(inventory)
+    if set(hosts) != {p["database"] for p in plans} or any(
+        set(host) != {"container", "user"}
+        or any(
+            not isinstance(v, str) or not v or v.startswith("-") for v in host.values()
+        )
+        for host in hosts.values()
+    ):
+        raise ValueError("prior database host inventory mismatch")
     query = """
 begin transaction isolation level repeatable read read only;
 select json_build_object('database',current_database(),'sampled_at',clock_timestamp(),
@@ -54,14 +63,12 @@ commit;
 """
     phases = []
     for row in plans:
-        clean = row["database"] == "jobforge_agent"
+        host = hosts[row["database"]]
         args = [
             "docker",
             "exec",
             "-i",
-            "jobforge-s5-clean-demo-control-postgres-1"
-            if clean
-            else "deploy-postgres-1",
+            host["container"],
             "psql",
             "-X",
             "-q",
@@ -69,7 +76,7 @@ commit;
             "-v",
             "ON_ERROR_STOP=1",
             "-U",
-            "jobforge_agent" if clean else "jobforge",
+            host["user"],
             "-d",
             row["database"],
         ]
@@ -99,10 +106,10 @@ commit;
     }
 
 
-def collect(root: Path, output: Path) -> dict[str, Any]:
+def collect(root: Path, output: Path, inventory: Path) -> dict[str, Any]:
     """Save current source bytes before interpreting their pricing or capabilities."""
     output.mkdir(exist_ok=False)
-    ledger = old_ledgers(root)
+    ledger = old_ledgers(root, inventory)
     save(output / "prior-ledger.json", ledger)
     containers = subprocess.run(
         ["docker", "ps", "--format", "{{.Names}}"],
@@ -163,7 +170,8 @@ def collect(root: Path, output: Path) -> dict[str, Any]:
             "account_available": available,
             "artifacts": artifacts,
             "old_paid_containers": active,
-            "c_free_bytes": shutil.disk_usage("C:/").free,
+            "evidence_volume": str(output.resolve().anchor),
+            "evidence_free_bytes": shutil.disk_usage(output.resolve()).free,
             "paid_chat_calls": 0,
         },
     )
@@ -181,6 +189,7 @@ def main() -> None:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--confirm-tariff", action="store_true")
+    parser.add_argument("--inventory", type=Path)
     args = parser.parse_args()
     if args.confirm_tariff:
         meta = read(args.output / "metadata.json")
@@ -203,7 +212,9 @@ def main() -> None:
         )
         print('{"ready":true,"paid_chat_calls":0}')
     else:
-        print(json.dumps(collect(args.root, args.output)))
+        if args.inventory is None:
+            parser.error("metadata collection requires --inventory")
+        print(json.dumps(collect(args.root, args.output, args.inventory)))
 
 
 if __name__ == "__main__":

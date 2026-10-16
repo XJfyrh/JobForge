@@ -12,6 +12,7 @@ import sys
 
 from tools.ci_checks import (
     CHECKS,
+    GO_TEST_SKIP_PATTERN,
     ROOT,
     git_paths,
     runtime_tests,
@@ -21,6 +22,7 @@ from tools.ci_checks import (
 
 PYTHON_TESTS = (
     ("tools/ci_tests",),
+    ("tools/support_schemas",),
     ("sdk/python/tests",),
     ("tools/agent_probe_data", "tools/executorprobe"),
     ("python/tests",),
@@ -29,6 +31,7 @@ PYTHON_TESTS = (
     ("tools/support_approval",),
     ("tools/support_s5", "tools/support_lifecycle", "tools/support_diagnosis"),
 )
+GOLANGCI_VERSION = "2.12.2"
 
 
 def tool(name: str) -> str:
@@ -49,7 +52,10 @@ def commands(check: str, base: str) -> list[list[str]]:
             ["go", "run", "github.com/rhysd/actionlint/cmd/actionlint@v1.7.12"],
         ]
     if check == "go-test":
-        return [["go", "test", "-race", "-count=1", "./..."]]
+        # Real executor acceptance runs once in Linux shards with a no-skip guard.
+        return [
+            ["go", "test", "-race", "-count=1", "-skip", GO_TEST_SKIP_PATTERN, "./..."]
+        ]
     if check == "python-lint":
         # Preserve the existing suite boundaries and their pytest configurations.
         result = [py + ["pytest", *paths] for paths in PYTHON_TESTS] + [
@@ -79,6 +85,7 @@ def commands(check: str, base: str) -> list[list[str]]:
                 "tools/ci_checks.py",
                 "tools/ci_docs.py",
                 "tools/ci_images.py",
+                "tools/support_schemas",
             ],
         ):
             result.append(py + ["mypy", "--platform", "linux", *paths])
@@ -255,6 +262,18 @@ def commands(check: str, base: str) -> list[list[str]]:
 def preflight(checks: list[str]) -> None:
     """Fail before a selected acceptance layer can silently skip its dependencies."""
     required: set[str] = set()
+    if "go-lint" in checks:
+        installed = json.loads(
+            subprocess.run(
+                [tool("golangci-lint"), "version", "--json"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=ROOT,
+            ).stdout
+        )
+        if installed.get("version") != GOLANGCI_VERSION:
+            raise ValueError(f"golangci-lint {GOLANGCI_VERSION} required")
     if "go-test" in checks:
         required |= {
             "JOBFORGE_TEST_DSN",
@@ -326,6 +345,11 @@ def free_environment(*, quick: bool) -> dict[str, str]:
     )
     if not quick:
         env["JOBFORGE_TEST_PYTHON"] = sys.executable
+    # Check this checkout's executor sources even when an older wheel is installed.
+    for name in ("PYTHONPATH", "MYPYPATH"):
+        env[name] = str(ROOT / "python") + (
+            os.pathsep + env[name] if env.get(name) else ""
+        )
     return env
 
 

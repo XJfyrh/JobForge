@@ -70,6 +70,11 @@ def test_public_source_schema_accepts_all_go_fixtures() -> None:
     )
     for value in FIXTURES.values():
         validator.validate(value)
+    thinking = copy.deepcopy(FIXTURES["thinking"])
+    thinking["items"][0]["provider_audit"]["schema_version"] = 1
+    assert not validator.is_valid(thinking)
+    with pytest.raises(ValueError):
+        RunCalls.from_dict(thinking)
 
 
 @pytest.mark.parametrize(

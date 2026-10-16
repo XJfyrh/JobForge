@@ -16,8 +16,9 @@ Go Worker 持有执行权，固定 Python guardian/step 执行登记单步，通
 | schema 15 / `support_agent_v1` + 状态政策前置读取 | `support-agent-v1` | `linux-v2-adjudication-runtime-4` |
 | schema 16 / `support_agent_v1` + 完整政策前置读取 | `support-agent-v1` | `linux-v2-adjudication-runtime-5` |
 | schema 17 / `support_fixed_v1` + 相同完整政策及终裁 | `support-fixed-v1` | `linux-v2-fixed-adjudication-runtime-2` |
+| schema 18 / `support_agent_v1` + 完整主张与自身时间证据 | `support-agent-v1` | `linux-v2-adjudication-runtime-5` |
 
-schema 1–10 使用 `deepseek-audit-v1`，schema 11–17 使用 `deepseek-audit-v2`；模型均为 `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9/11/13/14/15/16分别绑定实际 `support-agent-prompt-v2/v3/v4/v5/v6/v7/v8` 源码，schema17绑定 `support-fixed-prompt-v2`。schema 7–17均使用部署manifest 2；schema 1–6使用manifest 1。实际验收见[证据索引](../evidence/README.md)。
+schema 1–10 使用 `deepseek-audit-v1`，schema 11–18 使用 `deepseek-audit-v2`；模型均为 `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9/11/13/14/15/16/18分别绑定实际 `support-agent-prompt-v2/v3/v4/v5/v6/v7/v8/v9` 源码，schema17绑定 `support-fixed-prompt-v2`。schema 7–18均使用部署manifest 2；schema 1–6使用manifest 1。`deploy/support-agent.source.example.json` 保留 schema 2 的历史入口，不能作为 v9 模板使用。实际验收见[证据索引](../evidence/README.md)。
 
 schema 11 保持 v3 调查提示与工具行为。首次 `final` 只提交含原始初稿的 `investigation_complete` 标记，不能审批；Go 再调度独立 `model_proposal`，只传已提交事实与来源，不传初稿。终裁 thinking/high、16,384 completion token、120s HTTP 上限仍受原 attempt 180s、Run、账号截止和取消/租约约束。reasoning 包含于 completion，不重复计费；响应上限 1MiB，最终内容仍为 16KiB，推理正文不进入 IPC 或日志。空推理只观测；有效计量下截断/无效终裁结束当前 Run，不纠错、不按质量重试。schema 12 的 Fixed 终裁使用相同模型参数和额度。见 [ADR-0033](../adr/0033-versioned-final-adjudication.md)。
 

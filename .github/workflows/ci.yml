@@ -68,16 +68,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Build
-        run: go build ./...
-      - name: Vet
-        run: go vet ./...
-      - name: Validate workflows
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.12.2
+      - name: Install shared lint version
+        run: |
+          version="$(python -c 'from tools.check import GOLANGCI_VERSION; print(GOLANGCI_VERSION)')"
+          go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$version"
+      - name: Shared build, vet, lint and workflow checks
+        run: python -m tools.check --only go-lint
 
   go-test:
     needs: changes
@@ -341,18 +337,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Verify dashboard generation
-        run: |
-          python tools/generate_task_dashboard.py
-          git diff --exit-code -- deploy/grafana/dashboards/jobforge-tasks.json
-          python tools/generate_run_dashboard.py
-          git diff --exit-code -- deploy/grafana/run-dashboards/jobforge-runs.json
-      - name: Validate and test alert rules
-        run: |
-          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
-          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
-          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/run.yml
-          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/run-alerts.test.yml
+      - name: Shared dashboard and alert checks
+        run: python -m tools.check --only observability-config
 
   ci-required:
     name: CI required

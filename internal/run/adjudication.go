@@ -34,7 +34,7 @@ const (
 
 // FinalAdjudicationEnabled selects only a fully frozen new profile.
 func (p Profile) FinalAdjudicationEnabled() bool {
-	if p.ExecutorVersion != SupportAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV2ExecutorVersion && p.ExecutorVersion != SupportAdjudicationV3ExecutorVersion && p.ExecutorVersion != SupportAdjudicationV4ExecutorVersion && p.ExecutorVersion != SupportFixedAdjudicationExecutorVersion && p.ExecutorVersion != SupportAdjudicationV5ExecutorVersion && p.ExecutorVersion != SupportFixedBundleExecutorVersion {
+	if !IsAdjudicationExecutor(p.ExecutorVersion) {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

@@ -24,7 +24,6 @@ type chatBarrier struct {
 	StepSequence, StepCursor                                           *int64
 	StepAttempt                                                        *int64
 	StepOutput                                                         []byte
-	profileJSON                                                        []byte
 }
 
 // checkBatchAuditGuard is called with the batch account locked, before creating
@@ -43,15 +42,18 @@ func checkBatchAuditGuard(ctx context.Context, tx pgx.Tx, batchID string, curren
 			return nil
 		}
 	}
+	profiles, err := batchAuditProfiles(ctx, tx, batchID)
+	if err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, "select "+callColumns+`,r.profile_id,r.profile_hash,r.snapshot_id,r.snapshot_hash,
 		r.state,r.attempt_no,r.fencing_token,r.next_step_id,r.next_step_kind,r.next_input_hash,r.cursor_version,r.error_code,r.recovery_count,
 		ra.worker_id,ra.session_id,ra.fencing_token,ra.started_at,ra.finished_at,ra.outcome,ra.error_code,
-		s.step_id,s.sequence,s.cursor_version,s.kind,s.input_hash,s.profile_hash,s.snapshot_hash,s.output,s.commit_hash,s.attempt_no,p.definition
+		s.step_id,s.sequence,s.cursor_version,s.kind,s.input_hash,s.profile_hash,s.snapshot_hash,s.output,s.commit_hash,s.attempt_no
 		from physical_calls c
 		join runs r on r.tenant_id=c.tenant_id and r.run_id=c.run_id
 		join business_requests b on b.tenant_id=r.tenant_id and b.business_request_id=r.business_request_id
 		join run_attempts ra on ra.tenant_id=c.tenant_id and ra.run_id=c.run_id and ra.attempt_no=c.attempt_no
-		join agent_profiles p on p.profile_id=r.profile_id
 		left join run_steps s on s.tenant_id=c.tenant_id and s.run_id=c.run_id and s.step_id=c.step_id
 		where b.batch_account_id=$1 and c.kind='chat' order by c.reserved_at,c.physical_call_id`, batchID)
 	if err != nil {
@@ -69,15 +71,15 @@ func checkBatchAuditGuard(ctx context.Context, tx pgx.Tx, batchID string, curren
 			&barrier.AttemptWorker, &barrier.AttemptSession, &barrier.AttemptFence, &barrier.AttemptStarted, &barrier.AttemptFinished,
 			&barrier.AttemptOutcome, &barrier.AttemptError, &barrier.StepID, &barrier.StepSequence, &barrier.StepCursor,
 			&barrier.StepKind, &barrier.StepInput, &barrier.StepProfile, &barrier.StepSnapshot, &barrier.StepOutput,
-			&barrier.CommitHash, &barrier.StepAttempt, &barrier.profileJSON)
+			&barrier.CommitHash, &barrier.StepAttempt)
 		if err := rows.Scan(targets...); err != nil {
 			return err
 		}
 		if err := decodeCall(&barrier.Call); err != nil {
 			return err
 		}
-		if json.Unmarshal(barrier.profileJSON, &barrier.Profile) != nil || barrier.Profile.ValidateAuditPolicy() != nil ||
-			barrier.Profile.ID != barrier.Run.ProfileID || barrier.Profile.Hash != barrier.Run.ProfileHash {
+		barrier.Profile = profiles[barrier.Run.ProfileID]
+		if barrier.Profile.ID != barrier.Run.ProfileID || barrier.Profile.Hash != barrier.Run.ProfileHash {
 			return agentrun.ErrInternal
 		}
 		barrier.Run.ID, barrier.Run.TenantID = barrier.Call.Lease.RunID, barrier.Call.Lease.TenantID
@@ -107,6 +109,34 @@ func checkBatchAuditGuard(ctx context.Context, tx pgx.Tx, batchID string, curren
 		}
 	}
 	return nil
+}
+
+// Load and validate each immutable profile once, within the locked transaction.
+// The call query then carries only IDs/hashes instead of a definition per chat.
+func batchAuditProfiles(ctx context.Context, tx pgx.Tx, batchID string) (map[string]agentrun.Profile, error) {
+	rows, err := tx.Query(ctx, `select p.profile_id,p.profile_hash,p.definition from agent_profiles p
+		where exists(select 1 from runs r
+		join business_requests b on b.tenant_id=r.tenant_id and b.business_request_id=r.business_request_id
+		join physical_calls c on c.tenant_id=r.tenant_id and c.run_id=r.run_id
+		where b.batch_account_id=$1 and c.kind='chat' and r.profile_id=p.profile_id)`, batchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	profiles := make(map[string]agentrun.Profile)
+	for rows.Next() {
+		var id, hash string
+		var raw []byte
+		var profile agentrun.Profile
+		if err := rows.Scan(&id, &hash, &raw); err != nil {
+			return nil, err
+		}
+		if json.Unmarshal(raw, &profile) != nil || profile.ID != id || profile.Hash != hash || profile.ValidateAuditPolicy() != nil {
+			return nil, agentrun.ErrInternal
+		}
+		profiles[id] = profile
+	}
+	return profiles, rows.Err()
 }
 
 func persistedChatObservation(call callRow, profile agentrun.Profile) bool {

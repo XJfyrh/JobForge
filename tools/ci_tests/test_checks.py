@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import subprocess
 import tempfile
 import unittest
@@ -12,7 +13,11 @@ from unittest.mock import patch
 from tools.check import commands, free_environment, preflight
 from tools.ci_checks import (
     CHECKS,
+    CONTRACT_DOCS,
     DEADLINES,
+    GO_TEST_SKIP_PATTERN,
+    MANUAL_RESTORE_TESTS,
+    RUNTIME_PATTERN,
     SLOW_RECOVERY,
     git_paths,
     runtime_tests,
@@ -36,6 +41,11 @@ class SelectionTests(unittest.TestCase):
             set(select_checks(["deploy/prometheus/run-alerts.yml"])),
             {"python-lint", "observability-config"},
         )
+
+    def test_s5_contract_documents_and_profile_schemas(self) -> None:
+        """Contract-only changes run consumers and schema validation."""
+        for path in CONTRACT_DOCS | {"api/support/s5-agent-v9/profile-schema.json"}:
+            self.assertEqual(select_checks([path]), ["python-lint"])
 
     def test_protected_inputs_and_unknown_paths(self) -> None:
         """Contracts, executable Markdown and unmapped paths cannot take the docs path."""
@@ -219,6 +229,37 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(all(shards.values()))
         flat = [name for names in shards.values() for name in names]
         self.assertEqual(len(flat), len(set(flat)))
+        self.assertIn(
+            "-test.run=" + RUNTIME_PATTERN,
+            (
+                Path(__file__).resolve().parents[2]
+                / "tools/agentruntimecheck/Dockerfile"
+            ).read_text(),
+        )
+        self.assertEqual(
+            commands("go-test", "HEAD")[0][-3:],
+            ["-skip", GO_TEST_SKIP_PATTERN, "./..."],
+        )
+        for family in (
+            "Adjudication",
+            "PolicyBundle",
+            "StatusPolicy",
+            "ContentCleanup",
+        ):
+            self.assertTrue(any(name.startswith("TestRun" + family) for name in flat))
+        self.assertFalse(MANUAL_RESTORE_TESTS.intersection(flat))
+        manual_source = (
+            Path(__file__).resolve().parents[2]
+            / "tests/integration/run_s5_restore_linux_test.go"
+        ).read_text()
+        self.assertEqual(
+            set(
+                re.findall(
+                    r"^func (TestRunS5Restored\w+)\(", manual_source, re.MULTILINE
+                )
+            ),
+            MANUAL_RESTORE_TESTS,
+        )
         runtime = commands("agent-runtime-contract", "HEAD")
         self.assertEqual(
             sum("-test.timeout=1200s" in command for command in runtime), 3

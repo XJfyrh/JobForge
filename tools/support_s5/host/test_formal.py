@@ -13,6 +13,90 @@ from tools.support_s5.host import config
 from tools.support_s5.package import ARTIFACT_NAMES, DATASET_V3, DATASET_V4
 
 
+@pytest.mark.parametrize(
+    "image", [None, "production_worker", "approval_operator", "s5_operator", "business"]
+)
+def test_formal_freeze_binds_all_executed_images(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    image: str | None,
+) -> None:
+    """A same-source rebuild cannot silently replace the frozen candidate images."""
+    root = tmp_path / "package"
+    images = {
+        name: "sha256:" + "a" * 64
+        for name in (
+            "production_worker",
+            "approval_operator",
+            "s5_operator",
+            "business",
+        )
+    }
+    build_path, source_path, freeze_path = (
+        tmp_path / name for name in ("build.json", "source.json", "freeze.json")
+    )
+    frozen = {"images": dict(images)}
+    if image:
+        frozen["images"][image] = "sha256:" + "b" * 64
+
+    def bind(path: Path) -> dict[str, str]:
+        return {"path": str(path), "sha256": "hash"}
+
+    source = {
+        "schema_version": 2,
+        "definition": {
+            "schema_version": 18,
+            "program": {"strategy": "support_agent_v1"},
+            "resources": {
+                "dataset_id": DATASET_V4,
+                "runtime_manifest_sha256": "hash",
+                "seed_sha256": "hash",
+                "tenants": [],
+            },
+        },
+        "case_map": bind(root / "evaluation/case-map.jsonl"),
+        "runtime_data": {
+            "manifest": bind(root / "runtime/dataset-manifest.json"),
+            "seed": bind(root / "runtime/seed.json"),
+        },
+        **{
+            name: bind(build_path if name == "build_receipt" else tmp_path / name)
+            for name in (
+                "build_receipt",
+                "data_review",
+                "scoring_review",
+                "price_snapshot",
+            )
+        },
+    }
+    build = {
+        "sources": {},
+        "source_state": "clean-commit",
+        "source_commit": "head",
+        "images": images,
+    }
+    files = {source_path: source, build_path: build, freeze_path: frozen}
+    monkeypatch.setattr(config, "read", lambda path: files[path])
+    monkeypatch.setattr(config, "digest", lambda path: "hash")
+    monkeypatch.setattr(config, "source_hashes", lambda schema: {})
+    monkeypatch.setattr(config, "validate_blueprint", lambda *args: None)
+    monkeypatch.setattr(
+        config, "command", lambda argv: b"head" if argv[1] == "rev-parse" else b""
+    )
+    settings = {
+        "schema_version": 3,
+        "source": str(source_path),
+        "build_receipt": str(build_path),
+        "images": images,
+        "formal_v4": {"package": str(root), "freeze": str(freeze_path)},
+    }
+    if image:
+        with pytest.raises(ValueError, match="FROZEN_IMAGES_CHANGED"):
+            config.validate_sources(settings)
+    else:
+        assert config.validate_sources(settings) == build
+
+
 @pytest.mark.parametrize("mutation", ["none", "seen", "relative", "toggle"])
 def test_formal_loader_never_uses_historical_mode_or_development(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation: str

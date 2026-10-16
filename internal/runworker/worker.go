@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/xjfyrh/jobforge/internal/observability"
@@ -130,7 +131,7 @@ func (w *Worker) runStep(ctx context.Context, lease *agentv1.RunLease, checkpoin
 		kind := "unknown"
 		if checkpoint != nil && checkpoint.NextStep != nil {
 			if name, exists := agentv1.StepKind_name[int32(checkpoint.NextStep.Kind)]; exists {
-				kind = name
+				kind = strings.ToLower(strings.TrimPrefix(name, "STEP_KIND_"))
 			}
 		}
 		result := "accepted"

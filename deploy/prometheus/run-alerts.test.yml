@@ -1,6 +1,18 @@
 rule_files: [run-alerts.yml]
 evaluation_interval: 5s
 tests:
+  - interval: 1m
+    input_series:
+      - series: 'jobforge_run_recoveries{instance="growth"}'
+        values: '4 4 5 5 5 5'
+      - series: 'jobforge_run_recoveries{instance="retention"}'
+        values: '10 10 3 3 3 3'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: JobForgeRunRecovered
+        exp_alerts:
+          - exp_labels: {severity: warning, instance: growth}
+            exp_annotations: {summary: Runs recovered after lease loss}
   - interval: 5s
     input_series:
       - series: 'jobforge_run_budget_frozen{scope="batch"}'
