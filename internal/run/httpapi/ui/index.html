@@ -3,51 +3,63 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JobForge · 任务与审批</title>
+  <title>JobForge · 任务工作台</title>
   <link rel="icon" href="/ui/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/ui/style.css">
   <script type="module" src="/ui/app.js"></script>
 </head>
 <body>
-  <header><div><p class="eyebrow">JOBFORGE / AGENT V3</p><h1>任务与审批</h1></div><p>查证事实，审阅方案，核对回执。</p></header>
+<div class="workspace">
+  <header class="header">
+    <a class="wordmark" href="#tasks" aria-label="JobForge 首页">JobForge</a>
+    <nav aria-label="主要导航"><button id="nav-tasks" class="nav-link active">任务</button><button id="help" class="nav-link">使用帮助</button></nav>
+    <div class="header-end" id="session-info" hidden><span class="team">当前工作空间</span><div class="person"><span class="avatar" id="avatar" aria-hidden="true"></span><button id="session" class="identity"><span id="person-role"></span><img class="icon" src="/ui/assets/caret-down.svg" alt=""></button></div></div>
+  </header>
+  <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
   <main>
-    <section aria-labelledby="session-title">
-      <h2 id="session-title">当前身份</h2>
-      <form id="session-form" autocomplete="off">
-        <label>访问凭据<input id="credential" type="password" autocomplete="off" required maxlength="256" spellcheck="false"></label>
-        <button type="submit">连接 / 切换身份</button><button id="logout" type="button" class="secondary">退出并清除内容</button>
-      </form>
-      <p id="identity">尚未连接。凭据只保留在当前页面内存中。</p>
+    <section id="login" class="login-screen" aria-labelledby="login-title">
+      <div><p class="overline">JOBFORGE / 工作空间</p><h1 id="login-title">让每一步，<br>有据可循。</h1><p class="intro">跟进工单处理，审阅建议，确认实际结果。</p></div>
+      <form id="session-form" class="login-form" autocomplete="off"><h2>连接工作空间</h2><p>使用团队提供的访问凭据登录。</p><div class="field"><label for="credential">访问凭据</label><input id="credential" type="password" autocomplete="off" required maxlength="256" spellcheck="false"></div><button class="btn primary full" type="submit" id="connect">进入工作台 <img class="icon white" src="/ui/assets/arrow-right.svg" alt=""></button><p class="tiny">凭据只在当前页面内存中保存，退出后清除。</p></form>
     </section>
-    <p id="notice" role="status" aria-live="polite"></p>
-    <section id="submit-section" hidden aria-labelledby="submit-title">
-      <h2 id="submit-title">提交工单</h2>
-      <form id="submit-form">
-        <label>工单 ID<input name="ticket_id" required maxlength="128"></label>
-        <label>业务请求键<input name="business_request_key" required maxlength="128" placeholder="同一业务意图使用同一个键"></label>
-        <label>处理配置<input name="profile_id" required maxlength="128"></label>
-        <label>费用批次<input name="budget_batch_id" required maxlength="128"></label>
-        <label>处理期限（秒）<input name="run_timeout_seconds" type="number" min="1" max="86400" value="3600" required></label>
-        <button type="submit">提交</button>
-      </form>
-    </section>
-    <section id="workspace" hidden aria-labelledby="runs-title">
-      <div class="section-heading"><h2 id="runs-title">任务</h2><button id="refresh" class="secondary">刷新列表与详情</button></div>
-      <form id="query-form"><label>按 Run ID 查询<input id="run-query" required maxlength="36" spellcheck="false"></label><button type="submit">查询</button></form>
-      <label>状态筛选<select id="state-filter"><option value="">全部</option><option value="ready">等待处理</option><option value="running">正在处理</option><option value="retry_wait">等待重试</option><option value="awaiting_approval">待人工审批</option><option value="stopping">正在停止</option><option value="succeeded">处理完成</option><option value="failed">处理失败</option><option value="cancelled">已取消</option></select></label>
-      <div class="table-wrap"><table><thead><tr><th>工单</th><th>处理进度</th><th>处理结果</th><th>创建时间</th><th>详情</th></tr></thead><tbody id="runs"></tbody></table></div>
-      <button id="more" class="secondary" hidden>加载下一页</button>
-    </section>
+    <div id="workbench" hidden>
+      <section class="hero" aria-labelledby="home-title"><h1 id="home-title">任务工作台</h1><p class="intro">跟进工单处理，核对每一步结果。</p><p class="date" id="today"></p><button id="new-task" class="btn primary create" hidden>新建任务 <img class="icon white" src="/ui/assets/arrow-right.svg" alt=""></button><div class="hero-focus" aria-label="已加载任务中需要关注的事项"><button class="focus-item" id="focus-approval"><strong id="approval-count">—</strong><span>待人工审批</span></button><button class="focus-item" id="focus-unknown"><strong id="unknown-count">—</strong><span>更新结果待确认</span></button></div></section>
+      <section aria-label="任务列表">
+        <div class="list-controls"><div class="tabs" role="tablist" aria-label="已加载任务的处理进度"><button role="tab" aria-selected="true" data-filter="all" class="active">全部 <small id="count-all">—</small></button><button role="tab" aria-selected="false" data-filter="processing">处理中 <small id="count-processing">—</small></button><button role="tab" aria-selected="false" data-filter="awaiting">待审批 <small id="count-awaiting">—</small></button><button role="tab" aria-selected="false" data-filter="ended">已结束 <small id="count-ended">—</small></button></div><label class="search"><img class="icon" src="/ui/assets/magnifying-glass.svg" alt=""><input id="search" type="search" placeholder="搜索已加载任务" aria-label="搜索已加载任务"></label></div>
+        <div class="table-scroll"><table><colgroup><col class="task-col"><col class="progress-col"><col class="result-col"><col class="time-col"><col class="action-col"></colgroup><thead><tr><th scope="col">工单 / 任务编号</th><th scope="col">处理进度</th><th scope="col">处理结果</th><th scope="col">创建时间</th><th scope="col">操作</th></tr></thead><tbody id="runs"></tbody></table></div>
+        <div class="list-footer"><span id="list-summary">正在读取任务…</span><button id="more" class="loadmore" hidden>加载更多 <img class="icon" src="/ui/assets/arrow-down.svg" alt=""></button><button id="refresh" class="loadmore">刷新列表</button></div>
+        <p class="list-scope">统计、筛选与搜索基于已加载任务；打开详情可核对最新更新结果。</p><p id="options-note" class="list-scope" hidden></p>
+        <details class="lookup"><summary>查询其他任务</summary><form id="query-form"><label for="run-query">完整任务编号</label><div class="lookup-input"><input id="run-query" required maxlength="36" spellcheck="false" autocomplete="off"><button class="btn" type="submit">查看任务</button></div></form></details>
+      </section>
+    </div>
     <article id="detail" hidden aria-labelledby="detail-title">
-      <div class="section-heading"><h2 id="detail-title">任务详情</h2><button id="reload-detail" class="secondary">刷新此任务</button></div>
-      <dl id="run-facts" class="facts"></dl>
-      <section><h3>处理方案</h3><p id="result"></p><dl id="proposal-facts" class="facts"></dl><details><summary>核对事实与来源</summary><div id="claims"></div></details><details><summary>方案技术详情</summary><pre id="proposal"></pre></details><p id="proposal-error"></p></section>
-      <section><h3>人工审批</h3><p id="approval"></p><p id="approval-context"></p><div id="approval-actions" hidden><button id="approve">批准此方案</button><button id="reject" class="danger">拒绝此方案</button></div></section>
-      <section><h3>工单更新结果</h3><p id="effect"></p><dl id="receipt-facts" class="facts"></dl><details><summary>回执技术详情</summary><pre id="receipt"></pre></details><button id="reconcile" class="secondary" hidden>核对处理结果</button></section>
-      <section><h3>费用与额度</h3><p id="cost"></p><p>用量费用按本次登记费率估算。暂占额度包含进行中及用量尚未确认的调用。</p><details id="ledger-details"><summary>预算与调用技术详情</summary><pre id="ledger"></pre></details></section>
-      <details id="execution-details"><summary>执行技术详情</summary><dl id="run-technical" class="facts"></dl><p id="steps-error"></p><div id="steps"></div></details>
-      <section><h3>操作</h3><button id="cancel" class="danger" hidden>取消后续处理</button></section>
+      <div class="detail-top"><button class="backlink" id="back"><img class="icon back small" src="/ui/assets/arrow-right.svg" alt="">返回任务列表</button><div class="detail-heading"><div><p class="overline" id="detail-reference"></p><h1 id="detail-title">处理方案</h1><div class="meta"><span id="detail-state" class="status"></span><p id="detail-subtitle"></p></div></div><div class="detail-tools"><button class="btn quiet" id="reload-detail">刷新结果</button><button class="btn quiet" id="cancel" hidden>取消后续处理</button></div></div></div>
+      <div id="result-banner" class="result-banner" hidden><h2 id="effect-title"></h2><p id="effect-description"></p></div>
+      <div class="detail-grid">
+        <div class="stack">
+          <section id="receipt-section" class="section" hidden><div class="section-title"><h2>工单更新记录</h2><span class="status done">已确认</span></div><div class="record-grid" id="receipt-facts"></div><p id="reconcile-note" class="inline-message" hidden>本次核对找到工单更新记录；任务原处理进度与首次结果保持不变。</p></section>
+          <section class="section"><div class="section-title"><h2>处理方案</h2><span class="eyebrow" id="proposal-ticket"></span></div><div class="proposal-intro"><p class="eyebrow">处理建议</p><h3 class="proposal-title" id="proposal-title"></h3><p class="proposal-copy" id="proposal-summary"></p><p class="inline-message" id="proposal-error" hidden></p></div><div id="proposal-content" hidden><h3>我们发现了什么</h3><div id="claims" class="fact-lines"></div><h3>查看依据</h3><div id="sources" class="source-grid"></div><div class="changes"><h3 id="changes-title">方案中的工单变更</h3><div id="proposal-facts"></div></div></div></section>
+          <section class="section"><div class="section-title"><h2>处理记录</h2></div><ol id="timeline" class="timeline"></ol></section>
+        </div>
+        <aside class="right-stack"><section class="approval-card" aria-label="当前任务与可用操作"><span id="approval-state" class="status"></span><h2 id="approval-title"></h2><p id="approval-description"></p><div id="approval-actions" class="approval-actions" hidden><button id="approve" class="btn primary full">批准并更新工单 <img class="icon white" src="/ui/assets/arrow-right.svg" alt=""></button><button id="reject" class="btn full">拒绝方案</button></div><button id="reconcile" class="btn primary full reconcile-action" hidden>核对更新结果</button><p id="approval-note" class="tiny"></p><div class="approval-meta" id="approval-meta"></div></section><details class="cost-details"><summary>费用与额度 <img class="icon" src="/ui/assets/caret-down.svg" alt=""></summary><div class="cost-body"><div class="money"><span>用量费用估算</span><strong id="known-cost"></strong></div><div class="money"><span>暂占额度</span><strong id="held-cost"></strong></div><div class="money"><span>费用额度</span><strong id="cost-limit"></strong></div><p id="budget-state"></p><p>按本次登记费率估算。暂占额度包含进行中及用量尚未确认的调用。</p></div></details><div class="card-meta"><p id="detail-created"></p><button class="text-button" id="copy-id">复制完整任务编号</button></div></aside>
+      </div>
     </article>
   </main>
+  <footer class="detail-foot"><span>JobForge</span><span>工单处理与审批工作台</span></footer>
+</div>
+<dialog id="create-dialog" class="dialog" aria-labelledby="create-title">
+  <div class="dialog-head"><h2 id="create-title">新建任务</h2><button class="close-btn" data-close aria-label="关闭"><img class="icon" src="/ui/assets/x.svg" alt=""></button></div><p>输入工单编号，生成有依据的处理建议。</p>
+  <form id="submit-form">
+    <div class="field"><label for="ticket-input">工单编号</label><input id="ticket-input" name="ticket_id" required maxlength="128" autocomplete="off" placeholder="例如 TK-2049"></div>
+    <div class="field"><label for="processing-option">处理方式</label><select id="processing-option" required></select></div>
+    <details class="form-settings"><summary>更多设置</summary><div class="field"><label for="request-key">业务请求编号</label><input id="request-key" name="business_request_key" required maxlength="128" spellcheck="false"><small>同一次业务意图保留此编号重试；新一轮处理使用新编号。</small></div><div class="field"><label for="timeout">处理时限（分钟）</label><input id="timeout" type="number" min="1" max="1440" value="60" required></div></details>
+    <div class="inline-message">人工审批通过后，才会保存结论并更新工单标记。</div><p id="submit-notice" class="form-error" role="status" hidden></p>
+    <div class="dialog-actions"><button class="btn" type="button" data-close>返回</button><button class="btn primary" type="submit" id="submit-task">开始处理 <img class="icon white" src="/ui/assets/arrow-right.svg" alt=""></button></div>
+  </form>
+</dialog>
+<dialog id="confirm-dialog" class="dialog" aria-labelledby="confirm-title"><div class="dialog-head"><h2 id="confirm-title"></h2><button class="close-btn" data-close aria-label="关闭"><img class="icon" src="/ui/assets/x.svg" alt=""></button></div><p id="confirm-description"></p><div id="confirm-change" class="confirm-change"></div><p id="confirm-note"></p><div class="dialog-actions"><button class="btn" data-close>返回</button><button id="confirm-action" class="btn primary">确认</button></div></dialog>
+<dialog id="source-dialog" class="dialog" aria-labelledby="source-title"><div class="dialog-head"><h2 id="source-title">事实依据</h2><button class="close-btn" data-close aria-label="关闭"><img class="icon" src="/ui/assets/x.svg" alt=""></button></div><div id="source-content" class="source-content"></div></dialog>
+<dialog id="account-dialog" class="dialog" aria-labelledby="account-title"><div class="dialog-head"><h2 id="account-title">当前身份</h2><button class="close-btn" data-close aria-label="关闭"><img class="icon" src="/ui/assets/x.svg" alt=""></button></div><p id="account-role"></p><p>身份由团队提供的访问凭据确定。切换身份需退出后使用对应凭据重新连接。</p><div class="dialog-actions"><button class="btn" data-close>返回工作台</button><button class="btn primary" id="logout">退出工作空间</button></div></dialog>
+<dialog id="help-dialog" class="dialog" aria-labelledby="help-title"><div class="dialog-head"><h2 id="help-title">使用帮助</h2><button class="close-btn" data-close aria-label="关闭"><img class="icon" src="/ui/assets/x.svg" alt=""></button></div><p>业务操作员提交工单、取消后续处理和核对更新结果；审批人审阅当前方案并批准或拒绝；只读人员可以查询。</p><p>任务进度与工单更新结果分别展示。批准后需要等待实际更新确认；“需人工跟进”表示工单标记，后续仍需团队处理。</p><p>核对更新结果只查询已有记录，不会重新提交任务。网络未确认时，保留原业务请求编号重试。</p><p>列表统计和搜索基于已加载任务。可加载更多，或用完整任务编号查询其他任务。</p></dialog>
+<noscript>请启用 JavaScript 以使用任务工作台。</noscript>
 </body>
 </html>

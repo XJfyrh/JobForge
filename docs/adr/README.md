@@ -52,6 +52,7 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0038](0038-policy-bundle-before-adjudication.md) | 先读取完整政策，再独立终裁 | Accepted（固定整包读取方向独立接受；实现验证另记） | 2026-10-13 |
 | [ADR-0039](0039-s5-startup-review-and-automatic-health.md) | S5 一次启动审查与自动健康检查 | Accepted（后续新批次；不放行具体收费） | 2026-10-15 |
 | [ADR-0040](0040-s5-evidence-and-validation-consistency.md) | S5 证据绑定与验收一致性 | Accepted（随本 PR 合并生效） | 2026-10-16 |
+| [ADR-0041](0041-business-workbench-presentation.md) | 业务工作台与部署处理方式 | Accepted（随本 PR 合并生效） | 2026-10-16 |
 
 ## 增量适用范围
 

@@ -24,6 +24,8 @@ python3 -m venv .venv
 
 Go/Proto 工具使用官方 release，核验 checksum 后放入 `.tools/bin`；使用显式路径，不修改系统 PATH。`.tools`、`.venv` 和本地秘密均不提交。
 
+修改任务工作台时另需 Node.js 22 运行无依赖的业务展示测试：`node --test internal/run/httpapi/ui/tests/*.test.mjs`。生产静态页面不需要 Node 或 npm 构建。
+
 ## 构建与最短启动
 
 ```powershell

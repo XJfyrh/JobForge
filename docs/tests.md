@@ -35,6 +35,8 @@ CI 与本地共享 [tools/check.py](../tools/check.py) 的 Python／SQL、Go rac
 
 测试验证行为和实际故障，不为简单文案写镜像测试。已通过且没有新改动/失败/未解决风险的检查不重复。
 
+工作台另运行 `node --test internal/run/httpapi/ui/tests/*.test.mjs`（Node.js 22，无 npm 依赖），验证进度与独立效果、未知费用、原始来源精确解析。CI 的 Go 静态检查 job 同时运行该组；浏览器验证覆盖登录、身份切换、审批确认、提交与移动布局。
+
 ## PostgreSQL 与跨语言前置
 
 Windows 的 Docker Desktop 后端不由 testcontainers 自动启动测试库。以下是单会话默认前置；并行会话改用各自独占的测试容器、DSN和固定Redis端口。运行 `go test ./tests/integration/...` 或全仓 race 前先准备：
