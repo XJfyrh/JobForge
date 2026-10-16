@@ -422,6 +422,14 @@ class Supervisor:
             "JOBFORGE_AGENT_GATEWAY": "127.0.0.1:8095",
             "JOBFORGE_AGENT_GRPC_TLS": "false",
         }
+        if self.settings.get("telemetry") is True:
+            for key in (
+                "JOBFORGE_OTEL_EXPORTER",
+                "OTEL_EXPORTER_OTLP_ENDPOINT",
+                "JOBFORGE_OTEL_SAMPLE_RATIO",
+            ):
+                if key in os.environ:
+                    environment[key] = os.environ[key]
         self.current = subprocess.Popen(
             [WORKER],
             env=environment,

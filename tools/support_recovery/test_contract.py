@@ -18,6 +18,34 @@ from tools.support_evaluation.export import CaptureTransport, ExportError
 from tools.support_recovery import driver, plan
 
 
+@pytest.mark.parametrize("telemetry", [False, True])
+def test_supervisor_passes_only_enabled_telemetry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, telemetry: bool
+) -> None:
+    """Recovery tracing cannot forward parent control credentials to a Worker."""
+    received: dict[str, Any] = {}
+
+    def started(*args: Any, **kwargs: Any) -> Any:
+        received.update(kwargs["env"])
+        return object()
+
+    monkeypatch.setattr(driver.subprocess, "Popen", started)
+    monkeypatch.setenv("JOBFORGE_OTEL_EXPORTER", "otlp-http")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
+    monkeypatch.setenv("JOBFORGE_AGENT_DSN", "private-control-dsn")
+    supervisor = driver.Supervisor(
+        {
+            "telemetry": telemetry,
+            "workers": [{"config": "config", "credentials": "first-principal"}],
+        },
+        tmp_path,
+    )
+    supervisor.start()
+    assert "JOBFORGE_AGENT_DSN" not in received
+    assert ("OTEL_EXPORTER_OTLP_ENDPOINT" in received) is telemetry
+    assert received["JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE"] == "first-principal"
+
+
 def frozen() -> dict[str, Any]:
     """Use synthetic bindings for the exact reviewed eleven intentions."""
     batch = "11111111-1111-4111-8111-111111111111"
