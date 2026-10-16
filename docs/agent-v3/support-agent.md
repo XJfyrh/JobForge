@@ -4,8 +4,6 @@ Agent读取工单快照，由模型选择订单、物流和政策检索工具，
 
 默认Compose没有收费profile。当前能力及真实质量结果见[状态页](../status.md)，部署流程见[云端批次指南](cloud-batch.md)，审批和回执见[审批指南](approval.md)。
 
-S5已恢复诊断与修复，实际结果和待验收项见[当前状态](../status.md)。
-
 ## 接入顺序
 
 1. 核对业务HTTP、只读角色、政策索引及readiness；新环境记录实际索引UUID和摘要，保留环境不重复seed/index。
@@ -39,21 +37,16 @@ with RunClient(os.environ["JOBFORGE_RUN_URL"], os.environ["JOBFORGE_RUN_TOKEN"])
 
 ## 版本与执行边界
 
-| 受审版本 | definition / 部署manifest | 用途 |
+当前正式验收使用以下两种 profile。完整历史版本与 executor/manifest 映射在[运行时版本表](runtime.md)维护。
+
+| 流程 | definition / 部署 manifest | 提示与用途 |
 |---|---|---|
-| 原有界Agent | schema 2 / manifest 1 | 只读工具选择；[v0.16](../product/JobForge_PRD_v0.16.md)与[ADR-0024](../adr/0024-bounded-support-agent.md) |
-| 恢复 / 审批 | schema 3 / 4，manifest 1 | 已提交步骤复用、自然接管、独立动作许可 |
-| S5初版公平对照 | Agent schema 6 / Fixed schema 5 | 相同模型、工具、数据与family上限 |
-| S5历史候选v2 | Agent schema 7 / Fixed schema 8，均使用manifest 2 | `support-agent-prompt-v2`；版本选择见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md) |
-| S5候选v3 | Agent schema 9 / Fixed schema 10，均使用manifest 2 | `support-agent-prompt-v3`；必要条件核对见[ADR-0030](../adr/0030-s5-policy-condition-candidate.md) |
-| S5独立终裁v4 | Agent schema 11 / Fixed schema 12，均使用manifest 2 | `support-agent-prompt-v4`；版本化独立终裁见[ADR-0033](../adr/0033-versioned-final-adjudication.md) |
-| S5终裁任务分离v5 | Agent schema 13 / manifest 2，Fixed 仍为 schema 12 | `support-agent-prompt-v5`；终裁任务分离与条件枚举见[ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md) |
+| Agent V9 | schema 18 / manifest 2 | `support-agent-prompt-v9`；动态调查、独立终裁、恢复与人工审批 |
+| Fixed 对照 | schema 17 / manifest 2 | `support-fixed-prompt-v2`；固定取证图与相同参数终裁 |
 
-schema 7保留原Agent完整指令、事实字段、`policy_retrieval`与`previous_tools`，补充已提交请求去重、细分政策导航、缺失段落并集、correction来源和活跃事件说明。导航只展示实际取回及尚缺段落，不提供业务答案或自动取工具。模型仍选择全部工具、主张和结论。最终响应为`{"type":"final","proposal":{...}}`，未知字段和其他外层类型拒绝。
+两者在 `read_ticket` 后先读取快照绑定的全部20段政策，再开始模型调用；政策包计一次逻辑工具与一次业务HTTP。Agent在调查中选择只读工具、累计来源，并提交 `investigation_complete` 标记；Go随后安排一次final-only终裁。最终响应为 `{"type":"final","proposal":{...}}`，通过校验后才形成可审阅方案。V9明确要求主张完整，并为时间类主张提供自身证据。
 
-schema 9在原输入上追加冲突、严格较后纠正、时间差与继续取证的核对提示，不计算政策真值或改变输出合同。Fixed schema 10仅增加新数据身份，原Fixed行为保留。开发通过并冻结后，正式v3须对开发及正式v1/v2均完成独立场景/模板新颖性审查。
-
-schema 11把调查与终裁分成两个阶段：调查返回不可审批的`investigation_complete`初稿标记，Go再调度只接收已提交事实与来源的独立`model_proposal`。schema 13只改两阶段各自看到的内容——终裁改为自包含的final-only请求并移除载荷中的工具额度与检索导航，调查增加条件类枚举与`definition_retrieved`——输出形状、工具、事实投影与全部校验保持不变。Fixed未获得schema 13的澄清，配对对照存在这一已知不对称。
+完整政策前置读取见[ADR-0038](../adr/0038-policy-bundle-before-adjudication.md)，V9输出约束的形成与验证见[开发报告](../evidence/agent-v3-s5-v9-development-2026-10-15.md)。Fixed与Agent的工具调度和提示不同，配对结果按两种流程报告。
 
 S5两策略每个family最多12 chat、8逻辑工具、8 query embedding、44物理HTTP和1次纠错；消息64KiB、请求128KiB，另受本批持久费用/chat上限和期限约束。相同参数重复调用以`MODEL_PROTOCOL_ERROR`结束，不再次扣工具额度。unknown/full hold保留并停批，缺失usage不按零费处理。不同executor版本不能混入同一部署manifest，映射见[运行时指南](runtime.md)。
 
@@ -61,4 +54,4 @@ S5两策略每个family最多12 chat、8逻辑工具、8 query embedding、44物
 
 适用Python、真实PG、固定Linux进程及安装SDK检查见[测试指南](../tests.md)。源码机制fixture与真实模型质量分别报告，gold、评分器及故障工具不进入生产Worker镜像。可选outbound诊断只保存调用ID、固定校验模块和源码行号，不改变许可、计量或评分。
 
-S5正式合同要求完整20案、方案正确至少16案、完整案例证据至少18案、四类硬失败0。完整案例要求主张成立、实际来源覆盖及必要主张齐全；合法来源ID本身不满足门槛。当前冻结候选的实际开发和正式配对结果统一在[S5本轮报告](../evidence/agent-v3-s5-real-2026-10-08.md)。历史[S2验收](../evidence/agent-v3-s2-delivery-2026-09-17.md)保留原40案合同；不拼接不同版本结果。
+S5正式合同要求完整20案、方案正确至少16案、完整案例证据至少18案、四类硬失败0。完整案例要求主张成立、实际来源覆盖及必要主张齐全；合法来源ID本身不满足门槛。V9正式结果为正确18/20、完整证据18/20，Fixed各11/20；逐案结果见[未见正式配对](../evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)，恢复与审批演示见[S5最终报告](../evidence/agent-v3-s5-closeout-2026-10-16.md)。历史[S2验收](../evidence/agent-v3-s2-delivery-2026-09-17.md)保留原40案合同；不拼接不同版本结果。

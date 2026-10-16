@@ -26,7 +26,7 @@ schema 13（[ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enume
 
 ## 执行权与组件
 
-schema14/15 的补证与状态读取见 [ADR-0036](../adr/0036-s5-controlled-policy-supplement.md) / [ADR-0037](../adr/0037-status-policy-read-prerequisite.md)。schema16/17 按 [ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 改为 `read_ticket` 后必须完成 `read_policy_bundle`，再开始模型调用。工具从授权快照读取固定20段、结果上限32KiB，无 query/embedding，缺段立即失败；旧版本不接受该步骤。Agent 调查闭合后与 Fixed 均只执行一次相同的 final-only thinking，嵌套 `proposal`，无终裁补证或格式重试。来源和后续同别名搜索内容必须一致；已提交包恢复时不重读，未提交读取沿用原账本与恢复合同。
+schema14/15 的补证与状态读取见 [ADR-0036](../adr/0036-s5-controlled-policy-supplement.md) / [ADR-0037](../adr/0037-status-policy-read-prerequisite.md)。schema16/17/18 按 [ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 改为 `read_ticket` 后必须完成 `read_policy_bundle`，再开始模型调用。工具从授权快照读取固定20段、结果上限32KiB，无 query/embedding，缺段立即失败；旧版本不接受该步骤。Agent 调查闭合后执行一次 final-only thinking，Fixed 终裁使用相同模型参数；schema18沿用步骤图，以prompt-v9补全主张和自身时间证据要求。两者输出嵌套 `proposal`，无终裁补证或格式重试。来源和后续同别名搜索内容必须一致；已提交包恢复时不重读，未提交读取沿用原账本与恢复合同。
 
 ```mermaid
 flowchart LR
@@ -50,7 +50,7 @@ Worker容量固定为1。Register版本、Worker允许的**所有profile**的exe
 
 [运行输入源合同](../../api/executor/v2/runtime-input.md)和 [schema](../../api/executor/v2/runtime-input.schema.json)沿用 RPC 字段名，将 JSON bytes 投影为对象。Go 使用现有领域 canonicalizer 验证 accepted 结果、CommitHash、NextInputHash 全链、序号、资源和 result_ref；最新资源还须与原 Claim 一致。Python 验证形状与字符串链，不重新实现任意 decimal 规范化。原 JSON 与最终编码大小分别校验，超限不裁剪历史。
 
-Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–17，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
+Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–18，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
 
 生产入口是 [cmd/agent-worker](../../cmd/agent-worker/main.go)，不接命令行参数。配置由受信部署文件提供：
 

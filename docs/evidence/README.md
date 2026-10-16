@@ -1,34 +1,38 @@
 # 验收证据
 
-结果按源码机制、真实进程/数据库、真实模型与业务质量分层；较低层结果不能代替较高层验收。当前交付范围见[状态页](../status.md)。
+按交付阶段与候选版本查找报告。每份报告记录当时的源码、环境、样本、结果和原始工件；当前能力汇总见[状态页](../status.md)。
 
 ## 最终结果
 
 | 范围 | 报告 | 原机器证据 |
 |---|---|---|
+| S5 当前最终结果 | [正式Agent18/20、原11项恢复、实际审批与唯一回执恢复](agent-v3-s5-closeout-2026-10-16.md) | [源绑定机器摘要、费用、180秒视频来源](agent-v3-s5-closeout-2026-10-16.json) |
+| 公开 Preview | [免费接入、新版视频、许可与发布验证](public-readiness-2026-10-16.md) | 视频/字幕、包产物及来源清单见 [Release](https://github.com/XJfyrh/JobForge/releases/tag/v0.1.0-preview.1) |
 | S1 固定流程 | [40 案，业务 11/40](agent-v3-s1-delivery-2026-09-17.md) | [评分](agent-v3-s1-delivery-2026-09-17.json)、[receipt](agent-v3-s1-delivery-receipt-2026-09-17.json) |
 | S2 有界 Agent | [40 案，业务 37/40；真实截断注入](agent-v3-s2-delivery-2026-09-17.md) | [评分](agent-v3-s2-delivery-2026-09-17.json)、[receipt](agent-v3-s2-delivery-receipt-2026-09-17.json) |
 | S3 步骤恢复 | [11 项：5 个接管通过，DEV-035-C 业务失败](agent-v3-s3-cloud-2026-10-04.md) | [完整机器摘要](agent-v3-s3-cloud-2026-10-04.json) |
 | S3 免费机制 | [检查与原失败](agent-v3-s3-free-2026-10-04.md) | 原提交/私有原日志从报告进入 |
 | S4 人工审批与回执 | [10 个原方案/机制通过、12 个实际 Run](agent-v3-s4-cloud-2026-10-05.md) | [机器摘要](agent-v3-s4-cloud-2026-10-05.json) |
 | S4 免费工程 | [检查分层](agent-v3-s4-free-2026-10-05.md) | 当前 CI / 私有原日志从报告进入 |
-| S5 当前最终结果 | [正式Agent18/20、原11项恢复、实际审批与唯一回执恢复](agent-v3-s5-closeout-2026-10-16.md) | [源绑定机器摘要、费用、180秒视频来源](agent-v3-s5-closeout-2026-10-16.json) |
-| S5 prompt-v3正式质量（未通过） | [Agent正确12/20、完整证据15/20；恢复/演示未运行](agent-v3-s5-v3-real-2026-10-08.md) | [逐案、配对、费用与工件摘要](agent-v3-s5-v3-real-2026-10-08.json) |
 
-机器 JSON 保留原数值/状态/哈希；原始模型正文、SDK/PG/outbound 和秘密仅在仓库外私有材料中。known/hold 不等于已结算账单，失败/未尝试不从分母删除。
+机器 JSON 保留原数值、状态和哈希；模型正文、SDK/PG/outbound 导出等私有材料从报告定位。费用区分用量估算、hold与供应商结算，评分保留失败和未尝试的原分母。
+
+### V9 验收的组成证据
+
+- [S5 V9原11项恢复与从头对照](agent-v3-s5-v9-recovery-2026-10-16.md)：5项实际恢复通过，8个完整方案中7个正确，3个H0计划取消；两组可比案例未体现节费，1组因错答不可比；[全部11项机器摘要](agent-v3-s5-v9-recovery-2026-10-16.json)。后续实模审批演示与总体验收见最终结果。
+- [S5 V9未见正式V4配对](agent-v3-s5-v9-formal-v4-2026-10-16.md)：Agent正确/完整证据18/20，原门槛通过；Fixed原20案分18+2来源收齐、各11/20，配对胜8/平11/负1；[逐案机器摘要](agent-v3-s5-v9-formal-v4-2026-10-16.json)。后续恢复、实模演示和交付见最终结果。
+- [S5 v9原已见V3完整回归](agent-v3-s5-v9-seen-v3-2026-10-15.md)：19/20正确与完整证据，004/018及DEV-020三守卫通过，闭账与批后审阅accepted；[全部20案机器摘要](agent-v3-s5-v9-seen-v3-2026-10-15.json)。020保留不适用的额外状态主张；该报告记录正式冻结前的已见回归。
+- [S5 v9/Fixed17完整开发对照](agent-v3-s5-v9-fixed-development-2026-10-15.md)：Agent39/40、Fixed34/40，配对胜6/平33/负1，完整基线与闭账独立接受；[全部40案机器摘要](agent-v3-s5-v9-fixed-development-2026-10-15.json)。后续已见守卫结果见上条。
+- [S5 v9完整开发回归](agent-v3-s5-v9-development-2026-10-15.md)：正确和完整证据各39/40、硬失败0，独立接受开发质量及闭账；[全部40案机器摘要](agent-v3-s5-v9-development-2026-10-15.json)。该报告记录正式冻结前的开发结果。
 
 ## 历史与组件快照
 
-以下记录保留当时的探针、独立层检查、中断和修复；不是多份当前阶段台账。最终报告链接相关历史，未结事项统一在状态页维护。
+以下保留早期候选、诊断、中断与组件验证，按需要展开。报告中的“下一步”对应其记录日期。
 
-- [S5 V9原11项恢复与从头对照](agent-v3-s5-v9-recovery-2026-10-16.md)：5项实际恢复通过，8个完整方案中7个正确，3个H0计划取消；两组可比案例未体现节费，1组因错答不可比；[全部11项机器摘要](agent-v3-s5-v9-recovery-2026-10-16.json)。后续实模审批演示与总体验收见最终结果。
+<details>
+<summary>S5 早期候选与诊断（初版至 v8）</summary>
 
-- [S5 V9未见正式V4配对](agent-v3-s5-v9-formal-v4-2026-10-16.md)：Agent正确/完整证据18/20，原门槛通过；Fixed原20案分18+2来源收齐、各11/20，配对胜8/平11/负1；[逐案机器摘要](agent-v3-s5-v9-formal-v4-2026-10-16.json)。后续恢复、实模演示和交付见最终结果。
-- [S5 v9原已见V3完整回归](agent-v3-s5-v9-seen-v3-2026-10-15.md)：19/20正确与完整证据，004/018及DEV-020三守卫通过，闭账与批后审阅accepted；[全部20案机器摘要](agent-v3-s5-v9-seen-v3-2026-10-15.json)。020保留不适用的额外状态主张，正式冻结与未见验收待完成。
-- [S5 v9/Fixed17完整开发对照](agent-v3-s5-v9-fixed-development-2026-10-15.md)：Agent39/40、Fixed34/40，配对胜6/平33/负1，完整基线与闭账独立接受；[全部40案机器摘要](agent-v3-s5-v9-fixed-development-2026-10-15.json)。后续已见守卫结果见上条。
-
-- [S5 v9完整开发回归](agent-v3-s5-v9-development-2026-10-15.md)：正确和完整证据各39/40、硬失败0，独立接受开发质量及闭账；[全部40案机器摘要](agent-v3-s5-v9-development-2026-10-15.json)。正式冻结与S5验收待完成。
-
+- [S5 prompt-v3正式质量](agent-v3-s5-v3-real-2026-10-08.md)：Agent正确12/20、完整证据15/20，未通过；[原机器摘要](agent-v3-s5-v3-real-2026-10-08.json)。
 - [S5 免费机制、观测、恢复与本地检索](agent-v3-s5-free-2026-10-07.md)：[机器摘要](agent-v3-s5-free-2026-10-07.json)。
 - [S5 正式v2历史结果](agent-v3-s5-real-2026-10-08.md)：Agent正确/完整证据10/20、Fixed各1/20；[原机器摘要](agent-v3-s5-real-2026-10-08.json)保留。
 - [S5 正式v2输入诊断](agent-v3-s5-input-diagnosis-2026-10-08.md)：87次请求绑定、20案完整事实/政策/UTC复核；新增收费0，旧正式质量不变。
@@ -48,7 +52,12 @@
 - [S5 v8单句删减对照](agent-v3-s5-v8-description-ablation-2026-10-15.md)：固定18次全部执行，C1/C2均正确及完整9/9、无当轮配对改善，删句收益未获证明；累计usage估算¥15.431865、闭账，未晋升；[机器摘要](agent-v3-s5-v8-description-ablation-2026-10-15.json)。
 - [S5 v8时效主张对照](agent-v3-s5-v8-critical-timing-2026-10-15.md)：固定12次全部执行，V8/V8T正确及完整2/6、3/6，候选未达6/6；定位6项timing自身事件集合引用缺失、1项整条timing缺失；[机器摘要](agent-v3-s5-v8-critical-timing-2026-10-15.json)。
 - [S5 v8独立引用对照](agent-v3-s5-v8-timing-evidence-2026-10-15.md)：固定12次，V8T正确/完整3/6、V8TE6/6且三次配对改善，支持精确提示候选实施与完整开发回归；累计usage估算¥16.203356、36库闭账；[机器摘要](agent-v3-s5-v8-timing-evidence-2026-10-15.json)。
-- [S5 首次Agent开发记录](agent-v3-s5-dev-agent-2026-10-07.md)：[原机器摘要](agent-v3-s5-dev-agent-2026-10-07.json)，保留当时40案结果；当前候选与正式配对见上方S5本轮报告。
+- [S5 首次Agent开发记录](agent-v3-s5-dev-agent-2026-10-07.md)：[原机器摘要](agent-v3-s5-dev-agent-2026-10-07.json)，保留当时40案结果；后续版本与正式配对见上方最终结果。
+
+</details>
+
+<details>
+<summary>S0–S3 探针、组件与中间交付</summary>
 
 - [DeepSeek 接入调查、独立复审与环境阻塞](agent-v3-deepseek-and-blocker-2026-09-16.md)
 - [Docker 恢复后 S0 复验与合并](agent-v3-docker-recovery-2026-09-16.md)
@@ -72,6 +81,8 @@
 - [Agent v3 S1-C2：授权 HTTP 与 DeepSeek 模块验证](agent-v3-s1c2-http-2026-09-16.md)
 - [Agent v3 S1-C3a：普通观察 ACK 验证](agent-v3-s1c3a-ack-2026-09-16.md)
 - [执行器停止通知竞态修复](executor-stop-publication-2026-09-17.md)
+
+</details>
 
 <details>
 <summary>其他原始机器工件</summary>

@@ -1,6 +1,6 @@
 # 开始一个免费 v3 Run
 
-本体验运行真实Go控制/Worker、隔离PostgreSQL、业务HTTP和固定Python进程。**模型响应、向量和账本费用为模拟**；它证明接入及审批链路，真实模型质量见[V9报告](evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)。不需要云端密钥。
+用本地环境完成一次提交、审阅、审批和结果核对，无需云端密钥。Go控制/Worker、PostgreSQL、业务HTTP和Python进程实际运行；**模型响应、向量和账本费用为模拟**。
 
 ## 启动与页面体验
 
@@ -16,11 +16,11 @@ docker compose -f deploy/demo/compose.yaml up -d --build --wait
 
 1. 用`demo-operator`连接，点击新建任务。
 2. 输入工单`ticket-1`，选择“免费机制演示”，提交一次；保存完整任务编号，刷新查看方案。
-3. 查看方案及来源。模型响应为脚本化结果，不作为模型推理效果展示。
+3. 查看方案及订单、物流和政策来源。
 4. 退出，用独立`demo-approver`连接，核对原方案与影响后批准或拒绝。
 5. 刷新确认实际更新；需核对回执时使用operator。`demo-reader`只读。
 
-固定凭据属于本机隔离演示，不能用于生产。内部网络无互联网出口，PG不向宿主发布。该镜像是明确的integration target，生产镜像不包含演示适配器。
+固定凭据用于本机隔离演示。服务仅通过 loopback 入口访问，执行网络无互联网出口，PG不向宿主发布。
 
 ## 用SDK创建Run
 

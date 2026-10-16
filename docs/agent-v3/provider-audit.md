@@ -1,6 +1,6 @@
 # Agent v3：供应商报告与批次停止
 
-[ADR-0020](../adr/0020-provider-audit-and-batch-stop.md)定义持久供应商报告、跨 FD 确认和首批停止规则。实现复用原 PostgreSQL 调用账本、SettleUsage RPC、计量管道和 batch frozen；没有第二调度器。当前默认部署仍未启用收费 profile，确定性机制测试中的供应商响应不能作为 DeepSeek 推理或 40 案业务验收。
+[ADR-0020](../adr/0020-provider-audit-and-batch-stop.md)定义持久供应商报告、跨 FD 确认和首批停止规则。实现复用原 PostgreSQL 调用账本、SettleUsage RPC、计量管道和 batch frozen；没有第二调度器。本页供排查调用、usage 和批次停止使用；默认开发部署没有收费 profile。
 
 ## 数据与权限
 
@@ -50,9 +50,9 @@ with RunClient("http://localhost:8093", api_key=reader_key) as client:
 
 ## 验证与运维边界
 
-Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲突/冻结/晚到测试、安装 SDK 的真实 HTTP 查询，以及固定 Linux 进程/FD/PG/gRPC 故障分别验证不同层。前置、容器命令和串行规则见[测试指南](../tests.md)。跳过不能记为通过，合成响应不能代替真实 DeepSeek。
+Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲突/冻结/晚到测试、安装 SDK 的真实 HTTP 查询，以及固定 Linux 进程/FD/PG/gRPC 故障分别验证不同层。前置、容器命令和串行规则见[测试指南](../tests.md)。各层结果在[证据索引](../evidence/README.md)分别记录。
 
-报告至少覆盖原 30 日晚到窗口；没有自动清理、归档服务或生产长期留存验收。日志/Trace 不承载完整报告正文或模型输入输出。长期留存/备份等未覆盖运维能力统一见[限制清单](../status.md#限制与未结事项)。
+调用与报告保留原 30 日晚到窗口；S5 的7日终态内容清理保留调用、计量、hold和冻结事实，见[数据操作](operations.md#终态内容清理)。日志/Trace 记录调用标识和关联信息，不包含完整报告正文或模型输入输出。生产留存与备份要求见[部署参考](../deployment.md)。
 
 ## S2兼容扩展
 

@@ -15,6 +15,6 @@ JobForge将有界售后Agent放入持久执行、人工审批和费用控制的�
 
 ![回执优先恢复](images/receipt-recovery.drawio.svg)
 
-真实演示中原POST保留unknown，自然lease/Sweep后新attempt读取原操作回执，模型没有重放。该案例证明特定受控动作与数据库路径的恢复；恢复对照未证明节费。图源为同目录的`.drawio`文件。
+真实演示中原 POST 保留 unknown，自然 lease/Sweep 后新 attempt 读取原操作回执，复用已提交的模型步骤，工单版本只增加一次。[恢复对照](evidence/agent-v3-s5-v9-recovery-2026-10-16.md)另外比较成本：两组可比案例的续跑费用高于中断前缀加从头执行。图源为同目录的`.drawio`文件。
 
 更多内容见[架构](architecture.md)和[部署参考](deployment.md)。

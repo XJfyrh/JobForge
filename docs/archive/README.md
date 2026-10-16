@@ -5,6 +5,8 @@
 - [Agent/RAG 增量实施与验收记录](agent-rag-progress.md)
 - [Agent/RAG 合并审查与验收边界（2026-09-15）](agent-rag-review.md)
 - [Agent v3 实施记录](agent-v3-progress.md)
+- [S5 候选 v5 交接](s5-v5-candidate-handover.md)：schema 13 时点的交接，已由后续版本替代。
+- [公开展示与接入优化方案](plans/public-readiness-2026-10-16.md)：已完成并交付 Preview 的批准方案。
 - [JobForge 性能基线报告](benchmark-history.md)
 - [下一阶段路线 v2：有界 Agent 执行与真实业务评测](plans/agent-execution-roadmap-v2.md)
 - [路线 v3：面向 AI 应用后端的可恢复业务 Agent](plans/agent-execution-roadmap-v3.md)

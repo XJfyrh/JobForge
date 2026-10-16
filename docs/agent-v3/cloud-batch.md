@@ -4,7 +4,7 @@
 
 案例名单和分母由本次受审登记冻结，窗口最多6小时、Worker/tenant/profile容量1，每案最多一次Submit尝试。需要动作的方案停在`awaiting_approval`，明确无需动作可成功。所有部署记录累计授权，扣除已启动共享batch的known与未释放hold；新身份/库/批次不重置额度，停止的attempted批次不重启。
 
-下面的完整命令为原schema 1固定流程40开发案部署示例；schema 1生成器接受1–5,000,000 microyuan（默认5 CNY）。S5的schema 9/10历史候选、schema 11 Agent / 12 Fixed独立终裁候选和schema 13 Agent终裁任务分离候选、冻结资源、动作回执审计及评分改用[S5工具](../../tools/support_s5/README.md)，沿用本页数据库隔离、预算和进程收口要求。开发40案、已见20案诊断与正式20案分别登记，不相互替代。
+下面的完整命令为原schema 1固定流程40开发案部署示例；schema 1生成器接受1–5,000,000 microyuan（默认5 CNY）。S5 的版本化候选（包括正式验收的 Agent schema 18 / Fixed schema 17）、冻结资源、动作回执审计及评分使用[S5共享工作流](../../tools/support_s5/host/README.md)，沿用本页数据库隔离、预算和进程收口要求。开发40案、已见20案诊断与正式20案分别登记，不相互替代。
 
 ## 环境、数据库与安装
 

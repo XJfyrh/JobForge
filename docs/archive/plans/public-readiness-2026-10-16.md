@@ -1,6 +1,8 @@
 # JobForge 对外展示与接入体验优化方案
 
-日期：2026-10-16。版本：v1。状态：维护者已批准；交付入口与验证见[实施记录](../evidence/public-readiness-2026-10-16.md)。
+> 已完成方案：2026-10-16 经 PR #64、#68 交付，并发布 Preview。实施与验证见[交付记录](../../evidence/public-readiness-2026-10-16.md)；正文保留批准时的工作范围和完成标准。
+
+日期：2026-10-16。版本：v1。状态：维护者已批准；交付入口与验证见[实施记录](../../evidence/public-readiness-2026-10-16.md)。
 
 实施基准为已合并的 [PR #63](https://github.com/XJfyrh/JobForge/pull/63)，合并提交 `fe6dd385c4f1592b4f174b5372972c69b15fcd80`。本方案覆盖项目展示、首次 Run 接入、部署判断和外部贡献入口。
 
@@ -199,8 +201,8 @@ S表示以现有能力和文本整理为主，M表示涉及运行入口、跨组
 
 ## 6. 依据
 
-- [当前状态](../status.md)、[架构](../architecture.md)、[新版工作台操作](../agent-v3/operations.md)。
-- [Run接入](../agent-v3/runs.md)、[SDK](../../sdk/python/README.md)、[运行时](../agent-v3/runtime.md)、[人工审批](../agent-v3/approval.md)。
-- [S5最终结果与原演示](../evidence/agent-v3-s5-closeout-2026-10-16.md)、[V9未见正式对照](../evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)。
-- [贡献规范](../../CONTRIBUTING.md)、[开发指南](../development.md)、[测试指南](../tests.md)。
+- [当前状态](../../status.md)、[架构](../../architecture.md)、[新版工作台操作](../../agent-v3/operations.md)。
+- [Run接入](../../agent-v3/runs.md)、[SDK](../../../sdk/python/README.md)、[运行时](../../agent-v3/runtime.md)、[人工审批](../../agent-v3/approval.md)。
+- [S5最终结果与原演示](../../evidence/agent-v3-s5-closeout-2026-10-16.md)、[V9未见正式对照](../../evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)。
+- [贡献规范](../../../CONTRIBUTING.md)、[开发指南](../../development.md)、[测试指南](../../tests.md)。
 - [PyPA许可及打包元数据](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license-and-license-files)、[OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.0.html#fixed-fields)、[服务等级目标定义](https://sre.google/sre-book/service-level-objectives/)。

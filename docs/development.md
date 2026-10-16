@@ -43,7 +43,7 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 
 控制启动后打开 `http://127.0.0.1:8093/ui/`，使用服务端配置的独立 operator/approver 凭据。页面、v3 `obs` profile、内容清理与停写恢复命令见[操作指南](agent-v3/operations.md)。默认配置仍不启用收费执行。
 
-业务快照/真实 embedding 使用[业务准备](agent-v3/business.md)，正式 Python Worker 使用[固定运行时](agent-v3/runtime.md)，有界收费部署使用[批次指南](agent-v3/cloud-batch.md)。收费执行需独立登记与明确预算；复制示例不构成运行授权。
+业务快照/真实 embedding 使用[业务准备](agent-v3/business.md)，正式 Python Worker 使用[固定运行时](agent-v3/runtime.md)，有界收费部署使用[批次指南](agent-v3/cloud-batch.md)。收费执行的 profile、预算与启动范围通过对应批次工作流登记和审查。
 
 本地端口彼此独立：旧 Job/测试库 5433，业务库/HTTP/Ollama 5434/8092/11436，v3 控制库/HTTP/RPC 5435/8093/9093。停止控制组件用 `docker compose -f deploy/compose.agent.yaml --profile control stop control control-postgres`，保留数据时不删 volumes。
 
@@ -65,8 +65,6 @@ SDK 开发保持在仓库根目录，编辑后重新安装 `./sdk/python`；运�
 ## 检查与旧路径
 
 日常先运行 `python -m tools.check quick`；`affected --base origin/main --plan` 显示本分支及未提交修改需要的检查。完整环境前置和 CI 路由见[测试指南](tests.md)。Windows 集成测试必须先启动测试 PostgreSQL 并设置 DSN，安装 SDK 后设置跨语言解释器；专用 Linux 进程检查、同 DSN 串行和 skip 规则也在那里维护。
-
-为保留现有引用，本页的“CI 质量门禁”入口如下；权威清单在测试指南。
 
 ### CI 质量门禁
 

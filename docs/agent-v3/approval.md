@@ -1,6 +1,6 @@
 # 人工审批与工单回执
 
-合同见 [PRD v0.18](../product/JobForge_PRD_v0.18.md) 和 [ADR-0026](../adr/0026-approval-actions-and-receipt-recovery.md)，实施与分层验收见[当前状态](../status.md)。schema 4/6/7/9、`approval_policy=ticket_resolution_v1` 和 `linux-v2-approval-runtime-1` 登记能力支持批准后写入；其余profile的方案保持只读。S5版本映射见[Agent接入](support-agent.md#版本与执行边界)。
+合同见 [PRD v0.18](../product/JobForge_PRD_v0.18.md) 和 [ADR-0026](../adr/0026-approval-actions-and-receipt-recovery.md)，实施与分层验收见[当前状态](../status.md)。具备审批能力的 Agent profile 以 `approval_policy=ticket_resolution_v1` 登记，支持批准后写入；当前正式验收版本为 Agent schema 18。完整历史版本及执行器对应关系见[运行时](runtime.md)，Fixed 对照保持只读。
 
 ## 审阅和决定
 
