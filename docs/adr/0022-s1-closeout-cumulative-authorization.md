@@ -1,8 +1,8 @@
 # ADR-0022：S1 收尾新批次与累计费用授权
 
-> 后续部分取代：[ADR-0023](0023-held-unknown-cross-batch-admission.md) 精确调整有完整 hold 的历史传输失败对独立新批的准入要求；随新决策 PR 合并生效后仅部分取代本文，历史事实和其它合同保留。
+> 后续部分取代：[ADR-0023](0023-held-unknown-cross-batch-admission.md) 精确调整有完整 hold 的历史传输失败对独立新批的准入要求；该决策已随 [PR #54](https://github.com/XJfyrh/JobForge/pull/54) 合并，部分取代本文，历史事实和其它合同保留。
 
-- 状态：**Accepted（随 [PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并合并时生效）**；日期：2026-09-17。
+- 状态：**Accepted（[PR #53](https://github.com/XJfyrh/JobForge/pull/53) 独立审查通过并已合并）**；日期：2026-09-17。
 - 决策者：维护者明确授权本次 S1 收尾范围及新增累计 5 CNY，独立 Agent 审查后按 PR 流程接受。
 - 关联：[PRD v0.14](../product/JobForge_PRD_v0.14.md)、[ADR-0021](0021-first-cloud-batch-admission-and-launcher.md)；实现与真实验收另行记录。
 - 部分取代：仅对本次 S1 收尾，取代 ADR-0021 §2.2、§4、§5.2、§6 中“首批停止后没有新批次授权”“仅原 5 CNY 批次”的适用范围，及 §4 的每批固定 5,000,000 microyuan 值；合并接受后适用下述累计上限与较小 batch 上限。ADR-0018/0020 的首批历史授权不改写，ADR-0021 其它决策继续有效。

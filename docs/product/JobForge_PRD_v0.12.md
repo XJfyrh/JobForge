@@ -1,6 +1,6 @@
 # JobForge PRD v0.12：S1 provider 持久审计与批次停发
 
-- 日期：2026-09-16；状态：**Accepted，随 [PR #47](https://github.com/XJfyrh/JobForge/pull/47) 完成独立审查并合并时生效；尚未实现或验收**。
+- 日期：2026-09-16；状态：**Accepted；[PR #47](https://github.com/XJfyrh/JobForge/pull/47) 已完成独立审查并合并；实现与验收见[当前状态](../status.md)**。
 - 基线：[PRD v0.10](JobForge_PRD_v0.10.md)、[v0.11](JobForge_PRD_v0.11.md)、ADR-0017～0019；对应决策为 [ADR-0020](../adr/0020-provider-audit-and-batch-stop.md)。
 - 对应代码核对：C3b 已通过 PR #46 合并，起点 `0829a4c`。本稿定义下一合同，不修改已合并实现。
 - 本增量补 C-01/C-03/C-07/C-08 的持久审计和首批停发条件。support_fixed_v1、六字段模型输出、持久方案/来源/模板和离线评分已由 ADR-0018 决定，不在此重新决策。

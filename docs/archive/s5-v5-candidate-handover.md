@@ -1,6 +1,8 @@
 # S5 候选 v5 交接说明
 
-更新：2026-10-12。本页交接 **schema 13 / `support-agent-prompt-v5` / `linux-v2-adjudication-runtime-2`** 候选的实施状态、已验证范围、剩余工作与已知陷阱。决策依据见 [ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md)（Accepted），实现状态见[当前状态](../status.md)，验收门槛见 [S5 验收矩阵](s5-acceptance.md)。
+> 历史交接：以下记录 schema 13 / prompt-v5 的交接时点。当前版本、结果及接入方式见[状态页](../status.md)和[Agent 指南](../agent-v3/support-agent.md)。
+
+更新：2026-10-12。本页交接 **schema 13 / `support-agent-prompt-v5` / `linux-v2-adjudication-runtime-2`** 候选的实施状态、已验证范围、剩余工作与已知陷阱。决策依据见 [ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md)（Accepted），实现状态见[当前状态](../status.md)，验收门槛见 [S5 验收矩阵](../agent-v3/s5-acceptance.md)。
 
 **一句话现状**：代码与文档已完成并通过全部免费验证；**没有运行任何收费批次，没有任何真实模型质量结果**；下一步是先提交，再逐批放行。
 
@@ -59,7 +61,7 @@
 2. **实现批次 1 的终裁重放准备模块**。不能直接复用 [tools/support_diagnosis](../../tools/support_diagnosis/README.md)：它绑定的是 v3 时期 `formal-agent-v3-20261008` 的证据与它自己的 `FINAL_ONLY` 常量。新模块须从 `adjudication-20261011` 的逐案导出重建 marker 之前的 checkpoint（复用 `tools/support_evaluation.evidence.validate_run_sources`），再调用 v5 adapter 的终裁投影生成请求，并按原有谓词与 `claim_sources` 评分。准备半边完全离线可测。
 3. **逐批执行 1–8**，每批前形成具体有限 manifest 并取得独立放行，每批后停发并追加累计账本。顺序与费用见 [ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md) 的批次表（估算合计 ¥6.40，上限合计 ¥14.5，余量 ¥18.724359）。
 4. **批次 5 前绑定 `DATASET_V4`**，且必须同步五处，漏一处会在登记或评分处失败：`tools/support_s5/package.py` 的 `DATASET_V4`、`tools/support_evaluation/evidence.py` 的 S5 dataset 白名单、`internal/run/support_profile.go` 的 dataset 常量、`api/support/s5-agent-v5` 与 `api/support/s5-fixed-v4` 两份 profile-schema 的 `resources.dataset_id` enum、`tools/support_evaluation/test_registration_routing.py`。
-5. **依实际结果**新增证据文档与机器摘要，更新[当前状态](../status.md)与[验收矩阵](s5-acceptance.md)。
+5. **依实际结果**新增证据文档与机器摘要，更新[当前状态](../status.md)与[验收矩阵](../agent-v3/s5-acceptance.md)。
 
 ## 5. 已知陷阱（都真实踩过）
 

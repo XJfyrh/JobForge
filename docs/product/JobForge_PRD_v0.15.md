@@ -1,6 +1,6 @@
 # JobForge PRD v0.15：有界未知费用下继续交付 S1
 
-- 日期：2026-09-17；状态：Accepted（随本决策 PR 独立审查通过并合并时生效）。
+- 日期：2026-09-17；状态：Accepted（[PR #54](https://github.com/XJfyrh/JobForge/pull/54) 已独立审查并合并）。
 - 对应：[ADR-0023](../adr/0023-held-unknown-cross-batch-admission.md)；基线：[PRD v0.14](JobForge_PRD_v0.14.md)。
 - 维护者明确要求重新评估过严工程决策，交付可用成果；新增累计费用仍不超过 5 CNY，不恢复已停止批次。
 

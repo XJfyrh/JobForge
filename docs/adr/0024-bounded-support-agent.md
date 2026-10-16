@@ -1,6 +1,6 @@
 # ADR-0024：有界售后 Agent 与可用成果验收
 
-- 日期：2026-09-17；状态：Accepted（随 [PR #55](https://github.com/XJfyrh/JobForge/pull/55) 独立审查通过并合并时生效）。
+- 日期：2026-09-17；状态：Accepted（[PR #55](https://github.com/XJfyrh/JobForge/pull/55) 独立审查通过并已合并）。
 - 对应：[PRD v0.16](../product/JobForge_PRD_v0.16.md)。维护者已确认实施本方案，并授权按任务需要调整合理预算，无需重复确认。
 - 仅对新 S2 profile 部分取代 ADR-0018 的固定图/提示、ADR-0020 的固定模型步骤终结判断、ADR-0021～0023 的 S1 首批/5 CNY 准入限制。其余执行权、审计、停止和未知费用规则保留；历史记录不改写。
 

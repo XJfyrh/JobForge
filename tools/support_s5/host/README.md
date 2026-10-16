@@ -1,8 +1,8 @@
 # 新批次共享工作流
 
-当前入口用于完整政策候选 schema16/17/18 的完整开发40案、当前Agent18原已见V3完整20案及当前Agent18/Fixed17新冻结V4正式20案，规则见 [ADR-0039](../../../docs/adr/0039-s5-startup-review-and-automatic-health.md)。它取代逐版本复制的 `prepare_phase.py`、`manifest_checks.py`、`ledger.py`、`run_phase.py` 和私有 operator wrapper。历史脚本及证据只读保留；旧批次不迁移、不续跑。
+此入口覆盖完整政策候选schema16/17/18的开发40案、Agent18已见V3回归及Agent18/Fixed17的V4正式20案。S5本轮已完成，结果见[最终报告](../../../docs/evidence/agent-v3-s5-closeout-2026-10-16.md)；后续新实验的执行规则见 [ADR-0039](../../../docs/adr/0039-s5-startup-review-and-automatic-health.md)。它取代逐版本复制的 `prepare_phase.py`、`manifest_checks.py`、`ledger.py`、`run_phase.py` 和私有 operator wrapper。历史脚本及证据只读保留；旧批次不迁移、不续跑。
 
-先完成一个明确假设的最小诊断，收益成立才实现并完整回归；v8 已完成实现，直接回归。固定输入诊断复用现有 `tools.support_diagnosis`，冻结复用 `tools.support_s5.freeze`，不增加新平台或阶段次数/时间预算。
+先完成一个明确假设的最小诊断，收益成立才实现并完整回归。固定输入诊断复用现有 `tools.support_diagnosis`，冻结复用 `tools.support_s5.freeze`，不增加新平台或阶段次数/时间预算。
 
 在仓库根目录激活开发 `.venv`（或用 `.venv/Scripts/python.exe`）。共享宿主入口明确加载本 checkout 的 `python`、`sdk/python` 源码，避免旧批次已安装包漂移；不依赖 pytest 或额外 `PYTHONPATH`。配置从 [example.config.json](example.config.json) 复制到仓库外的当前工作目录，填入真实路径及预先确定的范围：
 

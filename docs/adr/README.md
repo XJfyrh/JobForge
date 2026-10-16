@@ -8,6 +8,8 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 
 `Proposed` 待审查，`Accepted` 为有效依据，`Rejected` 保存未采用原因，`Superseded` 指向后继。不静默改已接受历史结论；变化以新 ADR 明确取代范围。可靠性/状态机/租约/幂等、公开契约、事实源/调度、关键依赖、部署/安全边界或偏离 PRD 的选择需要 ADR。
 
+状态列记录决策接受与取代关系，实施和验收从状态页进入。已合并的决策使用明确状态，接受记录引用具体 PR；合并前的临时说明在合并时更新。
+
 ## 决策列表
 
 | 编号 | 标题 | 状态 | 日期 |
@@ -37,23 +39,23 @@ ADR 记录 PRD 未覆盖的架构、可靠性与公开契约取舍。接受决�
 | [ADR-0023](0023-held-unknown-cross-batch-admission.md) | 保留未知费用后的独立新批准入 | Accepted | 2026-09-17 |
 | [ADR-0024](0024-bounded-support-agent.md) | 有界售后 Agent | Accepted | 2026-09-17 |
 | [ADR-0025](0025-confirmed-step-recovery.md) | 完整审计下的未提交步骤恢复 | Accepted | 2026-10-04 |
-| [ADR-0026](0026-approval-actions-and-receipt-recovery.md) | 人工审批、签名动作与回执优先恢复 | Accepted（随本 PR 合并生效） | 2026-10-05 |
-| [ADR-0027](0027-s5-observability-and-data-lifecycle.md) | S5 观测关联、内容留存与停写恢复 | Accepted（随本PR合并生效） | 2026-10-07 |
-| [ADR-0028](0028-versioned-support-evidence-navigation.md) | 售后 Agent 证据导航的独立候选版本 | Accepted（随本PR合并生效） | 2026-10-07 |
-| [ADR-0029](0029-s5-registration-routing-amendment.md) | S5 正式登记路由的冻结后操作修订 | Accepted（随本PR合并生效） | 2026-10-08 |
-| [ADR-0030](0030-s5-policy-condition-candidate.md) | S5 必要条件核对候选与重新验收 | Accepted（随本PR合并生效） | 2026-10-08 |
-| [ADR-0031](0031-s5-controlled-decision-diagnosis.md) | S5 固定输入裁决对照 | Accepted（诊断工具，不改变正式验收） | 2026-10-11 |
-| [ADR-0032](0032-s5-reasoning-observation-amendment.md) | 空推理观测与原名单续跑 | Accepted（仅修订空推理分类） | 2026-10-11 |
-| [ADR-0033](0033-versioned-final-adjudication.md) | 版本化独立终裁 | Accepted（随本 PR 合并生效） | 2026-10-11 |
-| [ADR-0034](0034-s5-final-stage-separation-and-condition-enumeration.md) | S5 终裁任务分离与条件枚举候选 | Accepted（维护者批准方案与 ¥28 上限，独立设计审查通过；随本 PR 合并生效。增补 0033 的冻结守卫与阶段费用上限） | 2026-10-12 |
-| [ADR-0035](0035-s5-batch-reservation-and-v5-replay.md) | S5 批次预留上限与 v5 终裁回放 | Accepted（逐批 ¥4、累计 ¥28；具体 manifest 独立放行） | 2026-10-13 |
-| [ADR-0036](0036-s5-controlled-policy-supplement.md) | S5 裁决阶段受控补证 | Accepted（机制通过；真实开发在 DEV-033 闭合缺口后停发，未冻结） | 2026-10-13 |
-| [ADR-0037](0037-status-policy-read-prerequisite.md) | 特殊工单状态的政策读取前置条件 | Accepted（独立设计审查通过；schema 15 新候选） | 2026-10-13 |
-| [ADR-0038](0038-policy-bundle-before-adjudication.md) | 先读取完整政策，再独立终裁 | Accepted（固定整包读取方向独立接受；实现验证另记） | 2026-10-13 |
-| [ADR-0039](0039-s5-startup-review-and-automatic-health.md) | S5 一次启动审查与自动健康检查 | Accepted（后续新批次；不放行具体收费） | 2026-10-15 |
-| [ADR-0040](0040-s5-evidence-and-validation-consistency.md) | S5 证据绑定与验收一致性 | Accepted（随本 PR 合并生效） | 2026-10-16 |
-| [ADR-0041](0041-business-workbench-presentation.md) | 业务工作台与部署处理方式 | Accepted（随本 PR 合并生效） | 2026-10-16 |
-| [ADR-0042](0042-public-preview-and-isolated-demo.md) | 公开预览与隔离免费演示 | Accepted（随本 PR 合并生效） | 2026-10-16 |
+| [ADR-0026](0026-approval-actions-and-receipt-recovery.md) | 人工审批、签名动作与回执优先恢复 | Accepted | 2026-10-05 |
+| [ADR-0027](0027-s5-observability-and-data-lifecycle.md) | S5 观测关联、内容留存与停写恢复 | Accepted | 2026-10-07 |
+| [ADR-0028](0028-versioned-support-evidence-navigation.md) | 售后 Agent 证据导航的独立候选版本 | Accepted | 2026-10-07 |
+| [ADR-0029](0029-s5-registration-routing-amendment.md) | S5 正式登记路由的冻结后操作修订 | Accepted | 2026-10-08 |
+| [ADR-0030](0030-s5-policy-condition-candidate.md) | S5 必要条件核对候选与重新验收 | Accepted | 2026-10-08 |
+| [ADR-0031](0031-s5-controlled-decision-diagnosis.md) | S5 固定输入裁决对照 | Accepted | 2026-10-11 |
+| [ADR-0032](0032-s5-reasoning-observation-amendment.md) | 空推理观测与原名单续跑 | Accepted | 2026-10-11 |
+| [ADR-0033](0033-versioned-final-adjudication.md) | 版本化独立终裁 | Accepted | 2026-10-11 |
+| [ADR-0034](0034-s5-final-stage-separation-and-condition-enumeration.md) | S5 终裁任务分离与条件枚举候选 | Accepted | 2026-10-12 |
+| [ADR-0035](0035-s5-batch-reservation-and-v5-replay.md) | S5 批次预留上限与 v5 终裁回放 | Accepted | 2026-10-13 |
+| [ADR-0036](0036-s5-controlled-policy-supplement.md) | S5 裁决阶段受控补证 | Accepted | 2026-10-13 |
+| [ADR-0037](0037-status-policy-read-prerequisite.md) | 特殊工单状态的政策读取前置条件 | Accepted | 2026-10-13 |
+| [ADR-0038](0038-policy-bundle-before-adjudication.md) | 先读取完整政策，再独立终裁 | Accepted | 2026-10-13 |
+| [ADR-0039](0039-s5-startup-review-and-automatic-health.md) | S5 一次启动审查与自动健康检查 | Accepted | 2026-10-15 |
+| [ADR-0040](0040-s5-evidence-and-validation-consistency.md) | S5 证据绑定与验收一致性 | Accepted | 2026-10-16 |
+| [ADR-0041](0041-business-workbench-presentation.md) | 业务工作台与部署处理方式 | Accepted | 2026-10-16 |
+| [ADR-0042](0042-public-preview-and-isolated-demo.md) | 公开预览与隔离免费演示 | Accepted | 2026-10-16 |
 
 ## 增量适用范围
 

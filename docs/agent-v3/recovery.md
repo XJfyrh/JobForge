@@ -1,6 +1,6 @@
 # 已确认步骤恢复
 
-[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)定义 schema 3 的持久恢复。`support_agent_v1` 显式声明 `confirmed_uncommitted_v1`，固定 `linux-v2-recovery-runtime-1`；旧 schema 1/2 不借用新豁免。当前验收见[状态页](../status.md)与[S3 报告](../evidence/agent-v3-s3-cloud-2026-10-04.md)。
+[PRD v0.17](../product/JobForge_PRD_v0.17.md)与[ADR-0025](../adr/0025-confirmed-step-recovery.md)定义 schema 3 的持久恢复。`support_agent_v1` 显式声明 `confirmed_uncommitted_v1`，固定 `linux-v2-recovery-runtime-1`；旧 schema 1/2 不借用新豁免。后续 Agent 版本沿用恢复合同，当前版本见[运行时](runtime.md)。机制起点见[S3 报告](../evidence/agent-v3-s3-cloud-2026-10-04.md)，最新真实对照见[V9 恢复报告](../evidence/agent-v3-s5-v9-recovery-2026-10-16.md)。
 
 版本化 profile schema 与共同恢复向量见[源契约](../../api/support/recovery-v1/README.md)。
 

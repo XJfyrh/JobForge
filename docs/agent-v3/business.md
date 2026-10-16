@@ -1,6 +1,6 @@
 # 业务快照与政策检索
 
-业务依赖包括 40 个固定英文合成工单、Go HTTP、不可变 PostgreSQL 快照、真实 MiniLM embedding 与 pgvector 检索。`support-business` 独立于控制库，提供只读证据和可信 Capture；Run 的调度/模型/预算由[控制服务](runs.md)与[运行时](runtime.md)负责。
+本页用于准备开发语料与政策索引。开发数据包含 40 个固定英文合成工单，业务服务提供 Go HTTP、不可变 PostgreSQL 快照、真实 MiniLM embedding 与 pgvector 检索。`support-business` 独立于控制库，提供只读证据和可信 Capture；Run 的调度/模型/预算由[控制服务](runs.md)与[运行时](runtime.md)负责。
 
 ## 从干净环境启动（Windows PowerShell）
 
@@ -34,7 +34,7 @@ Invoke-RestMethod http://127.0.0.1:8092/health/ready
 
 Python 工具使用源码包 `python/jobforge_agent`；Run 接入使用已提供的 `jobforge.RunClient`，见[SDK](../../sdk/python/README.md)。旧 `JobForgeClient` 服务 Job API。Linux使用`export PYTHONPATH=python`、`.venv/bin/python`及相同模块/Go/Compose命令；环境变量用`export NAME=value`设置。Go可以替换为预先`go build -o support-business ./cmd/support-business`后的二进制调用。
 
-## 三分钟演示（依赖已准备）
+## 验证快照与政策检索
 
 ```powershell
 $headers=@{Authorization='Bearer dev-north-operator-key'}
@@ -52,19 +52,19 @@ $retrieval=(.venv\Scripts\python -m jobforge_agent retrieval --output-dir $out -
 
 再次提交相同body得到相同snapshot；相同request_key改ticket返回409。将读取key换成`dev-south-reader-key`访问北租户snapshot得到404。引用不是访问凭据；`business-evidence:<snapshot>:order`和`business-policy:<index>:<chunk>`都必须在授权快照路径内查询。政策查询接口接受固定profile和384维向量，Python工具仅向模型开放有界query文字。
 
-检索报告保留全部20条及原始top-3，评分器独立读取evaluation标签，失败/未尝试仍计入20条分母。评测按政策ID计算Hit@3/MRR@3，而非宣称每个具体段落都准确。当前v2的真实运行见[新证据](../evidence/agent-v3-s1-support-2026-09-16.md)，原v1的[验收证据](../evidence/agent-v3-s1-business-2026-09-16.md)保留。准备及检索的requests计数是发送前持久化的发送意图；取消、超期或进程退出可能发生在实际发送前，不能据此推断未知调用未发生。
+检索报告保留全部20条及原始top-3，评分器独立读取evaluation标签，失败/未尝试仍计入20条分母。评测单位为政策ID，指标为Hit@3/MRR@3；逐段原始命中保存在检索报告。开发语料v2的检索结果见[S1报告](../evidence/agent-v3-s1-support-2026-09-16.md)，原v1的[验收证据](../evidence/agent-v3-s1-business-2026-09-16.md)保留。准备及检索的requests计数是发送前持久化的发送意图；取消、超期或进程退出可能发生在实际发送前，不能据此推断未知调用未发生。
 
 ## 契约与边界
 
 完整接口表和版本规则见[ADR-0016](../adr/0016-business-snapshots-and-policy-retrieval.md)。HTTP创建≤4KiB、搜索≤32KiB、原接口响应≤8KiB、并发8、每请求10秒；未知字段、大小写别名、重复字段、尾随JSON、数值null和非法向量均拒绝。read服务启动检查低权限身份及每个配置tenant的种子/完整索引；缺资源时停止启动，运行中丢失依赖时ready返回503。
 
-[ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 新增 `GET /business/v1/snapshots/{id}/policies/bundle`，只读授权快照所绑定索引的 P01.1 至 P10.2 全部 20 段，按别名排序。请求不接受 query/body 或调用方选择索引、版本、别名；响应独立上限 32 KiB，保留实际来源六字段，不含向量 distance。缺段、额外段落、重复别名或绑定/正文错误均拒绝，不降级搜索。`read_policy_bundle` 只由新 schema16/17 的 Go 步骤图安排，记一次逻辑工具和一次业务 HTTP，无 embedding/chat；旧工具仍用原 8 KiB 上限。
+[ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 新增 `GET /business/v1/snapshots/{id}/policies/bundle`，只读授权快照所绑定索引的 P01.1 至 P10.2 全部 20 段，按别名排序。请求不接受 query/body 或调用方选择索引、版本、别名；响应独立上限 32 KiB，保留实际来源六字段，不含向量 distance。缺段、额外段落、重复别名或绑定/正文错误均拒绝，不降级搜索。`read_policy_bundle` 由 schema16/17/18 的 Go 步骤图安排，记一次逻辑工具和一次业务 HTTP，无 embedding/chat；旧工具仍用原 8 KiB 上限。
 
 固定业务观察时点保存在ticket.observed_at并冻结为snapshot.as_of；created_at另记事务捕获时间。快照事务使用repeatable-read，源表变更不影响已捕获订单、物流和旧政策；新事实需新请求键。工具只接受当前snapshot/order绑定，输入不能成为URL、SQL、shell或动态工具名入口。
 
-独立Compose项目`jobforge-agent-v3`占用5434、8092、11436，业务库与旧队列5433分离。NOLOGIN owner持有schema；HTTP用reader，种子/索引用loader，迁移用bootstrap。固定登录密码仅限本地开发实例。运行时虽在tenant间共用数据库角色，但HTTP/service每条查询均绑定鉴权tenant；不宣称数据库RLS隔离。全局角色标记属于该专属实例，业务库用途标记仍逐库核验；迁移拒绝未标记数据库和核心jobs表。
+独立Compose项目`jobforge-agent-v3`占用5434、8092、11436，业务库与旧队列5433分离。NOLOGIN owner持有schema；HTTP用reader，种子/索引用loader，迁移用bootstrap。固定登录密码仅限本地开发实例。租户间共用数据库角色，租户隔离由HTTP/service每条查询绑定的鉴权tenant实现，而非数据库RLS。全局角色标记属于该专属实例，业务库用途标记仍逐库核验；迁移拒绝未标记数据库和核心jobs表。
 
-本切片使用旧项目之外的新volume；固定镜像/model digest见Compose及ADR。索引只有20段，SQL精确余弦排序按chunk ID打破并列，不外推生产规模性能。业务服务镜像只复制runtime，不包含evaluation。40开发例已用于检查，不能重新称为未见保留集；20保留例未生成/打开。
+该Compose使用独立volume，固定镜像/model digest见Compose及ADR。索引规模为20段，SQL精确余弦排序按chunk ID打破并列。业务服务镜像只复制runtime，evaluation数据留在评测工具侧。40开发例与正式集分开；V9已完成新未见20案的[正式配对](../evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)，历史正式集作为已见回归材料保留。生产容量评估见[部署参考](../deployment.md)。
 
 ## 验证、重启与清理
 

@@ -1,6 +1,6 @@
 # ADR-0027：S5 观测关联、内容留存与停写恢复
 
-- 日期：2026-10-07（Asia/Shanghai）；状态：**Accepted，2026-10-07独立方案审查接受，随本PR合并生效**。
+- 日期：2026-10-07（Asia/Shanghai）；状态：**Accepted，2026-10-07独立方案审查接受**。
 - 对应：[PRD v0.19](../product/JobForge_PRD_v0.19.md)。
 - 增补：ADR-0013/0014 的 TraceContext、0017 的 S5 清理边界和0026的回执身份留存。仅在受保护内容实际清理后，取代0017/0026“已接受Submit/审批返回完整原Run/方案”的响应形式：Submit返回REQUEST_EXPIRED，GET/POST approval（包括已接受批准/拒绝重放）返回RESULT_EXPIRED。原决定、actor及操作身份保留，不重新派发；未清理记录仍按原合同幂等重放，不因retry窗口或批次到期被拒绝。历史profile、原状态机、审计/预算和签名内容保持。
 

@@ -1,6 +1,6 @@
 # ADR-0020：provider 审计报告、跨 FD 确认与首批停发
 
-- 日期：2026-09-16；状态：**Accepted，随 [PR #47](https://github.com/XJfyrh/JobForge/pull/47) 完成独立审查并合并时生效；尚未实现或验收**。
+- 日期：2026-09-16；状态：**Accepted**；[PR #47](https://github.com/XJfyrh/JobForge/pull/47) 已完成独立审查并合并。实现与验收见[当前状态](../status.md)。
 - 关联：[PRD v0.12](../product/JobForge_PRD_v0.12.md)，既有 [PRD v0.10](../product/JobForge_PRD_v0.10.md)/[v0.11](../product/JobForge_PRD_v0.11.md)、[ADR-0017](0017-run-admission-and-call-ledger.md)/[0018](0018-deepseek-fixed-flow-and-executor.md)/[0019](0019-executor-confirmation-and-exit-contract.md)。
 - 仓库核对：C3b 已通过 PR #46 合并，起点 `0829a4c`；本文定义下一合同，不修改已合并实现，也不声称本文已实现或验收。
 - 本文只解决 provider 审计持久化、确认、读取和新首批批次停发；support_fixed_v1 的固定图/schema/模板与评分沿用 ADR-0018，不重新决定，也不扩展为 S2 动态 Agent。
