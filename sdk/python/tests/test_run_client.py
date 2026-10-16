@@ -31,6 +31,42 @@ FIXTURES = json.loads(
 RUN_ID: str = FIXTURES["run"]["run_id"]
 
 
+def test_identity_comes_from_one_authenticated_exchange() -> None:
+    """Identity is presentation data, with no client-side permission grant."""
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200, json={"tenant_id": "north", "role": "approver", "actor_id": "reviewer"}
+        )
+
+    with RunClient(
+        "https://unit.invalid", "test-only", transport=httpx.MockTransport(handler)
+    ) as client:
+        identity = client.identity()
+    assert identity.tenant_id == "north" and identity.actor_id == "reviewer"
+    assert identity.role == "approver"
+    assert len(requests) == 1
+    assert requests[0].method == "GET" and requests[0].url.path == "/v2/identity"
+    assert requests[0].headers["Authorization"] == "Bearer test-only"
+
+
+def test_legacy_export_retention_metadata_remains_unknown() -> None:
+    """Complete historical evidence stays inspectable without rewriting it."""
+    original = copy.deepcopy(FIXTURES["run"])
+    original.pop("terminal_at")
+    original.pop("content_purged_at")
+    parsed = Run.from_dict(original)
+    assert parsed.terminal_at is parsed.content_purged_at is None
+    assert "terminal_at" not in original
+    with pytest.raises(ValueError):
+        Run.from_dict({**original, "terminal_at": None})
+    original.pop("profile_hash")
+    with pytest.raises(ValueError):
+        Run.from_dict(original)
+
+
 def invoke_submit(client: RunClient, **kwargs: Any) -> Any:
     """Submit shared fixture values, allowing one invalid override per test."""
     values = {

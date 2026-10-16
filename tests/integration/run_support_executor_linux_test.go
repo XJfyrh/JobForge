@@ -16,6 +16,8 @@ import (
 
 	"github.com/xjfyrh/jobforge/internal/business"
 	agentrun "github.com/xjfyrh/jobforge/internal/run"
+	runpostgres "github.com/xjfyrh/jobforge/internal/run/postgres"
+	"github.com/xjfyrh/jobforge/internal/runworker"
 )
 
 const supportExecutorProfileID = "support-executor-synthetic-audit-v1"
@@ -258,6 +260,58 @@ func TestRunSupportExecutor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunSupportS5FixedComparisonExecutor(t *testing.T) {
+	h := supportExecutorHarness(t, "comparison-original", true)
+	d, err := agentrun.DecodeSupportDefinition(h.Profile.Definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.SchemaVersion = 5
+	d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-07", "2026-10-07"
+	d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+	p, err := agentrun.BuildSupportProfile("s5-fixed-synthetic-mechanism", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Executable = true
+	h.Profile = p
+	h.Options.Profiles = []agentrun.Profile{p}
+	h.Options.Workers[0].ProfileIDs = []string{p.ID}
+	h.Store, err = runpostgres.New(h.Pool, h.Options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Store.EnsureProfiles(h.Ctx); err != nil {
+		t.Fatal(err)
+	}
+	h.Service, err = agentrun.NewService(h.Store, h.Capture, []string{"tenant-north", "tenant-south"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	supportProfileCapture(t, h, "submit", "submit-comparison", "", true)
+	path := "/etc/jobforge/executor.json"
+	original, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	launcherJSON(t, path, runworker.Manifest{SchemaVersion: 1, ExecutorVersion: p.ExecutorVersion, Profiles: []runworker.ManifestProfile{{ProfileID: p.ID, ProfileHash: p.Hash, AdapterID: "support-fixed-v1"}}})
+	t.Cleanup(func() {
+		if err := os.WriteFile(path, original, 0600); err != nil {
+			t.Error(err)
+		}
+	})
+	r := h.submit(t, "tenant-north", "comparison")
+	fixture := supportExecutorHTTP(t, h, r, true, false)
+	client := executorGateway(t, h)
+	running := startExecutorWorker(t, h, fixture.executorHTTPFixture, client)
+	waitExecutorSignal(t, running, client.looped)
+	view, err := h.Store.Get(h.Ctx, r.TenantID, r.ID)
+	if err != nil || view.State != agentrun.AwaitingApproval || view.CursorVersion != 6 {
+		t.Fatal("new fixed comparison runtime did not preserve finite proposal path", err)
+	}
+	assertSupportExecutorFacts(t, h, r, fixture, false)
 }
 
 func assertSupportExecutorFacts(t *testing.T, h *runHarness, r agentrun.Run, fixture *supportExecutorHTTPFixture, correction bool) {

@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "kind": "s5-final-execution-and-quality-evidence",
+  "engineering_capability_complete": true,
+  "formal_model_quality_passed": true,
+  "latest_archive_head_ci_and_merge": "Tracked in docs/status.md and PR61; this report binds the accepted execution source28242e6, not a future commit.",
+  "formal": {
+    "original_denominator": 20,
+    "agent_correct": 18,
+    "agent_complete_case_evidence": 18,
+    "agent_required_correct": 16,
+    "agent_required_complete_case_evidence": 18,
+    "hard_failures": 0,
+    "fixed_correct": 11,
+    "fixed_complete_case_evidence": 11,
+    "fixed_source_origins": "original18 plus originally-unattempted019/020 once each; stopped batch not reopened",
+    "paired": {
+      "wins": 8,
+      "ties": 11,
+      "losses": 1
+    }
+  },
+  "recovery": {
+    "original_denominator": 11,
+    "actual_recovery_mechanisms_passed": 5,
+    "complete_proposals": 8,
+    "correct_proposals": 7,
+    "planned_H0_cancellations": 3,
+    "cost_saving_demonstrated": false,
+    "comparable_pairs": 2,
+    "incomparable_pairs": 1
+  },
+  "demo": {
+    "run_id": "f26f2b0f-8a75-44ec-bd7c-6869e1bc1665",
+    "operation_id": "49392168-0b45-485e-9e2a-33ee3a9c923a",
+    "proposal_hash": "f731b2d60c55f8b105cc3cd67e2c5618479f9215e4279a396fb923610ccf716d",
+    "actual_human_approval": true,
+    "approval_actor": "s5-demo-maintainer-20261016",
+    "state": "succeeded",
+    "recovery_count": 1,
+    "ordinary_physical_calls": 7,
+    "chat_calls": 4,
+    "action_http_calls": 3,
+    "action_posts": 1,
+    "model_replay_calls": 0,
+    "known_cost_microyuan": 39035,
+    "usage": {
+      "known_tokens": 20916,
+      "known_cost_microyuan": 39035,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 7,
+      "chat_calls": 4,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 0,
+      "profile_metadata_calls": 0,
+      "business_tool_calls": 3
+    },
+    "ticket_revision_before": 2,
+    "ticket_revision_after": 3,
+    "ticket_status": "open",
+    "lost_ack_action_write_record": "unknown retained; no cost hold, effect applied from actual recovered receipt",
+    "timing": {
+      "sdk_submit_to_proposal_seconds": 13.591269,
+      "worker_signal_to_natural_close_seconds": 29.960358,
+      "worker_signal_to_recovery_claim_seconds": 32.063636,
+      "recovery_claim_to_success_seconds": 0.064598
+    },
+    "trace_checks": {
+      "exact_model_business_calls": true,
+      "natural_recovery_new_attempt_span": true,
+      "receipt_query_trace": true,
+      "python_and_steps_present": true,
+      "unique_business_resolution": true,
+      "receipt_exactly_matches_committed_response": true,
+      "all_attempts_naturally_closed": true,
+      "original_sdk_ancestor_link": true,
+      "actual_ticket_revision_and_status_match_receipt": true
+    },
+    "finished_attempt_root_spans": [
+      1,
+      3
+    ],
+    "killed_attempt": 2
+  },
+  "stage_ledger": {
+    "runs": 727,
+    "chat_calls": 2924,
+    "unknown_chat_calls": 0,
+    "inflight": 0,
+    "unfinished_attempts": 0,
+    "known": 23325083,
+    "held": 0
+  },
+  "stage_cap_microyuan": 28000000,
+  "remaining_stage_microyuan": 4674917,
+  "cost_basis": "actual_usage_at_frozen_tariff_estimate_not_provider_settled_invoice",
+  "recording": {
+    "duration": "00:03:00.00",
+    "speed": 1,
+    "kind": "actual_recording_excerpts_and_post_close_readonly_views",
+    "subtitles": "s5-three-minute-demo.vtt",
+    "video_sha256": "f7ace6b43defe8c7ab752ca5324e540e679af50a9631a38eb9a4ed0d66dd527e",
+    "recording_failure": {
+      "path": "sdk-to-proposal.webm",
+      "bytes": 0,
+      "preserved": true,
+      "replacement_model_run": false
+    },
+    "segments": [
+      {
+        "source": "approval-and-recovery.webm",
+        "source_sha256": "835e4336408c6da7c3c430598185ed217199b08ee68bd6d49f4562a64ea38c40",
+        "start_seconds": 0,
+        "duration_seconds": 75
+      },
+      {
+        "source": "final-readonly-view.webm",
+        "source_sha256": "b49566d37d4b45b649125141b76413dc978f552c97dc26e063792b7d264bb606",
+        "start_seconds": 0,
+        "duration_seconds": 65
+      },
+      {
+        "source": "actual-trace-1.webm",
+        "source_sha256": "e6c1bdf66e984c140510116bb4f7388e15fcd15241b63088c03ed3e6ba52fac8",
+        "start_seconds": 0,
+        "duration_seconds": 40
+      }
+    ],
+    "crop": "Remove only 180px gray recorder padding below 1280x720 browser viewport; no application content crop."
+  },
+  "environment": "Fresh isolated Compose project on Windows Docker Desktop Linux containers; Linux CI process/race checks passed; no separate native-Linux-host real-model demo claimed.",
+  "sources": [
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\startup-manifest.json",
+      "sha256": "63d45d0f1712977019086d9e2e333c487b48c4abd87a33f0023675b9c4eb8687"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\independent-startup-review.json",
+      "sha256": "568db7ee7646ff6362c3e35773af13d8618880fb014e2b32ddc653819ab1d105"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\independent-post-batch-review.json",
+      "sha256": "73ab052659abbbdef4bec86f18dd7740bdfbb70cc9071408b537e9797be18de6"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\human-approval.json",
+      "sha256": "023f87f4c94cc16bcd9b24df2138d0d60ee68fdd5cbcfed115c5d4bdfed6a4f2"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\quality-input.json",
+      "sha256": "a4441977f4c3d8e820bb5afb10791396d69513b034ecd1577d6c19fc4792a652"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\quality-report.json",
+      "sha256": "a54171e2e88f273eab0b105fc0f9cc1f7cf5c1ca01ddf2f9e5dec97b4b4d2e22"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\exports\\submitted.json",
+      "sha256": "72404809430e5c40558048998cc715fc54cb2a0945f165a79d61465b6fbdc628"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\exports\\pending.json",
+      "sha256": "69711e942fe68844d0c7b68641a1820c0ea929efd9eeb0b23a2d27b6edccc2c4"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\exports\\final.json",
+      "sha256": "dfdf9afc4a55c3d3a63617b6e53318fcd88074e1de9f8e72b755841e1f5f65d1"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\exports\\real-worker-stop.json",
+      "sha256": "e72dac814bf39daaaa2d03e7c1d60c8a87f085fdb863a8b5cdcb92106bc96052"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\exports\\completed.json",
+      "sha256": "dd5d125b9e44eb38d65e78ce432b1ee9257a5ab37ac71b58df8604f4bd95f141"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\audits\\control-after.json",
+      "sha256": "ccbdf65b5faa9b52c0abcaaa202185ac7e94b5a0ebd3521251207b50f826825f"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\audits\\ticket-after.json",
+      "sha256": "616014a1c2e59f0e3b80249a0621d5bf7b039028664988ab2fa323327918daf7"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\audits\\receipts-before.json",
+      "sha256": "cd54e8107f36efa4663986dc574bc6613e288910431c530212c9784a3a16f3f6"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\audits\\receipts-after-commit-before-recovery.json",
+      "sha256": "0b4e8294762484a3d6020edeaca749458ab4872f8947bf158b72b415e6f1aa54"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\audits\\receipts-after.json",
+      "sha256": "e0ab13f17e372d36f697bc68496af637d8f8b26ae2a563e08d3ecddff0e0ac73"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\sql-and-trace-verification.json",
+      "sha256": "3767d1502ccc4861603aaa1f49a21978952ea67e13780493dbb978d3ecddedc0"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\sql-and-trace-verification.final.json",
+      "sha256": "2515c8b06649068199d1045a64fb6a0601b4134a0d5a25814105cbbd5240144b"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\closed-ledger.json",
+      "sha256": "ae109449b552ed5a2725abd8649ab9a0f7fd67a7defb40a0c0e26d532444e117"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\final-view-closed-ledger.json",
+      "sha256": "9d66da4fbf49c2fb1b07d792e08482cdf9193d8097994f787c04fd53cbbe1395"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\video-assembly-receipt.json",
+      "sha256": "b832eda0170c447e634ffbea2626a23fa64ee9c37a1458faabfa9a7c24ac610c"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\s5-three-minute-demo.webm",
+      "sha256": "f7ace6b43defe8c7ab752ca5324e540e679af50a9631a38eb9a4ed0d66dd527e"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\s5-three-minute-demo.vtt",
+      "sha256": "ef4c5126ee00ae66247d75059685ac1ba24186197328a0e3d1ab1b94bf87a76c"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\sdk-to-proposal.webm",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\demo\\final-effect.png",
+      "sha256": "2abebe181bfa886618d1f193725047afe93797c3d703e484c6e214f146928036"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\recovery-ready\\independent-post-batch-review.json",
+      "sha256": "c12c56d16661ca0838152a5832c272958d070d9f07cc33729b9ab64dcc9821e7"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\s5-closeout-20261016\\validation\\ci-28242e6.json",
+      "sha256": "4b9c9cf266c4320f1c9e9388c4694e9a63fabdb599f4f3910f52ee6da551c6dc"
+    },
+    {
+      "path": "E:\\JobForge\\docs\\evidence\\agent-v3-s5-v9-formal-v4-2026-10-16.json",
+      "sha256": "f98dd4e15d4c39f99808211be724676905f84809587cf13d0078d9c23e0bc9c2"
+    },
+    {
+      "path": "E:\\JobForge\\docs\\evidence\\agent-v3-s5-v9-recovery-2026-10-16.json",
+      "sha256": "caad8b400c843a8eb3b42fef2b90f1de2b577a4d29a61aa07bfb423c1907227c"
+    }
+  ]
+}

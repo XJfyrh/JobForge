@@ -12,6 +12,7 @@ from jobforge_agent.business import (
     search_body,
     tool_argument,
     tool_path,
+    validate_policy_bundle_response,
     validate_read_response,
     validate_search_response,
 )
@@ -186,6 +187,24 @@ class RunBusinessTools:
         self, name: Any, arguments: Any, *, context: RunCallContext
     ) -> dict[str, Any]:
         """Return only after business validation and dispatch confirmation."""
+        if name == "read_policy_bundle":
+            if arguments != {}:
+                raise DispatchError("INPUT_INVALID")
+            request = prepare_request(
+                context=context,
+                endpoint="business",
+                subcall="read_policy_bundle",
+                method="GET",
+                path=f"/business/v1/snapshots/{self._binding.snapshot_id}/policies/bundle",
+                max_response_bytes=32768,
+            )
+            return await self._dispatcher.execute(
+                request,
+                context=context,
+                validate=_response_validator(
+                    lambda value: validate_policy_bundle_response(value, self._binding)
+                ),
+            )
         argument = _checked(
             lambda: tool_argument(name, arguments, self._binding), input_argument=True
         )

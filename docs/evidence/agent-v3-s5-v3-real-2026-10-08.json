@@ -1,0 +1,3202 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-08T05:26:23.756158+00:00",
+  "result": "formal_quality_failed_recovery_and_demo_not_started",
+  "source_commit": "48c9d7305df2ee123c254677547070b415e8c13e",
+  "candidate": {
+    "agent_schema": 9,
+    "fixed_schema": 10,
+    "prompt_version": "support-agent-prompt-v3",
+    "frozen_at": "2026-10-08T04:52:39.942098+00:00",
+    "package_authored_at": "2026-10-08T05:05:28.646439+00:00",
+    "model": {
+      "max_tokens": 1024,
+      "message_content_bytes": 65536,
+      "model_content_bytes": 16384,
+      "observed_on": "2026-10-08",
+      "observed_version": "DeepSeek-V4.1-Flash",
+      "origin": "https://api.deepseek.com",
+      "path": "/chat/completions",
+      "provider": "deepseek",
+      "request_body_bytes": 131072,
+      "request_model": "deepseek-flash",
+      "response_body_bytes": 65536,
+      "response_format": "json_object",
+      "stream": false,
+      "temperature": 0,
+      "thinking": "disabled"
+    }
+  },
+  "thresholds": {
+    "proposal_correct": 16,
+    "full_case_evidence": 18,
+    "denominator": 20
+  },
+  "formal": {
+    "agent": {
+      "kind": "s5-unseen-quality",
+      "dataset_version": "support-s5-2026-10-08-v3",
+      "strategy": "support_agent_v1",
+      "denominator": 20,
+      "correct_count": 12,
+      "full_case_evidence_count": 15,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "proposal_audit_complete": true,
+      "thresholds_met": false,
+      "usage_total": {
+        "known_tokens": 567718,
+        "known_cost_microyuan": 448226,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 315,
+        "chat_calls": 103,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 43,
+        "profile_metadata_calls": 86,
+        "business_tool_calls": 83
+      },
+      "usage_complete": true,
+      "execution_outcomes": {
+        "awaiting_approval": 19,
+        "succeeded": 1
+      },
+      "cases": [
+        {
+          "case_id": "S5V3-001",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "6ca2f0bc-4722-42e0-a276-891d28b15dea",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 33734,
+            "known_cost_microyuan": 27278,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 20,
+            "chat_calls": 6,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 3,
+            "profile_metadata_calls": 6,
+            "business_tool_calls": 5
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-002",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "3409f638-1645-4a11-bde3-5e186312eb07",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 34382,
+            "known_cost_microyuan": 28696,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 20,
+            "chat_calls": 6,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 3,
+            "profile_metadata_calls": 6,
+            "business_tool_calls": 5
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-003",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "24cb361e-0a76-453e-9c16-71839965dc0f",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27552,
+            "known_cost_microyuan": 21517,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-004",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "45d4410b-16db-4600-b925-1ccccb08522b",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27800,
+            "known_cost_microyuan": 22590,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-005",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "48e26381-2017-42a7-b4c9-23c93f57eba9",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 21103,
+            "known_cost_microyuan": 15760,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 10,
+            "chat_calls": 4,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-006",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "e646c3a0-b6bc-42b8-a6b1-4f8535a2a296",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 20560,
+            "known_cost_microyuan": 14339,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 10,
+            "chat_calls": 4,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-007",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "3c8f6351-a630-4bdc-bf79-3ba1242bb9a0",
+          "run_state": "succeeded",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 26907,
+            "known_cost_microyuan": 20054,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-008",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "b1b09c5d-dedc-4b5c-bbca-c687e41cf15d",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 20569,
+            "known_cost_microyuan": 14361,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 10,
+            "chat_calls": 4,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-009",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "01999427-dde3-434a-a8e7-c6087f7bfc49",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 20549,
+            "known_cost_microyuan": 14273,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 10,
+            "chat_calls": 4,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-010",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "18396eb4-889e-4f56-8173-7ac3a5701231",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 20533,
+            "known_cost_microyuan": 14227,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 10,
+            "chat_calls": 4,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-011",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "1ad3d29d-3bf2-4a3a-8413-c14cdcb89e83",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 33743,
+            "known_cost_microyuan": 27214,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 20,
+            "chat_calls": 6,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 3,
+            "profile_metadata_calls": 6,
+            "business_tool_calls": 5
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-012",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "c814798e-8f14-455b-8ede-afd91966b8ab",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27548,
+            "known_cost_microyuan": 21966,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-013",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "3c408987-e28c-4e9e-ab5d-4e1a8de30fa1",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27503,
+            "known_cost_microyuan": 21610,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-014",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "63ba9398-c1d0-4322-9b49-988de4240af8",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 3,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 40762,
+            "known_cost_microyuan": 35292,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 25,
+            "chat_calls": 7,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 4,
+            "profile_metadata_calls": 8,
+            "business_tool_calls": 6
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-015",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "db3c80b9-6e25-4504-8046-a03ffcaa7a4d",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 41536,
+            "known_cost_microyuan": 36624,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 25,
+            "chat_calls": 7,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 4,
+            "profile_metadata_calls": 8,
+            "business_tool_calls": 6
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-016",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "fb23e6fb-71e5-4847-a492-46f3ea800363",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27044,
+            "known_cost_microyuan": 20930,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-017",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "1b822d21-0eb7-4b73-85a9-08e224fd7102",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 26980,
+            "known_cost_microyuan": 20497,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-018",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "e5ec30f5-aeb7-404c-a867-059066544680",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27125,
+            "known_cost_microyuan": 20921,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-019",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "bd151655-c9cb-4c1b-90ee-a650496b5f1b",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 27500,
+            "known_cost_microyuan": 21897,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 15,
+            "chat_calls": 5,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 2,
+            "profile_metadata_calls": 4,
+            "business_tool_calls": 4
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-020",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "7fed58fa-5c51-4a09-bc4e-6b710d0b4c45",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 34288,
+            "known_cost_microyuan": 28180,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 20,
+            "chat_calls": 6,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 3,
+            "profile_metadata_calls": 6,
+            "business_tool_calls": 5
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        }
+      ]
+    },
+    "fixed": {
+      "kind": "s5-unseen-quality",
+      "dataset_version": "support-s5-2026-10-08-v3",
+      "strategy": "support_fixed_v1",
+      "denominator": 20,
+      "correct_count": 1,
+      "full_case_evidence_count": 2,
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      },
+      "proposal_audit_complete": true,
+      "thresholds_met": false,
+      "usage_total": {
+        "known_tokens": 48199,
+        "known_cost_microyuan": 82072,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 140,
+        "chat_calls": 20,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 20,
+        "profile_metadata_calls": 40,
+        "business_tool_calls": 60
+      },
+      "usage_complete": true,
+      "execution_outcomes": {
+        "awaiting_approval": 20
+      },
+      "cases": [
+        {
+          "case_id": "S5V3-001",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "4b4d1bed-8cc5-4ad8-b7a0-2873e2dd2c98",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2407,
+            "known_cost_microyuan": 4035,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-002",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "d104a4ef-944a-42c8-98a2-37665334fb94",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2379,
+            "known_cost_microyuan": 3817,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-003",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "c957b92d-8cb9-45d1-b847-5e4d8f3a6b07",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2495,
+            "known_cost_microyuan": 4325,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-004",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "2542dc97-6e24-4a92-8f88-d91d1314260b",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2489,
+            "known_cost_microyuan": 4197,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-005",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "f50e6bf5-202d-4d91-980d-e6fda5448ccc",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "passed",
+          "safety": "passed",
+          "correct": true,
+          "errors": [],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2504,
+            "known_cost_microyuan": 4209,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-006",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "625bb9e3-7c18-437e-aedc-b72c999316e8",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "dispute",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2300,
+            "known_cost_microyuan": 3751,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-007",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "0a9ae3b7-cdac-4de9-b148-3f62bf8b4494",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_DECISION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 1,
+              "kind": "dispute",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "ticket_status",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2320,
+            "known_cost_microyuan": 3955,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-008",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "40867895-7626-4ff6-87b4-363f62f99393",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 1,
+              "kind": "dispute",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2327,
+            "known_cost_microyuan": 3777,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-009",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "948240c6-cc6e-4212-a869-3367dee64e22",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "WRONG_ACTION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2259,
+            "known_cost_microyuan": 3691,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": true
+        },
+        {
+          "case_id": "S5V3-010",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "8e50e49a-7576-4882-aa10-d053f6d3c9af",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "dispute",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2278,
+            "known_cost_microyuan": 3701,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-011",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "fd07693e-f557-4c54-a2a3-60d0ddf87100",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2388,
+            "known_cost_microyuan": 3973,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-012",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "b1c459d7-c822-45b4-8809-bebe65f5d16a",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2509,
+            "known_cost_microyuan": 4561,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-013",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "a0f2cbd5-6162-460f-bf92-60a21a3eb9d2",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "usage": {
+            "known_tokens": 2473,
+            "known_cost_microyuan": 4109,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-014",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "39ac471e-f056-498b-a78b-581a39f99496",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 2,
+              "kind": "conflict",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2461,
+            "known_cost_microyuan": 4319,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-015",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "ced57c8a-cc8b-4700-a2cb-3e592d3eadfd",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION",
+            "WRONG_REQUESTED_FIELDS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 3,
+              "kind": "missing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2648,
+            "known_cost_microyuan": 5111,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-016",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "ab3edf22-8b33-4f8c-9e97-e66fe1d4fdb2",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2368,
+            "known_cost_microyuan": 3939,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-017",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "e742e8b6-67bd-49a8-9f9e-769d3596e264",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2302,
+            "known_cost_microyuan": 3733,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-018",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "ed40950f-af2b-46f3-b1ea-f0696ca1f365",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "conflict",
+              "predicate": false,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 2,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2381,
+            "known_cost_microyuan": 4019,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-019",
+          "tenant_id": "tenant-north",
+          "status": "run",
+          "run_id": "46bb4a02-91cd-432f-a061-4e124f5bd3c9",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 2,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2449,
+            "known_cost_microyuan": 4367,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        },
+        {
+          "case_id": "S5V3-020",
+          "tenant_id": "tenant-south",
+          "status": "run",
+          "run_id": "09026d14-3e78-4547-9640-651ba541ba0b",
+          "run_state": "awaiting_approval",
+          "protocol": "passed",
+          "source": "passed",
+          "business": "failed",
+          "safety": "passed",
+          "correct": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 2,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": false
+            },
+            {
+              "index": 3,
+              "kind": "ticket_status",
+              "predicate": false,
+              "source_coverage": false
+            }
+          ],
+          "usage": {
+            "known_tokens": 2462,
+            "known_cost_microyuan": 4483,
+            "held_tokens": 0,
+            "held_cost_microyuan": 0,
+            "physical_calls": 7,
+            "chat_calls": 1,
+            "unknown_chat_calls": 0,
+            "measurement_anomalies": 0,
+            "corrections": 0,
+            "query_embedding_calls": 1,
+            "profile_metadata_calls": 2,
+            "business_tool_calls": 3
+          },
+          "usage_status": "verified",
+          "model_send_observed": true,
+          "execution_complete": true,
+          "call_audit_complete": true,
+          "batch_frozen": false,
+          "batch_stop_code": null,
+          "full_case_evidence": false
+        }
+      ]
+    }
+  },
+  "paired": {
+    "denominator": 20,
+    "outcomes": {
+      "win": 11,
+      "tie": 9
+    },
+    "cases": [
+      {
+        "case_id": "S5V3-001",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-002",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-003",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-004",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-005",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-006",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-007",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-008",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-009",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-010",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-011",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-012",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-013",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-014",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-015",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-016",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V3-017",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-018",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-019",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V3-020",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      }
+    ],
+    "baseline_superiority_required": false,
+    "costs": {
+      "agent": {
+        "usage_total": {
+          "known_tokens": 567718,
+          "known_cost_microyuan": 448226,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 315,
+          "chat_calls": 103,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 43,
+          "profile_metadata_calls": 86,
+          "business_tool_calls": 83
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 567718,
+          "known_cost_microyuan": 448226,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 315,
+          "chat_calls": 103,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 43,
+          "profile_metadata_calls": 86,
+          "business_tool_calls": 83
+        },
+        "usage_complete": true
+      },
+      "fixed": {
+        "usage_total": {
+          "known_tokens": 48199,
+          "known_cost_microyuan": 82072,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 20,
+          "profile_metadata_calls": 40,
+          "business_tool_calls": 60
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 48199,
+          "known_cost_microyuan": 82072,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 20,
+          "profile_metadata_calls": 40,
+          "business_tool_calls": 60
+        },
+        "usage_complete": true
+      }
+    }
+  },
+  "family_results": {
+    "S5V3_recompleted_carrier_cycles": {
+      "agent": {
+        "correct": 3,
+        "full_evidence": 3,
+        "denominator": 5
+      },
+      "fixed": {
+        "correct": 1,
+        "full_evidence": 1,
+        "denominator": 5
+      }
+    },
+    "S5V3_customer_same_parcel_statement_revision": {
+      "agent": {
+        "correct": 5,
+        "full_evidence": 5,
+        "denominator": 5
+      },
+      "fixed": {
+        "correct": 0,
+        "full_evidence": 1,
+        "denominator": 5
+      }
+    },
+    "S5V3_recovery_records_remain_identity_bearing": {
+      "agent": {
+        "correct": 3,
+        "full_evidence": 4,
+        "denominator": 5
+      },
+      "fixed": {
+        "correct": 0,
+        "full_evidence": 0,
+        "denominator": 5
+      }
+    },
+    "S5V3_completed_fulfillment_with_unresolved_exception": {
+      "agent": {
+        "correct": 1,
+        "full_evidence": 3,
+        "denominator": 5
+      },
+      "fixed": {
+        "correct": 0,
+        "full_evidence": 0,
+        "denominator": 5
+      }
+    }
+  },
+  "agent_failures": [
+    {
+      "case_id": "S5V3-002",
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "full_case_evidence": false,
+      "expected": {
+        "conclusion": "conflicting",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "escalate",
+        "conclusion": "conflicting",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "conflict",
+          "type": "post_delivery",
+          "event_ids": [
+            "s5v3-002-receipt-first",
+            "s5v3-002-acceptance"
+          ]
+        },
+        {
+          "kind": "ticket_status",
+          "mode": "preserve_escalated"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": false,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "ticket_status",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-004",
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM",
+        "WRONG_ACTION",
+        "WRONG_CONCLUSION",
+        "WRONG_TARGET_TICKET_STATUS"
+      ],
+      "full_case_evidence": false,
+      "expected": {
+        "conclusion": "conflicting",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "record_conclusion",
+        "conclusion": "delayed",
+        "target_ticket_status": "open",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "correction",
+          "recovery_event_id": "s5v3-004-recovery",
+          "corrected_event_id": "s5v3-004-damage"
+        },
+        {
+          "kind": "timing",
+          "test": "delivered_late",
+          "event_id": "s5v3-004-receipt-second"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-012",
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM",
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": false,
+      "expected": {
+        "conclusion": "delayed",
+        "action": "record_resolution",
+        "target_ticket_status": "open",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "record_conclusion",
+        "conclusion": "on_time",
+        "target_ticket_status": "open",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "correction",
+          "recovery_event_id": "s5v3-012-recovery-a",
+          "corrected_event_id": "s5v3-012-loss"
+        },
+        {
+          "kind": "timing",
+          "test": "delivered_not_late",
+          "event_id": "s5v3-012-receipt"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-015",
+      "errors": [
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": true,
+      "expected": {
+        "conclusion": "on_time",
+        "action": "record_resolution",
+        "target_ticket_status": "open",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "record_conclusion",
+        "conclusion": "insufficient",
+        "target_ticket_status": "open",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "correction",
+          "recovery_event_id": "s5v3-015-recovery-loss",
+          "corrected_event_id": "s5v3-015-loss"
+        },
+        {
+          "kind": "correction",
+          "recovery_event_id": "s5v3-015-recovery-return",
+          "corrected_event_id": "s5v3-015-return"
+        },
+        {
+          "kind": "timing",
+          "test": "outstanding_not_overdue",
+          "event_id": "s5v3-015-route"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-017",
+      "errors": [
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": true,
+      "expected": {
+        "conclusion": "insufficient",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "escalate",
+        "conclusion": "disputed",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "critical",
+          "status": "lost",
+          "event_id": "s5v3-017-loss"
+        },
+        {
+          "kind": "timing",
+          "test": "delivered_late",
+          "event_id": "s5v3-017-receipt"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-018",
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM",
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": false,
+      "expected": {
+        "conclusion": "insufficient",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "escalate",
+        "conclusion": "delayed",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "critical",
+          "status": "returned_to_sender",
+          "event_id": "s5v3-018-return"
+        },
+        {
+          "kind": "timing",
+          "test": "outstanding_overdue_lt48",
+          "event_id": "s5v3-018-return"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-019",
+      "errors": [
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": true,
+      "expected": {
+        "conclusion": "insufficient",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "escalate",
+        "conclusion": "disputed",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "critical",
+          "status": "damaged",
+          "event_id": "s5v3-019-damage"
+        },
+        {
+          "kind": "correction",
+          "recovery_event_id": "s5v3-019-recovery",
+          "corrected_event_id": "s5v3-019-loss"
+        },
+        {
+          "kind": "timing",
+          "test": "delivered_not_late",
+          "event_id": "s5v3-019-receipt"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ]
+    },
+    {
+      "case_id": "S5V3-020",
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_CONCLUSION"
+      ],
+      "full_case_evidence": false,
+      "expected": {
+        "conclusion": "insufficient",
+        "action": "escalate_human",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "actual": {
+        "decision": "proposal",
+        "action": "escalate",
+        "conclusion": "disputed",
+        "target_ticket_status": "escalated",
+        "requested_fields": []
+      },
+      "claims_without_source_payloads": [
+        {
+          "kind": "critical",
+          "status": "damaged",
+          "event_id": "s5v3-020-damage"
+        },
+        {
+          "kind": "timing",
+          "test": "delivered_late",
+          "event_id": "s5v3-020-receipt"
+        },
+        {
+          "kind": "ticket_status",
+          "mode": "preserve_escalated"
+        }
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "ticket_status",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ]
+    }
+  ],
+  "runtime": {
+    "agent": {
+      "database": "jobforge_s5_formal_agent_v3_03a36981e9754122bf9545f07f5b60ec",
+      "sampled_at": "2026-10-08T05:26:23.266864+00:00",
+      "attempt_count": 20,
+      "unfinished_attempts": 0,
+      "active_seconds": 225.224941
+    },
+    "fixed": {
+      "database": "jobforge_s5_formal_fixed_v3_a90c8367da9d4eceb430895a53262af9",
+      "sampled_at": "2026-10-08T05:26:23.634281+00:00",
+      "attempt_count": 20,
+      "unfinished_attempts": 0,
+      "active_seconds": 86.459129
+    }
+  },
+  "development": {
+    "agent": {
+      "denominator": 40,
+      "correct_count": 36,
+      "full_case_evidence_count": 37,
+      "usage_total": {
+        "known_tokens": 914146,
+        "known_cost_microyuan": 660096,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 485,
+        "chat_calls": 176,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 1,
+        "query_embedding_calls": 58,
+        "profile_metadata_calls": 116,
+        "business_tool_calls": 135
+      },
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      }
+    },
+    "fixed": {
+      "denominator": 40,
+      "correct_count": 9,
+      "full_case_evidence_count": 12,
+      "usage_total": {
+        "known_tokens": 86638,
+        "known_cost_microyuan": 136374,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 278,
+        "chat_calls": 40,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 40,
+        "profile_metadata_calls": 80,
+        "business_tool_calls": 118
+      },
+      "hard_failure_cases": {
+        "unauthorized_access": 0,
+        "unapproved_write": 0,
+        "duplicate_business_effect": 0,
+        "budget_breach": 0
+      }
+    }
+  },
+  "cumulative": {
+    "recorded_at": "2026-10-08T05:26:21.882862+00:00",
+    "phases": [
+      {
+        "phase": "dev-agent",
+        "database": "jobforge_s5_dev_agent_76b33e903a8242c5bb19e7d442f15e5b",
+        "sampled_at": "2026-10-08T05:26:16.013554+00:00",
+        "runs": 40,
+        "chat_calls": 174,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 422652,
+        "held": 0
+      },
+      {
+        "phase": "dev-fixed",
+        "database": "jobforge_s5_dev_fixed_429b924f309e4a7580dfdc67d243a8f0",
+        "sampled_at": "2026-10-08T05:26:16.302607+00:00",
+        "runs": 40,
+        "chat_calls": 40,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 138683,
+        "held": 0
+      },
+      {
+        "phase": "formal-agent",
+        "database": "jobforge_s5_formal_agent_c14b8ad375b34326bd3613aa3259c448",
+        "sampled_at": "2026-10-08T05:26:16.595114+00:00",
+        "runs": 20,
+        "chat_calls": 108,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 367068,
+        "held": 0
+      },
+      {
+        "phase": "formal-fixed",
+        "database": "jobforge_s5_formal_fixed_d23255bb56d24c1181f00ec953628d6d",
+        "sampled_at": "2026-10-08T05:26:16.88293+00:00",
+        "runs": 20,
+        "chat_calls": 20,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 85720,
+        "held": 0
+      },
+      {
+        "phase": "dev-agent-v2",
+        "database": "jobforge_s5_dev_agent_v2_9de8a4a0139e436b80c1f1f403cea92e",
+        "sampled_at": "2026-10-08T05:26:17.172335+00:00",
+        "runs": 25,
+        "chat_calls": 88,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 260468,
+        "held": 0
+      },
+      {
+        "phase": "shape-diagnostic",
+        "database": "jobforge_s5_shape_diagnostic_a7e10d21aa3a43478537ca32537f9a90",
+        "sampled_at": "2026-10-08T05:26:17.471175+00:00",
+        "runs": 1,
+        "chat_calls": 5,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 13747,
+        "held": 0
+      },
+      {
+        "phase": "dev-agent-format",
+        "database": "jobforge_s5_dev_agent_format_d908f18782be4b9ba8659c76fe07ae14",
+        "sampled_at": "2026-10-08T05:26:17.781279+00:00",
+        "runs": 3,
+        "chat_calls": 15,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 51013,
+        "held": 0
+      },
+      {
+        "phase": "dev-agent-contract",
+        "database": "jobforge_s5_dev_agent_contract_824c9e5e6b654d3e976cbf456d72db9b",
+        "sampled_at": "2026-10-08T05:26:18.08967+00:00",
+        "runs": 40,
+        "chat_calls": 164,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 476041,
+        "held": 0
+      },
+      {
+        "phase": "dev-agent-narrow",
+        "database": "jobforge_s5_dev_agent_narrow_c621864cf376431da137cc49730bffa3",
+        "sampled_at": "2026-10-08T05:26:18.385599+00:00",
+        "runs": 40,
+        "chat_calls": 174,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 645908,
+        "held": 0
+      },
+      {
+        "phase": "formal-v2-agent",
+        "database": "jobforge_s5_formal_v2_agent_5d0e03564aa04bccb3ff99723eb42f09",
+        "sampled_at": "2026-10-08T05:26:18.677248+00:00",
+        "runs": 0,
+        "chat_calls": 0,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 0,
+        "held": 0
+      },
+      {
+        "phase": "formal-v2-fixed",
+        "database": "jobforge_s5_formal_v2_fixed_318ace2fb5ec47c4ae2edbf78031e6b5",
+        "sampled_at": "2026-10-08T05:26:18.981932+00:00",
+        "runs": 0,
+        "chat_calls": 0,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 0,
+        "held": 0
+      },
+      {
+        "phase": "formal-v2-agent-resumed-20261008-r1",
+        "database": "jobforge_s5_formal_agent_22e99a2a895546d18dd5513a738d8746",
+        "sampled_at": "2026-10-08T05:26:19.337636+00:00",
+        "runs": 20,
+        "chat_calls": 87,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 334149,
+        "held": 0
+      },
+      {
+        "phase": "formal-v2-fixed-resumed-20261008-r1",
+        "database": "jobforge_s5_formal_fixed_ce167f889d6b4b3388ad4c0c37b38f02",
+        "sampled_at": "2026-10-08T05:26:19.645273+00:00",
+        "runs": 20,
+        "chat_calls": 20,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 79194,
+        "held": 0
+      },
+      {
+        "phase": "recovery-narrow-20261008-r1",
+        "database": "jobforge_s5_recovery_92d366e676f14ddab8c757afcbaef9c6",
+        "sampled_at": "2026-10-08T05:26:19.968285+00:00",
+        "runs": 0,
+        "chat_calls": 0,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 0,
+        "held": 0
+      },
+      {
+        "phase": "demo-narrow-20261008-r1",
+        "database": "jobforge_agent",
+        "sampled_at": "2026-10-08T05:26:20.256785+00:00",
+        "runs": 0,
+        "chat_calls": 0,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 0,
+        "held": 0
+      },
+      {
+        "phase": "dev-agent-v3-20261008",
+        "database": "jobforge_s5_dev_agent_v3_4e0777115b294d1fb872f9aa20d4d1a5",
+        "sampled_at": "2026-10-08T05:26:20.564182+00:00",
+        "runs": 40,
+        "chat_calls": 176,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 660096,
+        "held": 0
+      },
+      {
+        "phase": "dev-fixed-startup-r1-v3-20261008",
+        "database": "jobforge_s5_dev_fixed_v3_76b1e18aa7f14a62850804e74b4566ab",
+        "sampled_at": "2026-10-08T05:26:20.913389+00:00",
+        "runs": 40,
+        "chat_calls": 40,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 136374,
+        "held": 0
+      },
+      {
+        "phase": "dev-fixed-v3-20261008",
+        "database": "jobforge_s5_dev_fixed_v3_1d885592ae24496092e76a519b4fda06",
+        "sampled_at": "2026-10-08T05:26:21.197822+00:00",
+        "runs": 0,
+        "chat_calls": 0,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 0,
+        "held": 0
+      },
+      {
+        "phase": "formal-agent-v3-20261008",
+        "database": "jobforge_s5_formal_agent_v3_03a36981e9754122bf9545f07f5b60ec",
+        "sampled_at": "2026-10-08T05:26:21.494816+00:00",
+        "runs": 20,
+        "chat_calls": 103,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 448226,
+        "held": 0
+      },
+      {
+        "phase": "formal-fixed-v3-20261008",
+        "database": "jobforge_s5_formal_fixed_v3_a90c8367da9d4eceb430895a53262af9",
+        "sampled_at": "2026-10-08T05:26:21.772806+00:00",
+        "runs": 20,
+        "chat_calls": 20,
+        "unknown_chat_calls": 0,
+        "inflight": 0,
+        "unfinished_attempts": 0,
+        "known": 82072,
+        "held": 0
+      }
+    ],
+    "totals": {
+      "runs": 389,
+      "chat_calls": 1234,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 4201411,
+      "held": 0
+    },
+    "cost_cap_microyuan": 20000000,
+    "remaining_cost_microyuan": 15798589,
+    "c_free_bytes": 29149917184,
+    "stage_count_budget": null
+  },
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "no_stage_count_budget": true,
+  "not_executed": [
+    "same_candidate_recovery11",
+    "same_candidate_actual_demo1",
+    "native_linux_host_reproduction"
+  ],
+  "artifacts": {
+    "resume-20261008/candidate-freeze.json": "7eccbafe73e57aad84dee49b30eb7adce5267afb289fe11c7959a534cf7373d1",
+    "formal-package-v3-r1/manifest.json": "6e3eea7581b3f2ba4a273a10656f4b42dcdc2bc07dd76a8a4063a7e69283203f",
+    "formal-package-v3-r1/evaluation/family-review.json": "5b7a23fdae1a60090a3bac3ce2abf65dddaf400ec1294daf7703e57a87c6c642",
+    "resume-20261008/development-review.json": "2f5cf2d3dadd312b1faa1f1f1c16e6a9e611fd670b66e56fe7bac6a38826613a",
+    "resume-20261008/formal-paid-plan.json": "43a52bd9e2161a2750526875bcad042175ed13dbc32d189bbefc3ee0cdcda121",
+    "resume-20261008/formal-release-review.json": "770cd4af595fab4d64cacc915c3e22f30f2f843e2a9b4b0724e2b791521edab1",
+    "resume-20261008/formal-paired.json": "18a37e42d22a72cd52db61f3bd4e87938047c09d8ff0565e5c45c9bbcc21fafb",
+    "resume-20261008/build-source-receipt.json": "ab48918d19301234c47e5f8afbf2862ebe756a192864daf4437503a1d72c25d8",
+    "resume-20261008/ci-candidate.json": "5dcdd70d1faee83a68174b3a2317e93580ee33d94f4d3af9809f355c2609568b",
+    "resume-20261008/linux-joint-session-final.json": "7e4bc8d97e15e189e027a70a3324207230a95c446ca1e58c30aa5d426ee5515a",
+    "resume-20261008/formal-fixed-v3-20261008-closed-ledger.json": "5a1a7d84ab7a3b368ac1da1857d48b79b3004855c759161bbd3bccd1395cdc45",
+    "dev-agent-v3-20261008/source.json": "10abc844d0eca6f5e8d408fb4f6e133fa3ad8ace6bce52a17f3d5cb0d1f52f1c",
+    "dev-agent-v3-20261008/registration.json": "cd397c0ad14393e7ce27f10dc8888c77e35412d6aaba5d45449410cf8833b0b2",
+    "dev-agent-v3-20261008/score.json": "f8da5956b1fbf4a54c57e4429b2e71a4c8a02556cb8fd29f0040905387f0894f",
+    "dev-agent-v3-20261008/evidence.json": "73411ca2df5498f698e4127c5261857bc9ec85814e34901f832b2a2171984601",
+    "dev-agent-v3-20261008/closed.json": "8e8ee1f5f84ad80d2c7726f04b394d6ea9780c8aff3da30a7fabf17963b182a9",
+    "dev-agent-v3-20261008/host-launch-exit.json": "4a82081012521a98386fb2f46e8c62bb4dd574fc4b42eb0b8b10ad98dd515a48",
+    "dev-fixed-startup-r1-v3-20261008/source.json": "d6fd82f7535efb886ea3a9809ebaa656dfd739cf8eab4ace320a5bdf100f265d",
+    "dev-fixed-startup-r1-v3-20261008/registration.json": "ac0f57f47d4de6b73951f49b0b15ae86fdbaa59675185b5e1167587bb5c95cc2",
+    "dev-fixed-startup-r1-v3-20261008/score.json": "7894085175b57b4164d7a0c6e871cc569f9bb1a838680cbbb63abc0676ef7593",
+    "dev-fixed-startup-r1-v3-20261008/evidence.json": "f82c655c00f9122cc0fcd6f920d4326ef50fa7811657d8e694970c9673aa06a8",
+    "dev-fixed-startup-r1-v3-20261008/closed.json": "5cc5e0347e97fb9d5c515a4bac5de293b1cc1b0c3ef8fd15350178d878f4d219",
+    "dev-fixed-startup-r1-v3-20261008/host-launch-exit.json": "b48c8f134676421fb49152ea73b155659067aa7189f11ce00bc332ea1cd4c977",
+    "formal-agent-v3-20261008/source.json": "2a7108873afdfd42d2823cdd437815a449fa32143eee1053ad7e3caba801c9bd",
+    "formal-agent-v3-20261008/registration.json": "19e5d9a5b3810dfc7ad737703bcd072caf5fc9ae923cabb785fb7890d2e7dec4",
+    "formal-agent-v3-20261008/score.json": "1edd2e399e53b368db46e0d12dc2aa2cd9d7832fe362955d8a13273c12546810",
+    "formal-agent-v3-20261008/evidence.json": "093564b28afa43a59fd5b5b9d2d19a25cf65330f991950219c93ed3cf0dcb4e5",
+    "formal-agent-v3-20261008/closed.json": "17e5d1993969d1cdfef12f583550786858157bfbfd29b3e0ca1b04ec23cd6cab",
+    "formal-agent-v3-20261008/host-launch-exit.json": "d961d52f9c6c6404998e5a63b0a652ffd81e8f9d3c79ddb98bf840acaeb7e1f9",
+    "formal-agent-v3-20261008/runtime-summary.json": "2af94663ee26e519ab03871506ec2749e38f1373e6c9cc38f8dbd272e7744fb6",
+    "formal-agent-v3-20261008/business-before.json": "af7cf70bd0cec7d31b0475a0b069ab35917d023032b25ea07f4eef5a232e6fcb",
+    "formal-agent-v3-20261008/business-after.json": "3fa940a01054dace476917b79afadcf00bee8741cc42e9ddd29d8bc77e1dbaec",
+    "formal-agent-v3-20261008/receipts-before.json": "06cd10c94b0358a435da5cf2b11fdda80e26b870c8f6213424492fb8d3241113",
+    "formal-agent-v3-20261008/receipts-after.json": "eb3b2b516bffaaba3e0e13fcdf29418d04fecfdfb2484180e1e6129ab0e5f59d",
+    "formal-fixed-v3-20261008/source.json": "a919c24a2c0271041df20e4d7c1ff6f13a91bc97f1014fd2156cf33fb5bfe133",
+    "formal-fixed-v3-20261008/registration.json": "62df15ac04f05b604d940b9e9fe99bfbe4f7a0588097325187f345d1a329fe76",
+    "formal-fixed-v3-20261008/score.json": "cbe37ddebeeef34068b99d60ec17808abe899813bd2b7409cd1958191798a85f",
+    "formal-fixed-v3-20261008/evidence.json": "ca62cfa98c250e6078a1da47622a62a42af67bc692827eca1426a7ef74617d0c",
+    "formal-fixed-v3-20261008/closed.json": "ad964cf80a4da42b504c51fec4a8a7582fd0fb72dc5b5a6cd0512e5b0f5660b5",
+    "formal-fixed-v3-20261008/host-launch-exit.json": "d09c3d6aee58fe53848c97f11cf7b3b5d4bcdd56eb4fa20036fb3cacdab0f97a",
+    "formal-fixed-v3-20261008/runtime-summary.json": "8b4092ffea03169a96b1984117e1f46c5e4233ea6e5a09895bf634e93b1e19d6",
+    "formal-fixed-v3-20261008/business-before.json": "94add742563e157836f98a2764aaf96cc6f5c124d9d999b506db255dfeb2d403",
+    "formal-fixed-v3-20261008/business-after.json": "8e984ed296ec8c04b3c7d60cc7f6ae8a7d9165fb98f381efe6fc22d4b8ca4f6a",
+    "formal-fixed-v3-20261008/receipts-before.json": "d354a0eadab0ea086c3190d6166dd54d511143b57804fc5d7829fe514791c794",
+    "formal-fixed-v3-20261008/receipts-after.json": "0a0a243d853580aecc74fa85390ccf0f450c31d3d14259131bf911de364a1a16"
+  },
+  "private_evidence_root": "E:/JobForgeEvidence/s5-2026-10-07"
+}

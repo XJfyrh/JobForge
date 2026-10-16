@@ -9,7 +9,19 @@ from pathlib import Path
 import pytest
 from jobforge_agent import runtime_adapters, runtime_registry
 from jobforge_agent.dispatch import DispatchError
-from jobforge_agent.runtime_input import EXECUTOR_VERSION
+from jobforge_agent.runtime_input import (
+    ADJUDICATION_EXECUTOR_VERSION,
+    ADJUDICATION_V2_EXECUTOR_VERSION,
+    ADJUDICATION_V3_EXECUTOR_VERSION,
+    ADJUDICATION_V4_EXECUTOR_VERSION,
+    ADJUDICATION_V5_EXECUTOR_VERSION,
+    EXECUTOR_VERSION,
+)
+from jobforge_agent.support_agent_v5 import SupportAgentV5Adapter
+from jobforge_agent.support_agent_v6 import SupportAgentV6Adapter
+from jobforge_agent.support_agent_v7 import SupportAgentV7Adapter
+from jobforge_agent.support_agent_v8 import SupportAgentV8Adapter
+from jobforge_agent.support_agent_v9 import SupportAgentV9Adapter
 from runtime_fixture_registry import MechanismAdapter
 
 PROFILE = {
@@ -132,3 +144,66 @@ def test_production_support_requires_matching_manifest_identity(
         runtime_adapters.resolve_adapter(
             profile["adapter_id"], profile["profile_id"], "b" * 64, EXECUTOR_VERSION
         )
+
+
+@pytest.mark.parametrize(
+    "prompt,executor,valid",
+    [
+        ("support-agent-prompt-v5", ADJUDICATION_V2_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v5", ADJUDICATION_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v4", ADJUDICATION_V2_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v6", ADJUDICATION_V3_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v6", ADJUDICATION_V2_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v5", ADJUDICATION_V3_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v7", ADJUDICATION_V4_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v7", ADJUDICATION_V3_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v6", ADJUDICATION_V4_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v8", ADJUDICATION_V5_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v9", ADJUDICATION_V5_EXECUTOR_VERSION, True),
+        ("support-agent-prompt-v9", ADJUDICATION_V4_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v8", ADJUDICATION_V4_EXECUTOR_VERSION, False),
+        ("support-agent-prompt-v7", ADJUDICATION_V5_EXECUTOR_VERSION, False),
+    ],
+)
+def test_manifest_selects_only_registered_adjudication_version(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    prompt: str,
+    executor: str,
+    valid: bool,
+) -> None:
+    """Each candidate resolves only through its own frozen manifest tuple."""
+    manifest(
+        monkeypatch,
+        tmp_path,
+        {
+            "schema_version": 2,
+            "executor_version": executor,
+            "profiles": [
+                {
+                    "profile_id": "candidate",
+                    "profile_hash": "a" * 64,
+                    "adapter_id": "support-agent-v1",
+                    "prompt_version": prompt,
+                }
+            ],
+        },
+    )
+    args = ("support-agent-v1", "candidate", "a" * 64, executor)
+    if valid:
+        expected = (
+            SupportAgentV9Adapter
+            if prompt == "support-agent-prompt-v9"
+            else SupportAgentV8Adapter
+            if executor == ADJUDICATION_V5_EXECUTOR_VERSION
+            else SupportAgentV7Adapter
+            if executor == ADJUDICATION_V4_EXECUTOR_VERSION
+            else SupportAgentV6Adapter
+            if executor == ADJUDICATION_V3_EXECUTOR_VERSION
+            else SupportAgentV5Adapter
+        )
+        assert type(runtime_adapters.resolve_adapter(*args)) is expected
+    else:
+        with pytest.raises(DispatchError, match="PROFILE_UNAVAILABLE"):
+            runtime_adapters.resolve_adapter(*args)
+    assert set(runtime_registry.REGISTRY) == {"support-fixed-v1", "support-agent-v1"}

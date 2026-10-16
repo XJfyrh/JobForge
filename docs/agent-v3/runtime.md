@@ -7,10 +7,25 @@ Go Worker 持有执行权，固定 Python guardian/step 执行登记单步，通
 | schema 1 / `support_fixed_v1` | `support-fixed-v1` | `linux-v2-audit-runtime-1` |
 | schema 2 / `support_agent_v1` | `support-agent-v1` | `linux-v2-agent-runtime-1` |
 | schema 3 / `support_agent_v1` + `confirmed_uncommitted_v1` | `support-agent-v1` | `linux-v2-recovery-runtime-1` |
+| schema 4 / 6 / 7 / 9 / `support_agent_v1` + 恢复/审批 | `support-agent-v1` | `linux-v2-approval-runtime-1` |
+| schema 5 / 8 / 10 / `support_fixed_v1` | `support-fixed-v1` | `linux-v2-fixed-comparison-runtime-1` |
+| schema 11 / `support_agent_v1` + 独立终裁/恢复/审批 | `support-agent-v1` | `linux-v2-adjudication-runtime-1` |
+| schema 12 / `support_fixed_v1` + 同参数终裁 | `support-fixed-v1` | `linux-v2-fixed-adjudication-runtime-1` |
+| schema 13 / `support_agent_v1` + 终裁任务分离 | `support-agent-v1` | `linux-v2-adjudication-runtime-2` |
+| schema 14 / `support_agent_v1` + 一次受控补证 | `support-agent-v1` | `linux-v2-adjudication-runtime-3` |
+| schema 15 / `support_agent_v1` + 状态政策前置读取 | `support-agent-v1` | `linux-v2-adjudication-runtime-4` |
+| schema 16 / `support_agent_v1` + 完整政策前置读取 | `support-agent-v1` | `linux-v2-adjudication-runtime-5` |
+| schema 17 / `support_fixed_v1` + 相同完整政策及终裁 | `support-fixed-v1` | `linux-v2-fixed-adjudication-runtime-2` |
 
-这三类均使用 `deepseek-audit-v1` / `deepseek-flash`。版本、profile/hash 与 manifest 不可混用；实际验收见[证据索引](../evidence/README.md)。
+schema 1–10 使用 `deepseek-audit-v1`，schema 11–17 使用 `deepseek-audit-v2`；模型均为 `deepseek-flash`。版本、profile/hash与manifest不可混用；schema 7/9/11/13/14/15/16分别绑定实际 `support-agent-prompt-v2/v3/v4/v5/v6/v7/v8` 源码，schema17绑定 `support-fixed-prompt-v2`。schema 7–17均使用部署manifest 2；schema 1–6使用manifest 1。实际验收见[证据索引](../evidence/README.md)。
+
+schema 11 保持 v3 调查提示与工具行为。首次 `final` 只提交含原始初稿的 `investigation_complete` 标记，不能审批；Go 再调度独立 `model_proposal`，只传已提交事实与来源，不传初稿。终裁 thinking/high、16,384 completion token、120s HTTP 上限仍受原 attempt 180s、Run、账号截止和取消/租约约束。reasoning 包含于 completion，不重复计费；响应上限 1MiB，最终内容仍为 16KiB，推理正文不进入 IPC 或日志。空推理只观测；有效计量下截断/无效终裁结束当前 Run，不纠错、不按质量重试。schema 12 的 Fixed 终裁使用相同模型参数和额度。见 [ADR-0033](../adr/0033-versioned-final-adjudication.md)。
+
+schema 13（[ADR-0034](../adr/0034-s5-final-stage-separation-and-condition-enumeration.md)，Accepted，真实结果见证据索引）沿用 schema 11 的全部许可、审计、租约、取消、恢复与费用边界，只改两个阶段各自看到的内容：终裁由自包含的 final-only system message 与去掉 `previous_tools`/`remaining_tools`/`completed_requests`/`policy_navigation`/`policy_retrieval` 的载荷构造，不再继承工具协议或工具额度；调查在返回闭合标记前须按固定优先级顺序把每个条件类判为成立/排除/无法判定，并为成立或无法判定的类别取得定义段，同时 `policy_retrieval` 增加 `definition_retrieved` 以区分定义段与同话题的支持段。输出 JSON 形状、工具、事实投影、来源与 proposal 校验均未变。Fixed 保持 schema 12 与原提示词，因此该澄清只作用于 Agent，配对对照存在这一已知不对称。
 
 ## 执行权与组件
+
+schema14/15 的补证与状态读取见 [ADR-0036](../adr/0036-s5-controlled-policy-supplement.md) / [ADR-0037](../adr/0037-status-policy-read-prerequisite.md)。schema16/17 按 [ADR-0038](../adr/0038-policy-bundle-before-adjudication.md) 改为 `read_ticket` 后必须完成 `read_policy_bundle`，再开始模型调用。工具从授权快照读取固定20段、结果上限32KiB，无 query/embedding，缺段立即失败；旧版本不接受该步骤。Agent 调查闭合后与 Fixed 均只执行一次相同的 final-only thinking，嵌套 `proposal`，无终裁补证或格式重试。来源和后续同别名搜索内容必须一致；已提交包恢复时不重读，未提交读取沿用原账本与恢复合同。
 
 ```mermaid
 flowchart LR
@@ -24,7 +39,7 @@ flowchart LR
 
 PostgreSQL 仍是唯一事实源；Go 独占 Worker session、Run lease、心跳和控制 RPC。`internal/runworker` 持有原 v2 Conversation，[runexecutor 包](../../internal/runexecutor/README.md)只管理固定进程和 I/O，不解释调度、预算或下一游标。Python 只执行当前登记单步，不 Claim、不续租、不重试 Run，也没有任务队列。交付仍为 at-least-once，外部副作用仍须业务幂等。
 
-Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile** 的 executor_version、部署 manifest 与 Python runtime 须一致：S1为 `linux-v2-audit-runtime-1`，S2为 `linux-v2-agent-runtime-1`，schema 3 的 S3 为 `linux-v2-recovery-runtime-1`（见[恢复指南](recovery.md)）；控制面在登记及后续 session 校验中拒绝混合版本。全部执行 profile 还须有固定审计 policy 和 expected model。Worker 核对注册返回的完整 profile 集合。Claim 后先 GetCheckpoint，只有明确成功的 CommitStep 返回允许继续时，才重新读取服务端 checkpoint 开始下一步；本地不计算下一游标或恢复次数。
+Worker容量固定为1。Register版本、Worker允许的**所有profile**的executor_version、部署manifest和Python runtime须与上表一致；控制面在登记及后续session校验中拒绝混合版本。全部执行profile还须有固定审计policy和expected model。Worker核对注册返回的完整profile集合。Claim后先GetCheckpoint，只有明确成功的CommitStep返回允许继续时，才重新读取服务端checkpoint开始下一步；本地不计算下一游标或恢复次数。
 
 5s Heartbeat 与普通控制 RPC/管道独立运行。RPC 均有截止，普通控制请求最多 2s；20ms 本地 watchdog 独立检查 Linux `CLOCK_BOOTTIME`。Register/Claim/Heartbeat 用 RPC 发起单调时间和服务端锁后观测时间保守映射 session/lease/attempt/Run 截止，扣除整个往返等待；迟到回调不能恢复已失效的旧执行权。Heartbeat 可更新 lease/session，不能延长固定 attempt/Run 或已经授予的物理调用期限。Windows 原生不支持分支测试不能替代同一 Linux 容器验收。
 
@@ -34,7 +49,7 @@ Worker 容量固定为 1。Register 的版本、Worker 允许的**所有 profile
 
 [运行输入源合同](../../api/executor/v2/runtime-input.md)和 [schema](../../api/executor/v2/runtime-input.schema.json)沿用 RPC 字段名，将 JSON bytes 投影为对象。Go 使用现有领域 canonicalizer 验证 accepted 结果、CommitHash、NextInputHash 全链、序号、资源和 result_ref；最新资源还须与原 Claim 一致。Python 验证形状与字符串链，不重新实现任意 decimal 规范化。原 JSON 与最终编码大小分别校验，超限不裁剪历史。
 
-Go/Python 只读固定 `/etc/jobforge/executor.json`：顶层恰有 `schema_version:1`、`executor_version` 和 `profiles`；1～32 个 profile 项恰有 `profile_id/profile_hash/adapter_id`，profile_id 不重复。manifest 不含 endpoint 或秘密，也不能把未安装 adapter 变成可执行能力。
+Go/Python只读固定`/etc/jobforge/executor.json`：manifest 1顶层为`schema_version/executor_version/profiles`，1～32个profile项为`profile_id/profile_hash/adapter_id`，profile_id不重复。manifest 2用于schema 7–17，profile项额外绑定`prompt_version`以选择已安装提示实现；提示源码摘要由prepared profile与实际构建receipt绑定。manifest不含endpoint或秘密，也不能把未安装adapter变成可执行能力。
 
 生产入口是 [cmd/agent-worker](../../cmd/agent-worker/main.go)，不接命令行参数。配置由受信部署文件提供：
 
@@ -46,7 +61,7 @@ Go/Python 只读固定 `/etc/jobforge/executor.json`：顶层恰有 `schema_vers
 | `JOBFORGE_AGENT_GATEWAY` | 控制 gRPC 的 `host:port` |
 | `JOBFORGE_AGENT_GRPC_TLS` | 默认或 `true` 使用 TLS；`false` 仅供明确配置的本地/私网部署 |
 
-只有 Go 持有 control token。子进程环境从白名单重新构建，不继承宿主环境、DSN、其他 tenant 凭据、代理或 PYTHONPATH。Go 按步骤投影所需配置：读票/提交不需要业务凭据，订单/物流只需业务读配置，政策检索另需固定 Ollama origin，模型步骤只需 DeepSeek key。生产 DeepSeek origin 保持代码常量。秘密不进入 argv、manifest、帧、结果或日志；stderr 正文不保存。
+只有 Go 持有 control token。子进程环境从白名单重新构建，不继承宿主环境、DSN、其他 tenant 凭据、代理或 PYTHONPATH。Go 按步骤投影所需配置：读票/提交不需要业务凭据，订单/物流/政策整包只需业务读配置，政策检索另需固定 Ollama origin，模型步骤只需 DeepSeek key。生产 DeepSeek origin 保持代码常量。秘密不进入 argv、manifest、帧、结果或日志；stderr 正文不保存。
 
 ## ACK、退出与 Commit 屏障
 

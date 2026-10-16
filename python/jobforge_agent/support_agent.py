@@ -139,10 +139,45 @@ def tool_decision(value: Any, checkpoint: RuntimeCheckpoint) -> dict[str, Any]:
     return result
 
 
-def next_tool_arguments(checkpoint: RuntimeCheckpoint, kind: str) -> dict[str, Any]:
+def next_tool_arguments(
+    checkpoint: RuntimeCheckpoint,
+    kind: str,
+    *,
+    supplement: bool = False,
+    status_policy: bool = False,
+    policy_bundle: bool = False,
+) -> dict[str, Any]:
     """Read the exact Go-committed decision; never replace its arguments."""
     require(bool(checkpoint["steps"]))
     last = checkpoint["steps"][-1]
+    if kind == "read_policy_bundle":
+        require(
+            policy_bundle
+            and len(checkpoint["steps"]) == 1
+            and last["step"]["kind"] == "read_ticket"
+        )
+        return {}
+    if status_policy:
+        from jobforge_agent.status_policy import (
+            investigation_marker,
+            pending_status_policy,
+        )
+
+        if investigation_marker(last):
+            require(kind == "search_policy")
+            return pending_status_policy(checkpoint)["arguments"]
+    if supplement and last["step"]["kind"] == "model_proposal":
+        from jobforge_agent.policy_supplement import (
+            supplement_tool,
+            validate_supplement,
+        )
+
+        require(kind == "search_policy")
+        intent = validate_supplement(
+            last["result_json"]["content"],
+            dict(checkpoint, steps=checkpoint["steps"][:-1]),
+        )
+        return supplement_tool(intent)["arguments"]
     require(last["step"]["kind"] in {"model_decision", "protocol_correction"})
     decision = tool_decision(last["result_json"]["content"], checkpoint)
     require(decision["name"] == kind)
@@ -150,16 +185,27 @@ def next_tool_arguments(checkpoint: RuntimeCheckpoint, kind: str) -> dict[str, A
     return copy.deepcopy(decision["arguments"])
 
 
-def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
+def validate_agent_step(
+    checkpoint: RuntimeCheckpoint,
+    kind: str,
+    *,
+    adjudication: bool = False,
+    supplement: bool = False,
+    status_policy: bool = False,
+    policy_bundle: bool = False,
+) -> None:
     """Check the accepted sequence while leaving all cursor choices to Go."""
-    from jobforge_agent.runtime_input import validate_step_result
+    from jobforge_agent.runtime_input import (
+        is_investigation_complete,
+        validate_step_result,
+    )
 
     expected = "read_ticket"
     corrected = False
     for index, accepted in enumerate(checkpoint["steps"]):
         current, result = accepted["step"]["kind"], accepted["result_json"]
         require(current == expected)
-        validate_step_result(result, current)
+        validate_step_result(result, current, supplement=supplement)
         if current == "read_ticket":
             require(index == 0)
             require(result["content"] == checkpoint["snapshot"]["ticket_binding_json"])
@@ -167,15 +213,54 @@ def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
                 result["evidence_refs"]
                 == [f"business-evidence:{checkpoint['snapshot']['snapshot_id']}:ticket"]
             )
+            expected = "read_policy_bundle" if policy_bundle else "model_decision"
+        elif current == "read_policy_bundle":
+            require(policy_bundle and index == 1)
             expected = "model_decision"
         elif current in {"get_order", "get_delivery", "search_policy"}:
             expected = "model_decision"
+            if status_policy and index > 0:
+                from jobforge_agent.status_policy import (
+                    investigation_marker,
+                    status_policy_satisfied,
+                )
+
+                if investigation_marker(checkpoint["steps"][index - 1]):
+                    status_policy_satisfied(
+                        dict(checkpoint, steps=checkpoint["steps"][: index + 1])
+                    )
+                    expected = "model_proposal"
+            if (
+                supplement
+                and index > 0
+                and checkpoint["steps"][index - 1]["step"]["kind"] == "model_proposal"
+            ):
+                from jobforge_agent.policy_supplement import supplement_satisfied
+
+                supplement_satisfied(
+                    dict(checkpoint, steps=checkpoint["steps"][: index + 1])
+                )
+                expected = "model_proposal"
         elif current in {"model_decision", "protocol_correction"}:
             if result["correction_required"]:
                 require(current == "model_decision" and not corrected)
                 corrected = True
                 expected = "protocol_correction"
+            elif adjudication and is_investigation_complete(result["content"]):
+                require(result["proposal"] is None)
+                expected = "model_proposal"
+                if status_policy:
+                    from jobforge_agent.status_policy import (
+                        missing_status_policy,
+                        pending_status_policy,
+                    )
+
+                    prior = dict(checkpoint, steps=checkpoint["steps"][: index + 1])
+                    if missing_status_policy(prior) is not None:
+                        pending_status_policy(prior)
+                        expected = "search_policy"
             elif result["proposal"] is not None:
+                require(not adjudication)
                 prior = dict(checkpoint, steps=checkpoint["steps"][:index])
                 validate_persisted_proposal(
                     result["proposal"], prior, repeated_search=True
@@ -183,12 +268,30 @@ def validate_agent_step(checkpoint: RuntimeCheckpoint, kind: str) -> None:
                 expected = "submit_proposal"
             else:
                 expected = tool_decision(result["content"], checkpoint)["name"]
+        elif adjudication and current == "model_proposal":
+            require(not result["correction_required"])
+            prior = dict(checkpoint, steps=checkpoint["steps"][:index])
+            if result["content"] is not None:
+                from jobforge_agent.policy_supplement import validate_supplement
+
+                require(supplement and result["proposal"] is None)
+                validate_supplement(result["content"], prior)
+                expected = "search_policy"
+                continue
+            validate_persisted_proposal(result["proposal"], prior, repeated_search=True)
+            expected = "submit_proposal"
         else:
             require(False)
     require(kind == expected)
     support_sources(checkpoint, repeated_search=True)
-    if kind in {"get_order", "get_delivery", "search_policy"}:
-        next_tool_arguments(checkpoint, kind)
+    if kind in {"get_order", "get_delivery", "search_policy", "read_policy_bundle"}:
+        next_tool_arguments(
+            checkpoint,
+            kind,
+            supplement=supplement,
+            status_policy=status_policy,
+            policy_bundle=policy_bundle,
+        )
 
 
 class SupportAgentAdapter:

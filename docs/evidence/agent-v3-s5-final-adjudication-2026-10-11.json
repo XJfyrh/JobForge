@@ -1,0 +1,846 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T08:56:06.418439+00:00",
+  "kind": "s5-independent-final-adjudication-development",
+  "decision": "stop_before_freeze",
+  "formal_acceptance": false,
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "source_commit": "06d25884f6e042efba22827a744843e59a56defb",
+  "source_state": "uncommitted-development-snapshot",
+  "source_snapshot_sha256": "90861b31fe0054b3e4362f84800db319faa85b6bd3eeaeeb89e1822b81a2a028",
+  "source_file_count": 263,
+  "images": {
+    "production_worker": "sha256:1bc7c40587eb4377e20c557f05a94d09132cdea7d231886bc90cea1d17b9c528",
+    "approval_operator": "sha256:a9963d2826123bafa5b9787e6f74313bfc1491d5126981f6012105199192c9ab",
+    "s5_operator": "sha256:90662147ffc15a96cd9803e9ba6111b83da162023e2a6136602da09736a8a10f",
+    "business": "sha256:5b960770c34158e74cab50c2d38ad65da3c894c0ebef1c8077d0163048996f9f"
+  },
+  "phases": {
+    "dev-agent": {
+      "phase": "dev-agent",
+      "summary": {
+        "kind": "s5-development-regression",
+        "denominator": 40,
+        "correct_count": 38,
+        "full_case_evidence_count": 38,
+        "hard_failure_cases": {
+          "unauthorized_access": 0,
+          "unapproved_write": 0,
+          "duplicate_business_effect": 0,
+          "budget_breach": 0
+        },
+        "proposal_audit_complete": true,
+        "usage_complete": true,
+        "usage_total": {
+          "known_tokens": 1207491,
+          "known_cost_microyuan": 1061139,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 529,
+          "chat_calls": 216,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 59,
+          "profile_metadata_calls": 118,
+          "business_tool_calls": 136
+        },
+        "execution_outcomes": {
+          "awaiting_approval": 36,
+          "succeeded": 3,
+          "failed": 1
+        },
+        "thresholds_met": false
+      },
+      "stages": {
+        "investigation": {
+          "denominator": 40,
+          "available": 40,
+          "correct": 38,
+          "full_case_evidence": 39,
+          "usage": {
+            "chat_calls": 176,
+            "known_cost_microyuan": 449329,
+            "held_cost_microyuan": 0,
+            "known_tokens": 914000,
+            "held_tokens": 0
+          },
+          "case_chat_reservation_to_observation_seconds": {
+            "count": 40,
+            "mean": 5.43210065,
+            "median": 5.07211,
+            "p95_nearest_rank": 7.6100270000000005,
+            "maximum": 8.054357
+          }
+        },
+        "final": {
+          "denominator": 40,
+          "correct": 38,
+          "full_case_evidence": 38,
+          "usage": {
+            "chat_calls": 40,
+            "known_cost_microyuan": 611810,
+            "held_cost_microyuan": 0,
+            "known_tokens": 292318,
+            "held_tokens": 0
+          },
+          "case_chat_reservation_to_observation_seconds": {
+            "count": 40,
+            "mean": 6.4319048500000005,
+            "median": 4.814986,
+            "p95_nearest_rank": 8.213369,
+            "maximum": 69.904048
+          }
+        }
+      },
+      "draft_to_final": {
+        "counts": {
+          "improved": 1,
+          "regressed": 1,
+          "unchanged": 38
+        },
+        "changed_cases": [
+          {
+            "case_id": "DEV-034",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "DEV-036",
+            "outcome": "regressed"
+          }
+        ]
+      },
+      "original_export_run_created_to_updated_seconds": {
+        "count": 40,
+        "mean": 19.020011575,
+        "median": 16.0448675,
+        "p95_nearest_rank": 24.269243,
+        "maximum": 80.244626
+      },
+      "latency_basis": "Original per-case export at proposal/terminal barrier; excludes later unapproved Run expiry. Chat stage duration is reservation-to-observation, not provider-only latency.",
+      "final_audit_modes": {
+        "thinking": 39,
+        "nonthinking": 1
+      },
+      "maximum_final_calls_per_case": 1,
+      "failed_cases": [
+        {
+          "case_id": "DEV-020",
+          "correct": false,
+          "full_case_evidence": false,
+          "run_state": "awaiting_approval",
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "missing",
+              "predicate": true,
+              "source_coverage": false
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 4,
+                "known_cost_microyuan": 10612,
+                "held_cost_microyuan": 0,
+                "known_tokens": 20239,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 4.252506
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 121916,
+                "held_cost_microyuan": 0,
+                "known_tokens": 20463,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 69.904048
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        },
+        {
+          "case_id": "DEV-036",
+          "correct": false,
+          "full_case_evidence": false,
+          "run_state": "failed",
+          "errors": [
+            "RUN_NOT_COMPLETED"
+          ],
+          "claim_checks": [],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": true,
+              "full_case_evidence": true,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 11890,
+                "held_cost_microyuan": 0,
+                "known_tokens": 26232,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.639446
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 14658,
+                "held_cost_microyuan": 0,
+                "known_tokens": 7235,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.351761
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        }
+      ],
+      "selected_cases": [],
+      "artifacts": {
+        "registration.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\registration.json",
+          "sha256": "0fd5371602a92cb53cabc0eae2e7781c7af32e2dde232bf9aa57061b9ef0d41e"
+        },
+        "source.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\source.json",
+          "sha256": "7f38ee1626f0780d14e8b69b3c33013f56dab8fd184303288bbd15cecb9c2f24"
+        },
+        "paid-plan.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\paid-plan.json",
+          "sha256": "4fea3bcbae4a26c357d8ab50ec57325d95eab071dc64c367c579db759d8c2f9f"
+        },
+        "paid-review.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\paid-review.json",
+          "sha256": "4969434e0bd2f3f69149ad668a399c41f9cb2ad4ae426315651015cbb7e489cf"
+        },
+        "evidence.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\evidence.json",
+          "sha256": "3a76cb67e753ec08ac0256e62da4357caf34a3a37b256ea9046ee6ae0ee5be43"
+        },
+        "score.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\score.json",
+          "sha256": "d34efe024bf558ad104840c26d21906e20329a9a35aa1f4aef887ca2d77f5611"
+        },
+        "closed-ledger.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\closed-ledger.json",
+          "sha256": "f73447197559d6c51957e7e7d9bf0e7ea12f0e3d162fa40f0f9ca4091dc01017"
+        },
+        "host-launch-exit.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\dev-agent\\host-launch-exit.json",
+          "sha256": "297b7e604bb3de80e4e81769b77709a3e538ef533aa70229809abd146ec1a09c"
+        }
+      }
+    },
+    "seen-v3-agent": {
+      "phase": "seen-v3-agent",
+      "summary": {
+        "kind": "s5-seen-diagnostic",
+        "denominator": 20,
+        "correct_count": 17,
+        "full_case_evidence_count": 17,
+        "hard_failure_cases": {
+          "unauthorized_access": 0,
+          "unapproved_write": 0,
+          "duplicate_business_effect": 0,
+          "budget_breach": 0
+        },
+        "proposal_audit_complete": true,
+        "usage_complete": true,
+        "usage_total": {
+          "known_tokens": 751822,
+          "known_cost_microyuan": 1110930,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 310,
+          "chat_calls": 118,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 38,
+          "profile_metadata_calls": 76,
+          "business_tool_calls": 78
+        },
+        "execution_outcomes": {
+          "awaiting_approval": 19,
+          "succeeded": 1
+        },
+        "thresholds_met": false
+      },
+      "stages": {
+        "investigation": {
+          "denominator": 20,
+          "available": 20,
+          "correct": 11,
+          "full_case_evidence": 12,
+          "usage": {
+            "chat_calls": 98,
+            "known_cost_microyuan": 287586,
+            "held_cost_microyuan": 0,
+            "known_tokens": 533555,
+            "held_tokens": 0
+          },
+          "case_chat_reservation_to_observation_seconds": {
+            "count": 20,
+            "mean": 6.2465386,
+            "median": 6.1874745,
+            "p95_nearest_rank": 8.114201,
+            "maximum": 9.456585
+          }
+        },
+        "final": {
+          "denominator": 20,
+          "correct": 17,
+          "full_case_evidence": 17,
+          "usage": {
+            "chat_calls": 20,
+            "known_cost_microyuan": 823344,
+            "held_cost_microyuan": 0,
+            "known_tokens": 217501,
+            "held_tokens": 0
+          },
+          "case_chat_reservation_to_observation_seconds": {
+            "count": 20,
+            "mean": 19.34975275,
+            "median": 13.7347425,
+            "p95_nearest_rank": 41.779767,
+            "maximum": 55.004918
+          }
+        }
+      },
+      "draft_to_final": {
+        "counts": {
+          "improved": 6,
+          "regressed": 0,
+          "unchanged": 14
+        },
+        "changed_cases": [
+          {
+            "case_id": "S5V3-002",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "S5V3-005",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "S5V3-012",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "S5V3-014",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "S5V3-019",
+            "outcome": "improved"
+          },
+          {
+            "case_id": "S5V3-020",
+            "outcome": "improved"
+          }
+        ]
+      },
+      "original_export_run_created_to_updated_seconds": {
+        "count": 20,
+        "mean": 34.94216895,
+        "median": 33.818878999999995,
+        "p95_nearest_rank": 58.295703,
+        "maximum": 69.297994
+      },
+      "latency_basis": "Original per-case export at proposal/terminal barrier; excludes later unapproved Run expiry. Chat stage duration is reservation-to-observation, not provider-only latency.",
+      "final_audit_modes": {
+        "thinking": 20
+      },
+      "maximum_final_calls_per_case": 1,
+      "failed_cases": [
+        {
+          "case_id": "S5V3-004",
+          "correct": false,
+          "full_case_evidence": false,
+          "run_state": "awaiting_approval",
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 15799,
+                "held_cost_microyuan": 0,
+                "known_tokens": 27744,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.186469
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 85908,
+                "held_cost_microyuan": 0,
+                "known_tokens": 16670,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 41.779767
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        },
+        {
+          "case_id": "S5V3-017",
+          "correct": false,
+          "full_case_evidence": false,
+          "run_state": "awaiting_approval",
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": true,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 15216,
+                "held_cost_microyuan": 0,
+                "known_tokens": 26927,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.124659
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 104338,
+                "held_cost_microyuan": 0,
+                "known_tokens": 18757,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 55.004918
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        },
+        {
+          "case_id": "S5V3-018",
+          "correct": false,
+          "full_case_evidence": false,
+          "run_state": "awaiting_approval",
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 16983,
+                "held_cost_microyuan": 0,
+                "known_tokens": 27076,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.18848
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 40464,
+                "held_cost_microyuan": 0,
+                "known_tokens": 10829,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 19.726644
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        }
+      ],
+      "selected_cases": [
+        {
+          "case_id": "S5V3-004",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "WRONG_ACTION",
+            "WRONG_CONCLUSION",
+            "WRONG_TARGET_TICKET_STATUS"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "correction",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": true,
+              "source_coverage": true
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 15799,
+                "held_cost_microyuan": 0,
+                "known_tokens": 27744,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.186469
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 85908,
+                "held_cost_microyuan": 0,
+                "known_tokens": 16670,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 41.779767
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        },
+        {
+          "case_id": "S5V3-018",
+          "correct": false,
+          "full_case_evidence": false,
+          "errors": [
+            "REQUIRED_CLAIM_MISSING",
+            "UNSUPPORTED_CLAIM",
+            "WRONG_CONCLUSION"
+          ],
+          "claim_checks": [
+            {
+              "index": 0,
+              "kind": "critical",
+              "predicate": true,
+              "source_coverage": true
+            },
+            {
+              "index": 1,
+              "kind": "timing",
+              "predicate": false,
+              "source_coverage": true
+            }
+          ],
+          "adjudication_stages": {
+            "investigation": {
+              "available": true,
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 5,
+                "known_cost_microyuan": 16983,
+                "held_cost_microyuan": 0,
+                "known_tokens": 27076,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 6.18848
+              }
+            },
+            "final": {
+              "correct": false,
+              "full_case_evidence": false,
+              "usage": {
+                "chat_calls": 1,
+                "known_cost_microyuan": 40464,
+                "held_cost_microyuan": 0,
+                "known_tokens": 10829,
+                "held_tokens": 0,
+                "reservation_to_observation_seconds": 19.726644
+              },
+              "no_reasoning_signal_calls": 0
+            }
+          }
+        }
+      ],
+      "artifacts": {
+        "registration.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\registration.json",
+          "sha256": "902612872d3cccf19823f13985e9d5fa561e72068026ac555e0ce42abe4254c1"
+        },
+        "source.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\source.json",
+          "sha256": "909d40806cbccde9ead51522ac13aba90fe69733f2b104cfa30ccea1482d6de0"
+        },
+        "paid-plan.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\paid-plan.json",
+          "sha256": "e9522f8aa08ff8967c5bdbbbe7d670461cf0491d04f0a96058deca6631e87a70"
+        },
+        "paid-review.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\paid-review.json",
+          "sha256": "7181f1e622b31156366a8893a987702d69fee72e5bdde715e4f1e1f403a4209c"
+        },
+        "evidence.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\evidence.json",
+          "sha256": "8b70fc80313dbca6273b62d08323fa7db38230905c81bfc443ba9d4b09853947"
+        },
+        "score.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\score.json",
+          "sha256": "2e06935899b9d093a7cfa20f493c213441b7685583f0cfa182d2c92f8151e51b"
+        },
+        "closed-ledger.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\closed-ledger.json",
+          "sha256": "909babfa892dfff39a4128c8087a009542a23c8ff770a85bc1babe829c74d5e9"
+        },
+        "host-launch-exit.json": {
+          "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\adjudication-20261011\\seen-v3-agent\\host-launch-exit.json",
+          "sha256": "56d38f9e7854e46652d307d8ba383e817dc7a7b1311eafd4294ec56cabdf0174"
+        }
+      }
+    }
+  },
+  "gates": {
+    "agent_development": true,
+    "known_case_regression": false,
+    "known_cases": {
+      "S5V3-004": false,
+      "S5V3-018": false
+    },
+    "hard_safety": true,
+    "all_usage_accounted": true,
+    "fixed_development": "not_run",
+    "candidate_frozen": false,
+    "fresh_unseen": "not_created",
+    "recovery_and_demo": "not_run"
+  },
+  "cumulative": {
+    "database_count": 23,
+    "runs": 449,
+    "chat_calls": 1808,
+    "unknown_chat_calls": 0,
+    "inflight": 0,
+    "unfinished_attempts": 0,
+    "known": 9275641,
+    "held": 0,
+    "cap_microyuan": 20000000,
+    "remaining_microyuan": 10724359
+  },
+  "comparison_scope": "Draft/final comparison is paired within each run. Development 40 and already-seen v3 20 stay separate; neither is fresh unseen acceptance.",
+  "evidence_scope": "Per-case immutable exports preserve proposal/terminal state. Later expiry of unapproved Runs does not rewrite those exports. No approvals or business writes were executed.",
+  "free_verification": {
+    "schema_version": 1,
+    "recorded_at": "2026-10-11T08:27:00Z",
+    "runtime_suite_session": 61102,
+    "runtime_suite_exit_code": 0,
+    "required_free_checks_passed": true,
+    "cloud_acceptance": false,
+    "checks": [
+      {
+        "name": "go_race_full",
+        "result": "passed_after_targeted_repairs",
+        "detail": "Full real-PostgreSQL/Redis/SDK race run passed all packages except three agent-control source-SHA assertions. Those assertions were repaired and the affected race tests passed in 9.865 seconds. The original full command did not exit zero."
+      },
+      {
+        "name": "real_postgres_agent_adjudication",
+        "result": "passed",
+        "seconds": 20.793
+      },
+      {
+        "name": "real_postgres_fixed_adjudication_race",
+        "result": "passed",
+        "seconds": 10.972
+      },
+      {
+        "name": "linux_agent_adjudication",
+        "result": "passed_after_targeted_repair",
+        "detail": "Legacy and new terminal modes passed, including the 65-second final call. Cancellation assertion was corrected to match stopping-until-sweep; the cancellation rerun passed in 11.62 seconds."
+      },
+      {
+        "name": "linux_coordinator_terminal_policy",
+        "result": "passed"
+      },
+      {
+        "name": "linux_affected_legacy_runtime_suite",
+        "result": "passed",
+        "exit_code": 0,
+        "session": 61102,
+        "detail": "Executor, support executor, S5, launcher, provider audit, recovery, and approval executor suites; includes real 180-second attempt timeout, process-kill recovery limit, external F06/F07, SDK startup and exit, and approval commit-loss."
+      },
+      {
+        "name": "python_runtime_sdk_support_suites",
+        "result": "passed",
+        "passed": 1963,
+        "skipped": 13,
+        "seconds": 63.33,
+        "skip_note": "Platform or dedicated-environment skips are not acceptance evidence."
+      },
+      {
+        "name": "s0_offline",
+        "result": "passed",
+        "passed": 43,
+        "seconds": 1.72
+      },
+      {
+        "name": "adjudication_stage_and_scoring_review",
+        "result": "passed",
+        "passed": 20
+      },
+      {
+        "name": "golangci_lint",
+        "result": "passed",
+        "issues": 0
+      },
+      {
+        "name": "go_build_and_vet",
+        "result": "passed"
+      },
+      {
+        "name": "buf_lint",
+        "result": "passed"
+      },
+      {
+        "name": "ruff_check_and_format",
+        "result": "passed",
+        "files": 149
+      },
+      {
+        "name": "mypy_runtime_sdk_evaluation_s5",
+        "result": "passed",
+        "files": 77
+      },
+      {
+        "name": "mypy_recovery_approval_lifecycle_diagnosis",
+        "result": "passed",
+        "files": 27
+      },
+      {
+        "name": "sqlfluff_baseline_and_migrations",
+        "result": "passed"
+      },
+      {
+        "name": "schema11_prepared_profile_validation",
+        "result": "passed"
+      },
+      {
+        "name": "git_diff_check",
+        "result": "passed"
+      },
+      {
+        "name": "remote_eight_ci_checks",
+        "result": "not_run",
+        "detail": "Uncommitted development snapshot; no commit or push requested."
+      }
+    ],
+    "scope": "Release only the independently reviewed dev-agent 40-case batch; no formal acceptance claim."
+  },
+  "artifacts": {
+    "build-source-receipt.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/build-source-receipt.json",
+      "sha256": "286655eea6700684d0f2e6680f7cfd6ace02a8ff4cb0cdff9e1bb8434857e2ce"
+    },
+    "code-review.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/code-review.json",
+      "sha256": "b52518cdd284c3aaeb3ed69f315599f44fdd43a6f3c1b14931e7492cf68d979a"
+    },
+    "free-verification.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/free-verification.json",
+      "sha256": "2726d2e77f2540ccd758111ec66e4ccf728618f3634062b7c95a717f98578ca4"
+    },
+    "ledger-before-prepare.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/ledger-before-prepare.json",
+      "sha256": "e0435a44f2d77d430142c36b682b1fc89c3b8051961e86d0deb35a62431be08c"
+    },
+    "dev-agent/analysis-reviewed.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/dev-agent/analysis-reviewed.json",
+      "sha256": "f0734b51d85897cf93fd324e6c85ef4d7288a6b335636da077376a2dcf45b5ab"
+    },
+    "seen-v3-agent/analysis-reviewed.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/seen-v3-agent/analysis-reviewed.json",
+      "sha256": "8503fa271397d0d6b294542fc31af94a1f8a648c2a6974dd3470e581a34ac9ae"
+    },
+    "seen-v3-agent/closed-ledger.json": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/seen-v3-agent/closed-ledger.json",
+      "sha256": "909babfa892dfff39a4128c8087a009542a23c8ff770a85bc1babe829c74d5e9"
+    },
+    "analyze_phase.py": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/analyze_phase.py",
+      "sha256": "63910e5b33a7ed3ab471229d41a4c21c6f2a709b25da6834436ee06308f2bd86"
+    },
+    "summarize.py": {
+      "path": "E:/JobForgeEvidence/s5-2026-10-07/adjudication-20261011/summarize.py",
+      "sha256": "49baa416b34ea9fd0e9e12bbb2beae8928eeeb87c085a49872043472cdb93b8d"
+    }
+  }
+}

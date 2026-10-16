@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JobForge · 任务与审批</title>
+  <link rel="icon" href="/ui/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/ui/style.css">
+  <script type="module" src="/ui/app.js"></script>
+</head>
+<body>
+  <header><div><p class="eyebrow">JOBFORGE / AGENT V3</p><h1>任务与审批</h1></div><p>查证事实，审阅方案，核对回执。</p></header>
+  <main>
+    <section aria-labelledby="session-title">
+      <h2 id="session-title">当前身份</h2>
+      <form id="session-form" autocomplete="off">
+        <label>访问凭据<input id="credential" type="password" autocomplete="off" required maxlength="256" spellcheck="false"></label>
+        <button type="submit">连接 / 切换身份</button><button id="logout" type="button" class="secondary">退出并清除内容</button>
+      </form>
+      <p id="identity">尚未连接。凭据只保留在当前页面内存中。</p>
+    </section>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <section id="submit-section" hidden aria-labelledby="submit-title">
+      <h2 id="submit-title">提交工单</h2>
+      <form id="submit-form">
+        <label>工单 ID<input name="ticket_id" required maxlength="128"></label>
+        <label>业务请求键<input name="business_request_key" required maxlength="128" placeholder="同一业务意图使用同一个键"></label>
+        <label>处理配置<input name="profile_id" required maxlength="128"></label>
+        <label>费用批次<input name="budget_batch_id" required maxlength="128"></label>
+        <label>处理期限（秒）<input name="run_timeout_seconds" type="number" min="1" max="86400" value="3600" required></label>
+        <button type="submit">提交</button>
+      </form>
+    </section>
+    <section id="workspace" hidden aria-labelledby="runs-title">
+      <div class="section-heading"><h2 id="runs-title">任务</h2><button id="refresh" class="secondary">刷新列表与详情</button></div>
+      <form id="query-form"><label>按 Run ID 查询<input id="run-query" required maxlength="36" spellcheck="false"></label><button type="submit">查询</button></form>
+      <label>状态筛选<select id="state-filter"><option value="">全部</option><option value="ready">等待处理</option><option value="running">正在处理</option><option value="retry_wait">等待重试</option><option value="awaiting_approval">待人工审批</option><option value="stopping">正在停止</option><option value="succeeded">处理完成</option><option value="failed">处理失败</option><option value="cancelled">已取消</option></select></label>
+      <div class="table-wrap"><table><thead><tr><th>工单</th><th>处理进度</th><th>处理结果</th><th>创建时间</th><th>详情</th></tr></thead><tbody id="runs"></tbody></table></div>
+      <button id="more" class="secondary" hidden>加载下一页</button>
+    </section>
+    <article id="detail" hidden aria-labelledby="detail-title">
+      <div class="section-heading"><h2 id="detail-title">任务详情</h2><button id="reload-detail" class="secondary">刷新此任务</button></div>
+      <dl id="run-facts" class="facts"></dl>
+      <section><h3>处理方案</h3><p id="result"></p><dl id="proposal-facts" class="facts"></dl><details><summary>核对事实与来源</summary><div id="claims"></div></details><details><summary>方案技术详情</summary><pre id="proposal"></pre></details><p id="proposal-error"></p></section>
+      <section><h3>人工审批</h3><p id="approval"></p><p id="approval-context"></p><div id="approval-actions" hidden><button id="approve">批准此方案</button><button id="reject" class="danger">拒绝此方案</button></div></section>
+      <section><h3>工单更新结果</h3><p id="effect"></p><dl id="receipt-facts" class="facts"></dl><details><summary>回执技术详情</summary><pre id="receipt"></pre></details><button id="reconcile" class="secondary" hidden>核对处理结果</button></section>
+      <section><h3>费用与额度</h3><p id="cost"></p><p>用量费用按本次登记费率估算。暂占额度包含进行中及用量尚未确认的调用。</p><details><summary>预算与调用技术详情</summary><pre id="ledger"></pre></details></section>
+      <details><summary>执行技术详情</summary><dl id="run-technical" class="facts"></dl><p id="steps-error"></p><div id="steps"></div></details>
+      <section><h3>操作</h3><button id="cancel" class="danger" hidden>取消后续处理</button></section>
+    </article>
+  </main>
+</body>
+</html>

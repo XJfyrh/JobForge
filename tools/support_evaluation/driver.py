@@ -27,6 +27,23 @@ KEYS = Path("/run/secrets/driver.json")
 CONTROL = "http://control:8093"
 
 
+def protocol_signature(row: dict[str, Any]) -> Any:
+    """Classify only observed protocol rejection, without guessing its cause."""
+    if (
+        row["status"] != "run"
+        or (row["run"].get("error") or {}).get("code") != "MODEL_PROTOCOL_ERROR"
+    ):
+        return None
+    rejected = [
+        c
+        for c in row["calls"]["items"]
+        if c["subcall"] == "chat" and c["business_outcome"] == "rejected"
+    ]
+    return tuple((c["step_kind"], c["error_code"]) for c in rejected) or (
+        "unclassified_protocol_error",
+    )
+
+
 class BatchStopped(RuntimeError):
     """The current invocation ends; export remains available."""
 
@@ -36,7 +53,7 @@ def instant(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def continuation(evidence: dict[str, Any]) -> bool:
+def continuation(evidence: dict[str, Any], *, executor_version: str = "") -> bool:
     """Check visible completion; PostgreSQL alone authorizes the next call.
 
     The public export cannot prove the internal attempt/session/fence barrier.
@@ -46,8 +63,18 @@ def continuation(evidence: dict[str, Any]) -> bool:
     if calls["batch_frozen"] or calls["batch_stop_code"] is not None:
         return False
     chat = [call for call in calls["items"] if call["subcall"] == "chat"]
+    adjudication = executor_version in {
+        "linux-v2-adjudication-runtime-1",
+        "linux-v2-adjudication-runtime-2",
+        "linux-v2-adjudication-runtime-3",
+        "linux-v2-adjudication-runtime-4",
+        "linux-v2-adjudication-runtime-5",
+        "linux-v2-fixed-adjudication-runtime-2",
+        "linux-v2-fixed-adjudication-runtime-1",
+    }
     for call in chat:
         audit = call["provider_audit"]
+        final = adjudication and call["step_kind"] == "model_proposal"
         if (
             not call["usage_known"]
             or call["measurement_anomaly"]
@@ -56,7 +83,9 @@ def continuation(evidence: dict[str, Any]) -> bool:
             or call["observed_at"] is None
             or audit is None
             or audit["identity_state"] != "compatible"
-            or audit["mode_state"] != "nonthinking"
+            or audit["schema_version"] != (2 if final else 1)
+            or audit["mode_state"]
+            not in ({"thinking", "nonthinking"} if final else {"nonthinking"})
         ):
             return False
     steps = [item["record"] for item in evidence["steps"]]
@@ -97,6 +126,17 @@ def continuation(evidence: dict[str, Any]) -> bool:
                 for call in chat
             )
         )
+    if adjudication:
+        return bool(
+            run["state"] == "failed"
+            and run["error"] is not None
+            and run["error"]["code"] == "MODEL_PROTOCOL_ERROR"
+            and len(chat) == 1
+            and chat[0]["step_kind"] == "model_proposal"
+            and chat[0]["transport_outcome"] == "response"
+            and chat[0]["business_outcome"] == "rejected"
+            and chat[0]["error_code"] == "MODEL_PROTOCOL_ERROR"
+        )
     return bool(
         run["state"] == "failed"
         and run["error"] is not None
@@ -113,16 +153,25 @@ class Driver:
     """Own only case bookkeeping and single-exchange SDK calls."""
 
     def __init__(
-        self, manifest: dict[str, Any], output: Path, keys: dict[str, str]
+        self,
+        manifest: dict[str, Any],
+        output: Path,
+        keys: dict[str, str],
+        *,
+        case_count: int = 40,
     ) -> None:
         """Bind the fixed manifest and fresh private output directory."""
         self.manifest, self.output, self.keys = manifest, output, keys
         self.stopped = False
         self.deadline = instant(manifest["valid_until"])
         cases = manifest["cases"]
-        if len(cases) != 40 or len({row["case_id"] for row in cases}) != 40:
+        if (
+            case_count not in {20, 40}
+            or len(cases) != case_count
+            or len({row["case_id"] for row in cases}) != case_count
+        ):
             raise BatchStopped("CASE_REGISTRATION_INVALID")
-        if [row["ordinal"] for row in cases] != list(range(1, 41)):
+        if [row["ordinal"] for row in cases] != list(range(1, case_count + 1)):
             raise BatchStopped("CASE_ORDER_INVALID")
         self.rows = [
             dict(row, status="unattempted", run_id=None, error_code="") for row in cases
@@ -199,7 +248,10 @@ class Driver:
                     atomic_json(archive / "events.json", events)
                     row["status"] = "finished"
                     self.save()
-                    if not continuation(evidence):
+                    if not continuation(
+                        evidence,
+                        executor_version=self.manifest.get("executor_version", ""),
+                    ):
                         raise BatchStopped("CASE_BARRIER_INCOMPLETE")
                 except (JobForgeError, ExportError, OSError, BatchStopped) as exc:
                     row["error_code"] = (
@@ -237,7 +289,7 @@ def export_known(
     atomic_json(target / "rows.json", {"schema_version": 1, "cases": rows})
 
 
-def main() -> int:
+def main(*, s5: bool = False, driver_type: type[Driver] = Driver) -> int:
     """The launch mode is invoked only by the fixed parent supervisor."""
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("launch", "export"))
@@ -262,7 +314,12 @@ def main() -> int:
                 raise BatchStopped("ORIGINAL_EXPORT_REQUIRED")
             export_known(manifest, args.original, output, keys)
         else:
-            driver = Driver(manifest, output, keys)
+            driver = driver_type(
+                manifest,
+                output,
+                keys,
+                case_count=(20 if s5 and len(manifest["cases"]) == 20 else 40),
+            )
             signal.signal(signal.SIGTERM, driver.stop)
             signal.signal(signal.SIGINT, driver.stop)
             driver.run()

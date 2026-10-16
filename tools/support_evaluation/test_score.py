@@ -78,7 +78,7 @@ def _export(rows: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
     }, sha256(raw)
 
 
-def _rehash(row: dict[str, Any]) -> None:
+def _rehash(row: dict[str, Any], *, maximum: int = 16384) -> None:
     """Make source tampering tests reach provenance checks beyond hash integrity."""
     previous = ""
     run = row["run"]
@@ -100,7 +100,7 @@ def _rehash(row: dict[str, Any]) -> None:
             run["profile_hash"],
             run["snapshot_id"],
             run["snapshot_hash"],
-            canonical(entry["output_json"]),
+            canonical(entry["output_json"], maximum=maximum),
         )
         record["commit_hash"] = previous
 

@@ -36,6 +36,7 @@
         "get_order",
         "get_delivery",
         "search_policy",
+        "read_policy_bundle",
         "model_proposal",
         "model_decision",
         "protocol_correction",
@@ -60,7 +61,7 @@
         },
         "executor_version": {
           "type": "string",
-          "enum": ["linux-v2-audit-runtime-1", "linux-v2-agent-runtime-1", "linux-v2-recovery-runtime-1", "linux-v2-approval-runtime-1"]
+          "enum": ["linux-v2-audit-runtime-1", "linux-v2-agent-runtime-1", "linux-v2-recovery-runtime-1", "linux-v2-approval-runtime-1", "linux-v2-fixed-comparison-runtime-1", "linux-v2-adjudication-runtime-1", "linux-v2-adjudication-runtime-2", "linux-v2-adjudication-runtime-3", "linux-v2-adjudication-runtime-4", "linux-v2-adjudication-runtime-5", "linux-v2-fixed-adjudication-runtime-1", "linux-v2-fixed-adjudication-runtime-2"]
         },
         "adapter_id": {
           "$ref": "#/$defs/identifier"
@@ -79,7 +80,7 @@
           "const": "deepseek-flash"
         },
         "provider_audit_policy": {
-          "const": "deepseek-audit-v1"
+          "enum": ["deepseek-audit-v1", "deepseek-audit-v2"]
         }
       }
     },

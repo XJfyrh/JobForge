@@ -1,0 +1,5 @@
+{
+  "kind": "critical-timing-completeness",
+  "case_ids": ["DEV-026", "DEV-027"],
+  "repetitions": 3
+}

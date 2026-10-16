@@ -100,6 +100,7 @@ type BusinessRequest struct {
 // Admission is a trusted service result after external capture and validation.
 // Store admission must still recheck idempotency and database time under locks.
 type Admission struct {
+	TraceContext    string
 	TenantID        string
 	OperationKey    string
 	RequestHash     string

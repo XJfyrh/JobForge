@@ -2,7 +2,9 @@ package runworker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -15,6 +17,56 @@ import (
 	v2 "github.com/xjfyrh/jobforge/internal/runprotocol/v2"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
 )
+
+func TestCoordinatorFinalReportUsesOriginalThinkingPolicy(t *testing.T) {
+	for _, mode := range []run.ProviderModeState{run.ProviderModeThinking, run.ProviderModeNonthinking} {
+		t.Run(string(mode), func(t *testing.T) {
+			c, client, _, call, observation := activeCoordinator(t, "model_proposal", true, func(c *coordinator) {
+				raw, err := os.ReadFile("../../api/support/profile-v1/fixtures.json")
+				if err != nil {
+					t.Fatal(err)
+				}
+				var fixture struct {
+					Profile run.Profile `json:"profile"`
+				}
+				if err := json.Unmarshal(raw, &fixture); err != nil {
+					t.Fatal(err)
+				}
+				d, err := run.DecodeSupportDefinition(fixture.Profile.Definition)
+				if err != nil {
+					t.Fatal(err)
+				}
+				d.SchemaVersion = 12
+				d.Model.ObservedOn, d.Price.ObservedOn = "2026-10-11", "2026-10-11"
+				d.Model.MessageContentBytes, d.Model.RequestBodyBytes = 65536, 131072
+				final := d.Model
+				final.Thinking, final.ReasoningEffort, final.MaxTokens, final.ResponseBodyBytes = "enabled", "high", 16384, 1048576
+				d.FinalModel = &final
+				c.profile, err = run.BuildSupportProfile("synthetic-final-report", d)
+				if err != nil {
+					t.Fatal(err)
+				}
+				c.execute.Input = json.RawMessage(`{"executor_version":"linux-v2-fixed-adjudication-runtime-1","provider_audit_policy":"deepseek-audit-v2"}`)
+			})
+			call.reservation.Budget.CostMicroyuan = 100000
+			report := c.base("metering_report", observation.EmittedMonoMS)
+			report.CallSequence, report.PhysicalCallID, report.ParameterHash = 1, call.id, call.intent.ParameterHash
+			report.Usage, report.ProviderAudit = &v2.Usage{InputTokens: 1, OutputTokens: 1}, fixtureAudit()
+			report.ProviderAudit.SchemaVersion, report.ProviderAudit.ModeState = 2, mode
+			completeFixtureReport(t, &report)
+			client.settle = func(context.Context, *agentv1.SettleUsageRequest) (*agentv1.SettleUsageResponse, error) {
+				r := proto.Clone(call.reservation).(*agentv1.CallReservation)
+				r.UsageKnown = true
+				return fixtureSettledResponse(r, &report), nil
+			}
+			c.event(context.Background(), runexecutor.Event{Kind: runexecutor.FrameReceived, Channel: runexecutor.Metering, Frame: &report})
+			joinCoordinatorTasks(t, c)
+			if c.fatal || c.stopped || c.conversation.Closed() || !call.settled {
+				t.Fatal("local worker contradicted durable final adjudication policy")
+			}
+		})
+	}
+}
 
 func TestAuditedWorkerRejectsLegacyOrDriftedProfile(t *testing.T) {
 	profile := run.Profile{ID: "audit-test", Hash: strings.Repeat("a", 64), ExecutorVersion: run.ProviderAuditExecutorVersion,

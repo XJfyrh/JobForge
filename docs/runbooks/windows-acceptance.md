@@ -1,10 +1,10 @@
 # Windows 验收：时钟与 Worker 启动诊断
 
-适用 Windows 原生 Go/Python 快速检查与旧 Job 真实模型层。Run 专用 Linux 执行器/恢复验收见[测试指南](../tests.md#固定-linux-进程与联合检查)。测试数据库必须可重建；禁止对演示或生产 DSN 执行 integration，禁止两个测试进程同时重建同一个数据库。
+适用 Windows 时钟诊断、原生全仓 race 与旧 Job 真实模型层。日常快速反馈使用 `python -m tools.check quick`。Run 专用 Linux 执行器/恢复验收见[测试指南](../tests.md#固定-linux-进程与联合检查)。测试数据库必须可重建；禁止对演示或生产 DSN 执行 integration，禁止两个测试进程同时重建同一个数据库。
 
 ## 一次复现
 
-按[开发指南](../development.md)安装 Go、Docker、`.venv` 和锁定 Python 工具。快速层：
+按[开发指南](../development.md)安装 Go、Docker、`.venv` 和锁定 Python 工具。完整时钟／race诊断：
 
 ```powershell
 pwsh -NoProfile -File tools/test-windows.ps1
@@ -19,7 +19,7 @@ $env:JOBFORGE_TEST_JAEGER_URL = 'http://localhost:16686'
 pwsh -NoProfile -File tools/test-windows.ps1 -RealModels -EvidenceDirectory E:\JobForge-notes\windows-acceptance
 ```
 
-脚本启动规定的 PostgreSQL/Redis、安装普通 SDK wheel、运行 Python 单测，先检查 60s 时钟/SQL 环境，再运行快速层全量 race；`-RealModels` 随后单独运行两个真实模型集成测试。两层顺序执行，不共享并行重建。每一步非零退出均停止，不能让输出重定向吞掉 Go 失败。输出目录保留 JSON 时钟样本及两层日志；脚本不修改系统时钟或 WSL 配置。它不替代 CONTRIBUTING 中其余静态检查。快速层的真实模型 skip 与 AT-25 的未实现 skip 必须分别披露。
+脚本启动规定的 PostgreSQL/Redis、安装普通 SDK wheel、运行 Python 单测，先检查 60s 时钟/SQL 环境，再运行原生全量 race；`-RealModels` 随后单独运行两个真实模型集成测试。两层顺序执行，不共享并行重建。每一步非零退出均停止，不能让输出重定向吞掉 Go 失败。输出目录保留 JSON 时钟样本及两层日志；脚本不修改系统时钟或 WSL 配置。它不替代 CONTRIBUTING 中其余静态检查。原生层的真实模型 skip 与 AT-25 的未实现 skip 必须分别披露。
 
 ## DB-clock 仍要求稳定的时钟
 

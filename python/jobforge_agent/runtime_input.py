@@ -16,11 +16,33 @@ EXECUTOR_VERSION = "linux-v2-audit-runtime-1"
 AGENT_EXECUTOR_VERSION = "linux-v2-agent-runtime-1"
 RECOVERY_EXECUTOR_VERSION = "linux-v2-recovery-runtime-1"
 APPROVAL_EXECUTOR_VERSION = "linux-v2-approval-runtime-1"
+FIXED_COMPARISON_EXECUTOR_VERSION = "linux-v2-fixed-comparison-runtime-1"
+ADJUDICATION_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-1"
+ADJUDICATION_V2_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-2"
+ADJUDICATION_V3_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-3"
+ADJUDICATION_V4_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-4"
+ADJUDICATION_V5_EXECUTOR_VERSION = "linux-v2-adjudication-runtime-5"
+FIXED_ADJUDICATION_EXECUTOR_VERSION = "linux-v2-fixed-adjudication-runtime-1"
+FIXED_BUNDLE_EXECUTOR_VERSION = "linux-v2-fixed-adjudication-runtime-2"
+POLICY_BUNDLE_EXECUTORS = frozenset(
+    {ADJUDICATION_V5_EXECUTOR_VERSION, FIXED_BUNDLE_EXECUTOR_VERSION}
+)
+ADJUDICATION_EXECUTORS = frozenset(
+    {
+        ADJUDICATION_EXECUTOR_VERSION,
+        ADJUDICATION_V2_EXECUTOR_VERSION,
+        ADJUDICATION_V3_EXECUTOR_VERSION,
+        ADJUDICATION_V4_EXECUTOR_VERSION,
+        ADJUDICATION_V5_EXECUTOR_VERSION,
+        FIXED_ADJUDICATION_EXECUTOR_VERSION,
+        FIXED_BUNDLE_EXECUTOR_VERSION,
+    }
+)
 RuntimeCheckpoint = dict[str, Any]
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 HASH = re.compile(r"[0-9a-f]{64}")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-TOOLS = frozenset({"get_order", "get_delivery", "search_policy"})
+TOOLS = frozenset({"get_order", "get_delivery", "search_policy", "read_policy_bundle"})
 KINDS = TOOLS | {
     "read_ticket",
     "model_proposal",
@@ -118,11 +140,34 @@ def input_hash(
     return digest.hexdigest()
 
 
-def validate_step_result(result: Any, kind: str) -> None:
+def is_investigation_complete(value: Any) -> bool:
+    """Recognize an audit-only closed draft without judging its truth or sources."""
+    if not isinstance(value, dict) or set(value) != {"type", "draft"}:
+        return False
+    draft = value["draft"]
+    strings = {"decision", "action", "conclusion", "target_ticket_status"}
+    return (
+        value["type"] == "investigation_complete"
+        and isinstance(draft, dict)
+        and set(draft) == strings | {"requested_fields", "claims"}
+        and all(isinstance(draft[key], str) for key in strings)
+        and isinstance(draft["requested_fields"], list)
+        and isinstance(draft["claims"], list)
+    )
+
+
+def validate_step_result(result: Any, kind: str, *, supplement: bool = False) -> None:
     """Check the protected envelope and closed registered proposal formats."""
     _require(kind in KINDS)
     _object(result, RESULT_FIELDS, frozenset({"content", "proposal"}))
-    _size(result, 8192 if kind in TOOLS | {"read_ticket"} else 16384)
+    _size(
+        result,
+        32768
+        if kind == "read_policy_bundle"
+        else 8192
+        if kind in TOOLS | {"read_ticket"}
+        else 16384,
+    )
     _require(_integer(result["schema_version"], 1, 1))
     _require(type(result["correction_required"]) is bool)
     refs = result["evidence_refs"]
@@ -173,14 +218,20 @@ def validate_step_result(result: Any, kind: str) -> None:
                 and result["content"] is None
             )
         elif result["content"] is not None:
+            from jobforge_agent.policy_supplement import is_policy_supplement
+
+            if supplement and kind == "model_proposal":
+                _require(proposal is None and is_policy_supplement(result["content"]))
+                return
             _require(
                 kind in {"model_decision", "protocol_correction"} and proposal is None
             )
-            _object(result["content"], {"type", "name", "arguments"})
-            _require(
-                result["content"]["type"] == "tool"
-                and result["content"]["name"] in TOOLS
-            )
+            if not is_investigation_complete(result["content"]):
+                _object(result["content"], {"type", "name", "arguments"})
+                _require(
+                    result["content"]["type"] == "tool"
+                    and result["content"]["name"] in TOOLS - {"read_policy_bundle"}
+                )
         else:
             _require(proposal is not None)
 
@@ -342,7 +393,12 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
         executor_matches_adapter(selection["executor_version"], selection["adapter_id"])
         and _match(IDENTIFIER, selection["adapter_id"])
         and selection["expected_response_model"] == "deepseek-flash"
-        and selection["provider_audit_policy"] == "deepseek-audit-v1"
+        and selection["provider_audit_policy"]
+        == (
+            "deepseek-audit-v2"
+            if selection["executor_version"] in ADJUDICATION_EXECUTORS
+            else "deepseek-audit-v1"
+        )
     )
     _require(
         _match(UUID, selection["tool_invocation_id"])
@@ -366,9 +422,22 @@ def parse_runtime_input(frame: Frame) -> RuntimeInput:
         seen.add(accepted["step"]["step_id"])
         _require(_match(HASH, accepted["commit_hash"]))
         _require(accepted["result_ref"] == f"run-step:{binding['run_id']}:{sequence}")
-        validate_step_result(accepted["result_json"], accepted["step"]["kind"])
+        validate_step_result(
+            accepted["result_json"],
+            accepted["step"]["kind"],
+            supplement=selection["executor_version"]
+            in {ADJUDICATION_V3_EXECUTOR_VERSION, ADJUDICATION_V4_EXECUTOR_VERSION},
+        )
         previous = accepted["commit_hash"]
     step = checkpoint["next_step"]
+    if selection["executor_version"] not in POLICY_BUNDLE_EXECUTORS:
+        _require(step["kind"] != "read_policy_bundle")
+        _require(
+            all(
+                item["step"]["kind"] != "read_policy_bundle"
+                for item in checkpoint["steps"]
+            )
+        )
     _step(step, binding, cursor + 1, previous)
     _require(step["step_id"] not in seen)
     for source, target in (
@@ -395,5 +464,18 @@ def executor_matches_adapter(version: str, adapter: str) -> bool:
             AGENT_EXECUTOR_VERSION,
             RECOVERY_EXECUTOR_VERSION,
             APPROVAL_EXECUTOR_VERSION,
+            ADJUDICATION_EXECUTOR_VERSION,
+            ADJUDICATION_V2_EXECUTOR_VERSION,
+            ADJUDICATION_V3_EXECUTOR_VERSION,
+            ADJUDICATION_V4_EXECUTOR_VERSION,
+            ADJUDICATION_V5_EXECUTOR_VERSION,
         )
-    return version == EXECUTOR_VERSION
+    return version == EXECUTOR_VERSION or (
+        adapter == "support-fixed-v1"
+        and version
+        in {
+            FIXED_COMPARISON_EXECUTOR_VERSION,
+            FIXED_ADJUDICATION_EXECUTOR_VERSION,
+            FIXED_BUNDLE_EXECUTOR_VERSION,
+        }
+    )

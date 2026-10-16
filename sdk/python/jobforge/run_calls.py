@@ -48,8 +48,10 @@ class ProviderAudit(RunModel):
     audit_hash: str
 
     def __post_init__(self) -> None:
-        if self.schema_version != 1 or self.provider != "deepseek":
+        if self.schema_version not in (1, 2) or self.provider != "deepseek":
             raise ValueError("invalid audit schema")
+        if self.mode_state == "thinking" and self.schema_version != 2:
+            raise ValueError("invalid audit mode version")
         for value in (self.response_id, self.response_model, self.system_fingerprint):
             if value is not None:
                 _identifier(value)
@@ -64,7 +66,7 @@ class ProviderAudit(RunModel):
             or self.reasoning_state
             not in ("observed", "absent", "invalid", "unavailable")
             or self.mode_state
-            not in ("nonthinking", "unexpected", "invalid", "unavailable")
+            not in ("nonthinking", "thinking", "unexpected", "invalid", "unavailable")
         ):
             raise ValueError("invalid audit state")
         if (self.reasoning_state == "observed") != (self.reasoning_tokens is not None):
@@ -176,6 +178,7 @@ class RunCall(RunModel):
             "get_order",
             "get_delivery",
             "search_policy",
+            "read_policy_bundle",
             "model_proposal",
             "model_decision",
             "protocol_correction",
@@ -186,6 +189,7 @@ class RunCall(RunModel):
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat",
         ):
             raise ValueError("invalid registered physical call")

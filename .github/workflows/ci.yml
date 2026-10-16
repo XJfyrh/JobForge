@@ -1,24 +1,9 @@
-# Mechanical quality gate for JobForge.
-#
-# This workflow runs the checks declared in docs/development.md and
-# CONTRIBUTING.md ("验证要求") on every pull request, so the local
-# pre-commit checklist and the PR gate stay in sync. The check list maps to
-# AGENTS.md "验证与汇报": format/lint/unit/integration/fault/race.
-#
-# Local equivalents (see docs/development.md):
-#   go build ./... && go vet ./...
-#   .tools/bin/golangci-lint run
-#   go test -race ./...   (real PostgreSQL)
-#   .venv/bin/python tools/check_sqlfluff_baseline.py
-#   .venv/bin/sqlfluff lint migrations
-#   .venv/bin/ruff check . && .venv/bin/ruff format --check .
-#   .venv/bin/mypy sdk/python
-#   .tools/bin/buf lint
-
+# Required checks are selected by tools/ci_checks.py; see docs/tests.md.
 name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -30,7 +15,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Select required checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      go-lint: ${{ steps.plan.outputs.go-lint }}
+      go-test: ${{ steps.plan.outputs.go-test }}
+      python-lint: ${{ steps.plan.outputs.python-lint }}
+      business-contract: ${{ steps.plan.outputs.business-contract }}
+      executor-process-probe: ${{ steps.plan.outputs.executor-process-probe }}
+      proto-lint: ${{ steps.plan.outputs.proto-lint }}
+      agent-runtime-contract: ${{ steps.plan.outputs.agent-runtime-contract }}
+      image-contract: ${{ steps.plan.outputs.image-contract }}
+      observability-config: ${{ steps.plan.outputs.observability-config }}
+      selected: ${{ steps.plan.outputs.selected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            python -m tools.ci_checks plan --base "$BASE_SHA"
+          else
+            python -m tools.ci_checks plan --full
+          fi
+
+  docs:
+    name: Documentation and check routing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check selection, gate and partition regressions
+        run: python -m unittest discover -s tools/ci_tests -v
+      - name: Local links, anchors and Linux path case
+        run: python -m tools.ci_docs
+
   go-lint:
+    needs: changes
+    if: needs.changes.outputs.go-lint == 'true'
     name: Go build, vet & golangci-lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -44,12 +72,16 @@ jobs:
         run: go build ./...
       - name: Vet
         run: go vet ./...
+      - name: Validate workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
 
   go-test:
+    needs: changes
+    if: needs.changes.outputs.go-test == 'true'
     name: Go test (race, real PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -94,6 +126,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/requirements-lint.txt
       - name: Install SDK for real HTTP contract
         run: |
           python -m pip install --requirement tools/requirements-lint.txt
@@ -108,10 +142,12 @@ jobs:
           test "$(docker exec "$redis_container" redis-cli --raw CONFIG GET appendfsync | tail -1)" = "everysec"
           echo "JOBFORGE_TEST_REDIS_CONTAINER=$redis_container" >> "$GITHUB_ENV"
       - name: Test with race detector
-        run: go test -race -count=1 ./...
+        run: python -m tools.check --only go-test
 
   python-lint:
-    name: Python ruff & mypy
+    needs: changes
+    if: needs.changes.outputs.python-lint == 'true'
+    name: Python tests, lint, types and SQL
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -119,45 +155,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install pinned lint toolchain
+          cache: pip
+          cache-dependency-path: tools/requirements-lint.txt
+      - name: Install pinned toolchain and SDK
         run: |
-          python -m pip install --upgrade pip
           python -m pip install --requirement tools/requirements-lint.txt
           python -m pip install --no-deps ./sdk/python
-      - name: Python SDK tests
-        run: python -m pytest sdk/python/tests
-      - name: Agent S0 probe guardrails (no model calls)
-        run: python -m pytest tools/agent_probe_data tools/executorprobe
-      - name: Agent S1 adapters and authorized HTTP (real Linux clock, no model calls)
-        run: python -m pytest python/tests
-      - name: Support development data and semantic anchors (offline, no holdout)
-        run: python -m pytest tools/support_evaluation
-      - name: S3 frozen list and failure export (offline, no model calls)
-        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_recovery
-      - name: S4 source bindings and approval evidence (offline, no model calls)
-        run: PYTHONPATH=python:sdk/python python -m pytest tools/support_approval
-      - name: Validate SQLFluff historical baseline
-        run: python tools/check_sqlfluff_baseline.py
-      - name: SQLFluff migrations
-        run: sqlfluff lint migrations
-      - name: Ruff check
-        run: ruff check .
-      - name: Ruff format check
-        run: ruff format --check .
-      - name: Mypy
-        run: mypy sdk/python
-      - name: Agent S0 probe types
-        run: mypy --platform linux tools/agent_model_probe.py tools/executorprobe/executor.py
-      - name: Agent S1 business adapter types
-        run: mypy python/jobforge_agent
-      - name: Offline support evaluation types
-        run: MYPYPATH=python:sdk/python mypy --explicit-package-bases tools/support_evaluation
-      - name: S3 experiment types (Linux process interfaces)
-        run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_recovery tools/agentruntimecheck/recovery_supervisor_check.py
-      - name: S4 experiment types
-        run: MYPYPATH=python:sdk/python mypy --platform linux --explicit-package-bases tools/support_approval
+      - name: Python and SQL checks
+        run: python -m tools.check --only python-lint
 
   business-contract:
+    needs: changes
+    if: needs.changes.outputs.business-contract == 'true'
     name: Agent S1 business (real pgvector, HTTP, race)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -170,6 +179,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/requirements-lint.txt
       - name: Install business adapter dependencies
         run: python -m pip install --requirement tools/requirements-lint.txt
       - name: Start isolated business database
@@ -186,6 +197,8 @@ jobs:
         run: docker compose -f deploy/compose.agent.yaml down --volumes
 
   executor-process-probe:
+    needs: changes
+    if: needs.changes.outputs.executor-process-probe == 'true'
     name: Agent S0 executor (Linux process faults, race)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -204,6 +217,8 @@ jobs:
           ./clock.test -test.v -test.timeout=30s
 
   proto-lint:
+    needs: changes
+    if: needs.changes.outputs.proto-lint == 'true'
     name: Buf lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -213,11 +228,24 @@ jobs:
         with:
           version: 1.72.0
           github_token: ${{ github.token }}
-      - name: Buf lint
-        run: buf lint
+      - name: Buf lint and compatibility
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          buf lint
+          if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags origin "$BASE_SHA"
+            buf breaking --against ".git#ref=$BASE_SHA"
+          fi
 
   agent-runtime-contract:
-    name: Agent S1-S4 runtime (real processes, PostgreSQL, race)
+    needs: changes
+    if: needs.changes.outputs.agent-runtime-contract == 'true'
+    name: Agent runtime (${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [core, recovery, deadlines]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
@@ -249,38 +277,65 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Build fixed installed process checks
-        run: docker build --target process-check -f tools/agentruntimecheck/Dockerfile -t jobforge-agent-runtime:process .
+        if: matrix.shard == 'core'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/agentruntimecheck/Dockerfile
+          target: process-check
+          load: true
+          tags: jobforge-agent-runtime:process
+          cache-from: type=gha,scope=runtime-process
+          cache-to: type=gha,mode=max,scope=runtime-process
       - name: Actual guardian, step and parent death with race
+        if: matrix.shard == 'core'
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:process
       - name: Build explicitly synthetic HTTP mechanism image
-        run: docker build --target integration-check -f tools/agentruntimecheck/Dockerfile -t jobforge-agent-runtime:integration .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/agentruntimecheck/Dockerfile
+          target: integration-check
+          load: true
+          tags: jobforge-agent-runtime:integration
+          cache-from: type=gha,scope=runtime-${{ matrix.shard }}
+          cache-to: type=gha,mode=max,scope=runtime-${{ matrix.shard }}
       - name: Coordinator ordering with the real Linux clock
+        if: matrix.shard == 'core'
         run: docker run --rm --init --network none --cpus 1 --memory 384m --pids-limit 64 jobforge-agent-runtime:integration /app/worker.test -test.v -test.timeout=120s
       - name: Real PostgreSQL, business actions, gRPC and process faults
-        run: >-
-          docker run --rm --init --network host --add-host control:127.0.0.1 --cpus 2 --memory 512m --pids-limit 96
-          -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable
-          -e JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@127.0.0.1:5434/jobforge_business?sslmode=disable
-          jobforge-agent-runtime:integration
-      - name: Build production image and reject fixture registration
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
-          docker build -f deploy/Dockerfile.agent-worker -t jobforge-agent-worker:production .
-          docker run --rm --init --network none --entrypoint python jobforge-agent-worker:production -I -c 'from jobforge_agent.runtime_registry import REGISTRY; from jobforge_agent.dispatch import DEEPSEEK_ORIGIN; from pathlib import Path; from importlib.util import find_spec; assert set(REGISTRY) == {"support-fixed-v1", "support-agent-v1"}; assert REGISTRY["support-fixed-v1"].__class__.__module__ == "jobforge_agent.support_adapter"; assert REGISTRY["support-agent-v1"].__class__.__module__ == "jobforge_agent.support_agent"; assert DEEPSEEK_ORIGIN == "https://api.deepseek.com"; assert find_spec("jobforge_agent.runtime_recovery_faults") is None; assert not Path("/tmp/runtime_recovery_faults.py").exists(); assert not Path("/tmp/test_install.py").exists(); assert not Path("/etc/jobforge/executor.json").exists(); assert not Path("/checks").exists(); assert not Path("/src/examples/support-agent/evaluation").exists()'
+          pattern="$(python -m tools.ci_checks runtime --shard "$SHARD")"
+          set -o pipefail
+          docker run --rm --init --network host --add-host control:127.0.0.1 --cpus 2 --memory 512m --pids-limit 96 \
+            -e JOBFORGE_TEST_DSN=postgres://jobforge:jobforge@127.0.0.1:5432/jobforge?sslmode=disable \
+            -e JOBFORGE_BUSINESS_TEST_DSN=postgres://jobforge_business_bootstrap:jobforge_business_bootstrap@127.0.0.1:5434/jobforge_business?sslmode=disable \
+            jobforge-agent-runtime:integration /app/integration.test -test.v -test.timeout=1200s "-test.run=$pattern" | tee runtime-tests.txt
+          python -m tools.ci_checks verify-runtime --shard "$SHARD" --log runtime-tests.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-${{ matrix.shard }}
+          path: runtime-tests.txt
 
-      - name: Verify external approval image has every frozen operator source
-        run: |
-          docker build --build-arg WORKER_IMAGE=jobforge-agent-worker:production -f deploy/Dockerfile.support-approval -t jobforge-support-approval:acceptance .
-          python - "$RUNNER_TEMP/support-approval-sources.json" <<'PY'
-          import hashlib, json, sys
-          from pathlib import Path
-          files = [path for folder in ("tools/support_approval", "tools/support_evaluation") for path in Path(folder).iterdir() if path.suffix in {".py", ".sql"} and not path.name.startswith("test_") and path.name != "fixtures.py"]
-          files += [Path("tools/support_recovery") / name for name in ("driver.py", "plan.py", "continuation.py")]
-          Path(sys.argv[1]).write_text(json.dumps({path.as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}), encoding="utf-8")
-          PY
-          docker run --rm --init --network none --entrypoint python --mount "type=bind,source=$RUNNER_TEMP/support-approval-sources.json,target=/tmp/expected.json,readonly" jobforge-support-approval:acceptance -I -c 'import hashlib,json,sys; from pathlib import Path; sys.path.insert(0,"/app"); from tools.support_approval.driver import verify_release; from tools.support_approval.report import report; expected=json.loads(Path("/tmp/expected.json").read_bytes()); assert expected; assert all(hashlib.sha256((Path("/app")/path).read_bytes()).hexdigest()==digest for path,digest in expected.items()); print("Frozen operator sources verified:",len(expected))'
+  image-contract:
+    needs: changes
+    if: needs.changes.outputs.image-contract == 'true'
+    name: Production and operator image contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify installed sources and production boundaries
+        run: python -m tools.check --only image-contract
 
   observability-config:
+    needs: changes
+    if: needs.changes.outputs.observability-config == 'true'
     name: Prometheus rules & generated dashboard
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -290,7 +345,25 @@ jobs:
         run: |
           python tools/generate_task_dashboard.py
           git diff --exit-code -- deploy/grafana/dashboards/jobforge-tasks.json
+          python tools/generate_run_dashboard.py
+          git diff --exit-code -- deploy/grafana/run-dashboards/jobforge-runs.json
       - name: Validate and test alert rules
         run: |
           docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
           docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/alerts.test.yml
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 check config /etc/prometheus/run.yml
+          docker run --rm -v "$PWD/deploy/prometheus:/etc/prometheus:ro" --entrypoint promtool prom/prometheus:v3.14.0 test rules /etc/prometheus/run-alerts.test.yml
+
+  ci-required:
+    name: CI required
+    if: always()
+    needs: [changes, docs, go-lint, go-test, python-lint, business-contract, executor-process-probe, proto-lint, agent-runtime-contract, image-contract, observability-config]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require every selected job to succeed
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+          CI_SELECTED: ${{ needs.changes.outputs.selected || '[]' }}
+        run: python -m tools.ci_checks gate

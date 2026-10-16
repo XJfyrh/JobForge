@@ -13,6 +13,8 @@ import (
 	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/runclock"
 	agentv1 "github.com/xjfyrh/jobforge/proto/jobforge/agent/v1"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func actionRPCOutcome(err error) stepOutcome {
@@ -57,6 +59,9 @@ func (w *Worker) runAction(ctx context.Context, lease *agentv1.RunLease, checkpo
 		return stepOutcome{Failure: "PROFILE_UNAVAILABLE"}
 	}
 	step := checkpoint.NextStep
+	ctx, span := otel.Tracer("jobforge/runworker").Start(ctx, "run.step")
+	defer span.End()
+	span.SetAttributes(attribute.String("jobforge.step_kind", step.Kind.String()), attribute.String("jobforge.step_id", step.StepId))
 	p, ok := w.profiles[step.ProfileId]
 	if !ok || p.Hash != step.ProfileHash || !p.ApprovalEnabled() {
 		return stepOutcome{Failure: "PROFILE_UNAVAILABLE"}

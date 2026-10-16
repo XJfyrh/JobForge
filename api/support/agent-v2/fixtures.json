@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "topics": {
+    "timing": {
+      "aliases": [
+        "P02.1",
+        "P02.2"
+      ],
+      "query": "Compare delivery timestamp or observation time with promised_delivery_at in UTC; on_time delayed fulfillment"
+    },
+    "extended_delay": {
+      "aliases": [
+        "P07.1",
+        "P07.2"
+      ],
+      "query": "Outstanding undelivered order at least 48 hours after promise escalation threshold; completed late delivery"
+    },
+    "missing_facts": {
+      "aliases": [
+        "P03.1",
+        "P03.2"
+      ],
+      "query": "Missing related order delivery tracking event or vague complaint needing specific problem description clarification"
+    },
+    "delivery_dispute": {
+      "aliases": [
+        "P04.1",
+        "P04.2"
+      ],
+      "query": "Delivered but customer disputes receipt wrong address unauthorized recipient safe place"
+    },
+    "structured_conflict": {
+      "aliases": [
+        "P05.1"
+      ],
+      "query": "Authoritative structured tracking contradiction same timestamp source key pre handover post delivery conflict"
+    },
+    "critical_exception": {
+      "aliases": [
+        "P06.1"
+      ],
+      "query": "Active lost damaged returned_to_sender critical carrier exception escalation"
+    },
+    "carrier_correction": {
+      "aliases": [
+        "P05.2",
+        "P06.2"
+      ],
+      "query": "Explicit carrier correction identifies erroneous event and supersedes it; ordinary later scans do not correct"
+    },
+    "ticket_status": {
+      "aliases": [
+        "P08.1",
+        "P08.2",
+        "P09.1"
+      ],
+      "query": "Already informational_only ticket action none; already escalated preserve status no silent downgrade"
+    }
+  },
+  "cases": [
+    {
+      "name": "one_definition",
+      "valid": true,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2"
+        ]
+      }
+    },
+    {
+      "name": "two_definitions",
+      "valid": true,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.1",
+          "P03.2"
+        ]
+      }
+    },
+    {
+      "name": "specific_sibling",
+      "valid": true,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "structured_conflict",
+        "required_aliases": [
+          "P05.1"
+        ]
+      }
+    },
+    {
+      "name": "supporting_not_definition",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "structured_conflict",
+        "required_aliases": [
+          "P05.2"
+        ]
+      }
+    },
+    {
+      "name": "unknown_topic",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "arbitrary",
+        "required_aliases": [
+          "P03.2"
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": []
+      }
+    },
+    {
+      "name": "null",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": null
+      }
+    },
+    {
+      "name": "unsorted",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2",
+          "P03.1"
+        ]
+      }
+    },
+    {
+      "name": "duplicate",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2",
+          "P03.2"
+        ]
+      }
+    },
+    {
+      "name": "cross_topic",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P05.1"
+        ]
+      }
+    },
+    {
+      "name": "proposal",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2"
+        ],
+        "proposal": {}
+      }
+    },
+    {
+      "name": "free_query",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2"
+        ],
+        "query": "unrestricted"
+      }
+    },
+    {
+      "name": "wrong_type",
+      "valid": false,
+      "value": {
+        "type": "tool",
+        "topic": "missing_facts",
+        "required_aliases": [
+          "P03.2"
+        ]
+      }
+    },
+    {
+      "name": "numeric_alias",
+      "valid": false,
+      "value": {
+        "type": "policy_supplement",
+        "topic": "missing_facts",
+        "required_aliases": [
+          1
+        ]
+      }
+    }
+  ]
+}

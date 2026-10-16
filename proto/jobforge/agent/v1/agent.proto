@@ -115,6 +115,8 @@ enum StepKind {
   STEP_KIND_MODEL_DECISION = 8;
   // Execute the approved fixed business action in Go; never starts Python.
   STEP_KIND_APPLY_TICKET_RESOLUTION = 9;
+  // Read the complete versioned policy bundle before any model call.
+  STEP_KIND_READ_POLICY_BUNDLE = 10;
 }
 
 // RunState is the control-plane lifecycle; proposal does not mean applied.
@@ -450,6 +452,8 @@ enum Subcall {
   SUBCALL_SEARCH_POLICY = 6;
   // One registered chat HTTP request, including a separate correction call.
   SUBCALL_CHAT = 7;
+  // One snapshot-bound complete policy bundle HTTP read.
+  SUBCALL_READ_POLICY_BUNDLE = 8;
 }
 
 // ReserveCallRequest asks for one physical send, without caller-selected prices.
@@ -474,7 +478,7 @@ message ReserveCallRequest {
 message CallBudget {
   // Nonnegative upper bound on input tokens.
   int64 input_tokens = 1;
-  // Nonnegative upper bound on output tokens; chat maximum is 1024.
+  // Profile/step-derived output bound: 1024 investigation or 16384 final.
   int64 output_tokens = 2;
   // Nonnegative combined token hold, with checked integer addition.
   int64 total_tokens = 3;
@@ -498,7 +502,7 @@ message CallReservation {
   google.protobuf.Timestamp reserved_at = 6;
   // Latest dispatch time, bounded by lease/attempt/Run/batch expiry.
   google.protobuf.Timestamp dispatch_expires_at = 7;
-  // Fixed response deadline, at most 60 seconds, or 10 for free tools.
+  // Profile/step-derived deadline: up to 120 seconds for final adjudication.
   google.protobuf.Timestamp call_deadline = 8;
   // Conservative token/cost hold applied atomically to all three accounts.
   CallBudget budget = 9;
@@ -615,6 +619,8 @@ enum ProviderModeState {
   PROVIDER_MODE_STATE_INVALID = 3;
   // The mode could not be established from complete evidence.
   PROVIDER_MODE_STATE_UNAVAILABLE = 4;
+  // Schema 2 observes reasoning in a versioned final-only response.
+  PROVIDER_MODE_STATE_THINKING = 5;
 }
 
 // ProviderAudit is bounded typed metadata, never a response body or authority.

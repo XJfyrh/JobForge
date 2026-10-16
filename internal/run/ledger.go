@@ -16,13 +16,14 @@ type Subcall string
 
 // Fixed physical capabilities retain separate authorization for each HTTP send.
 const (
-	SubcallGetOrder       Subcall = "get_order"
-	SubcallGetDelivery    Subcall = "get_delivery"
-	SubcallProfileVersion Subcall = "profile_version"
-	SubcallProfileTags    Subcall = "profile_tags"
-	SubcallQueryEmbedding Subcall = "query_embedding"
-	SubcallSearchPolicy   Subcall = "search_policy"
-	SubcallChat           Subcall = "chat"
+	SubcallGetOrder         Subcall = "get_order"
+	SubcallGetDelivery      Subcall = "get_delivery"
+	SubcallProfileVersion   Subcall = "profile_version"
+	SubcallProfileTags      Subcall = "profile_tags"
+	SubcallQueryEmbedding   Subcall = "query_embedding"
+	SubcallSearchPolicy     Subcall = "search_policy"
+	SubcallReadPolicyBundle Subcall = "read_policy_bundle"
+	SubcallChat             Subcall = "chat"
 
 	// QueryEmbeddingMaxInputTokens assumes the registered MiniLM tokenizer and
 	// the fixed 512 UTF-8 byte query bound. Missing usage retains this full hold.
@@ -62,7 +63,7 @@ func CheckStep(r Run, a Authority, step StepIdentity) error {
 
 func validStepKind(kind string) bool {
 	switch kind {
-	case "read_ticket", "get_order", "get_delivery", "search_policy", "model_proposal", "model_decision", "protocol_correction", "submit_proposal", "apply_ticket_resolution":
+	case "read_ticket", "get_order", "get_delivery", "search_policy", "read_policy_bundle", "model_proposal", "model_decision", "protocol_correction", "submit_proposal", "apply_ticket_resolution":
 		return true
 	default:
 		return false
@@ -238,7 +239,7 @@ func CallKind(subcall Subcall) string {
 		return "query_embedding"
 	case SubcallProfileVersion, SubcallProfileTags:
 		return "profile_metadata_http"
-	case SubcallGetOrder, SubcallGetDelivery, SubcallSearchPolicy:
+	case SubcallGetOrder, SubcallGetDelivery, SubcallSearchPolicy, SubcallReadPolicyBundle:
 		return "business_tool_http"
 	default:
 		return ""
@@ -252,6 +253,8 @@ func ToolSequence(kind string) []Subcall {
 		return []Subcall{SubcallGetOrder}
 	case "get_delivery":
 		return []Subcall{SubcallGetDelivery}
+	case "read_policy_bundle":
+		return []Subcall{SubcallReadPolicyBundle}
 	case "search_policy":
 		return []Subcall{SubcallProfileVersion, SubcallProfileTags, SubcallQueryEmbedding, SubcallSearchPolicy}
 	default:
@@ -261,10 +264,18 @@ func ToolSequence(kind string) []Subcall {
 
 // ReservationBudget derives bounds entirely from registered execution resources.
 func ReservationBudget(profile Profile, subcall Subcall) (CallBudget, error) {
+	maximum := int64(1024)
+	if profile.FinalAdjudicationEnabled() {
+		maximum = FinalAdjudicationMaxTokens
+	}
+	return reservationBudget(profile, subcall, maximum)
+}
+
+func reservationBudget(profile Profile, subcall Subcall, maximum int64) (CallBudget, error) {
 	switch CallKind(subcall) {
 	case "chat":
 		if profile.MaxInputTokens < 1 || profile.MaxInputTokens > MaxSafeInteger || profile.MaxOutputTokens < 1 ||
-			profile.MaxOutputTokens > 1024 || profile.MaxInputTokens > MaxSafeInteger-profile.MaxOutputTokens {
+			profile.MaxOutputTokens > maximum || profile.MaxInputTokens > MaxSafeInteger-profile.MaxOutputTokens {
 			return CallBudget{}, ErrProfileUnavailable
 		}
 		upper := UsageReport{InputTokens: profile.MaxInputTokens, OutputTokens: profile.MaxOutputTokens}

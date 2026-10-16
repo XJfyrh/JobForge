@@ -37,6 +37,8 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 
 默认控制配置有租户和 Worker 身份，零模型/预算；它用于查询和开发接缝，提交未登记 profile 会失败。`bootstrap` 需要迁移权限，重复执行不清零预算。原生命令和鉴权变量见[Run 指南](agent-v3/runs.md)。
 
+控制启动后打开 `http://127.0.0.1:8093/ui/`，使用服务端配置的独立 operator/approver 凭据。页面、v3 `obs` profile、内容清理与停写恢复命令见[操作指南](agent-v3/operations.md)。默认配置仍不启用收费执行。
+
 业务快照/真实 embedding 使用[业务准备](agent-v3/business.md)，正式 Python Worker 使用[固定运行时](agent-v3/runtime.md)，有界收费部署使用[批次指南](agent-v3/cloud-batch.md)。收费执行需独立登记与明确预算；复制示例不构成运行授权。
 
 本地端口彼此独立：旧 Job/测试库 5433，业务库/HTTP/Ollama 5434/8092/11436，v3 控制库/HTTP/RPC 5435/8093/9093。停止控制组件用 `docker compose -f deploy/compose.agent.yaml --profile control stop control control-postgres`，保留数据时不删 volumes。
@@ -50,19 +52,20 @@ Invoke-RestMethod http://127.0.0.1:8093/health/ready
 | `python/jobforge_agent` | 固定 guardian/step、HTTP adapter 与 Agent 策略 |
 | `cmd/support-business`、`internal/business` | 独立业务事实、快照和检索 |
 | `api`、`proto`、`sdk/python` | 源契约、生成代码与 Python 客户端 |
-| `tools/support_evaluation`、`tools/support_recovery`、`tools/support_approval` | 离线评分、有界实验与导出 |
+| `tools/support_evaluation`、`tools/support_recovery`、`tools/support_approval`、`tools/support_s5` | 离线评分、有界实验、冻结与导出 |
+| `tools/support_lifecycle` | 明确拥有的免费审查库停写、备份、新库恢复及逐表核验 |
 | `cmd/jobforge`、`internal/worker` | 既有 Job API/Handler 路径 |
 
 SDK 开发保持在仓库根目录，编辑后重新安装 `./sdk/python`；运行测试/lint 无需 `cd sdk/python`。Proto 修改后使用 `.tools/bin/buf.exe generate`（Linux/macOS 为 `.tools/bin/buf generate`），不手改生成代码。规范见[编码要求](code-standards.md)。
 
 ## 检查与旧路径
 
-按[测试指南](tests.md)选择定向检查和全部 8 项 CI 门禁。Windows 集成测试必须先启动测试 PostgreSQL 并设置 DSN，安装 SDK 后设置跨语言解释器；专用 Linux 进程检查、同 DSN 串行和 skip 规则也在那里维护。
+日常先运行 `python -m tools.check quick`；`affected --base origin/main --plan` 显示本分支及未提交修改需要的检查。完整环境前置和 CI 路由见[测试指南](tests.md)。Windows 集成测试必须先启动测试 PostgreSQL 并设置 DSN，安装 SDK 后设置跨语言解释器；专用 Linux 进程检查、同 DSN 串行和 skip 规则也在那里维护。
 
 为保留现有引用，本页的“CI 质量门禁”入口如下；权威清单在测试指南。
 
 ### CI 质量门禁
 
-[8 项 PR CI 与本地命令](tests.md#ci-质量门禁)。
+[按改动选择的 PR CI 与统一入口](tests.md#ci-质量门禁)。
 
 既有 jobs 的任务目录、Redis、运维 CLI 与观测 profile 见[旧运行配置](legacy/operations.md)；本地 Ollama 示例见[真实任务](legacy/real-tasks.md)。Windows 一键检查与时间异常排查见[运行手册](runbooks/windows-acceptance.md)。

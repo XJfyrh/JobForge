@@ -2,6 +2,8 @@
 
 本页说明控制服务接入、持久步骤与预算排障。合同为 [PRD v0.9](../product/JobForge_PRD_v0.9.md)、[ADR-0017](../adr/0017-run-admission-and-call-ledger.md)及[供应商审计](provider-audit.md)；当前交付与真实验收统一见[状态页](../status.md)。
 
+S5 的 Run 响应新增 `terminal_at` 和 `content_purged_at`，身份查询为 `GET /v2/identity`。终态内容过窗后 steps/result/GET及POST approval 返回 `410 RESULT_EXPIRED`，旧 Submit 重放返回 `410 REQUEST_EXPIRED`；Run 状态、费用和独立效果仍可查询。SDK 提供对应的过窗异常；清理条件与命令见[数据操作](operations.md#终态内容清理)。
+
 ## 服务与数据边界
 
 `agent-control` 同一进程提供 `/v2/runs`、`jobforge.agent.v1` Worker RPC 和每秒一次、每轮最多100候选的恢复扫描。它只调度 Run，不启动历史 jobs 调度器。PostgreSQL 是唯一执行事实源；步骤、工具与物理调用记录都不是独立队列。
@@ -66,7 +68,7 @@ with RunClient("http://127.0.0.1:8093", "dev-agent-north-operator") as client:
 
 CommitStep拒绝过大结果或无法验证的模型方案时，RPC状态为 `INVALID_ARGUMENT`，reason分别保留 `CHECKPOINT_TOO_LARGE`、`MODEL_PROTOCOL_ERROR`。这两类结果错误不能被当作临时内部故障无限重试；Worker只可按登记策略使用一次协议纠正，或以同名永久错误结束attempt。未知服务端错误仍统一脱敏为 `INTERNAL`。
 
-步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；`no_action` 可以直接成功。新 schema 4 的[审批路径](approval.md)可拒绝完成或批准后继续原 Run 的登记动作；旧方案不获得写权限。
+步骤只按服务端注册的有限策略推进，生产 support 支持 `support_fixed_v1` 与 `support_agent_v1`，按不可变 profile 选择。Worker提交当前身份和受保护输出，服务端核验工具/物理调用观察与实际证据来源，并计算下一游标。最终方案进入 `awaiting_approval` 时原子保存方案/版本向量/许可截止，关闭attempt并释放容量；`no_action` 可以直接成功。schema 4/6/7/9的[审批路径](approval.md)可拒绝完成或批准后继续原Run的登记动作；其余方案不获得写权限。
 
 重复中间CommitStep仍须当前有效lease；最终提交丢ACK后使用只读GetAcceptedCommit。自动恢复读取原Run已提交步骤，未提交步骤可能重做；首次授权前的人工retry为空游标。恢复规则、runtime 版本和未提交模型步骤的条件见[恢复指南](recovery.md)，不恢复模型内部推理进度。
 

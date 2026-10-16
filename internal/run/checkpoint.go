@@ -114,7 +114,9 @@ func CanonicalStepResultForStrategy(data []byte, kind, strategy string) (StepRes
 		return StepResult{}, nil, ErrProfileUnavailable
 	}
 	limit := 16384
-	if kind == "read_ticket" || len(ToolSequence(kind)) != 0 {
+	if kind == "read_policy_bundle" {
+		limit = 32768
+	} else if kind == "read_ticket" || len(ToolSequence(kind)) != 0 {
 		limit = 8192
 	}
 	var result StepResult
@@ -285,6 +287,9 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		return decision, ErrStepConflict
 	}
 	decision.Result, decision.CanonicalJSON = result, canonical
+	if err := CheckPolicyBundleStep(profile, snapshot, prior, req.Step.Kind); err != nil {
+		return decision, err
+	}
 	allowed := map[string]bool{"business-evidence:" + snapshot.ID + ":ticket": true}
 	for _, step := range prior {
 		previous, _, err := CanonicalStepResultForStrategy(step.Output, step.Kind, profile.Strategy)
@@ -307,6 +312,9 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		if profile.Strategy == SupportAgentStrategy {
 			decision.NextKind = "model_decision"
 		}
+		if profile.PolicyBundleEnabled() {
+			decision.NextKind = "read_policy_bundle"
+		}
 		return decision, nil
 	}
 	if len(ToolSequence(req.Step.Kind)) != 0 {
@@ -324,16 +332,50 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 				decision.NextKind = "search_policy"
 			}
 		}
+		if profile.PolicyBundleEnabled() && profile.Strategy == SupportFixedStrategy {
+			switch req.Step.Kind {
+			case "read_policy_bundle":
+				decision.NextKind = "get_order"
+			case "get_order":
+				var order struct {
+					Missing bool `json:"missing"`
+				}
+				_ = json.Unmarshal(result.Content, &order)
+				if order.Missing {
+					decision.NextKind = "model_proposal"
+				}
+			case "get_delivery":
+				decision.NextKind = "model_proposal"
+			}
+		}
 		if profile.Strategy == SupportAgentStrategy {
-			if _, err := pendingSupportAgentTool(snapshot, prior, req.Step.Kind); err != nil {
+			if _, err := pendingAgentToolForProfile(profile, snapshot, prior, req.Step.Kind); err != nil {
 				return decision, err
 			}
 			decision.NextKind = "model_decision"
+			if profile.StatusPolicyEnabled() && investigationMarker(prior[len(prior)-1]) {
+				withResult := append(slices.Clone(prior), Step{Kind: req.Step.Kind, Output: canonical})
+				if err := statusPolicySatisfied(snapshot, withResult); err != nil {
+					return decision, err
+				}
+				decision.NextKind = "model_proposal"
+			}
+			if profile.PolicySupplementEnabled() && prior[len(prior)-1].Kind == "model_proposal" {
+				intent, _, err := CanonicalStepResultForStrategy(prior[len(prior)-1].Output, "model_proposal", profile.Strategy)
+				if err != nil {
+					return decision, err
+				}
+				withResult := append(slices.Clone(prior), Step{Kind: req.Step.Kind, Output: canonical})
+				if err := supplementSatisfied(snapshot, withResult, intent.Content); err != nil {
+					return decision, err
+				}
+				decision.NextKind = "model_proposal"
+			}
 		}
 		return decision, nil
 	}
 	if profile.Strategy == SupportAgentStrategy {
-		return decideSupportAgentModel(snapshot, prior, req, decision, allowed)
+		return decideSupportAgentModel(profile, snapshot, prior, req, decision, allowed)
 	}
 	if req.Step.Kind != "model_proposal" && req.Step.Kind != "protocol_correction" && req.Step.Kind != "submit_proposal" {
 		return decision, ErrInvalidArgument
@@ -356,7 +398,7 @@ func DecideCommit(profile Profile, snapshot SnapshotBinding, prior []Step, req C
 		return decision, ErrStepConflict
 	}
 	if result.CorrectionRequired {
-		if req.Step.Kind != "model_proposal" || result.Proposal != nil {
+		if req.Step.Kind != "model_proposal" || result.Proposal != nil || profile.ThinkingStep(req.Step.Kind) {
 			return decision, ErrModelProtocol
 		}
 		decision.NextKind = "protocol_correction"
@@ -442,6 +484,9 @@ func toolEvidence(snapshot SnapshotBinding, kind string, result StepResult) bool
 	}
 	if json.Unmarshal(result.Content, &content) != nil || content.SnapshotID != snapshot.ID {
 		return false
+	}
+	if kind == "read_policy_bundle" {
+		return validatePolicyBundle(snapshot, result) == nil
 	}
 	if kind != "search_policy" {
 		evidenceKind := strings.TrimPrefix(kind, "get_")

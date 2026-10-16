@@ -26,7 +26,7 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 		if !call.confirmed || call.observation == nil || (call.observation.UsageDisposition == "reported" && !call.settled) {
 			return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 		}
-		if call.intent.Subcall == "chat" && !confirmedChat(call) {
+		if call.intent.Subcall == "chat" && !c.confirmedChat(call) {
 			return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 		}
 		if last == nil || call.intent.CallSequence > last.intent.CallSequence {
@@ -41,6 +41,9 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 		return stepOutcome{Failure: "EXECUTOR_PROTOCOL_ERROR"}
 	}
 	if f.Outcome == "error" {
+		if c.profile.ThinkingStep(f.Binding.StepKind) {
+			return stepOutcome{Failure: "MODEL_PROTOCOL_ERROR"}
+		}
 		// Only a complete, acknowledged first-model validation failure creates
 		// the existing one-correction marker. No other local failure is a step.
 		if (f.Binding.StepKind != "model_proposal" && f.Binding.StepKind != "model_decision") || f.ErrorCode != "OUTPUT_INVALID" || last == nil ||
@@ -89,9 +92,9 @@ func (c *coordinator) commit(ctx context.Context) stepOutcome {
 	return stepOutcome{Abandoned: true}
 }
 
-func confirmedChat(call *callRecord) bool {
+func (c *coordinator) confirmedChat(call *callRecord) bool {
 	return call.confirmed && call.settled && call.report != nil && call.report.Usage != nil && call.report.ProviderAudit != nil &&
-		call.report.ProviderAudit.IdentityState == run.ProviderIdentityCompatible && call.report.ProviderAudit.ModeState == run.ProviderModeNonthinking &&
+		call.report.ProviderAudit.IdentityState == run.ProviderIdentityCompatible && c.profile.AllowsProviderAudit(c.execute.Binding.StepKind, call.report.ProviderAudit) &&
 		call.observation != nil && call.observation.UsageDisposition == "reported" && call.observation.UsageHash != nil &&
 		*call.observation.UsageHash == call.report.Usage.UsageHash && call.observation.AuditHash != nil &&
 		*call.observation.AuditHash == call.report.ProviderAudit.AuditHash

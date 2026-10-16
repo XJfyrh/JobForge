@@ -8,6 +8,14 @@
 
 提交使用 Conventional Commits：`type(scope): 简短描述`，scope 按需。type 为 `feat/fix/docs/refactor/test/perf/build/ci/chore/style/revert`，小写英文；描述默认简体中文，PR 内语言一致，尽量不超过 72 字符且末尾无句号。不兼容变更用 `!` 和 `BREAKING CHANGE:` 说明影响。
 
+## 审查与复核
+
+一次主审聚焦本次行为、相关失败路径和契约。发现问题时给出位置、触发条件与影响；修复后的复核只覆盖原问题、修复影响和新增差异。格式、类型和机械一致性由自动检查负责，风格偏好、无关重构与猜测性扩展不阻塞。新增实质问题仍需处理，不以固定复核轮数强行通过。
+
+PR 按可独立验证的能力拆分，避免把页面、观测、恢复和评测工具合成阶段大包。API、迁移及行为说明随代码提交；最终执行日志与审查记录可放 Actions artifact / PR 说明，必须入库的后续验收报告可用独立小 PR。PR 说明引用实际检查链接，不逐次复制全套检查清单。
+
+可靠性与公开契约决策继续使用 ADR。收费 manifest、正式集冻结和阶段放行按对应合同执行，不作为普通改动的多轮审批模板。历史失败不改写，工程验证不替代业务验收。
+
 ## 代码与契约
 
 遵守[编码规范](docs/code-standards.md)与 [AGENTS 不变量](AGENTS.md#事实来源与不变量)。状态转换属于 domain/service，goroutine 有明确所有者与取消/退出路径。数据库新增 migration，不改已应用历史；生成代码通过源生成；日志不记录秘密、Authorization 或完整敏感 payload。
@@ -16,7 +24,7 @@
 
 ## 验证要求
 
-权威命令和 8 项 PR CI 清单见[测试指南](docs/tests.md)。本地执行与本次改动相关的检查；并发修改必须全仓 race，可靠性使用真实 PG，API 变更验证契约/兼容性。所有必需 CI 在最新 head 通过后才能合并。
+统一入口和 CI 路由见[测试指南](docs/tests.md)。本地先执行 `python -m tools.check quick`，需要完整环境时用 `affected` 或 `full`；并发修改必须全仓 race，可靠性使用真实 PG，API 变更验证契约/兼容性。选择器列出的检查必须在最新 head 成功，由 `CI required` 汇总后才能合并；未选择与意外 skip 分开处理。
 
 安装 SDK 并设置跨语言解释器；Windows 先启测试 PG/DSN，Linux 进程套件用固定镜像、`--init` 和专用环境开关。同 DSN 清理测试串行；skip、合成响应、未启动依赖不能冒充验收通过。说明已运行/失败/未运行及原因，不为文档重复云端收费。
 

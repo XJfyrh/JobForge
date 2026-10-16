@@ -172,8 +172,12 @@ func (s *Store) Steps(ctx context.Context, tenant, id string, after int64, limit
 		return page, agentrun.ErrInvalidArgument
 	}
 	err = s.readOnly(ctx, func(tx pgx.Tx) error {
-		if _, _, err := readRun(tx.QueryRow(ctx, "select "+runColumns+" from runs where tenant_id=$1 and run_id=$2", tenant, id)); err != nil {
+		r, _, err := readRun(tx.QueryRow(ctx, "select "+runColumns+" from runs where tenant_id=$1 and run_id=$2", tenant, id))
+		if err != nil {
 			return err
+		}
+		if r.ContentPurgedAt != nil {
+			return agentrun.ErrResultExpired
 		}
 		rows, err := tx.Query(ctx, `select step_id,sequence,kind,input_hash,profile_hash,snapshot_hash,
 			commit_hash,output_ref,output,cursor_version,created_at from run_steps
@@ -247,14 +251,18 @@ func (s *Store) Result(ctx context.Context, tenant, id string) (agentrun.Result,
 	if !validUUID(id) {
 		return result, agentrun.ErrInvalidArgument
 	}
-	err := s.pool.QueryRow(ctx, `select result_kind,result_ref,case
+	var purgedAt *time.Time
+	err := s.pool.QueryRow(ctx, `select content_purged_at,result_kind,result_ref,case
 		when state in ('failed','cancelled','succeeded') then coalesce(terminal_disposition,
 			case when outcome='applied' then 'applied' when outcome='rejected' then 'rejected'
 			when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end)
 		when outcome='applied' then 'applied' when outcome='rejected' then 'rejected' when outcome='no_action' then 'no_action'
 		when next_step_kind='apply_ticket_resolution' then 'approved'
 		when result_kind='proposal' then 'proposal' when result_kind='no_action' then 'no_action' else 'none' end
-		from runs where tenant_id=$1 and run_id=$2`, tenant, id).Scan(&result.Kind, &result.Ref, &result.Disposition)
+		from runs where tenant_id=$1 and run_id=$2`, tenant, id).Scan(&purgedAt, &result.Kind, &result.Ref, &result.Disposition)
+	if err == nil && purgedAt != nil {
+		return agentrun.Result{}, agentrun.ErrResultExpired
+	}
 	result.Available = err == nil && result.Ref != nil
 	return result, dbError(err)
 }

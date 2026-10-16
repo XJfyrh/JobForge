@@ -5,6 +5,8 @@ import "time"
 const (
 	// ProviderAuditPolicyDeepSeekV1 fixes the accepted immutable report policy.
 	ProviderAuditPolicyDeepSeekV1 = "deepseek-audit-v1"
+	// ProviderAuditPolicyDeepSeekV2 permits thinking only for frozen final steps.
+	ProviderAuditPolicyDeepSeekV2 = "deepseek-audit-v2"
 	// ProviderAuditExecutorVersion selects the single audited runtime deployment.
 	ProviderAuditExecutorVersion = "linux-v2-audit-runtime-1"
 	// MaxCallsPerRun is the existing family physical-call limit, not pagination.
@@ -14,18 +16,26 @@ const (
 )
 
 // AuditEnabled selects semantics from the immutable profile, never request data.
-func (p Profile) AuditEnabled() bool { return p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV1 }
+func (p Profile) AuditEnabled() bool {
+	return p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV1 || p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV2
+}
 
 // ValidateAuditPolicy rejects mismatched policy/runtime deployments. The profile
 // registrar must include these fields in its immutable content and profile hash.
 func (p Profile) ValidateAuditPolicy() error {
-	if p.ProviderAuditPolicy == "" {
-		if p.ExpectedResponseModel != "" || (p.ExecutorVersion == ProviderAuditExecutorVersion || p.ExecutorVersion == SupportAgentExecutorVersion || p.ExecutorVersion == SupportRecoveryExecutorVersion || p.ExecutorVersion == SupportApprovalExecutorVersion) {
+	if p.ExecutorVersion == SupportAdjudicationExecutorVersion || p.ExecutorVersion == SupportAdjudicationV2ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV3ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV4ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV5ExecutorVersion || p.ExecutorVersion == SupportFixedBundleExecutorVersion || p.ExecutorVersion == SupportFixedAdjudicationExecutorVersion || p.ProviderAuditPolicy == ProviderAuditPolicyDeepSeekV2 {
+		if !p.FinalAdjudicationEnabled() {
 			return ErrProfileUnavailable
 		}
 		return nil
 	}
-	if !p.AuditEnabled() || (p.ExecutorVersion != ProviderAuditExecutorVersion && p.ExecutorVersion != SupportAgentExecutorVersion && p.ExecutorVersion != SupportRecoveryExecutorVersion && p.ExecutorVersion != SupportApprovalExecutorVersion) || !ValidIdentifier(p.ExpectedResponseModel) {
+	if p.ProviderAuditPolicy == "" {
+		if p.ExpectedResponseModel != "" || (p.ExecutorVersion == ProviderAuditExecutorVersion || p.ExecutorVersion == SupportFixedComparisonExecutorVersion || p.ExecutorVersion == SupportAgentExecutorVersion || p.ExecutorVersion == SupportRecoveryExecutorVersion || p.ExecutorVersion == SupportApprovalExecutorVersion) {
+			return ErrProfileUnavailable
+		}
+		return nil
+	}
+	if !p.AuditEnabled() || (p.ExecutorVersion != ProviderAuditExecutorVersion && p.ExecutorVersion != SupportFixedComparisonExecutorVersion && p.ExecutorVersion != SupportAgentExecutorVersion && p.ExecutorVersion != SupportRecoveryExecutorVersion && p.ExecutorVersion != SupportApprovalExecutorVersion) || !ValidIdentifier(p.ExpectedResponseModel) {
 		return ErrProfileUnavailable
 	}
 	return nil

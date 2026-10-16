@@ -164,6 +164,17 @@ class SupportFixedAdapter:
         self, checkpoint: RuntimeCheckpoint, *, correction: bool
     ) -> Sequence[Mapping[str, object]]:
         """Send complete accepted facts separately from immutable system instructions."""
+        return self._proposal_messages(checkpoint, correction=correction, wide=False)
+
+    def comparison_messages(
+        self, checkpoint: RuntimeCheckpoint, *, correction: bool
+    ) -> Sequence[Mapping[str, object]]:
+        """Use the S5 frozen common input cap with the same fixed strategy."""
+        return self._proposal_messages(checkpoint, correction=correction, wide=True)
+
+    def _proposal_messages(
+        self, checkpoint: RuntimeCheckpoint, *, correction: bool, wide: bool
+    ) -> Sequence[Mapping[str, object]]:
         sources = _accepted_reads(checkpoint, model=True, correction=correction)
         facts = {
             "T": checkpoint["snapshot"]["ticket_binding_json"],
@@ -185,17 +196,21 @@ class SupportFixedAdapter:
                 "content": SYSTEM_INSTRUCTIONS
                 + (CORRECTION_INSTRUCTIONS if correction else ""),
             },
-            {"role": "user", "content": bounded_json(facts)},
+            {
+                "role": "user",
+                "content": bounded_json(facts, limit=65536 if wide else 16384),
+            },
         ]
-        if (
-            sum(len(message["content"].encode("utf-8")) for message in messages)
-            > MAX_MESSAGE_BYTES
+        if sum(len(message["content"].encode("utf-8")) for message in messages) > (
+            65536 if wide else MAX_MESSAGE_BYTES
         ):
             raise DispatchError("OUTPUT_INVALID", fact="size_limit", stop=True)
         # Reuse the provider's exact serialized-envelope guard, including escape
         # overhead and the fixed 1024-token output setting. Input-token exposure
         # uses the registered full-context hold, never a bytes-to-tokens estimate.
-        prepare_chat_request(messages, context=RunCallContext("0" * 64, "0" * 64, ""))
+        prepare_chat_request(
+            messages, context=RunCallContext("0" * 64, "0" * 64, "", wide_context=wide)
+        )
         return messages
 
     def validate_proposal(

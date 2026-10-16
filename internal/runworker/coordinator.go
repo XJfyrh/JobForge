@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/runclock"
@@ -17,6 +21,7 @@ import (
 )
 
 type callRecord struct {
+	span                trace.Span
 	intent              v2.Frame
 	id                  string
 	reservation         *agentv1.CallReservation
@@ -81,6 +86,9 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Abandoned: true}
 	}
 	s := checkpoint.NextStep
+	ctx, stepSpan := otel.Tracer("jobforge/runworker").Start(ctx, "run.step")
+	defer stepSpan.End()
+	stepSpan.SetAttributes(attribute.String("jobforge.step_kind", s.Kind.String()), attribute.String("jobforge.step_id", s.StepId))
 	profile, ok := w.profiles[s.ProfileId]
 	selected, err := w.manifest.profile(s.ProfileId, s.ProfileHash)
 	if !ok || err != nil || profile.Hash != s.ProfileHash {
@@ -91,7 +99,7 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 		return stepOutcome{Failure: "PROFILE_UNAVAILABLE"}
 	}
 	toolID := ""
-	if s.Kind == agentv1.StepKind_STEP_KIND_GET_ORDER || s.Kind == agentv1.StepKind_STEP_KIND_GET_DELIVERY || s.Kind == agentv1.StepKind_STEP_KIND_SEARCH_POLICY {
+	if s.Kind == agentv1.StepKind_STEP_KIND_GET_ORDER || s.Kind == agentv1.StepKind_STEP_KIND_GET_DELIVERY || s.Kind == agentv1.StepKind_STEP_KIND_SEARCH_POLICY || s.Kind == agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE {
 		toolID = uuid.NewString()
 		bounded, cancel := context.WithTimeout(ctx, controlTimeout)
 		response, beginErr := w.client.BeginTool(bounded, &agentv1.BeginToolRequest{Execution: lease.Execution, Step: s, ToolInvocationId: toolID})
@@ -121,12 +129,24 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 	}
 	stepCtx, cancel := context.WithTimeout(ctx, time.Duration(frame.RemainingMS)*time.Millisecond)
 	defer cancel()
+	stepCtx, pythonSpan := otel.Tracer("jobforge/runworker").Start(stepCtx, "run.python.execute")
+	defer pythonSpan.End()
+	pythonSpan.SetAttributes(attribute.String("jobforge.observation.source", "go_guardian"),
+		attribute.String("jobforge.adapter_id", selected.AdapterID))
+	carrier := propagation.MapCarrier{}
+	propagation.TraceContext{}.Inject(stepCtx, carrier)
+	frame.TraceContext = carrier["traceparent"]
 	process, err := runexecutor.Start(stepCtx, runexecutor.Spec{Environment: stepEnvironment(environment, s.Kind)})
 	if err != nil {
 		return stepOutcome{Failure: "DEPENDENCY_UNAVAILABLE"}
 	}
 	c := &coordinator{worker: w, lease: lease, checkpoint: checkpoint, authority: authority, process: process, execute: frame,
 		priceHash: profile.Pricing.Hash, profile: profile, calls: make(map[string]*callRecord), completed: make(chan completion, 4)}
+	defer func() {
+		for _, call := range c.calls {
+			endCallTrace(call)
+		}
+	}()
 	if c.conversation.Accept(frame, now) != nil {
 		c.stop("EXECUTOR_PROTOCOL_ERROR")
 	} else {
@@ -134,6 +154,7 @@ func (w *Worker) coordinateStep(ctx context.Context, lease *agentv1.RunLease, ch
 	}
 	c.loop(stepCtx)
 	receipt := process.Wait()
+	pythonSpan.End()
 	return c.finish(ctx, receipt)
 }
 
@@ -154,7 +175,7 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 		// Missing chat confirmation stops this Worker; a fresh Worker must pass
 		// the persisted batch guard after natural lease expiry and closure.
 		for _, call := range c.calls {
-			if call.intent.Subcall == "chat" && !confirmedChat(call) {
+			if call.intent.Subcall == "chat" && !c.confirmedChat(call) {
 				return stepOutcome{Fatal: ErrBatchStopped}
 			}
 		}
@@ -169,8 +190,8 @@ func (c *coordinator) finish(ctx context.Context, receipt runexecutor.Receipt) s
 			// Only the fully confirmed second business-validation failure may
 			// finish this case without stopping the batch. Durable storage checks
 			// its exact attempt/step terminal facts before any later permission.
-			secondRejected := (c.execute.Binding.StepKind == "protocol_correction" || c.profile.Strategy == run.SupportAgentStrategy && c.execute.Binding.StepKind == "model_decision") && code == "MODEL_PROTOCOL_ERROR" &&
-				confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
+			secondRejected := (c.execute.Binding.StepKind == "protocol_correction" || c.profile.Strategy == run.SupportAgentStrategy && c.execute.Binding.StepKind == "model_decision" || c.profile.ThinkingStep(c.execute.Binding.StepKind)) && code == "MODEL_PROTOCOL_ERROR" &&
+				c.confirmedChat(call) && call.observation.BusinessOutcome == "rejected" &&
 				call.observation.ErrorCode == "OUTPUT_INVALID" && !c.stopped && c.failure == ""
 			if !secondRejected {
 				c.fatal = true
@@ -257,7 +278,7 @@ func (c *coordinator) failStoppedBatch(ctx context.Context, reason string) {
 
 func stepEnvironment(all runexecutor.Environment, kind agentv1.StepKind) runexecutor.Environment {
 	switch kind {
-	case agentv1.StepKind_STEP_KIND_GET_ORDER, agentv1.StepKind_STEP_KIND_GET_DELIVERY:
+	case agentv1.StepKind_STEP_KIND_GET_ORDER, agentv1.StepKind_STEP_KIND_GET_DELIVERY, agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey}
 	case agentv1.StepKind_STEP_KIND_SEARCH_POLICY:
 		return runexecutor.Environment{BusinessOrigin: all.BusinessOrigin, BusinessReadKey: all.BusinessReadKey, OllamaOrigin: all.OllamaOrigin}
@@ -362,6 +383,7 @@ func (c *coordinator) event(ctx context.Context, event runexecutor.Event) {
 			return
 		}
 		call.observation = &f
+		endCallTrace(call)
 		if c.conversation.Closed() {
 			c.stop("")
 			return

@@ -1,0 +1,5 @@
+{
+  "kind": "description-gap-ablation",
+  "case_ids": ["DEV-016", "DEV-017", "DEV-020"],
+  "repetitions": 3
+}

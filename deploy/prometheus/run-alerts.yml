@@ -1,0 +1,48 @@
+groups:
+  - name: jobforge-run
+    rules:
+      - alert: JobForgeRunSnapshotUnavailable
+        expr: jobforge_run_snapshot_success == 0 or up{job="jobforge-run-control"} == 0
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: Run state snapshot unavailable
+      - alert: JobForgeRunWithoutWorkers
+        expr: sum(jobforge_run_current{state="ready"}) > 0 and sum(jobforge_run_workers_live) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Ready Runs have no live Worker
+      - alert: JobForgeRunApprovalWaiting
+        expr: jobforge_run_oldest_wait_seconds{state="awaiting_approval"} > 300
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: Proposal awaiting approval for over five minutes
+      - alert: JobForgeRunBudgetFrozen
+        expr: jobforge_run_budget_frozen > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Budget frozen; inspect unknown exposure before any continuation
+      - alert: JobForgeRunBudgetNearLimit
+        expr: jobforge_run_budget_max_ratio >= 0.9
+        labels:
+          severity: warning
+        annotations:
+          summary: One account has at least 90 percent known plus held exposure
+      - alert: JobForgeRunRecovered
+        expr: increase(jobforge_run_recoveries[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Runs recovered after lease loss
+      - alert: JobForgeRunUnknownAction
+        expr: sum(jobforge_run_action_calls{kind="action_write",status="unknown"}) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Action write outcome is unknown; query the original receipt

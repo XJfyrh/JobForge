@@ -8,8 +8,17 @@ on:
       - 'internal/worker/**'
       - 'tests/integration/real_*'
       - 'tests/integration/trace_backend_test.go'
-      - 'examples/**'
+      - 'examples/agent_rag.py'
+      - 'examples/observability_acceptance.py'
+      - 'go.mod'
+      - 'go.sum'
+      - 'sdk/python/jobforge/**'
+      - 'tools/requirements-lint.txt'
       - '.github/workflows/real-models.yml'
+
+concurrency:
+  group: real-models-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -49,6 +58,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/requirements-lint.txt
       - name: Install pinned tools and SDK
         run: |
           python -m pip install -r tools/requirements-lint.txt

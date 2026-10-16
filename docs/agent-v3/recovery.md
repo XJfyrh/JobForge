@@ -28,6 +28,10 @@ Windows PG/SDK 前置、固定 Linux `--init`、专用环境开关和同 DSN 串
 
 ## 查询与实验工具
 
+S5 使用 `tools.support_recovery.plan --s5`：schema7/prompt-v2生成历史plan2，schema9/prompt-v3生成plan3，schema18/prompt-v9生成plan4。原十一项故障/对照意图和每批费用≤¥4保持不变；plan4累计核对S5全部历史批次的known、held、unknown及冻结状态，累计授权为¥28，每次提交前保留下一次完整模型预留。plan3/4不另设阶段chat预算，family协议限制保留。到方案保存后待审批或no_action结束，不批准业务写入；S3的plan1与历史报告保持原语义。版本边界见[ADR-0028](../adr/0028-versioned-support-evidence-navigation.md)和[ADR-0030](../adr/0030-s5-policy-condition-candidate.md)。
+
+plan4只调整外部验收工具的故障定位：原首次检索边界改为完整政策包提交后，原第二次检索决策边界改为实际`investigation_complete`提交后；首次读取及两项未提交chat故障保持原意图。生产Worker、恢复协议、模型候选和权限不变。实际政策包缺段、来源或身份异常、unknown与预留不足立即停发；单次可审计模型格式失败保留并继续，预定义重复格式故障自动停止。所有失败及原十一项分母保留，不自动重试或补样。最终thinking调用按审计schema2核验，调查调用仍按schema1核验。
+
 使用 `RunClient.get/steps/events/calls/result` 读取状态、已提交前缀、attempt 与原调用/费用；恢复不创建人工 retry 后继。终态方案导出与后续审批等待到期状态分别保存，不改写评分时点结果。
 
 [有限实验工具记录](../archive/s3-experiment-tools.md)说明固定代理、Supervisor、单 Submit、分离计时与受控续执行；它只适用于已完成的十一项历史实验。新实验需重新冻结来源、预算和实际授权，不重启原 attempted 批次。

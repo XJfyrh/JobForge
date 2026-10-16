@@ -15,8 +15,9 @@ import (
 var stepNames = map[agentv1.StepKind]string{
 	agentv1.StepKind_STEP_KIND_READ_TICKET: "read_ticket", agentv1.StepKind_STEP_KIND_GET_ORDER: "get_order",
 	agentv1.StepKind_STEP_KIND_GET_DELIVERY: "get_delivery", agentv1.StepKind_STEP_KIND_SEARCH_POLICY: "search_policy",
-	agentv1.StepKind_STEP_KIND_MODEL_DECISION: "model_decision",
-	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL: "model_proposal", agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
+	agentv1.StepKind_STEP_KIND_MODEL_DECISION:     "model_decision",
+	agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE: "read_policy_bundle",
+	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL:     "model_proposal", agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
 	agentv1.StepKind_STEP_KIND_SUBMIT_PROPOSAL:         "submit_proposal",
 	agentv1.StepKind_STEP_KIND_APPLY_TICKET_RESOLUTION: "apply_ticket_resolution",
 }
@@ -25,7 +26,8 @@ var subcallNames = map[agentv1.Subcall]run.Subcall{
 	agentv1.Subcall_SUBCALL_GET_ORDER: run.SubcallGetOrder, agentv1.Subcall_SUBCALL_GET_DELIVERY: run.SubcallGetDelivery,
 	agentv1.Subcall_SUBCALL_PROFILE_VERSION: run.SubcallProfileVersion, agentv1.Subcall_SUBCALL_PROFILE_TAGS: run.SubcallProfileTags,
 	agentv1.Subcall_SUBCALL_QUERY_EMBEDDING: run.SubcallQueryEmbedding, agentv1.Subcall_SUBCALL_SEARCH_POLICY: run.SubcallSearchPolicy,
-	agentv1.Subcall_SUBCALL_CHAT: run.SubcallChat,
+	agentv1.Subcall_SUBCALL_CHAT:               run.SubcallChat,
+	agentv1.Subcall_SUBCALL_READ_POLICY_BUNDLE: run.SubcallReadPolicyBundle,
 }
 
 func (h *service) session(principal string, value *agentv1.SessionIdentity) (string, error) {

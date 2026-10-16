@@ -134,6 +134,7 @@ func (s *Service) Retry(ctx context.Context, tenant, sourceID, key string, reque
 }
 
 func (s *Service) create(ctx context.Context, input Admission) (SubmitResponse, error) {
+	input.TraceContext = admissionTraceContext(ctx)
 	release, err := s.admissionSlot(input.TenantID)
 	if err != nil {
 		return SubmitResponse{}, err

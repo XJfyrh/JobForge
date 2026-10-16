@@ -19,7 +19,7 @@
     "Reports can arrive before or after the ordinary observation, including after stop or execution expiry. Each pipe/direction orders its own emitted stamps; never compare metering emitted stamps with ordinary arrival order.",
     "Token overrun, anomaly/unconfirmed ACK, missing/mismatched report or settlement prevent further execution. Overrun reports remain available for ledger settlement; no ACK can reopen a stopped or expired conversation.",
     "Caller must drain/join the metering reader and wait/verify process exit before Commit; successful step_result alone is not commit authority.",
-    "Free subcalls have call_ms <=10000, zero token limits and no metering. Chat/query embedding <=60000; ordinary output bound remains 1024. Tool result <=8192, other result/input <=16384, checkpoint <=262144 bytes.",
+    "Free subcalls have call_ms <=10000, zero token limits and no metering. Chat/query embedding <=60000 and ordinary output bound 1024. Only a frozen adjudication profile's model_proposal may receive call_ms <=120000 and output bound 16384. Tool result <=8192, other result/input <=16384, checkpoint <=262144 bytes.",
     "Permit emission must follow intent emission; observation/report emission must follow consumed dispatch. Ordinary ACK emission must not precede its observation or the first settled metering ACK. The next intent/result emission must not precede either confirmation. ACK receipt and pending confirmation join check the original call and step deadlines. After joining, receipt of the next intent/result must still be before that call deadline and the step deadline. Once the next intent is accepted, its new permit is bounded by its own call deadline and the original step deadline. No confirmation resets a deadline.",
     "Ordinary call_observation_ack contains exactly the five common fields plus call_sequence, physical_call_id and observation_hash. Match the complete original binding, request, call, sequence and observation hash; matching payload hash alone is insufficient. No negative ACK, result, permit, input or deadline increment is allowed.",
     "Go sends an ordinary ACK only after ObserveCall explicitly succeeds with original call/parameter/tool identity and execution authority remains current. For reported usage, confirm matching SettleUsage first and pass original usage to ObserveCall; unknown passes false/nil. Neither pipe write nor metering ACK is ObserveCall confirmation.",
@@ -131,6 +131,7 @@
             "get_order",
             "get_delivery",
             "search_policy",
+            "read_policy_bundle",
             "model_proposal",
         "model_decision",
             "protocol_correction",
@@ -273,6 +274,7 @@
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat"
           ]
         },
@@ -361,6 +363,7 @@
             "profile_tags",
             "query_embedding",
             "search_policy",
+            "read_policy_bundle",
             "chat"
           ]
         },
@@ -413,7 +416,7 @@
         "call_ms": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 60000
+          "maximum": 120000
         },
         "input_token_limit": {
           "type": "integer",
@@ -423,7 +426,7 @@
         "output_token_limit": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 1024
+          "maximum": 16384
         },
         "emitted_mono_ms": {
           "type": "integer",
@@ -509,7 +512,8 @@
                   "get_delivery",
                   "profile_version",
                   "profile_tags",
-                  "search_policy"
+                  "search_policy",
+                  "read_policy_bundle"
                 ]
               }
             }
@@ -1021,7 +1025,7 @@
       ],
       "properties": {
         "schema_version": {
-          "const": 1
+          "enum": [1, 2]
         },
         "provider": {
           "const": "deepseek"
@@ -1129,6 +1133,7 @@
         "mode_state": {
           "enum": [
             "nonthinking",
+            "thinking",
             "unexpected",
             "invalid",
             "unavailable"

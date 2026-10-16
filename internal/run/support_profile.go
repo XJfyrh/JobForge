@@ -22,6 +22,21 @@ const (
 	SupportPolicyVersion = "delivery-policy-dev-v2"
 	// SupportObservedAt fixes the business observation instant.
 	SupportObservedAt = "2026-09-16T12:00:00Z"
+	// SupportS5DatasetID binds the separately frozen S5 scenario package.
+	SupportS5DatasetID = "support-s5-2026-10-07-v1"
+	// SupportS5V2DatasetID identifies the independently reviewed second cohort.
+	SupportS5V2DatasetID = "support-s5-2026-10-07-v2"
+	// SupportAgentPromptV2 selects source-only evidence navigation in schema 7.
+	SupportAgentPromptV2 = "support-agent-prompt-v2"
+	// SupportS5V3DatasetID identifies the cohort created after both seen sets.
+	SupportS5V3DatasetID = "support-s5-2026-10-08-v3"
+	// SupportS5V4DatasetID is admitted only by the current Agent18/Fixed17 pair.
+	SupportS5V4DatasetID = "support-s5-2026-10-15-v4"
+	// SupportAgentPromptV3 selects policy-condition review in schema 9.
+	SupportAgentPromptV3 = "support-agent-prompt-v3"
+	// SupportFixedComparisonExecutorVersion grants the same bounded chat input
+	// envelope as Agent, using the existing registered fixed adapter.
+	SupportFixedComparisonExecutorVersion = "linux-v2-fixed-comparison-runtime-1"
 	// SupportPromptVersion identifies the reviewed fixed prompt source contract.
 	SupportPromptVersion = "support-fixed-prompt-v1"
 )
@@ -31,6 +46,7 @@ const (
 type SupportDefinition struct {
 	SchemaVersion int                       `json:"schema_version"`
 	Model         SupportModelDefinition    `json:"model"`
+	FinalModel    *SupportModelDefinition   `json:"final_model,omitempty"`
 	Program       SupportProgramDefinition  `json:"program"`
 	Resources     SupportResourceDefinition `json:"resources"`
 	Price         SupportPriceDefinition    `json:"price"`
@@ -47,6 +63,7 @@ type SupportModelDefinition struct {
 	ObservedOn          string `json:"observed_on"`
 	Stream              bool   `json:"stream"`
 	Thinking            string `json:"thinking"`
+	ReasoningEffort     string `json:"reasoning_effort,omitempty"`
 	MaxTokens           int64  `json:"max_tokens"`
 	ResponseFormat      string `json:"response_format"`
 	Temperature         int64  `json:"temperature"`
@@ -159,10 +176,10 @@ func supportDigest(value string) bool {
 
 func (d SupportDefinition) validate() error {
 	m, p, r, price := d.Model, d.Program, d.Resources, d.Price
-	if d.SchemaVersion != 4 && (d.Action != nil || p.ApprovalPolicy != "") {
+	if d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9 && d.SchemaVersion != 11 && d.SchemaVersion != 13 && d.SchemaVersion != 14 && d.SchemaVersion != 15 && d.SchemaVersion != 16 && d.SchemaVersion != 18 && (d.Action != nil || p.ApprovalPolicy != "") {
 		return ErrProfileUnavailable
 	}
-	if d.SchemaVersion == 4 {
+	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9 || d.SchemaVersion == 11 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 18 {
 		if d.Action == nil || p.ApprovalPolicy != TicketResolutionApprovalPolicy ||
 			d.Action.Operation != business.ResolutionOperation || !ValidIdentifier(d.Action.KeyID) || !supportDigest(d.Action.PublicKeySHA256) {
 			return ErrProfileUnavailable
@@ -184,16 +201,57 @@ func (d SupportDefinition) validate() error {
 			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != "2026-09-16" {
 			return ErrProfileUnavailable
 		}
-	case 2, 3, 4:
-		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion >= 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
-			return ErrProfileUnavailable
+	case 5, 8, 10, 12, 17:
+		promptVersion := SupportPromptVersion
+		if d.SchemaVersion == 17 {
+			promptVersion = SupportFixedPromptV2
 		}
-		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != SupportAgentPromptVersion ||
-			p.DecisionSchema != SupportAgentDecisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
+		if p.Strategy != SupportFixedStrategy || p.Adapter != "support-fixed-v1" || p.PromptVersion != promptVersion ||
+			p.DecisionSchema != "" || p.DecisionSchemaSHA256 != "" || p.RecoveryPolicy != "" || price.ObservedOn != m.ObservedOn {
 			return ErrProfileUnavailable
 		}
 		date, err := time.Parse("2006-01-02", m.ObservedOn)
-		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-09-17" {
+		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-10-07" {
+			return ErrProfileUnavailable
+		}
+		expected.ObservedOn = m.ObservedOn
+		expected.MessageContentBytes, expected.RequestBodyBytes = 65536, 131072
+	case 2, 3, 4, 6, 7, 9, 11, 13, 14, 15, 16, 18:
+		if d.SchemaVersion == 2 && p.RecoveryPolicy != "" || d.SchemaVersion >= 3 && p.RecoveryPolicy != ConfirmedUncommittedRecovery {
+			return ErrProfileUnavailable
+		}
+		promptVersion := SupportAgentPromptVersion
+		if d.SchemaVersion == 7 {
+			promptVersion = SupportAgentPromptV2
+		}
+		if d.SchemaVersion == 9 {
+			promptVersion = SupportAgentPromptV3
+		}
+		if d.SchemaVersion == 11 {
+			promptVersion = SupportAgentPromptV4
+		}
+		if d.SchemaVersion == 13 {
+			promptVersion = SupportAgentPromptV5
+		}
+		decisionSchema := SupportAgentDecisionSchema
+		if d.SchemaVersion == 14 {
+			promptVersion, decisionSchema = SupportAgentPromptV6, SupportSupplementDecisionSchema
+		}
+		if d.SchemaVersion == 15 {
+			promptVersion, decisionSchema = SupportAgentPromptV7, SupportSupplementDecisionSchema
+		}
+		if d.SchemaVersion == 16 {
+			promptVersion = SupportAgentPromptV8
+		}
+		if d.SchemaVersion == 18 {
+			promptVersion = SupportAgentPromptV9
+		}
+		if p.Strategy != SupportAgentStrategy || p.Adapter != "support-agent-v1" || p.PromptVersion != promptVersion ||
+			p.DecisionSchema != decisionSchema || !supportDigest(p.DecisionSchemaSHA256) || price.ObservedOn != m.ObservedOn {
+			return ErrProfileUnavailable
+		}
+		date, err := time.Parse("2006-01-02", m.ObservedOn)
+		if err != nil || date.Format("2006-01-02") != m.ObservedOn || m.ObservedOn < "2026-09-17" || (d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9) && m.ObservedOn < "2026-10-07" {
 			return ErrProfileUnavailable
 		}
 		expected.ObservedOn = m.ObservedOn
@@ -201,7 +259,27 @@ func (d SupportDefinition) validate() error {
 	default:
 		return ErrProfileUnavailable
 	}
-	if m != expected || p.ProposalSchema != SupportProposalSchema || r.DatasetID != SupportDatasetID ||
+	if d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 17 || d.SchemaVersion == 18 {
+		final := expected
+		final.Thinking, final.ReasoningEffort = "enabled", "high"
+		final.MaxTokens, final.ResponseBodyBytes = FinalAdjudicationMaxTokens, 1048576
+		if d.FinalModel == nil || *d.FinalModel != final || m.ObservedOn < "2026-10-11" {
+			return ErrProfileUnavailable
+		}
+	} else if d.FinalModel != nil {
+		return ErrProfileUnavailable
+	}
+	validDataset := r.DatasetID == SupportDatasetID || (d.SchemaVersion == 5 || d.SchemaVersion == 6) && r.DatasetID == SupportS5DatasetID
+	if d.SchemaVersion == 7 || d.SchemaVersion == 8 {
+		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID
+	}
+	if d.SchemaVersion == 9 || d.SchemaVersion == 10 || d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 17 || d.SchemaVersion == 18 {
+		validDataset = r.DatasetID == SupportDatasetID || r.DatasetID == SupportS5DatasetID || r.DatasetID == SupportS5V2DatasetID || r.DatasetID == SupportS5V3DatasetID
+	}
+	if d.SchemaVersion == 17 || d.SchemaVersion == 18 {
+		validDataset = validDataset || r.DatasetID == SupportS5V4DatasetID
+	}
+	if m != expected || p.ProposalSchema != SupportProposalSchema || !validDataset ||
 		r.PolicyVersion != SupportPolicyVersion || r.ObservedAt != SupportObservedAt ||
 		price.Currency != "CNY" || price.Denominator != 1000000 || price.InputMissMicroyuan != 2000000 ||
 		price.InputHitMicroyuan != 40000 || price.OutputMicroyuan != 8000000 {
@@ -265,8 +343,34 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 	if definition.SchemaVersion == 3 {
 		p.ExecutorVersion = SupportRecoveryExecutorVersion
 	}
-	if definition.SchemaVersion == 4 {
+	if definition.SchemaVersion == 4 || definition.SchemaVersion == 6 || definition.SchemaVersion == 7 || definition.SchemaVersion == 9 {
 		p.ExecutorVersion = SupportApprovalExecutorVersion
+	}
+	if definition.SchemaVersion == 5 || definition.SchemaVersion == 8 || definition.SchemaVersion == 10 {
+		p.ExecutorVersion = SupportFixedComparisonExecutorVersion
+	}
+	if definition.SchemaVersion == 11 || definition.SchemaVersion == 12 || definition.SchemaVersion == 13 || definition.SchemaVersion == 14 || definition.SchemaVersion == 15 || definition.SchemaVersion == 16 || definition.SchemaVersion == 17 || definition.SchemaVersion == 18 {
+		p.ExecutorVersion = SupportAdjudicationExecutorVersion
+		if definition.SchemaVersion == 12 {
+			p.ExecutorVersion = SupportFixedAdjudicationExecutorVersion
+		}
+		if definition.SchemaVersion == 13 {
+			p.ExecutorVersion = SupportAdjudicationV2ExecutorVersion
+		}
+		p.ProviderAuditPolicy = ProviderAuditPolicyDeepSeekV2
+		p.MaxOutputTokens, p.FamilyTokenLimit = FinalAdjudicationMaxTokens, 12610560
+		if definition.SchemaVersion == 14 {
+			p.ExecutorVersion, p.FamilyTokenLimit = SupportAdjudicationV3ExecutorVersion, 12625920
+		}
+		if definition.SchemaVersion == 15 {
+			p.ExecutorVersion, p.FamilyTokenLimit = SupportAdjudicationV4ExecutorVersion, 12625920
+		}
+		if definition.SchemaVersion == 16 || definition.SchemaVersion == 18 {
+			p.ExecutorVersion = SupportAdjudicationV5ExecutorVersion
+		}
+		if definition.SchemaVersion == 17 {
+			p.ExecutorVersion = SupportFixedBundleExecutorVersion
+		}
 	}
 	p.Hash, err = SupportProfileHash(p)
 	return p, err
@@ -282,13 +386,39 @@ func SupportProfileHash(p Profile) (string, error) {
 	if d.SchemaVersion == 3 {
 		expectedExecutor = SupportRecoveryExecutorVersion
 	}
-	if d.SchemaVersion == 4 {
+	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9 {
 		expectedExecutor = SupportApprovalExecutorVersion
 	}
+	if d.SchemaVersion == 5 || d.SchemaVersion == 8 || d.SchemaVersion == 10 {
+		expectedExecutor = SupportFixedComparisonExecutorVersion
+	}
+	policy, output, family := ProviderAuditPolicyDeepSeekV1, int64(1024), int64(12595200)
+	if d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 17 || d.SchemaVersion == 18 {
+		expectedExecutor = SupportAdjudicationExecutorVersion
+		if d.SchemaVersion == 12 {
+			expectedExecutor = SupportFixedAdjudicationExecutorVersion
+		}
+		if d.SchemaVersion == 13 {
+			expectedExecutor = SupportAdjudicationV2ExecutorVersion
+		}
+		policy, output, family = ProviderAuditPolicyDeepSeekV2, FinalAdjudicationMaxTokens, 12610560
+		if d.SchemaVersion == 14 {
+			expectedExecutor, family = SupportAdjudicationV3ExecutorVersion, 12625920
+		}
+		if d.SchemaVersion == 15 {
+			expectedExecutor, family = SupportAdjudicationV4ExecutorVersion, 12625920
+		}
+		if d.SchemaVersion == 16 || d.SchemaVersion == 18 {
+			expectedExecutor = SupportAdjudicationV5ExecutorVersion
+		}
+		if d.SchemaVersion == 17 {
+			expectedExecutor = SupportFixedBundleExecutorVersion
+		}
+	}
 	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||
-		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != ProviderAuditPolicyDeepSeekV1 ||
-		p.ExpectedResponseModel != "deepseek-flash" || p.MaxInputTokens != 1048576 || p.MaxOutputTokens != 1024 ||
-		p.FamilyTokenLimit != 12595200 || p.FamilyCostMicroyuan != 5000000 {
+		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != policy ||
+		p.ExpectedResponseModel != "deepseek-flash" || p.MaxInputTokens != 1048576 || p.MaxOutputTokens != output ||
+		p.FamilyTokenLimit != family || p.FamilyCostMicroyuan != 5000000 {
 		return "", ErrProfileUnavailable
 	}
 	priceHash, _ := SupportPriceHash(d)

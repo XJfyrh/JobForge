@@ -66,7 +66,7 @@ func readFault(path string) (fault, error) {
 	if !run.ValidIdentifier(f.Experiment) || !run.ValidUUID(f.RunID) ||
 		!run.ValidIdentifier(f.TenantID) || !run.ValidHash(f.ProfileHash) ||
 		(f.Boundary != "first_search_commit" && f.Boundary != "first_read_commit" && f.Boundary != "second_search_decision" &&
-			f.Boundary != "first_chat_observation") {
+			f.Boundary != "first_chat_observation" && f.Boundary != "first_bundle_commit" && f.Boundary != "investigation_complete_commit") {
 		return f, errors.New("FAULT_INVALID")
 	}
 	return f, nil
@@ -136,6 +136,19 @@ func (p *proxy) selectBoundary(f fault, request, response any) (string, *agentv1
 			if step.Kind == agentv1.StepKind_STEP_KIND_SEARCH_POLICY {
 				p.armed[f.Experiment] = accepted.NextStep
 				p.armedOwner[f.Experiment] = execution
+			}
+		case "first_bundle_commit":
+			if step.Kind == agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE {
+				p.armed[f.Experiment] = accepted.NextStep
+				p.armedOwner[f.Experiment] = execution
+			}
+		case "investigation_complete_commit":
+			var result struct {
+				Content run.SupportToolDecision `json:"content"`
+			}
+			if step.Kind == agentv1.StepKind_STEP_KIND_MODEL_DECISION && json.Unmarshal(req.ResultJson, &result) == nil &&
+				result.Content.Type == "investigation_complete" {
+				phase = "commit_ack_lost"
 			}
 		case "second_search_decision":
 			var result struct {

@@ -76,6 +76,7 @@ var stepNames = map[agentv1.StepKind]string{
 	agentv1.StepKind_STEP_KIND_GET_ORDER:           "get_order",
 	agentv1.StepKind_STEP_KIND_GET_DELIVERY:        "get_delivery",
 	agentv1.StepKind_STEP_KIND_SEARCH_POLICY:       "search_policy",
+	agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE:  "read_policy_bundle",
 	agentv1.StepKind_STEP_KIND_MODEL_DECISION:      "model_decision",
 	agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL:      "model_proposal",
 	agentv1.StepKind_STEP_KIND_PROTOCOL_CORRECTION: "protocol_correction",
@@ -206,12 +207,20 @@ func validStep(s identity) bool {
 }
 
 func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
+	policy := run.ProviderAuditPolicyDeepSeekV1
+	if i.ExecutorVersion == run.SupportAdjudicationExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV2ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV3ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV4ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion || i.ExecutorVersion == run.SupportFixedBundleExecutorVersion || i.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion {
+		policy = run.ProviderAuditPolicyDeepSeekV2
+	}
 	if i.SchemaVersion != 1 || !ExecutorMatchesAdapter(i.ExecutorVersion, i.AdapterID) || !run.ValidIdentifier(i.AdapterID) ||
-		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != run.ProviderAuditPolicyDeepSeekV1 ||
+		i.ExpectedResponseModel != "deepseek-flash" || i.ProviderAuditPolicy != policy ||
 		p.CursorVersion < 0 || p.CursorVersion > 31 || p.Steps == nil || int64(len(p.Steps)) != p.CursorVersion || !validStep(p.NextStep) {
 		return run.ErrInvalidArgument
 	}
 	n := p.NextStep
+	bundle := i.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion || i.ExecutorVersion == run.SupportFixedBundleExecutorVersion
+	if !bundle && n.Kind == "read_policy_bundle" {
+		return run.ErrStepConflict
+	}
 	if n.Sequence != p.CursorVersion+1 || n.StepID != b.StepID || n.Sequence != b.StepSequence || n.Kind != b.StepKind ||
 		n.CursorVersion != b.CursorVersion || n.InputHash != b.InputHash || n.ProfileID != b.ProfileID || n.ProfileHash != b.ProfileHash ||
 		n.SnapshotID != b.SnapshotID || n.SnapshotHash != b.SnapshotHash {
@@ -228,6 +237,9 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 	seen := map[string]bool{n.StepID: true}
 	for index, step := range p.Steps {
 		s := step.Step
+		if !bundle && s.Kind == "read_policy_bundle" {
+			return run.ErrStepConflict
+		}
 		if !validStep(s) || s.Sequence != int64(index)+1 || seen[s.StepID] || s.ProfileID != n.ProfileID ||
 			s.ProfileHash != n.ProfileHash || s.SnapshotID != n.SnapshotID || s.SnapshotHash != n.SnapshotHash ||
 			s.InputHash != run.NextInputHash(n.ProfileHash, n.SnapshotHash, s.CursorVersion, previousHash) ||
@@ -252,7 +264,7 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 // ExecutorMatchesAdapter prevents mixed strategy/version deployments.
 func ExecutorMatchesAdapter(version, adapter string) bool {
 	if adapter == "support-agent-v1" {
-		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion
+		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion || version == run.SupportAdjudicationExecutorVersion || version == run.SupportAdjudicationV2ExecutorVersion || version == run.SupportAdjudicationV3ExecutorVersion || version == run.SupportAdjudicationV4ExecutorVersion || version == run.SupportAdjudicationV5ExecutorVersion
 	}
-	return version == ExecutorVersion
+	return version == ExecutorVersion || adapter == "support-fixed-v1" && (version == run.SupportFixedComparisonExecutorVersion || version == run.SupportFixedAdjudicationExecutorVersion || version == run.SupportFixedBundleExecutorVersion)
 }

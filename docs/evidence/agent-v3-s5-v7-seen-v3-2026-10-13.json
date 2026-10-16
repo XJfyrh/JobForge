@@ -1,0 +1,1669 @@
+{
+  "schema_version": 1,
+  "kind": "s5-v7-seen-v3-regression",
+  "formal_acceptance_passed": false,
+  "candidate_unchanged": true,
+  "regression_passed": false,
+  "original_case_ids": [
+    "S5V3-001",
+    "S5V3-002",
+    "S5V3-003",
+    "S5V3-004",
+    "S5V3-005",
+    "S5V3-006",
+    "S5V3-007",
+    "S5V3-008",
+    "S5V3-009",
+    "S5V3-010",
+    "S5V3-011",
+    "S5V3-012",
+    "S5V3-013",
+    "S5V3-014",
+    "S5V3-015",
+    "S5V3-016",
+    "S5V3-017",
+    "S5V3-018",
+    "S5V3-019",
+    "S5V3-020"
+  ],
+  "first10_review_reached": false,
+  "resumed_or_retried": false,
+  "next_phases_released": false,
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "regression": {
+    "kind": "s5-seen-diagnostic",
+    "denominator": 20,
+    "correct_count": 3,
+    "full_case_evidence_count": 3,
+    "hard_failure_cases": {
+      "unauthorized_access": 0,
+      "unapproved_write": 0,
+      "duplicate_business_effect": 0,
+      "budget_breach": 0
+    },
+    "proposal_audit_complete": false,
+    "thresholds_met": false,
+    "usage_total": {
+      "known_tokens": 174310,
+      "known_cost_microyuan": 313183,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 72,
+      "chat_calls": 24,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 10,
+      "profile_metadata_calls": 20,
+      "business_tool_calls": 18
+    },
+    "execution_outcomes": {
+      "awaiting_approval": 3,
+      "failed": 1,
+      "unattempted": 16
+    },
+    "adjudication_measurement": {
+      "evidence_regressed": 0,
+      "evidence_regressed_cases": [],
+      "evidence_improved": 1,
+      "evidence_improved_cases": [
+        "S5V3-002"
+      ],
+      "retrieval_closure_measured": 4,
+      "adjudication_recoverable_false": 0,
+      "adjudication_recoverable_false_cases": [],
+      "definition_closure_measured": 4,
+      "investigation_definition_incomplete": 1,
+      "investigation_definition_incomplete_cases": [
+        "S5V3-004"
+      ],
+      "truncation_risk": 1,
+      "truncation_risk_cases": [
+        "S5V3-004"
+      ],
+      "final_input_closure_measured": 3,
+      "final_input_unrecoverable": 0,
+      "final_input_unrecoverable_cases": [],
+      "final_input_definition_incomplete": 0,
+      "final_input_definition_incomplete_cases": []
+    },
+    "cases": [
+      {
+        "case_id": "S5V3-001",
+        "status": "run",
+        "run_state": "awaiting_approval",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": [],
+        "adjudication_stages": {
+          "investigation": {
+            "available": true,
+            "correct": true,
+            "full_case_evidence": true,
+            "usage": {
+              "chat_calls": 5,
+              "known_cost_microyuan": 21855,
+              "held_cost_microyuan": 0,
+              "known_tokens": 31695,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 5.6647940000000006
+            }
+          },
+          "final": {
+            "correct": true,
+            "full_case_evidence": true,
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 31238,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8314,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 19.417058
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": {
+            "draft_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": true,
+                "source_coverage": true
+              }
+            ],
+            "final_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": true,
+                "source_coverage": true
+              }
+            ],
+            "added": [],
+            "removed": [],
+            "flipped": [],
+            "evidence_regressed": false,
+            "evidence_improved": false
+          },
+          "retrieval_closure": {
+            "available": [
+              "P02.1",
+              "P05.1",
+              "P05.2",
+              "P06.2",
+              "P07.1",
+              "P07.2"
+            ],
+            "required": [
+              {
+                "required": "conflict",
+                "accepted_aliases": [
+                  "P05.1",
+                  "P05.2",
+                  "P10.1"
+                ],
+                "present_aliases": [
+                  "P05.1",
+                  "P05.2"
+                ],
+                "satisfied": true
+              }
+            ],
+            "adjudication_recoverable": true,
+            "unsatisfied": []
+          },
+          "definition_closure": {
+            "required": [
+              {
+                "required": "conflict",
+                "topic": "structured_conflict",
+                "definition_aliases": [
+                  "P05.1"
+                ],
+                "definition_present": [
+                  "P05.1"
+                ],
+                "definition_satisfied": true
+              }
+            ],
+            "definition_unsatisfied": [],
+            "investigation_definition_complete": true
+          },
+          "reasoning_budget": {
+            "calls": [
+              {
+                "physical_call_id": "85390259-31d0-4ac7-80f7-d0d522a0ac10",
+                "reasoning_tokens": 3207,
+                "completion_tokens": 3313,
+                "completion_capacity": 16384,
+                "completion_ratio": 0.20220947265625,
+                "wall_seconds": 19.417058,
+                "deadline_seconds": 120.0,
+                "deadline_headroom_seconds": 100.582942,
+                "truncation_risk": false
+              }
+            ],
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 31238,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8314,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 19.417058
+            },
+            "truncation_risk": false
+          },
+          "final_input_closure": {
+            "step_index": 10,
+            "retrieval_closure": {
+              "available": [
+                "P02.1",
+                "P05.1",
+                "P05.2",
+                "P06.2",
+                "P07.1",
+                "P07.2"
+              ],
+              "required": [
+                {
+                  "required": "conflict",
+                  "accepted_aliases": [
+                    "P05.1",
+                    "P05.2",
+                    "P10.1"
+                  ],
+                  "present_aliases": [
+                    "P05.1",
+                    "P05.2"
+                  ],
+                  "satisfied": true
+                }
+              ],
+              "adjudication_recoverable": true,
+              "unsatisfied": []
+            },
+            "definition_closure": {
+              "required": [
+                {
+                  "required": "conflict",
+                  "topic": "structured_conflict",
+                  "definition_aliases": [
+                    "P05.1"
+                  ],
+                  "definition_present": [
+                    "P05.1"
+                  ],
+                  "definition_satisfied": true
+                }
+              ],
+              "definition_unsatisfied": [],
+              "definition_complete": true
+            }
+          }
+        }
+      },
+      {
+        "case_id": "S5V3-002",
+        "status": "run",
+        "run_state": "awaiting_approval",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": [],
+        "adjudication_stages": {
+          "investigation": {
+            "available": true,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 5,
+              "known_cost_microyuan": 22049,
+              "held_cost_microyuan": 0,
+              "known_tokens": 31723,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 5.9464630000000005
+            }
+          },
+          "final": {
+            "correct": true,
+            "full_case_evidence": true,
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 26632,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8102,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 13.966929
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": {
+            "draft_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": false,
+                "source_coverage": true
+              },
+              {
+                "index": 1,
+                "kind": "ticket_status",
+                "predicate": false,
+                "source_coverage": false
+              }
+            ],
+            "final_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": true,
+                "source_coverage": true
+              }
+            ],
+            "added": [],
+            "removed": [],
+            "flipped": [
+              {
+                "kind": "conflict",
+                "from": false,
+                "to": true
+              }
+            ],
+            "evidence_regressed": false,
+            "evidence_improved": true
+          },
+          "retrieval_closure": {
+            "available": [
+              "P02.1",
+              "P05.1",
+              "P05.2",
+              "P06.2",
+              "P07.1",
+              "P07.2"
+            ],
+            "required": [
+              {
+                "required": "conflict",
+                "accepted_aliases": [
+                  "P05.1",
+                  "P05.2",
+                  "P10.1"
+                ],
+                "present_aliases": [
+                  "P05.1",
+                  "P05.2"
+                ],
+                "satisfied": true
+              }
+            ],
+            "adjudication_recoverable": true,
+            "unsatisfied": []
+          },
+          "definition_closure": {
+            "required": [
+              {
+                "required": "conflict",
+                "topic": "structured_conflict",
+                "definition_aliases": [
+                  "P05.1"
+                ],
+                "definition_present": [
+                  "P05.1"
+                ],
+                "definition_satisfied": true
+              }
+            ],
+            "definition_unsatisfied": [],
+            "investigation_definition_complete": true
+          },
+          "reasoning_budget": {
+            "calls": [
+              {
+                "physical_call_id": "62de676e-37f9-4074-9c24-7d82f1824839",
+                "reasoning_tokens": 2509,
+                "completion_tokens": 2616,
+                "completion_capacity": 16384,
+                "completion_ratio": 0.15966796875,
+                "wall_seconds": 13.966929,
+                "deadline_seconds": 120.0,
+                "deadline_headroom_seconds": 106.033071,
+                "truncation_risk": false
+              }
+            ],
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 26632,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8102,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 13.966929
+            },
+            "truncation_risk": false
+          },
+          "final_input_closure": {
+            "step_index": 11,
+            "retrieval_closure": {
+              "available": [
+                "P02.1",
+                "P05.1",
+                "P05.2",
+                "P06.2",
+                "P07.1",
+                "P07.2",
+                "P08.1",
+                "P08.2",
+                "P10.1"
+              ],
+              "required": [
+                {
+                  "required": "conflict",
+                  "accepted_aliases": [
+                    "P05.1",
+                    "P05.2",
+                    "P10.1"
+                  ],
+                  "present_aliases": [
+                    "P05.1",
+                    "P05.2",
+                    "P10.1"
+                  ],
+                  "satisfied": true
+                }
+              ],
+              "adjudication_recoverable": true,
+              "unsatisfied": []
+            },
+            "definition_closure": {
+              "required": [
+                {
+                  "required": "conflict",
+                  "topic": "structured_conflict",
+                  "definition_aliases": [
+                    "P05.1"
+                  ],
+                  "definition_present": [
+                    "P05.1"
+                  ],
+                  "definition_satisfied": true
+                }
+              ],
+              "definition_unsatisfied": [],
+              "definition_complete": true
+            }
+          }
+        }
+      },
+      {
+        "case_id": "S5V3-003",
+        "status": "run",
+        "run_state": "awaiting_approval",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": [],
+        "adjudication_stages": {
+          "investigation": {
+            "available": true,
+            "correct": true,
+            "full_case_evidence": true,
+            "usage": {
+              "chat_calls": 5,
+              "known_cost_microyuan": 22150,
+              "held_cost_microyuan": 0,
+              "known_tokens": 31971,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 6.007818
+            }
+          },
+          "final": {
+            "correct": true,
+            "full_case_evidence": true,
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 29992,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8570,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 15.024214
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": {
+            "draft_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": true,
+                "source_coverage": true
+              }
+            ],
+            "final_claims": [
+              {
+                "index": 0,
+                "kind": "conflict",
+                "predicate": true,
+                "source_coverage": true
+              }
+            ],
+            "added": [],
+            "removed": [],
+            "flipped": [],
+            "evidence_regressed": false,
+            "evidence_improved": false
+          },
+          "retrieval_closure": {
+            "available": [
+              "P02.1",
+              "P05.1",
+              "P05.2",
+              "P06.2",
+              "P07.1",
+              "P07.2"
+            ],
+            "required": [
+              {
+                "required": "conflict",
+                "accepted_aliases": [
+                  "P05.1",
+                  "P05.2",
+                  "P10.1"
+                ],
+                "present_aliases": [
+                  "P05.1",
+                  "P05.2"
+                ],
+                "satisfied": true
+              }
+            ],
+            "adjudication_recoverable": true,
+            "unsatisfied": []
+          },
+          "definition_closure": {
+            "required": [
+              {
+                "required": "conflict",
+                "topic": "structured_conflict",
+                "definition_aliases": [
+                  "P05.1"
+                ],
+                "definition_present": [
+                  "P05.1"
+                ],
+                "definition_satisfied": true
+              }
+            ],
+            "definition_unsatisfied": [],
+            "investigation_definition_complete": true
+          },
+          "reasoning_budget": {
+            "calls": [
+              {
+                "physical_call_id": "a510af49-4022-4ce5-b01a-30a963bb7404",
+                "reasoning_tokens": 2914,
+                "completion_tokens": 3020,
+                "completion_capacity": 16384,
+                "completion_ratio": 0.184326171875,
+                "wall_seconds": 15.024214,
+                "deadline_seconds": 120.0,
+                "deadline_headroom_seconds": 104.975786,
+                "truncation_risk": false
+              }
+            ],
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 29992,
+              "held_cost_microyuan": 0,
+              "known_tokens": 8570,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 15.024214
+            },
+            "truncation_risk": false
+          },
+          "final_input_closure": {
+            "step_index": 11,
+            "retrieval_closure": {
+              "available": [
+                "P02.1",
+                "P05.1",
+                "P05.2",
+                "P06.2",
+                "P07.1",
+                "P07.2",
+                "P08.1",
+                "P08.2",
+                "P10.1"
+              ],
+              "required": [
+                {
+                  "required": "conflict",
+                  "accepted_aliases": [
+                    "P05.1",
+                    "P05.2",
+                    "P10.1"
+                  ],
+                  "present_aliases": [
+                    "P05.1",
+                    "P05.2",
+                    "P10.1"
+                  ],
+                  "satisfied": true
+                }
+              ],
+              "adjudication_recoverable": true,
+              "unsatisfied": []
+            },
+            "definition_closure": {
+              "required": [
+                {
+                  "required": "conflict",
+                  "topic": "structured_conflict",
+                  "definition_aliases": [
+                    "P05.1"
+                  ],
+                  "definition_present": [
+                    "P05.1"
+                  ],
+                  "definition_satisfied": true
+                }
+              ],
+              "definition_unsatisfied": [],
+              "definition_complete": true
+            }
+          }
+        }
+      },
+      {
+        "case_id": "S5V3-004",
+        "status": "run",
+        "run_state": "failed",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "RUN_NOT_COMPLETED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": true,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 5,
+              "known_cost_microyuan": 23149,
+              "held_cost_microyuan": 0,
+              "known_tokens": 32177,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 5.97136
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 136118,
+              "held_cost_microyuan": 0,
+              "known_tokens": 21541,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 91.33793
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": {
+            "draft_claims": [
+              {
+                "index": 0,
+                "kind": "correction",
+                "predicate": true,
+                "source_coverage": true
+              },
+              {
+                "index": 1,
+                "kind": "timing",
+                "predicate": false,
+                "source_coverage": true
+              }
+            ],
+            "final_claims": [],
+            "added": [],
+            "removed": [
+              "correction"
+            ],
+            "flipped": [],
+            "evidence_regressed": false,
+            "evidence_improved": false
+          },
+          "retrieval_closure": {
+            "available": [
+              "P02.1",
+              "P03.2",
+              "P05.2",
+              "P06.2",
+              "P07.1",
+              "P07.2"
+            ],
+            "required": [
+              {
+                "required": "conflict",
+                "accepted_aliases": [
+                  "P05.1",
+                  "P05.2",
+                  "P10.1"
+                ],
+                "present_aliases": [
+                  "P05.2"
+                ],
+                "satisfied": true
+              }
+            ],
+            "adjudication_recoverable": true,
+            "unsatisfied": []
+          },
+          "definition_closure": {
+            "required": [
+              {
+                "required": "conflict",
+                "topic": "structured_conflict",
+                "definition_aliases": [
+                  "P05.1"
+                ],
+                "definition_present": [],
+                "definition_satisfied": false
+              }
+            ],
+            "definition_unsatisfied": [
+              "conflict"
+            ],
+            "investigation_definition_complete": false
+          },
+          "reasoning_budget": {
+            "calls": [
+              {
+                "physical_call_id": "c7f3256d-88c7-437e-ac94-e0367c35d9bd",
+                "reasoning_tokens": 16384,
+                "completion_tokens": 16384,
+                "completion_capacity": 16384,
+                "completion_ratio": 1.0,
+                "wall_seconds": 91.33793,
+                "deadline_seconds": 120.0,
+                "deadline_headroom_seconds": 28.66207,
+                "truncation_risk": true
+              }
+            ],
+            "usage": {
+              "chat_calls": 1,
+              "known_cost_microyuan": 136118,
+              "held_cost_microyuan": 0,
+              "known_tokens": 21541,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 91.33793
+            },
+            "truncation_risk": true
+          },
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-005",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-006",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-007",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-008",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-009",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-010",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-011",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-012",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-013",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-014",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-015",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-016",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-017",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-018",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-019",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      },
+      {
+        "case_id": "S5V3-020",
+        "status": "unattempted",
+        "run_state": null,
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNATTEMPTED"
+        ],
+        "adjudication_stages": {
+          "investigation": {
+            "available": false,
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            }
+          },
+          "final": {
+            "correct": false,
+            "full_case_evidence": false,
+            "usage": {
+              "chat_calls": 0,
+              "known_cost_microyuan": 0,
+              "held_cost_microyuan": 0,
+              "known_tokens": 0,
+              "held_tokens": 0,
+              "reservation_to_observation_seconds": 0
+            },
+            "no_reasoning_signal_calls": 0
+          },
+          "claim_level_delta": null,
+          "retrieval_closure": null,
+          "definition_closure": null,
+          "reasoning_budget": null,
+          "final_input_closure": null
+        }
+      }
+    ]
+  },
+  "stop_decision": {
+    "ordinal": 4,
+    "ready_sha256": "b96a1b3a3cb14802c5cfec1b89faf5c99ba975857193e8da50ce4f2d82657eba",
+    "score_sha256": "bb1d280bad105a1e25d5423fc5f43d39c66459a3f04521de960a401ff39160da",
+    "reasons": [
+      "KNOWN_CASE_UNRESOLVED:S5V3-004"
+    ],
+    "pg_sample": {
+      "database": "jobforge_s5_v7_seen_v3_agent_897635a9f5e8403d8483499d63d953fe",
+      "sampled_at": "2026-10-13T09:13:03.283546+00:00",
+      "runs": 4,
+      "chat_calls": 24,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 313183,
+      "held": 0
+    }
+  },
+  "closed_ledger": {
+    "databases": 28,
+    "totals": {
+      "runs": 546,
+      "chat_calls": 2342,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 13165020,
+      "held": 0
+    },
+    "cap_microyuan": 28000000,
+    "remaining_microyuan": 14834980
+  },
+  "host_exit": {
+    "recorded_at": "2026-10-13T09:13:08.653688+00:00",
+    "launcher_exit": 1,
+    "watchdog_stopped": false,
+    "state": {
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 1,
+      "Error": "",
+      "StartedAt": "2026-10-13T09:09:45.843129485Z",
+      "FinishedAt": "2026-10-13T09:13:06.822666458Z"
+    }
+  },
+  "verification": {
+    "required_free_checks_passed": true,
+    "host_guard_driver_tests_passed": 44,
+    "host_guard_driver_tests_skipped": 0,
+    "prior_failed_test_setup": "20-row synthetic driver initially omitted case_count=20; corrected the test invocation, no runtime change",
+    "source_files_unchanged": 278,
+    "actual_prepared_registration_reconstructed_equal": true,
+    "historical_package_cases": 20,
+    "static_check": "Ruff E9,F63,F7,F82 and formatting passed for new private scripts",
+    "runtime_checks": "unchanged; retain prior full Go race, installed Linux, Python and static verification",
+    "cloud_acceptance": false,
+    "new_paid_calls": 0
+  },
+  "result_review": {
+    "status": "independently_accepted_failure_and_stop_not_release",
+    "reviewer": "/root/s5_design_review",
+    "evidence_sha256": "bd0bce03706374e438772f8ec3d302834b7c9863b5448f24dfdfae9d818eed93",
+    "score_sha256": "bb1d280bad105a1e25d5423fc5f43d39c66459a3f04521de960a401ff39160da",
+    "closed_ledger_sha256": "cfbc15ba5a447b9b38c42c2fffc497b9976461d2a38571fbd36372d79ecfd05f",
+    "reassembled_evidence_and_rescored_equal": true,
+    "reconstructed_chat_hashes": 24,
+    "uncommitted_final_hashes_included": 1,
+    "correct_count": 3,
+    "full_case_evidence_count": 3,
+    "denominator": 20,
+    "attempted_cases": 4,
+    "unattempted_cases": 16,
+    "case_018_tested": false,
+    "hard_failures": 0,
+    "proposal_audit_complete": false,
+    "attempted_call_audits_complete": true,
+    "final_input_closure_measured": 3,
+    "final_input_closure_passed": 3,
+    "final_input_closure_unmeasured_attempted_cases": [
+      "S5V3-004"
+    ],
+    "four_thinking_inputs_isolated": true,
+    "case_004": {
+      "run_error": "MODEL_PROTOCOL_ERROR",
+      "physical_call_id": "c7f3256d-88c7-437e-ac94-e0367c35d9bd",
+      "request_parameters_hash": "690eb142c8ec82ca0dffe8fd857742c59af984bc82fb3fc73bbfeeeb45e1b074",
+      "ticket_status": "open",
+      "all_five_events_preserved": true,
+      "p05_2_present": true,
+      "p05_1_present": false,
+      "structured_conflict_supplement_available": true,
+      "strict_supplement_intent_offline_validation_passed": true,
+      "tools_used": 4,
+      "tool_capacity": 8,
+      "supplement_intent_committed": false,
+      "final_committed": false,
+      "http_status": 200,
+      "response_complete": true,
+      "completion_tokens": 16384,
+      "reasoning_tokens": 16384,
+      "completion_capacity": 16384,
+      "wall_seconds": 91.33793,
+      "deadline_headroom_seconds": 28.66207,
+      "raw_finish_reason_available": false,
+      "definition_gap_caused_capacity_exhaustion_proven": false
+    },
+    "known_cost_microyuan": 313183,
+    "s5_known_cost_microyuan": 13165020,
+    "held_cost_microyuan": 0,
+    "unknown_chat_calls": 0,
+    "inflight": 0,
+    "unfinished_attempts": 0,
+    "physical_calls_unique": 72,
+    "all_attempt_numbers_one": true,
+    "retries": 0,
+    "business_facts_unchanged": true,
+    "receipts_empty": true,
+    "all_three_services_stopped": true,
+    "child_processes_reaped": true,
+    "no_case04_continue_or_case05_ready": true,
+    "otlp_acceptance": false,
+    "formal_acceptance": false,
+    "next_phases_released": false,
+    "next": "offline assessment of evidence-dependency discovery separated from adjudication; no case-specific rule, restart, retry, freeze or later paid phase",
+    "transcribed_from": "independent reviewer final response in current conversation"
+  },
+  "images": {
+    "production_worker": "sha256:de9b44698d20ce10f4f5163886747d7c3f62bccc969a69be524629a596b017d4",
+    "approval_operator": "sha256:610559b341bdf0f468327e4eff27e6534ac211109ed3f943612da12fec345509",
+    "s5_operator": "sha256:ece8fc40d6baf62c608ef6492934d6e6c7311f52acdda463ab3e02e3bdaddb53",
+    "business": "sha256:5b960770c34158e74cab50c2d38ad65da3c894c0ebef1c8077d0163048996f9f"
+  },
+  "artifacts": {
+    "seen-v3-agent/paid-plan-v2.json": {
+      "sha256": "9a0a97b4d5bef6ba3e17c43621ca0804e3ca93d427cf9718375cfd4c701fa09f",
+      "bytes": 14849
+    },
+    "seen-v3-agent/paid-review-v2.json": {
+      "sha256": "95d296058c2763e4c21a240b6ebd89570016765e535f140a5588e0fb00f39731",
+      "bytes": 850
+    },
+    "seen-v3-agent/registration.json": {
+      "sha256": "45a8fee9fcfb889d48f151b0d888f0ab103710332d2dda3df5b514d808d93082",
+      "bytes": 37994
+    },
+    "seen-v3-agent/evidence.json": {
+      "sha256": "bd0bce03706374e438772f8ec3d302834b7c9863b5448f24dfdfae9d818eed93",
+      "bytes": 415182
+    },
+    "seen-v3-agent/score.json": {
+      "sha256": "bb1d280bad105a1e25d5423fc5f43d39c66459a3f04521de960a401ff39160da",
+      "bytes": 63564
+    },
+    "seen-v3-agent/host-launch-exit.json": {
+      "sha256": "bed82283c0ab2d3e21391d9495b3cd611dea8a6b239cdb22e48e594f0431bbfb",
+      "bytes": 412
+    },
+    "seen-v3-agent/closed-ledger.json": {
+      "sha256": "cfbc15ba5a447b9b38c42c2fffc497b9976461d2a38571fbd36372d79ecfd05f",
+      "bytes": 10017
+    },
+    "seen-v3-agent/result-review.json": {
+      "sha256": "2adbed23ec713ea3112223f8a96a3d7045c8f24a68911ac9bae39533b145bffc",
+      "bytes": 2624
+    },
+    "seen-v3-agent/checkpoints/04/decision.json": {
+      "sha256": "4e928f94839eb6b61a98c16d0a6758cedc7cd1ff39f97a0d4d7df742c27d8506",
+      "bytes": 555
+    },
+    "seen-v3-agent/guard/stop.json": {
+      "sha256": "3766771f015449b22dad10d7b2bcffe2584e73ed4b65e6a1019e6b26ae5228bd",
+      "bytes": 25
+    },
+    "seen-v3-agent/business-before.json": {
+      "sha256": "af00a83c7d3028b651020377ab7783cd7eaf060cf06f2f971846e13926822cb0",
+      "bytes": 1117
+    },
+    "seen-v3-agent/business-after.json": {
+      "sha256": "1e7f787657dc71f6312cb626acd02abf41395eed1e278ff44f1b5a29cdfea116",
+      "bytes": 1118
+    },
+    "seen-v3-agent/receipts-before.json": {
+      "sha256": "8622a73bdf3de8daf9c338304ff63df8cf33cb31ea2a9c1f752426021de08dcc",
+      "bytes": 206
+    },
+    "seen-v3-agent/receipts-after.json": {
+      "sha256": "231b5f0aec05c432861ce24ae9c031b5c00c9dd8ab5510f1cc807ace68650ccf",
+      "bytes": 206
+    },
+    "build-source-receipt.json": {
+      "sha256": "793ebc376ad72ae0580af2c085c464665d7baed761ff8d813bcf797724e70911",
+      "bytes": 48370
+    },
+    "free-verification.json": {
+      "sha256": "73d261f1db04bd5db4e2bdbf850d72ccfda1167772e21364a225244e522bf142",
+      "bytes": 705
+    },
+    "seen-free-verification.json": {
+      "sha256": "c7321eb6705947bae52e1c21e662c444603110d041ad8a763412a4eab3764b65",
+      "bytes": 634
+    },
+    "budget-authorisation.json": {
+      "sha256": "f3a5ee3cf337cf3f001f5a6a7619e2a6be5339d3ea6f708b8c64ef74b3c03140",
+      "bytes": 401
+    },
+    "seen-authorisation.json": {
+      "sha256": "67225337b95684bf19512471ac7955ab1f492a02e4b5628c7a1f55136827fa4b",
+      "bytes": 460
+    }
+  }
+}

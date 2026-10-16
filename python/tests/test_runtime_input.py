@@ -18,6 +18,21 @@ FIXTURE = json.loads(
 )
 
 
+def test_fixed_comparison_selection_is_bound_to_registered_fixed_adapter() -> None:
+    """The new input envelope cannot be chosen for Agent or a fixture adapter."""
+    frame = copy.deepcopy(FIXTURE["valid"][0]["frame"])
+    frame["input"]["executor_version"] = "linux-v2-fixed-comparison-runtime-1"
+    frame["input"]["adapter_id"] = "support-fixed-v1"
+    assert (
+        parse_runtime_input(frame).executor_version
+        == frame["input"]["executor_version"]
+    )
+    for adapter in ("support-agent-v1", "fixture-static-v1"):
+        frame["input"]["adapter_id"] = adapter
+        with pytest.raises(RuntimeInputError):
+            parse_runtime_input(frame)
+
+
 @pytest.mark.parametrize("case", FIXTURE["valid"], ids=lambda case: case["name"])
 def test_shared_valid_runtime_projection(case: dict) -> None:
     """Accept the original hash strings and copied RPC field names unchanged."""

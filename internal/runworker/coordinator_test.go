@@ -330,7 +330,7 @@ func TestCoordinatorDeadlineAnchorsRPCStartAndRejectsEquality(t *testing.T) {
 	}
 }
 
-func activeCoordinator(t *testing.T, kind string, reported bool) (*coordinator, *coordinatorClient, *coordinatorProcess, *callRecord, v2.Frame) {
+func activeCoordinator(t *testing.T, kind string, reported bool, configure ...func(*coordinator)) (*coordinator, *coordinatorClient, *coordinatorProcess, *callRecord, v2.Frame) {
 	t.Helper()
 	now, err := runclock.Now()
 	if errors.Is(err, runclock.ErrUnsupported) {
@@ -340,6 +340,9 @@ func activeCoordinator(t *testing.T, kind string, reported bool) (*coordinator, 
 		t.Fatal(err)
 	}
 	c, client, process := coordinatorFixture(t, kind)
+	for _, update := range configure {
+		update(c)
+	}
 	c.execute.EmittedMonoMS = now
 	if err := c.conversation.Accept(c.execute, now); err != nil {
 		t.Fatal(err)

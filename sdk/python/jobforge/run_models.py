@@ -62,6 +62,21 @@ class RunError(RunModel):
 
 
 @dataclass(frozen=True)
+class RunIdentity(RunModel):
+    """Current server-derived identity; a query never grants permissions."""
+
+    tenant_id: str
+    role: str
+    actor_id: str
+
+    def __post_init__(self) -> None:
+        if self.role not in ("reader", "operator", "approver") or (
+            self.role == "approver" and not self.actor_id
+        ):
+            raise ValueError("invalid authenticated identity")
+
+
+@dataclass(frozen=True)
 class TicketVersion(RunModel):
     """Authoritative ticket revision from the immutable snapshot."""
 
@@ -234,7 +249,22 @@ class Run(RunModel):
     cancel_requested_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    terminal_at: datetime | None
+    content_purged_at: datetime | None
     budget: RunBudget
+
+    @classmethod
+    def from_dict(cls, data: object) -> Run:
+        """Preserve exact pre-S5 exports; absent retention metadata is unknown.
+
+        Only the complete old shape is accepted. A partial new shape and every
+        other missing/unknown field still fail closed; source data is not edited.
+        """
+        if isinstance(data, dict) and set(data) == {
+            field.name for field in fields(cls)
+        } - {"terminal_at", "content_purged_at"}:
+            data = {**data, "terminal_at": None, "content_purged_at": None}
+        return super().from_dict(data)
 
     def __post_init__(self) -> None:
         for value in (self.run_id, self.business_request_id, self.snapshot_id):

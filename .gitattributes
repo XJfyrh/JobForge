@@ -18,6 +18,9 @@
 # Preserve intentional Markdown hard breaks and the original EOF in the frozen PRD.
 docs/product/JobForge_PRD_v0.1.md -whitespace
 
+# Preserve the byte-exact published evidence snapshot.
+docs/evidence/agent-v3-s5-final-adjudication-2026-10-11.json -text -eol whitespace=cr-at-eol
+
 *.pb.go linguist-generated=true
 *_pb2.py linguist-generated=true
 *_pb2_grpc.py linguist-generated=true

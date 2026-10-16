@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/xjfyrh/jobforge/internal/observability"
 	"github.com/xjfyrh/jobforge/internal/run"
 	"github.com/xjfyrh/jobforge/internal/run/businessclient"
 	"github.com/xjfyrh/jobforge/internal/run/grpcapi"
@@ -95,6 +96,20 @@ func stopReason(err error) string {
 }
 
 func serve(ctx context.Context) error {
+	shutdownTracing, err := observability.SetupRunTracing(ctx, "jobforge-agent-worker")
+	if err != nil {
+		return run.ErrInvalidArgument
+	}
+	defer shutdownTracing()
+	metricsAddress := os.Getenv("JOBFORGE_METRICS_ADDR")
+	if metricsAddress == "" {
+		metricsAddress = "127.0.0.1:6064"
+	}
+	go func() {
+		if observability.ServeRunMetrics(ctx, metricsAddress, nil) != nil && ctx.Err() == nil {
+			slog.Warn("Run metrics listener unavailable")
+		}
+	}()
 	if len(os.Args) != 1 {
 		return run.ErrInvalidArgument
 	}
@@ -141,6 +156,7 @@ func serve(ctx context.Context) error {
 		return run.ErrInvalidArgument
 	}
 	connection, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport),
+		grpc.WithUnaryInterceptor(runworker.TraceRPC),
 		grpc.WithPerRPCCredentials(bearer{token: keys.ControlToken, secure: secure}),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(grpcapi.MaxMessageBytes), grpc.MaxCallSendMsgSize(grpcapi.MaxMessageBytes)))
 	if err != nil {

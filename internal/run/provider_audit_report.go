@@ -13,6 +13,7 @@ type ReportBinding struct {
 	ParameterHash         string  `json:"parameter_hash"`
 	Subcall               Subcall `json:"subcall"`
 	ExpectedResponseModel string  `json:"expected_response_model"`
+	AllowThinking         bool    `json:"allow_thinking,omitempty"`
 }
 
 // CallReport is one immutable report, including non-priceable observed usage.
@@ -201,7 +202,7 @@ func FirstReportDisposition(binding ReportBinding, report CallReport, budget Cal
 		result.Settlement, result.UsageKnown = "settled", true
 		result.KnownTokens, result.KnownCostMicroyuan = usage.InputTokens+usage.OutputTokens, cost
 	}
-	result.BatchStopCode = firstAuditStop(binding.Subcall, report.ProviderAudit, result.PriceEligible)
+	result.BatchStopCode = firstAuditStop(binding, report.ProviderAudit, result.PriceEligible)
 	return result, nil
 }
 
@@ -214,8 +215,8 @@ func validReportBudget(budget CallBudget) bool {
 	return budget.InputTokens <= MaxSafeInteger-budget.OutputTokens && budget.TotalTokens == budget.InputTokens+budget.OutputTokens
 }
 
-func firstAuditStop(subcall Subcall, audit *ProviderAudit, priceEligible bool) BatchStopCode {
-	if subcall != SubcallChat {
+func firstAuditStop(binding ReportBinding, audit *ProviderAudit, priceEligible bool) BatchStopCode {
+	if binding.Subcall != SubcallChat {
 		return ""
 	}
 	switch {
@@ -224,7 +225,7 @@ func firstAuditStop(subcall Subcall, audit *ProviderAudit, priceEligible bool) B
 	case audit.ResponseComplete && audit.HTTPStatus == 200 &&
 		(audit.IdentityState == ProviderIdentityIncompatible || audit.IdentityState == ProviderIdentityInvalid):
 		return BatchStopProviderIdentityInvalid
-	case audit.ModeState == ProviderModeUnexpected || audit.ModeState == ProviderModeInvalid || audit.ReasoningState == ReasoningInvalid:
+	case audit.ModeState == ProviderModeUnexpected || audit.ModeState == ProviderModeInvalid || audit.ReasoningState == ReasoningInvalid || audit.ModeState == ProviderModeThinking && !binding.AllowThinking || (audit.SchemaVersion == 2) != binding.AllowThinking:
 		return BatchStopProviderModeInvalid
 	case !priceEligible:
 		return BatchStopChatUsageUnknown

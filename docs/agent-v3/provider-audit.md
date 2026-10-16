@@ -4,7 +4,9 @@
 
 ## 数据与权限
 
-所有当前 support profile 固定 `provider_audit_policy=deepseek-audit-v1`、`expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
+support schema 1–10 固定 `provider_audit_policy=deepseek-audit-v1`；schema 11–13 固定 `deepseek-audit-v2`，均使用 `expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
+
+`deepseek-audit-v2` 的调查步骤仍使用 audit schema 1/nonthinking；只有原始步骤为 `model_proposal` 的终裁使用 audit schema 2，可观测 `thinking` 或空推理的 `nonthinking`。Go 本地判定、PG 持久判定与 IPC 都按原 profile/步骤选择，不能从响应反推权限。非空推理正文与显式零推理 token 矛盾时 usage 无效，保留 full hold 并停发；有效计量下的截断或无效最终 JSON 保留原费用，结束 Run 而非重发。reasoning token 属于 completion，不额外相加。[ADR-0033](../adr/0033-versioned-final-adjudication.md) 定义完整边界。
 
 每次 chat 消费许可后，固定 adapter 在业务输出校验前冻结一份报告。它仅含安全的响应标识、model/fingerprint、完整响应摘要、精确计数和闭集状态；不保存输入输出正文、reasoning 内容、工具内容、错误正文、headers 或凭据。无完整响应不能生成完整摘要；没有保存任何报告的调用显示 `missing`，已保存的 unavailable 报告显示 `recorded`。缺失 reasoning 与显式零分别为 `absent/null` 和 `observed/0`。
 
@@ -51,5 +53,7 @@ Go/Python 共同 audit/report/observation 向量、真实 PG 首份/重放/冲�
 报告至少覆盖原 30 日晚到窗口；没有自动清理、归档服务或生产长期留存验收。日志/Trace 不承载完整报告正文或模型输入输出。长期留存/备份等未覆盖运维能力统一见[限制清单](../status.md#限制与未结事项)。
 
 ## S2兼容扩展
+
+显式挂载 `/var/lib/jobforge/outbound` 的操作者可在已解码模型对象被校验器拒绝后读取独立 `.model-shape.json`。每份最多 2KiB，包含原 physical call ID、闭集字段标记/数量、`tool/final/missing/other` 类型枚举和嵌套 proposal 的非 null 标记；未知字段名、其值和响应正文不写出。未挂载、写入失败或文件已存在时忽略诊断，原计量、拒绝和一次纠正规则照常执行。
 
 [ADR-0024](../adr/0024-bounded-support-agent.md)的新`support_agent_v1`使用`linux-v2-agent-runtime-1`与`model_decision`，仍使用相同provider audit和Calls合同。全部已提交工具决定的chat可通过原commit/report/observation屏障；全Run纠错用尽后的新模型失败，仅在相同attempt/fence/当前步骤和持久failed_terminal、完整known审计匹配时允许下一案。重复工具决定本身已提交，拒绝发生在后续BeginTool且不扣工具额度。unknown、异常、身份/模式不兼容、确认丢失仍停止当前批次。

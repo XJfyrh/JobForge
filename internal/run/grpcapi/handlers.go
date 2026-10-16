@@ -66,7 +66,8 @@ func (h *service) Claim(ctx context.Context, request *agentv1.ClaimRequest) (*ag
 	}
 	return &agentv1.ClaimResponse{Lease: &agentv1.RunLease{Execution: execution,
 		LeaseUntil: optionalTime(claimed.Checkpoint.Run.LeaseUntil), AttemptDeadline: optionalTime(claimed.Checkpoint.Run.AttemptDeadline),
-		RunDeadline: timestamppb.New(claimed.Checkpoint.Run.RunDeadline), Checkpoint: checkpoint, AuthorityObservedAt: observedAt}}, nil
+		RunDeadline: timestamppb.New(claimed.Checkpoint.Run.RunDeadline), Checkpoint: checkpoint,
+		TraceContext: claimed.Checkpoint.Run.TraceContext, AuthorityObservedAt: observedAt}}, nil
 }
 
 func (h *service) Heartbeat(ctx context.Context, request *agentv1.HeartbeatRequest) (*agentv1.HeartbeatResponse, error) {

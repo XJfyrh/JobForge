@@ -46,3 +46,7 @@ Go 与 Python 测试实际消费相同 JSON。通过这些确定性检查只说�
 ## 恢复 runtime
 
 S3 仍使用 v2 帧，登记 `linux-v2-recovery-runtime-1` / `support-agent-v1`。它与原 audit/agent 版本的对应关系见[运行时](../../../docs/agent-v3/runtime.md)，未提交恢复证明与原 profile 边界见[恢复指南](../../../docs/agent-v3/recovery.md)；旧 fixture 原字节保留。
+
+## 完整政策读取 runtime
+
+[ADR-0038](../../../docs/adr/0038-policy-bundle-before-adjudication.md) 追加 step/subcall `read_policy_bundle`，Agent 使用 `linux-v2-adjudication-runtime-5`、Fixed 使用 `linux-v2-fixed-adjudication-runtime-2`，均为 audit-v2。该步骤只有一次受许可业务 HTTP，结果上限 32 KiB；仍须原普通 observation ACK 与持久提交确认。只有这两个版本接受 bundle checkpoint，其他工具的 8 KiB 合同不变。两者仅允许一次 thinking `model_proposal`，16,384 completion / 120 秒，不接受补证意图或格式纠正重试。

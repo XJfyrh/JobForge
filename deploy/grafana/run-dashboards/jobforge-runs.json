@@ -1,0 +1,606 @@
+{
+  "uid": "jobforge-runs",
+  "title": "JobForge · v3 Runs",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "tags": [
+    "jobforge",
+    "runs",
+    "agent-v3"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "PG snapshot available",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jobforge_run_snapshot_success",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 2,
+      "title": "Live Workers",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jobforge_run_workers_live",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 3,
+      "title": "Run state",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (state) (jobforge_run_current)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 4,
+      "title": "Pending age (seconds)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (state) (jobforge_run_oldest_wait_seconds)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 5,
+      "title": "Batch known / held (observed usage)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind) (jobforge_run_budget_cost_microyuan{scope=\"batch\",kind=~\"known|held\"}) / 1000000",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyCNY"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 6,
+      "title": "Maximum account exposure / limit",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (scope) (jobforge_run_budget_max_ratio)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 7,
+      "title": "Frozen accounts",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (scope) (jobforge_run_budget_frozen)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 8,
+      "title": "Physical calls · durable status",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind,status) (jobforge_run_calls)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 9,
+      "title": "Step duration p95 · includes cleanup/commit",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by (le,kind) (rate(jobforge_run_step_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 10,
+      "title": "Checkpoint commit RPC p95 · includes ACK",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95,sum by (le) (rate(jobforge_run_control_rpc_duration_seconds_bucket{method=\"CommitStep\"}[$__rate_interval])))",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 11,
+      "title": "Public refusals / errors",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(jobforge_run_http_requests_total{result!=\"ok\"}[$__rate_interval]))",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 12,
+      "title": "Persisted recoveries",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "jobforge_run_recoveries",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 13,
+      "title": "Independent action physical calls",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (kind,status) (jobforge_run_action_calls)",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    },
+    {
+      "id": 14,
+      "title": "Active Run alerts",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "jobforge-run-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 42,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\",alertname=~\"JobForgeRun.*\"}",
+          "legendFormat": "{{state}}{{scope}}{{kind}}{{status}}{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      },
+      "description": "Missing samples are unknown. PG snapshots are durable; process histograms may miss a crash. Known usage is observed, not an invoice. Held exposure is not zero. Account scopes overlap."
+    }
+  ],
+  "links": [
+    {
+      "title": "Run traces",
+      "type": "link",
+      "url": "http://localhost:16687",
+      "targetBlank": true
+    },
+    {
+      "title": "Run alerts",
+      "type": "link",
+      "url": "http://localhost:9094/alerts",
+      "targetBlank": true
+    }
+  ]
+}

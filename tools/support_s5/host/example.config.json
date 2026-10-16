@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "question": "v8 修复审计标签后，完整开发回归是否达到 36/40 正确和 38/40 完整证据？",
+  "hypothesis": "完整政策前置读取的已实现候选在正确审计绑定下满足原开发门槛。",
+  "case_ids": [
+    "DEV-001", "DEV-002", "DEV-003", "DEV-004", "DEV-005",
+    "DEV-006", "DEV-007", "DEV-008", "DEV-009", "DEV-010",
+    "DEV-011", "DEV-012", "DEV-013", "DEV-014", "DEV-015",
+    "DEV-016", "DEV-017", "DEV-018", "DEV-019", "DEV-020",
+    "DEV-021", "DEV-022", "DEV-023", "DEV-024", "DEV-025",
+    "DEV-026", "DEV-027", "DEV-028", "DEV-029", "DEV-030",
+    "DEV-031", "DEV-032", "DEV-033", "DEV-034", "DEV-035",
+    "DEV-036", "DEV-037", "DEV-038", "DEV-039", "DEV-040"
+  ],
+  "source": "E:/CURRENT/source.json",
+  "build_receipt": "E:/CURRENT/build-source-receipt.json",
+  "prior_ledger": "E:/CURRENT/latest-complete-ledger.json",
+  "inventory": [
+    {"container": "REPLACE_WITH_EVERY_HISTORICAL_DATABASE", "user": "REPLACE", "database": "REPLACE"},
+    {"container": "deploy-postgres-1", "user": "jobforge", "database": "REPLACE_WITH_FRESH_DATABASE"}
+  ],
+  "control_database": "REPLACE_WITH_FRESH_DATABASE",
+  "business_database": "REPLACE_WITH_ACTUAL_BUSINESS_DATABASE",
+  "business_container": "jobforge-agent-v3-business-postgres-1",
+  "network": "REPLACE_WITH_PREPARED_NETWORK",
+  "container_prefix": "jobforge-s5-REPLACE-WITH-UNIQUE-BATCH",
+  "stage_lock": "E:/JobForgeEvidence/s5-2026-10-07/active-paid-batch.lock",
+  "secrets": "E:/CURRENT/secrets",
+  "identity": {
+    "profile_id": "REPLACE_WITH_NEW_PROFILE",
+    "worker_id": "REPLACE_WITH_NEW_WORKER",
+    "batch_id": "REPLACE_WITH_NEW_UUID",
+    "batch_key": "REPLACE_WITH_NEW_KEY",
+    "north_account_id": "REPLACE_WITH_NEW_UUID",
+    "south_account_id": "REPLACE_WITH_NEW_UUID",
+    "valid_from": "REPLACE_WITH_UTC_START"
+  },
+  "images": {
+    "production_worker": "REPLACE_WITH_SHA256_IMAGE_ID",
+    "approval_operator": "REPLACE_WITH_SHA256_IMAGE_ID",
+    "s5_operator": "REPLACE_WITH_SHA256_IMAGE_ID",
+    "business": "REPLACE_WITH_SHA256_IMAGE_ID"
+  },
+  "policy": {
+    "case_count": 40,
+    "minimum_correct": 36,
+    "minimum_full_evidence": 38,
+    "batch_cap_microyuan": 4000000,
+    "stage_cap_microyuan": 28000000,
+    "full_hold_microyuan": {"investigation": 2105344, "final": 2228224},
+    "systemic_protocol": "two_consecutive_or_two_in_first_three"
+  }
+}

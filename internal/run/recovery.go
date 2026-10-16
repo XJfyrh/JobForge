@@ -16,11 +16,14 @@ const (
 // ConfirmedStepRecovery requires the original complete profile identity. Neither
 // a current request nor a newer deployment can upgrade an older call's policy.
 func (p Profile) ConfirmedStepRecovery() bool {
+	if p.ExecutorVersion == SupportAdjudicationExecutorVersion || p.ExecutorVersion == SupportAdjudicationV2ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV3ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV4ExecutorVersion || p.ExecutorVersion == SupportAdjudicationV5ExecutorVersion {
+		return p.FinalAdjudicationEnabled()
+	}
 	if (p.ExecutorVersion != SupportRecoveryExecutorVersion && p.ExecutorVersion != SupportApprovalExecutorVersion) || p.Strategy != SupportAgentStrategy || !p.AuditEnabled() {
 		return false
 	}
 	d, err := DecodeSupportDefinition(p.Definition)
-	if err != nil || (d.SchemaVersion != 3 && d.SchemaVersion != 4) || d.Program.RecoveryPolicy != ConfirmedUncommittedRecovery {
+	if err != nil || (d.SchemaVersion != 3 && d.SchemaVersion != 4 && d.SchemaVersion != 6 && d.SchemaVersion != 7 && d.SchemaVersion != 9) || d.Program.RecoveryPolicy != ConfirmedUncommittedRecovery {
 		return false
 	}
 	hash, err := SupportProfileHash(p)

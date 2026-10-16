@@ -1,0 +1,3646 @@
+{
+  "schema_version": 1,
+  "kind": "s5-fixed17-development-and-v9-paired-summary",
+  "recorded_at": "2026-10-15T11:05:40.882648+00:00",
+  "scope": "Complete development baseline and paired comparison; not unseen S5 acceptance.",
+  "source_commit": "387acf55fecadf3c04bf78635053a5befbce4a4d",
+  "actual_image_build_commit": "69359e113b0a54e6c89cf5608e00cc6dfaaa1504",
+  "manifest_sha256": "d4368bdb61bf16defb08ea95cd29e15808700cc6e7366ef00df0c84f6ebbdb25",
+  "baseline": {
+    "schema": 17,
+    "prompt_version": "support-fixed-prompt-v2",
+    "final_system_bytes": 4945,
+    "final_system_sha256": "25108d13c6fc9adb53644ed8e58a32592f4cf297090a33ecf9f7b893edad8ec5",
+    "executor": "linux-v2-fixed-adjudication-runtime-2"
+  },
+  "engineering_complete": true,
+  "model_quality_applicable": false,
+  "model_quality_passed": null,
+  "baseline_collection_complete": true,
+  "s5_overall_accepted": false,
+  "denominator": 40,
+  "executed": 40,
+  "unattempted": 0,
+  "correct": 34,
+  "full_evidence": 34,
+  "hard_failure_cases": {
+    "unauthorized_access": 0,
+    "unapproved_write": 0,
+    "duplicate_business_effect": 0,
+    "budget_breach": 0
+  },
+  "proposal_audit_complete": true,
+  "usage_complete": true,
+  "usage": {
+    "known_tokens": 298738,
+    "known_cost_microyuan": 953640,
+    "held_tokens": 0,
+    "held_cost_microyuan": 0,
+    "physical_calls": 158,
+    "chat_calls": 40,
+    "unknown_chat_calls": 0,
+    "measurement_anomalies": 0,
+    "corrections": 0,
+    "query_embedding_calls": 0,
+    "profile_metadata_calls": 0,
+    "business_tool_calls": 118
+  },
+  "execution_outcomes": {
+    "awaiting_approval": 35,
+    "failed": 2,
+    "succeeded": 3
+  },
+  "actual_final_inputs": {
+    "requests_reconstructed": 40,
+    "request_parameter_hashes_matched": 40,
+    "policy_and_definition_complete": 40,
+    "request_binding_digest": "16826ff859968dcf7ac725701aab70d3538f49aa9d8add6617cc69d284697ca2",
+    "committed_final_closure_measured": 38,
+    "failed_uncommitted_finals_not_backfilled": true
+  },
+  "adjudication_measurement": {
+    "evidence_regressed": 0,
+    "evidence_regressed_cases": [],
+    "evidence_improved": 0,
+    "evidence_improved_cases": [],
+    "retrieval_closure_measured": 0,
+    "adjudication_recoverable_false": 0,
+    "adjudication_recoverable_false_cases": [],
+    "definition_closure_measured": 0,
+    "investigation_definition_incomplete": 0,
+    "investigation_definition_incomplete_cases": [],
+    "truncation_risk": 0,
+    "truncation_risk_cases": [],
+    "final_input_closure_measured": 38,
+    "final_input_unrecoverable": 0,
+    "final_input_unrecoverable_cases": [],
+    "final_input_definition_incomplete": 0,
+    "final_input_definition_incomplete_cases": []
+  },
+  "failed_cases": [
+    {
+      "case_id": "DEV-005",
+      "run_id": "8975a74d-a662-4460-b63c-ae69b8dfb9ff",
+      "run_state": "failed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ],
+      "claim_checks": [],
+      "usage": {
+        "known_tokens": 6214,
+        "known_cost_microyuan": 10518,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 8.193101
+    },
+    {
+      "case_id": "DEV-017",
+      "run_id": "654d86ee-b2d5-44c8-afe9-9a0e44dc306f",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_REQUESTED_FIELDS"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "missing",
+          "predicate": false,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 9775,
+        "known_cost_microyuan": 40008,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 30.998444
+    },
+    {
+      "case_id": "DEV-019",
+      "run_id": "ad9d83ba-18ef-45bf-bbe8-01ee7be33803",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_REQUESTED_FIELDS"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "missing",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 8592,
+        "known_cost_microyuan": 29806,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 22.083257
+    },
+    {
+      "case_id": "DEV-020",
+      "run_id": "df50ade0-12af-4cb8-a5c1-84058e8d9221",
+      "run_state": "failed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ],
+      "claim_checks": [],
+      "usage": {
+        "known_tokens": 6323,
+        "known_cost_microyuan": 13157,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 10.592331
+    },
+    {
+      "case_id": "DEV-026",
+      "run_id": "fa3ea4ec-500e-4fcf-98a4-117faba2c712",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 6466,
+        "known_cost_microyuan": 14241,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 10.622872
+    },
+    {
+      "case_id": "DEV-027",
+      "run_id": "655d274c-222c-48b9-8798-bb6b478cc0bc",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 9190,
+        "known_cost_microyuan": 34338,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 25.800069
+    }
+  ],
+  "paired": {
+    "denominator": 40,
+    "outcomes": {
+      "tie": 33,
+      "win": 6,
+      "loss": 1
+    },
+    "cases": [
+      {
+        "case_id": "DEV-001",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-002",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-003",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-004",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-005",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-006",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-007",
+        "agent_correct": false,
+        "fixed_correct": true,
+        "outcome": "loss"
+      },
+      {
+        "case_id": "DEV-008",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-009",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-010",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-011",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-012",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-013",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-014",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-015",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-016",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-017",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-018",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-019",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-020",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-021",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-022",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-023",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-024",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-025",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-026",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-027",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "DEV-028",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-029",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-030",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-031",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-032",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-033",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-034",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-035",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-036",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-037",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-038",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-039",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "DEV-040",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      }
+    ],
+    "baseline_superiority_required": false,
+    "costs": {
+      "agent": {
+        "usage_total": {
+          "known_tokens": 888102,
+          "known_cost_microyuan": 1703829,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 272,
+          "chat_calls": 156,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 116
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 888102,
+          "known_cost_microyuan": 1703829,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 272,
+          "chat_calls": 156,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 116
+        },
+        "usage_complete": true
+      },
+      "fixed": {
+        "usage_total": {
+          "known_tokens": 298738,
+          "known_cost_microyuan": 953640,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 158,
+          "chat_calls": 40,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 118
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 298738,
+          "known_cost_microyuan": 953640,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 158,
+          "chat_calls": 40,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 118
+        },
+        "usage_complete": true
+      }
+    }
+  },
+  "comparison": {
+    "agent_correct": 39,
+    "agent_full_evidence": 39,
+    "fixed_correct": 34,
+    "fixed_full_evidence": 34,
+    "same_model_final_model_resources_and_family_limits": true,
+    "agent_usage": {
+      "known_tokens": 888102,
+      "known_cost_microyuan": 1703829,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 272,
+      "chat_calls": 156,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 0,
+      "profile_metadata_calls": 0,
+      "business_tool_calls": 116
+    },
+    "fixed_usage": {
+      "known_tokens": 298738,
+      "known_cost_microyuan": 953640,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 158,
+      "chat_calls": 40,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 0,
+      "profile_metadata_calls": 0,
+      "business_tool_calls": 118
+    },
+    "additional_agent_usage_cost_microyuan": 750189,
+    "agent_to_fixed_cost_ratio": 1.7866584874795521,
+    "single_complete_development_comparison_not_stability_or_causal_isolation": true
+  },
+  "active_execution": {
+    "agent": {
+      "definition": "Sum of actual run_attempts.finished_at-started_at; excludes approval wait, pre-claim and host checkpoint review.",
+      "total_seconds": 1021.130969,
+      "mean_seconds": 25.528274225,
+      "median_seconds": 25.152921499999998,
+      "p95_nearest_rank_seconds": 37.859892,
+      "attempts": 40
+    },
+    "fixed": {
+      "definition": "Sum of actual run_attempts.finished_at-started_at; excludes approval wait, pre-claim and host checkpoint review.",
+      "total_seconds": 674.660004,
+      "mean_seconds": 16.8665001,
+      "median_seconds": 15.1664215,
+      "p95_nearest_rank_seconds": 25.800069,
+      "attempts": 40
+    }
+  },
+  "financial_closure": {
+    "database_count": 39,
+    "prior_known_microyuan": 17907185,
+    "additional_microyuan": 953640,
+    "totals": {
+      "runs": 654,
+      "chat_calls": 2702,
+      "unknown_chat_calls": 0,
+      "inflight": 0,
+      "unfinished_attempts": 0,
+      "known": 18860825,
+      "held": 0
+    },
+    "remaining_microyuan": 9139175,
+    "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+    "peak_batch_known_plus_held_microyuan": 3149400,
+    "peak_stage_known_plus_held_microyuan": 21056585
+  },
+  "closure": {
+    "workflow_exit_code": 0,
+    "historical38_counts_unchanged": true,
+    "stage_lock_released": true,
+    "business_writes": 0,
+    "quality_retries_or_replacements": 0,
+    "runtime_review": "pending",
+    "independent_review": "independently_accepted_for_baseline_collection_report_and_financial_closure",
+    "independent_review_receipt": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\independent-post-batch-review.json",
+    "independent_review_receipt_sha256": "1420197ae29908f990f4c7971350673fae0ab9c97cc0ec529474100e72893101"
+  },
+  "initial_failed_launch": {
+    "root": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-20261015",
+    "executed": 0,
+    "unattempted": 40,
+    "additional_microyuan": 0,
+    "root_cause": "Copied Agent action keys with no Fixed action endpoint; rejected before Worker registration.",
+    "old_attempted_batch_reopened": false,
+    "fix": "Remove unused action credentials and reject scope mismatch before database creation.",
+    "real_installed_worker_free_registration_proved": true
+  },
+  "observability": {
+    "recorded_at": "2026-10-15T11:03:41.424721+00:00",
+    "kind": "actual-closed-batch-OTLP-association",
+    "source_evidence": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\evidence.json",
+    "source_evidence_sha256": "430b0dc98b3a591cf8797b95cf757be4bb059b7189e38c06e94c26eaec3211ad",
+    "collector_source": "E:\\JobForgeEvidence\\s5-2026-10-07\\verify_actual_otlp.py",
+    "collector_source_sha256": "3818010874e4b5808b8f6ce43c95395a09e4c92546d07f30a406f4eb24515119",
+    "executed_runs": 40,
+    "passed_runs": 40,
+    "all_passed": true,
+    "expected_physical_calls": 158,
+    "model_calls_from_this_collection": 0,
+    "link_rule": "FOLLOWS_FROM target may be control run.http; follow CHILD_OF ancestry to original sdk.run.submit.",
+    "rows": [
+      {
+        "case_id": "DEV-001",
+        "run_id": "23779ced-775d-4f0b-aa01-16f5552d759a",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 25,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 25,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "686c534cf47ca9956049dba3e748bf38",
+            "spanID": "cf5e52062c19009a"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-002",
+        "run_id": "479ac702-2cd9-4f76-b1a6-16368c2036d3",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 25,
+          "run.worker_rpc": 25,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "73b9d8292a933ea8a45b3cb89a3e1e21",
+            "spanID": "56aff583deef159a"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-003",
+        "run_id": "35acf1f5-d4ff-4ed9-8576-13e07c3af78a",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "2c678fece43c0aa1015e235e4d1855ca",
+            "spanID": "9dc3caa03b093e24"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-004",
+        "run_id": "e260759d-09cc-4123-adc9-280dab398d3b",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "10957d77b7b5b5f8b9499eb36f06c596",
+            "spanID": "07af948f8cbd877a"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-005",
+        "run_id": "8975a74d-a662-4460-b63c-ae69b8dfb9ff",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 23,
+          "run.python.execute": 5,
+          "run.step": 5,
+          "run.worker_rpc": 23,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "d4eeadb6d4db969c28b1d782c9b9032c",
+            "spanID": "f56a6f5a4a8b1129"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-006",
+        "run_id": "3d63e19a-f630-410d-bcb2-a7688714c91a",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.worker_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "ec5095c2cbc3b32f49f4b6b8e0184bb7",
+            "spanID": "7e1b15eaab2f193c"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-007",
+        "run_id": "2a9b17a5-17da-403f-a25c-9bf47fd8e576",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "bfa20068a79b8488b5fea0d0d813039a",
+            "spanID": "2ad6989b05f6ed21"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-008",
+        "run_id": "e2c4e90c-54c8-4cb8-ae2e-5fb386627c46",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "288767b99c2bcd99d2fca695c64a48a8",
+            "spanID": "3aa6e6df5f31461b"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-009",
+        "run_id": "9922cf27-4b6a-43d9-9f2f-d5060da35d4b",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.worker_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "20168ba63fc68bb83155368506be39d1",
+            "spanID": "215f61ae83233109"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-010",
+        "run_id": "3fff73a8-c7e8-4df1-8cd6-c77ff9a2ffd6",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "9735714757914aeae9ff9c3bef359361",
+            "spanID": "4774d92ae81f4c99"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-011",
+        "run_id": "85ebcae5-660f-43d4-9634-7a2e9782555b",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "35a0c3ed0eb249ff78143b225773199f",
+            "spanID": "1a7740ea1610b450"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-012",
+        "run_id": "e6b820d4-7de5-480b-9054-2de0315e6f61",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.worker_rpc": 28,
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "6396835a87443d3b17f139121c78da35",
+            "spanID": "afdcae071d56adb4"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-013",
+        "run_id": "c98ecc54-0f2a-4adb-af4c-bd8d1ac80fd0",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.worker_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "2ee5ee9f383fb7197626b137c629639c",
+            "spanID": "682e6dd2550d28e5"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-014",
+        "run_id": "d8a290ad-aafb-49e6-a39c-72a0e8aced1a",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "48e34a31b8914ad369cf1ce47a784291",
+            "spanID": "62192712bc654a6e"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-015",
+        "run_id": "6f5acad2-08d7-45df-80a6-32d5bdb6cfc8",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "33d776c024472f7eb15ac9a5bb749ca9",
+            "spanID": "a4328ffee52b1b41"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-016",
+        "run_id": "657341c5-a99a-4661-a6b4-ce77ee93ef1e",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 22,
+          "run.python.execute": 5,
+          "run.step": 5,
+          "run.worker_rpc": 22,
+          "run.external_http": 3,
+          "business.http": 2,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 3,
+        "observed_external_http_spans": 3,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "5caef8a87b44c2ade61fe5e7333b21b3",
+            "spanID": "4a3429e3394da784"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-017",
+        "run_id": "654d86ee-b2d5-44c8-afe9-9a0e44dc306f",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 30,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 30,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "1697cedf50ac43ea29e4590edd286952",
+            "spanID": "ccba103551acb1d6"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-018",
+        "run_id": "095b2447-89bd-4df9-95d1-2105b9b0978c",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 28,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "6edf9ad8d19960a563b4b412a9332a32",
+            "spanID": "ecd9fe24c4e9745b"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-019",
+        "run_id": "ad9d83ba-18ef-45bf-bbe8-01ee7be33803",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 28,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "851550993f7c8a82b51cc40702820a76",
+            "spanID": "7e47aa50c1f53138"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-020",
+        "run_id": "df50ade0-12af-4cb8-a5c1-84058e8d9221",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 24,
+          "run.python.execute": 5,
+          "run.step": 5,
+          "run.worker_rpc": 24,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "6b8dd77b27d3bf298e6e7eabf058bdd5",
+            "spanID": "f7bf16c4f670211f"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-021",
+        "run_id": "e9863fdf-a994-4ad9-b66e-5c35aacb1a77",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "98cd354631e02dcc748c66491ccb5e28",
+            "spanID": "ec3cb6a7bb655f82"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-022",
+        "run_id": "e0fa3676-a1e8-4858-8d2b-42dcae9ad0af",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "fa18894f26439ce5aa2e606d1c0c6cf8",
+            "spanID": "b33102e598fa1435"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-023",
+        "run_id": "a722c591-a193-46d9-8933-e8293b5ed3dc",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.worker_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "96c7259076b58c4d153c19c0768e2d15",
+            "spanID": "53286ee02ef3406e"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-024",
+        "run_id": "bf7117b7-379f-4b71-8c4a-990f3503afc7",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "86c7f2161d4f002bec834caa4d53bbee",
+            "spanID": "909e3cf0acb7d9f2"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-025",
+        "run_id": "34fd162f-6b4f-4ed3-a54f-78a5158413f1",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "f4be166fbc7a23dee526f697bc5bb90e",
+            "spanID": "78b047011b53818a"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-026",
+        "run_id": "fa3ea4ec-500e-4fcf-98a4-117faba2c712",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "0cdf08dc7e9959a99c869b42bc19ae10",
+            "spanID": "5bcd06345eec5000"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-027",
+        "run_id": "655d274c-222c-48b9-8798-bb6b478cc0bc",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 29,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 29,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "e199b9e14af194c38ed8a89b71cac086",
+            "spanID": "a0c0001f2ce798c9"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-028",
+        "run_id": "ad8aaa3c-0eb9-474a-9df8-48788e7533e4",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 28,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "527b7969ec0c2814e512c6f71ef71edc",
+            "spanID": "79783c858672cb5c"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-029",
+        "run_id": "94e7106c-c001-4ed1-afbd-d26bb31edc9f",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 31,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 31,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "6eca5ffa56f1f90fcde09e119b7d12b5",
+            "spanID": "f2dc3d48bc818fae"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-030",
+        "run_id": "19f75597-68f8-4d10-a516-339ca09f614f",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "60d9e597b2d4844b149cad44410e2945",
+            "spanID": "e9e79daf0ddfaccc"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-031",
+        "run_id": "fb88f6a9-9075-4d38-9e49-24ddb583e732",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "69aa4ac0b494f96f954c68c0b24744a7",
+            "spanID": "24ebf4f4e2367f28"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-032",
+        "run_id": "5646e15c-9818-4629-9d05-9acdf5927fd7",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "9f03006f0d10b0220378beac0e810d86",
+            "spanID": "551a1630d4f945de"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-033",
+        "run_id": "0e5801cb-bb62-4422-8a6a-d34e0ab9c386",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 27,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "97297cc0cb1331d4ce5f5d40876e71cc",
+            "spanID": "766a56aedf976c0f"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-034",
+        "run_id": "cc35eb8a-9cdc-42a1-b140-c8fbd6e51648",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 27,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "581453775fcf6a60d28f4ae1dc28ed16",
+            "spanID": "5e7aec0986f5eeb7"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-035",
+        "run_id": "d5df05a2-fe61-4f3b-a367-2472e2884dd4",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.worker_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "b22a63bd3159f60bd374860af0a1e88e",
+            "spanID": "0663b5a3813cffa7"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-036",
+        "run_id": "a1ab7345-4d2c-4690-b3bf-b64aa0692c29",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 27,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 27,
+          "run.external_http": 4,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "4a034406f9b8eeaecc2bc85191f4feb7",
+            "spanID": "274898a04ffd5c29"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-037",
+        "run_id": "982c51b0-ee45-4af3-b9d1-32da6e7f887a",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 28,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "fd05fc5c0f35ee3422fd11e9381e879b",
+            "spanID": "e248c88a859f17de"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-038",
+        "run_id": "934449eb-81c1-4c02-b038-86a924551df8",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.worker_rpc": 21,
+          "run.control_rpc": 21,
+          "run.python.execute": 5,
+          "run.step": 5,
+          "run.external_http": 3,
+          "business.http": 2,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 3,
+        "observed_external_http_spans": 3,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "0839f91d1276b288470e53c14fa5eedc",
+            "spanID": "e9dd1f76f0e556b9"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-039",
+        "run_id": "34d174f8-af86-48a9-bbc1-53ed8af35ba3",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 26,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.worker_rpc": 26,
+          "business.http": 3,
+          "run.external_http": 4,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "282b56d0662d725bde84ad128af9f151",
+            "spanID": "f82f04c77d70ccaf"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      },
+      {
+        "case_id": "DEV-040",
+        "run_id": "bafe2961-fba3-4e6b-80b0-13ab0b2b7fd1",
+        "attempt_traces": 1,
+        "span_counts": {
+          "run.control_rpc": 28,
+          "run.python.execute": 6,
+          "run.step": 6,
+          "run.external_http": 4,
+          "run.worker_rpc": 28,
+          "business.http": 3,
+          "run.attempt": 1
+        },
+        "expected_physical_calls": 4,
+        "observed_external_http_spans": 4,
+        "physical_calls_exactly_once_in_trace": true,
+        "bridge_source_verified": true,
+        "original_submit_links": [
+          {
+            "refType": "FOLLOWS_FROM",
+            "traceID": "9c525645479a58dac732a552e0d4b4e1",
+            "spanID": "67a988a87871771a"
+          }
+        ],
+        "all_attempt_links_reach_original_SDK_submit": true,
+        "finite_chain_present": true,
+        "passed": true
+      }
+    ],
+    "artifact_sha256": {
+      "search-DEV-001.json": "ac9b2ec3ceeccd16d429b2711e61c0a875ce5939bee7c93ffae3d6b33506302c",
+      "trace-686c534cf47ca9956049dba3e748bf38.json": "1a533e2bc042ff88fe05b6aed261b3ad8ac6d1cdbd2b21a6311e70fcf0f00855",
+      "search-DEV-002.json": "9b4e7a7521bc00dcd98b0ac5b5adc179e42470c636f7cf492ad67b965711f754",
+      "trace-73b9d8292a933ea8a45b3cb89a3e1e21.json": "126be2d819af63391fee8b93e317798521e6ae39297496c73a6d65dbab01736e",
+      "search-DEV-003.json": "6baf56371b3a7ce395fcf81ac5bf93b82ef6d4429488e36c6343afa305bd7826",
+      "trace-2c678fece43c0aa1015e235e4d1855ca.json": "2cff2363e8ae57106717c4d9580e800528fcadbfa47f278f35cc86ab154f1fcc",
+      "search-DEV-004.json": "02620d2eb3f3f2a786e91cc024295e13b0e6807ed506c51433c7923a5af9e276",
+      "trace-10957d77b7b5b5f8b9499eb36f06c596.json": "1fd84a8ceb0c9c9500c9da6ed4ddd7700b1e5bf36442f8a0fb2cf06ac7d0e31b",
+      "search-DEV-005.json": "3d160c651e16b91d44a0bba79e4f70b2b030fc17cc5a0488a57adddcf6d648be",
+      "trace-d4eeadb6d4db969c28b1d782c9b9032c.json": "304bb4c4b177b00603fffa3be9fd76c9414d860a7c2061e7ef816855cdaa0ead",
+      "search-DEV-006.json": "6c0584f8ba5099cb7f299349226b59c23d358d12f15c85d8c6c649a54468dd30",
+      "trace-ec5095c2cbc3b32f49f4b6b8e0184bb7.json": "be307bfa20a3bd1727be81119b2d19960d53f9831e0d9fa97b78d352745dab6c",
+      "search-DEV-007.json": "9227d4d3399f6b4005d349f9d79145e814c535065937cc1893e2264c1daf6f5f",
+      "trace-bfa20068a79b8488b5fea0d0d813039a.json": "26d700e8ad968119a77d522760658809a68d1effb3ae14f54e737726942dd1fe",
+      "search-DEV-008.json": "ffba3a621b828f2670b7db258b85ca0840ec213c5311ee563d93fa5863d0cddb",
+      "trace-288767b99c2bcd99d2fca695c64a48a8.json": "7e4d48dac26f42dc3362ca8a77b2db6c875010777638d38a6600c3cfa7f37de4",
+      "search-DEV-009.json": "e4337cbe75cda7aed2d4526d9cfc8f652665f4093153b1e093eb210a996b03a0",
+      "trace-20168ba63fc68bb83155368506be39d1.json": "07eb07ffa1aa42b96ec06ddf91dd819cc392cecb285c6102716e1466e0fede1c",
+      "search-DEV-010.json": "35d7a0568802ad135f043dfcd1d8b6e45d84dccb32750f90bf86105d1b149dc4",
+      "trace-9735714757914aeae9ff9c3bef359361.json": "d913aaec8d558b23d519ae7428a8e97009c5820554a592adca3640fa3cff2374",
+      "search-DEV-011.json": "4b8c00a77171392aa612faa6f1344ae686aa068707e238619dd33f4b6664141a",
+      "trace-35a0c3ed0eb249ff78143b225773199f.json": "42beab50551d2341201b25f9f7646afa08e7101bd06618be2050de79c5e74bf9",
+      "search-DEV-012.json": "a342fefa28edd74ab1e21c9e3af5d9379e3b392c7938c4e0d2be52796d2ec376",
+      "trace-6396835a87443d3b17f139121c78da35.json": "d011780d343801b7016ef60585eb210bd87a5b022be6cb21a6fcd3f96ac9cba1",
+      "search-DEV-013.json": "01f7e952d7328af8cd6f618500925e9fba28e0aa290f21de89c17e3893b32cf1",
+      "trace-2ee5ee9f383fb7197626b137c629639c.json": "8caa5e68b58fa19956ea54effad262d968d9462bc1419aad026ad67d98c611aa",
+      "search-DEV-014.json": "2802a95396c9c891d8c712b30dd5cc8b1624a8c762018a4c7e083e1892e57fc8",
+      "trace-48e34a31b8914ad369cf1ce47a784291.json": "42e8c66e6d54665944c2da4a250edb33c9fa4ac4cd2db7620b6dfa03fae9add1",
+      "search-DEV-015.json": "0aa54d2af4ca949e84b314b8659e1d97d3dcc99eff6f1b95a87dbfda037991c0",
+      "trace-33d776c024472f7eb15ac9a5bb749ca9.json": "05cf78ed742db8ab167275df1df16d43b2b2d10bad7ab6dd52a6afd3530d4179",
+      "search-DEV-016.json": "566dd2946a7fc5b64bc97413d46ae63fc9b9fc811178a03e31e3b5dce219d138",
+      "trace-5caef8a87b44c2ade61fe5e7333b21b3.json": "e2d9e768d869a35314a90197ed1f97ff9722e7e72c02037f11bdd08dec4d3bda",
+      "search-DEV-017.json": "e786c4a54930fc6ed21bb0a4610981ff0ea1505715f70544e1b398fff15c028e",
+      "trace-1697cedf50ac43ea29e4590edd286952.json": "f68f9448b2b308baca41c921d951a77aee852df40871ab06d14a865889c9db74",
+      "search-DEV-018.json": "c1e2bfd3c4a76f0bc9df489c20b34bb231aca831f555a8986d9c3d9015ba5a22",
+      "trace-6edf9ad8d19960a563b4b412a9332a32.json": "bd01523a025dfd9fc70987d946c889ceb369dc1b2319b21264a58ecc940d7c0a",
+      "search-DEV-019.json": "9f45e607c4b7e623d4d4eef2c36ec1ff49b94b40a4863c39da24f446e90b75b7",
+      "trace-851550993f7c8a82b51cc40702820a76.json": "0a21b92fc99684737b42a1a00c539af56c2a8d8ec54b9cb0a546916cda1ff9ba",
+      "search-DEV-020.json": "88d4e6dd739ba9fa60aa0c3ad4e1efb5e36485c90f35e2fb53c6ec24db85a193",
+      "trace-6b8dd77b27d3bf298e6e7eabf058bdd5.json": "4dbbba98b110d9946ccf5abc5fa06d57f9e95c1f448c5d7fd5fbd36af261fa19",
+      "search-DEV-021.json": "94bdfe9084002f26f1bd1188b845812f7d7f45d32489be04bb8f626db0adf659",
+      "trace-98cd354631e02dcc748c66491ccb5e28.json": "808c491009e5acde6324199ab993df51232d4167fea4ead585f85d8a94ba54b3",
+      "search-DEV-022.json": "64def7aa709053490ed74745438a91c2e79635b2a4d41ffa202907d78ee00a82",
+      "trace-fa18894f26439ce5aa2e606d1c0c6cf8.json": "90a0fd84288ecca87ab2737eae2106253aa71849e6895b072903f09355c47aa4",
+      "search-DEV-023.json": "fb4558672aefdfd4ab4415999300e5c4b052bfa84662bd88bed0025b5e616dc5",
+      "trace-96c7259076b58c4d153c19c0768e2d15.json": "e6587fe466f9bdd4874e56f61cd454eebb9f294dcbf33572ee5eadc767100b5d",
+      "search-DEV-024.json": "a21439a7d23d6539802119572fb547cf4d780cc140b837cf3e31af16f15fec73",
+      "trace-86c7f2161d4f002bec834caa4d53bbee.json": "dd2e9db614a6d221c6ef2476566261037556f5c6d097d2cbde8b0a32c0ffc49b",
+      "search-DEV-025.json": "78d82c91a1181492c174c0885052f08460874fa6ffdefa9f6274af2129af3159",
+      "trace-f4be166fbc7a23dee526f697bc5bb90e.json": "69fb3f20d772edbf7ee97a66ed04192f6f7477b5d176756e5fbbd4e57c1b7f27",
+      "search-DEV-026.json": "162246872344654acff0504ab2f064a61255251693662c667ce6f47fd6761a21",
+      "trace-0cdf08dc7e9959a99c869b42bc19ae10.json": "3af02ce0519499628b1bb6148a0f2ade6aad3a11e6d0d528e0a0ae3f2c3057b7",
+      "search-DEV-027.json": "17583774d8aa61317652d39886cea22ce5c2c25c7becdeb34fae3956d51e8c64",
+      "trace-e199b9e14af194c38ed8a89b71cac086.json": "197faa47e81b32d4753a6eb3ab14b63113cf9e6ad6e243adcb5f1b841ee67c84",
+      "search-DEV-028.json": "321bc6c1108240708c97c55c3627ebda94215045ee832432ccf5b6eb8403d4ff",
+      "trace-527b7969ec0c2814e512c6f71ef71edc.json": "2d73ac7483258be49cd7ed04c70d0fedd14cdcd97adba24ff1d691e5e2fd682a",
+      "search-DEV-029.json": "fc0059960f8e1c02b17502c35786098fe15eb35ea53cb4db0841f847de77f329",
+      "trace-6eca5ffa56f1f90fcde09e119b7d12b5.json": "4a47e8f5796c6a437ffe9b6bc655e825ff99e29e593216df86f269d0e3404a25",
+      "search-DEV-030.json": "afb528ef8b829242df059d9135c086c31e2298df91eed2cb9e201e1d742d0085",
+      "trace-60d9e597b2d4844b149cad44410e2945.json": "9119e9c2939e2fb7cff125176e265c58d1b21bbaca5ab48498f29223d390e432",
+      "search-DEV-031.json": "d41384ef37918811a6175b11cfc759da8a494b97a0868ebdda30872ddf328823",
+      "trace-69aa4ac0b494f96f954c68c0b24744a7.json": "5db0d50ad2c269de531d31e7e863aebbaa3e7eecc0ad7f0dc18bb81161cdfde4",
+      "search-DEV-032.json": "1b97a55d8f542493a584bb744c6d8150ccd68555bc15a3bd6e25504dcca63e49",
+      "trace-9f03006f0d10b0220378beac0e810d86.json": "ee69d7e852ff17bb9fca3d38b98df4ee827fcaf10f7482b7c69ed24fa6056c60",
+      "search-DEV-033.json": "56d24717ab003ec9c8b0f577189cb9172407e3ebb44515772c617d282239e4e4",
+      "trace-97297cc0cb1331d4ce5f5d40876e71cc.json": "57135f61560134c82be60a5a397fc8422920a3785ea8870ac153ea7c0ebbf8b0",
+      "search-DEV-034.json": "4295edca0e750ee34c9c2e15a58ea6c31ae6b0c838e7a24d8c8a363542b76752",
+      "trace-581453775fcf6a60d28f4ae1dc28ed16.json": "0ce87a9348200c1a2dac4259ac33134d182241ee86093d1b21c704501a50f95f",
+      "search-DEV-035.json": "f29d0e6395a2732c39ee98a34c45dbfeca13cba2ba01a1441dc0023f423a7d58",
+      "trace-b22a63bd3159f60bd374860af0a1e88e.json": "3e1316b9f086ca10d646e7174b81f1348709b6d26a458b06090d557ef67f6001",
+      "search-DEV-036.json": "295e9bf92ca3e791673519c67e37c168e43f6f9bb59aeb35dcff44da183be0dc",
+      "trace-4a034406f9b8eeaecc2bc85191f4feb7.json": "525c4e4abd785ea632e8c3b770b68d8a27e057f8ea5f0e35b7501eae418632d3",
+      "search-DEV-037.json": "f83e99b73bebd67de12df74979ea970d5448c4b66ef033ddcc378ca4589b3bd6",
+      "trace-fd05fc5c0f35ee3422fd11e9381e879b.json": "a7d4eaee1f8b4f629cc3b1d4015cb334eddce96ea3cddd90959b48aae63fb983",
+      "search-DEV-038.json": "589592894cbe00dfa3e64e64fc47f1943118b14c83ec782300ad7a00c612037e",
+      "trace-0839f91d1276b288470e53c14fa5eedc.json": "d504ab4813d2efb48381ad1d5c88c0accf101ecc78be01c56d35b37cb46d27d1",
+      "search-DEV-039.json": "86f0517907e705975726b2761cde73ceb0528e927cdcafe3aaf03deb7887cfae",
+      "trace-282b56d0662d725bde84ad128af9f151.json": "67639c2400bc5325d6b5937a42c683eaef225f992b3cf58c273b047ee8e85386",
+      "search-DEV-040.json": "b7c98ed2cb44fd2ea36b98fdd10358a11eef4e384f55dee5aceefad15c0cc82e",
+      "trace-9c525645479a58dac732a552e0d4b4e1.json": "712a035aaae60ce87b7bbc1d401b09375824398adb0ac91da7534ac98b9244ab"
+    }
+  },
+  "validation": {
+    "recorded_at": "2026-10-15T10:36:39.190165+00:00",
+    "scope": "Free prepare-time tenant/action credential scope check. No production, installed image, Go concurrency, model, prompt, scoring or permission expansion.",
+    "host_tests_passed": 64,
+    "related_python_passed": 356,
+    "checks": [
+      {
+        "name": "related-python",
+        "argv": [
+          "E:\\JobForge\\.venv\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tools/support_s5",
+          "-q",
+          "--tb=short"
+        ],
+        "exit_code": 0,
+        "seconds": 10.155263,
+        "sha256": "d5ab2b780cbaea85fe2f2feb2fe4d5ecd1e158fa9c5056cb0b7a445ffef8da37",
+        "log": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\validation\\related-python.log"
+      },
+      {
+        "name": "mypy",
+        "argv": [
+          "E:\\JobForge\\.venv\\Scripts\\python.exe",
+          "-m",
+          "mypy",
+          "--platform",
+          "linux",
+          "--explicit-package-bases",
+          "tools/support_s5",
+          "tools/support_lifecycle",
+          "tools/support_diagnosis"
+        ],
+        "exit_code": 0,
+        "seconds": 0.729391,
+        "sha256": "ee3a12df8b76d14e26acc8e630f53f2fa25ac3235e6bdd46c6ec61ea827f83ad",
+        "log": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\validation\\mypy.log"
+      },
+      {
+        "name": "quick",
+        "argv": [
+          "E:\\JobForge\\.venv\\Scripts\\python.exe",
+          "-m",
+          "tools.check",
+          "quick"
+        ],
+        "exit_code": 0,
+        "seconds": 6.31523,
+        "sha256": "351711339add8f5e80c584995dda67f2d4b961c998fef2a294ff663988804b23",
+        "log": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\validation\\quick.log"
+      },
+      {
+        "name": "docs",
+        "argv": [
+          "E:\\JobForge\\.venv\\Scripts\\python.exe",
+          "-m",
+          "tools.ci_docs"
+        ],
+        "exit_code": 0,
+        "seconds": 0.674142,
+        "sha256": "f3b1be281c26a4f57e9eea85d06638f5e9d41c0a427c05c832d350ba0960e229",
+        "log": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\validation\\docs.log"
+      }
+    ],
+    "real_installed_worker_startup": {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\validation\\run-2\\worker-startup-proof.json",
+      "sha256": "323b6c1fde72394b035c72b2f4eee64db9ba641a291064451e0fd57090e1bbfe",
+      "real_pg_session": 1,
+      "runs": 0,
+      "calls": 0,
+      "profiles_disabled": true,
+      "synthetic_credentials_only": true
+    },
+    "initial_free_probe_failure": "validation/worker-startup-first-failure.json",
+    "old_zero_call_batch": "E:/JobForgeEvidence/s5-2026-10-07/v9-fixed-20261015/failed-startup-closure.json",
+    "reused_validation": "E:/JobForgeEvidence/s5-2026-10-07/v9-20261015/implementation-validation.json",
+    "reason_for_reuse": "No production/installed/Go/scorer change; added CLI startup proof covers identified new risk.",
+    "remote_ci": "not_run",
+    "paid_calls": 0
+  },
+  "next_step": "Complete seen V3 original20 with unchanged v9, checking S5V3-004/018 and accepted DEV020 before freeze. New scope requires independent concrete startup review.",
+  "rows": [
+    {
+      "case_id": "DEV-001",
+      "run_id": "23779ced-775d-4f0b-aa01-16f5552d759a",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6110,
+        "known_cost_microyuan": 9728,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 8.443615
+    },
+    {
+      "case_id": "DEV-002",
+      "run_id": "479ac702-2cd9-4f76-b1a6-16368c2036d3",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 5948,
+        "known_cost_microyuan": 9895,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 9.16425
+    },
+    {
+      "case_id": "DEV-003",
+      "run_id": "35acf1f5-d4ff-4ed9-8576-13e07c3af78a",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7236,
+        "known_cost_microyuan": 18748,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 14.005286
+    },
+    {
+      "case_id": "DEV-004",
+      "run_id": "e260759d-09cc-4123-adc9-280dab398d3b",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6753,
+        "known_cost_microyuan": 16179,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 13.007075
+    },
+    {
+      "case_id": "DEV-005",
+      "run_id": "8975a74d-a662-4460-b63c-ae69b8dfb9ff",
+      "run_state": "failed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ],
+      "claim_checks": [],
+      "usage": {
+        "known_tokens": 6214,
+        "known_cost_microyuan": 10518,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 8.193101
+    },
+    {
+      "case_id": "DEV-006",
+      "run_id": "3d63e19a-f630-410d-bcb2-a7688714c91a",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6890,
+        "known_cost_microyuan": 17639,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 13.280176
+    },
+    {
+      "case_id": "DEV-007",
+      "run_id": "2a9b17a5-17da-403f-a25c-9bf47fd8e576",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6858,
+        "known_cost_microyuan": 15748,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 12.493406
+    },
+    {
+      "case_id": "DEV-008",
+      "run_id": "e2c4e90c-54c8-4cb8-ae2e-5fb386627c46",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7426,
+        "known_cost_microyuan": 21957,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 15.579401
+    },
+    {
+      "case_id": "DEV-009",
+      "run_id": "9922cf27-4b6a-43d9-9f2f-d5060da35d4b",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6505,
+        "known_cost_microyuan": 12870,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 11.832959
+    },
+    {
+      "case_id": "DEV-010",
+      "run_id": "3fff73a8-c7e8-4df1-8cd6-c77ff9a2ffd6",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7747,
+        "known_cost_microyuan": 24203,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 18.287787
+    },
+    {
+      "case_id": "DEV-011",
+      "run_id": "85ebcae5-660f-43d4-9634-7a2e9782555b",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6748,
+        "known_cost_microyuan": 14826,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 12.309738
+    },
+    {
+      "case_id": "DEV-012",
+      "run_id": "e6b820d4-7de5-480b-9054-2de0315e6f61",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 8623,
+        "known_cost_microyuan": 31055,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 24.546555
+    },
+    {
+      "case_id": "DEV-013",
+      "run_id": "c98ecc54-0f2a-4adb-af4c-bd8d1ac80fd0",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6699,
+        "known_cost_microyuan": 14266,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 11.581243
+    },
+    {
+      "case_id": "DEV-014",
+      "run_id": "d8a290ad-aafb-49e6-a39c-72a0e8aced1a",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7510,
+        "known_cost_microyuan": 22313,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 18.625843
+    },
+    {
+      "case_id": "DEV-015",
+      "run_id": "6f5acad2-08d7-45df-80a6-32d5bdb6cfc8",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7852,
+        "known_cost_microyuan": 23484,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 18.069929
+    },
+    {
+      "case_id": "DEV-016",
+      "run_id": "657341c5-a99a-4661-a6b4-ce77ee93ef1e",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7437,
+        "known_cost_microyuan": 30878,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 3,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 2
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 19.313224
+    },
+    {
+      "case_id": "DEV-017",
+      "run_id": "654d86ee-b2d5-44c8-afe9-9a0e44dc306f",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_REQUESTED_FIELDS"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "missing",
+          "predicate": false,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 9775,
+        "known_cost_microyuan": 40008,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 30.998444
+    },
+    {
+      "case_id": "DEV-018",
+      "run_id": "095b2447-89bd-4df9-95d1-2105b9b0978c",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 8089,
+        "known_cost_microyuan": 27807,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 22.602947
+    },
+    {
+      "case_id": "DEV-019",
+      "run_id": "ad9d83ba-18ef-45bf-bbe8-01ee7be33803",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "UNSUPPORTED_CLAIM",
+        "WRONG_REQUESTED_FIELDS"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "missing",
+          "predicate": false,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 8592,
+        "known_cost_microyuan": 29806,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 22.083257
+    },
+    {
+      "case_id": "DEV-020",
+      "run_id": "df50ade0-12af-4cb8-a5c1-84058e8d9221",
+      "run_state": "failed",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "RUN_NOT_COMPLETED"
+      ],
+      "claim_checks": [],
+      "usage": {
+        "known_tokens": 6323,
+        "known_cost_microyuan": 13157,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 10.592331
+    },
+    {
+      "case_id": "DEV-021",
+      "run_id": "e9863fdf-a994-4ad9-b66e-5c35aacb1a77",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6883,
+        "known_cost_microyuan": 16056,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 14.545933
+    },
+    {
+      "case_id": "DEV-022",
+      "run_id": "e0fa3676-a1e8-4858-8d2b-42dcae9ad0af",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7575,
+        "known_cost_microyuan": 22897,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 18.32593
+    },
+    {
+      "case_id": "DEV-023",
+      "run_id": "a722c591-a193-46d9-8933-e8293b5ed3dc",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6900,
+        "known_cost_microyuan": 15904,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 13.59407
+    },
+    {
+      "case_id": "DEV-024",
+      "run_id": "bf7117b7-379f-4b71-8c4a-990f3503afc7",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6685,
+        "known_cost_microyuan": 15879,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 13.112847
+    },
+    {
+      "case_id": "DEV-025",
+      "run_id": "34fd162f-6b4f-4ed3-a54f-78a5158413f1",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "conflict",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6445,
+        "known_cost_microyuan": 12396,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 11.054385
+    },
+    {
+      "case_id": "DEV-026",
+      "run_id": "fa3ea4ec-500e-4fcf-98a4-117faba2c712",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 6466,
+        "known_cost_microyuan": 14241,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 10.622872
+    },
+    {
+      "case_id": "DEV-027",
+      "run_id": "655d274c-222c-48b9-8798-bb6b478cc0bc",
+      "run_state": "awaiting_approval",
+      "correct": false,
+      "full_case_evidence": false,
+      "errors": [
+        "REQUIRED_CLAIM_MISSING",
+        "UNSUPPORTED_CLAIM"
+      ],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": false
+        }
+      ],
+      "usage": {
+        "known_tokens": 9190,
+        "known_cost_microyuan": 34338,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 25.800069
+    },
+    {
+      "case_id": "DEV-028",
+      "run_id": "ad8aaa3c-0eb9-474a-9df8-48788e7533e4",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 8391,
+        "known_cost_microyuan": 36146,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 21.82943
+    },
+    {
+      "case_id": "DEV-029",
+      "run_id": "94e7106c-c001-4ed1-afbd-d26bb31edc9f",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 11254,
+        "known_cost_microyuan": 58060,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 36.886178
+    },
+    {
+      "case_id": "DEV-030",
+      "run_id": "19f75597-68f8-4d10-a516-339ca09f614f",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6762,
+        "known_cost_microyuan": 22664,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 13.256335
+    },
+    {
+      "case_id": "DEV-031",
+      "run_id": "fb88f6a9-9075-4d38-9e49-24ddb583e732",
+      "run_state": "succeeded",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "ticket_status",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7285,
+        "known_cost_microyuan": 25990,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 14.753442
+    },
+    {
+      "case_id": "DEV-032",
+      "run_id": "5646e15c-9818-4629-9d05-9acdf5927fd7",
+      "run_state": "succeeded",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "ticket_status",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7813,
+        "known_cost_microyuan": 31450,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 19.201541
+    },
+    {
+      "case_id": "DEV-033",
+      "run_id": "0e5801cb-bb62-4422-8a6a-d34e0ab9c386",
+      "run_state": "succeeded",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "ticket_status",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7977,
+        "known_cost_microyuan": 31550,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 18.200373
+    },
+    {
+      "case_id": "DEV-034",
+      "run_id": "cc35eb8a-9cdc-42a1-b140-c8fbd6e51648",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7984,
+        "known_cost_microyuan": 32770,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 19.52712
+    },
+    {
+      "case_id": "DEV-035",
+      "run_id": "d5df05a2-fe61-4f3b-a367-2472e2884dd4",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "correction",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 2,
+          "kind": "ticket_status",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7876,
+        "known_cost_microyuan": 30322,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 17.562684
+    },
+    {
+      "case_id": "DEV-036",
+      "run_id": "a1ab7345-4d2c-4690-b3bf-b64aa0692c29",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7802,
+        "known_cost_microyuan": 31374,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 19.167753
+    },
+    {
+      "case_id": "DEV-037",
+      "run_id": "982c51b0-ee45-4af3-b9d1-32da6e7f887a",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "dispute",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 9149,
+        "known_cost_microyuan": 40980,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 24.591037
+    },
+    {
+      "case_id": "DEV-038",
+      "run_id": "934449eb-81c1-4c02-b038-86a924551df8",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "missing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6107,
+        "known_cost_microyuan": 20088,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 3,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 2
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 11.99515
+    },
+    {
+      "case_id": "DEV-039",
+      "run_id": "34d174f8-af86-48a9-bbc1-53ed8af35ba3",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 6902,
+        "known_cost_microyuan": 22986,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 14.470386
+    },
+    {
+      "case_id": "DEV-040",
+      "run_id": "bafe2961-fba3-4e6b-80b0-13ab0b2b7fd1",
+      "run_state": "awaiting_approval",
+      "correct": true,
+      "full_case_evidence": true,
+      "errors": [],
+      "claim_checks": [
+        {
+          "index": 0,
+          "kind": "critical",
+          "predicate": true,
+          "source_coverage": true
+        },
+        {
+          "index": 1,
+          "kind": "timing",
+          "predicate": true,
+          "source_coverage": true
+        }
+      ],
+      "usage": {
+        "known_tokens": 7957,
+        "known_cost_microyuan": 32464,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "physical_calls": 4,
+        "chat_calls": 1,
+        "unknown_chat_calls": 0,
+        "measurement_anomalies": 0,
+        "corrections": 0,
+        "query_embedding_calls": 0,
+        "profile_metadata_calls": 0,
+        "business_tool_calls": 3
+      },
+      "usage_status": "verified",
+      "source": "passed",
+      "protocol": "passed",
+      "safety": "passed",
+      "execution_complete": true,
+      "call_audit_complete": true,
+      "active_attempt_seconds": 21.151902
+    }
+  ],
+  "artifact_sha256": {
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\manifest.json": "d4368bdb61bf16defb08ea95cd29e15808700cc6e7366ef00df0c84f6ebbdb25",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\registration.json": "351ab58d0d4e82516b72daa8b0d6139cfddc064f792800ddf443c0c9fdbd8657",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\evidence.json": "430b0dc98b3a591cf8797b95cf757be4bb059b7189e38c06e94c26eaec3211ad",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\score.json": "2bd8f7ba231468b6a384d8e2973dd1c6b404a2da96b55f183f6ed0ed4d141f9b",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\result.json": "73c49bd436ec6ecf13664a54a928898223f90998d143ca15a8c740a896de6e83",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\dev-fixed\\closed-ledger.json": "6847bd1559e0531c072a7f81bc03d169c768810a0775086045e949e83d5e1703",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\source.json": "b501fb2edd4841f5d28f9a99a5f1324ccf3f7738e0d5414dfe00e6d68424b39c",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\build-source-receipt.json": "20470212e9987f43f6b3fbd38fa37318574d0f86ab5bf4fde3d1be06f66a8d3a",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\budget-allocation.json": "f157d9aeade014f7f138a795c188e1474ecf26ee1049715405208c79b0909eeb",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\independent-startup-review.json": "7cdf825d5e46e34f4de67fcfddfc54bb13389a38173208866458765ab052fe21",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\startup-review.authorized.json": "22af7b63e97d77f1b721d83680079e631f2af6d27666bd75a1084abbd2b627c4",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\implementation-validation.json": "009d43fe02d30638d893bc3db5a388badb0a609fcc4a8fc46d39844f82cafa0c",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\paired-development.json": "47a1508e19428793717f5aa4daa322c6627590bfcb9594505a6a60397141f398",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\attempts-agent.json": "addf653255b81f7b1eb3de4a530e71f2e8a0f711b1a49fcb74c293212f57523b",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\attempts-fixed.json": "d94b8d75b5504a55f9b8c3ed9d2fb0f5d6cc54b04d1bc7ed49c1a71a0942298f",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\observability\\post-batch\\summary.json": "b71762f2ab6aa4e361e1b782687b8927913e9218b25dec0ab10691148fdf8238",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-20261015\\failed-startup-closure.json": "526e8dfde1f6c9fcc132a47e9916740b4daef318c73600ff6adf276d11a0d2c8",
+    "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-fixed-relaunch-20261015\\independent-post-batch-review.json": "1420197ae29908f990f4c7971350673fae0ab9c97cc0ec529474100e72893101"
+  }
+}

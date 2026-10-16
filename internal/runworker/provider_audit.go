@@ -33,6 +33,7 @@ func providerAuditToWire(a *run.ProviderAudit) *agentv1.ProviderAudit {
 		}[a.ReasoningState],
 		ModeState: map[run.ProviderModeState]agentv1.ProviderModeState{
 			"nonthinking": agentv1.ProviderModeState_PROVIDER_MODE_STATE_NONTHINKING,
+			"thinking":    agentv1.ProviderModeState_PROVIDER_MODE_STATE_THINKING,
 			"unexpected":  agentv1.ProviderModeState_PROVIDER_MODE_STATE_UNEXPECTED,
 			"invalid":     agentv1.ProviderModeState_PROVIDER_MODE_STATE_INVALID,
 			"unavailable": agentv1.ProviderModeState_PROVIDER_MODE_STATE_UNAVAILABLE,

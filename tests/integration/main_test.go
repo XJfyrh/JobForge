@@ -235,7 +235,8 @@ func applyMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 	if _, err := pool.Exec(ctx, cleanup); err != nil {
 		return fmt.Errorf("cleanup: %w", err)
 	}
-	if _, err := pool.Exec(ctx, "drop function if exists guard_action_identity()"); err != nil {
+	if _, err := pool.Exec(ctx, `drop function if exists guard_action_identity(),
+		set_run_terminal_time(), guard_expired_step_content()`); err != nil {
 		return fmt.Errorf("cleanup action guard: %w", err)
 	}
 

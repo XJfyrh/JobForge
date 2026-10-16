@@ -62,6 +62,8 @@ const (
 	ErrActionAuthorizationExpired ErrorCode = "ACTION_AUTHORIZATION_EXPIRED"
 	ErrActionOutcomeUnknown       ErrorCode = "ACTION_OUTCOME_UNKNOWN"
 	ErrRateLimited                ErrorCode = "RATE_LIMITED"
+	ErrResultExpired              ErrorCode = "RESULT_EXPIRED"
+	ErrRequestExpired             ErrorCode = "REQUEST_EXPIRED"
 )
 
 func (e ErrorCode) Error() string { return string(e) }
@@ -75,6 +77,7 @@ type Failure struct {
 // Run contains queryable execution facts. Worker authority is kept separately
 // in Lease and must never be accepted from the public submit payload.
 type Run struct {
+	TraceContext        string          `json:"-"`
 	ID                  string          `json:"run_id"`
 	TenantID            string          `json:"tenant_id"`
 	BusinessRequestID   string          `json:"business_request_id"`
@@ -104,6 +107,8 @@ type Run struct {
 	CancelRequestedAt   *time.Time      `json:"cancel_requested_at"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
+	TerminalAt          *time.Time      `json:"terminal_at"`
+	ContentPurgedAt     *time.Time      `json:"content_purged_at"`
 	Budget              BudgetView      `json:"budget"`
 }
 

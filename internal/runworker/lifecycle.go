@@ -168,6 +168,8 @@ func (w *Worker) validClaim(lease *agentv1.RunLease, session *agentv1.SessionIde
 func (w *Worker) runClaim(ctx context.Context, now clockSample, execute stepRunner, lease *agentv1.RunLease,
 	sessionDeadline, start, received int64,
 ) (int64, error) {
+	ctx, attemptSpan := attemptTrace(ctx, lease)
+	defer attemptSpan.End()
 	stepContext, cancel := context.WithCancel(ctx)
 	keeper, err := newLeaseKeeper(lease, sessionDeadline, start, received, now, cancel)
 	if err != nil {

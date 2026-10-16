@@ -18,6 +18,34 @@ from tools.support_evaluation.export import CaptureTransport, ExportError
 from tools.support_recovery import driver, plan
 
 
+@pytest.mark.parametrize("telemetry", [False, True])
+def test_supervisor_passes_only_enabled_telemetry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, telemetry: bool
+) -> None:
+    """Recovery tracing cannot forward parent control credentials to a Worker."""
+    received: dict[str, Any] = {}
+
+    def started(*args: Any, **kwargs: Any) -> Any:
+        received.update(kwargs["env"])
+        return object()
+
+    monkeypatch.setattr(driver.subprocess, "Popen", started)
+    monkeypatch.setenv("JOBFORGE_OTEL_EXPORTER", "otlp-http")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318")
+    monkeypatch.setenv("JOBFORGE_AGENT_DSN", "private-control-dsn")
+    supervisor = driver.Supervisor(
+        {
+            "telemetry": telemetry,
+            "workers": [{"config": "config", "credentials": "first-principal"}],
+        },
+        tmp_path,
+    )
+    supervisor.start()
+    assert "JOBFORGE_AGENT_DSN" not in received
+    assert ("OTEL_EXPORTER_OTLP_ENDPOINT" in received) is telemetry
+    assert received["JOBFORGE_AGENT_WORKER_CREDENTIALS_FILE"] == "first-principal"
+
+
 def frozen() -> dict[str, Any]:
     """Use synthetic bindings for the exact reviewed eleven intentions."""
     batch = "11111111-1111-4111-8111-111111111111"
@@ -53,6 +81,119 @@ def frozen() -> dict[str, Any]:
             for i, (case, arm, boundary, target) in enumerate(plan.SPECS, 1)
         ],
     }
+
+
+@pytest.mark.parametrize("version, schema, prompt", [(2, 7, "v2"), (3, 9, "v3")])
+def test_s5_plan_version_binds_new_prompt_and_saved_proposal_boundary(
+    version: int, schema: int, prompt: str
+) -> None:
+    """S5 gets a distinct plan while preserving the eleven historical faults."""
+    value = frozen()
+    value["schema_version"] = version
+    value["max_cost_microyuan"] = 3_000_000
+    value["definition"]["schema_version"] = schema
+    value["definition"]["program"]["prompt_version"] = f"support-agent-prompt-{prompt}"
+    value["profile"]["executor_version"] = "linux-v2-approval-runtime-1"
+    plan.validate(value, check_sources=False)
+    wrong_prompt = copy.deepcopy(value)
+    wrong_prompt["definition"]["program"]["prompt_version"] = "support-agent-prompt-v1"
+    with pytest.raises(ValueError, match="S3_PLAN_CHANGED"):
+        plan.validate(wrong_prompt, check_sources=False)
+    for path, changed in [("plan", 1), ("definition", 3)]:
+        mixed = copy.deepcopy(value)
+        if path == "plan":
+            mixed["schema_version"] = changed
+        else:
+            mixed["definition"]["schema_version"] = changed
+        with pytest.raises(ValueError, match="S3_PLAN_CHANGED"):
+            plan.validate(mixed, check_sources=False)
+
+
+def test_v9_plan_keeps_eleven_intentions_with_reachable_boundaries() -> None:
+    """Admit only the current frozen candidate and reject old search fault points."""
+    value = frozen()
+    value.update(schema_version=4, max_cost_microyuan=4_000_000)
+    value["definition"]["schema_version"] = 18
+    value["definition"]["program"]["prompt_version"] = "support-agent-prompt-v9"
+    value["profile"]["executor_version"] = "linux-v2-adjudication-runtime-5"
+    for row, spec in zip(value["runs"], plan.V9_SPECS, strict=True):
+        row["boundary"] = spec[2]
+    plan.validate(value, check_sources=False)
+    assert [(c, a, t) for c, a, _, t in plan.V9_SPECS] == [
+        (c, a, t) for c, a, _, t in plan.SPECS
+    ]
+    for key, wrong in (
+        ("prompt", "support-agent-prompt-v8"),
+        ("schema", 16),
+        ("executor", "linux-v2-adjudication-runtime-2"),
+        ("boundary", "first_search_commit"),
+    ):
+        invalid = copy.deepcopy(value)
+        if key == "prompt":
+            invalid["definition"]["program"]["prompt_version"] = wrong
+        elif key == "schema":
+            invalid["definition"]["schema_version"] = wrong
+        elif key == "executor":
+            invalid["profile"]["executor_version"] = wrong
+        else:
+            invalid["runs"][0]["boundary"] = wrong
+        with pytest.raises(
+            ValueError, match="S3_PLAN_CHANGED|S3_EXECUTION_LIST_CHANGED"
+        ):
+            plan.validate(invalid, check_sources=False)
+
+
+def test_v9_cumulative_authorization_and_full_next_reservation() -> None:
+    """The current ledger leaves5.005813CNY; no hold is replaced by average spend."""
+    value: dict[str, Any] = {"schema_version": 4}
+    prior = {
+        "batch_account_id": "old-batch",
+        "known_cost_microyuan": 22_994_187,
+        "held_cost_microyuan": 0,
+        "batch_frozen": False,
+        "unknown_chat_calls": 0,
+    }
+    release = {"stage_cap_microyuan": 28_000_000, "prior_batch_exposure": [prior]}
+    assert driver.stage_remaining(value, release) == 5_005_813
+    with pytest.raises(ValueError, match="S5_STAGE_AUTHORIZATION_MISMATCH"):
+        driver.stage_remaining(value, dict(release, stage_cap_microyuan=29_000_000))
+    with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+        driver.stage_remaining(
+            value,
+            dict(release, prior_batch_exposure=[dict(prior, held_cost_microyuan=1)]),
+        )
+    assert driver.stage_remaining({"schema_version": 3}, release) == -17_994_187
+    closed = dict(prior, batch_frozen=True, execution_closed=True)
+    assert (
+        driver.stage_remaining(value, dict(release, prior_batch_exposure=[closed]))
+        == 5_005_813
+    )
+    for changed in (
+        dict(closed, execution_closed=False),
+        dict(closed, unknown_chat_calls=1),
+        dict(closed, held_cost_microyuan=1),
+    ):
+        with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+            driver.stage_remaining(value, dict(release, prior_batch_exposure=[changed]))
+    with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+        driver.stage_remaining(
+            {"schema_version": 3}, dict(release, prior_batch_exposure=[closed])
+        )
+    value.update(
+        max_cost_microyuan=4_000_000,
+        profile={
+            "max_input_tokens": 1_048_576,
+            "pricing": {
+                "input_miss_microyuan": 2_000_000,
+                "output_microyuan": 8_000_000,
+                "denominator": 1_000_000,
+            },
+        },
+        definition={"final_model": {"max_tokens": 16_384}},
+    )
+    driver.require_next_reservation(value, 1_771_776)
+    with pytest.raises(ValueError, match="S5_INSUFFICIENT_FULL_RESERVATION"):
+        driver.require_next_reservation(value, 1_771_777)
 
 
 def test_worker_signal_and_wait_times_keep_no_child_window_explicit(

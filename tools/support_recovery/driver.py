@@ -18,7 +18,8 @@ from typing import Any
 import httpx
 from jobforge import RunClient
 
-from tools.support_evaluation.driver import instant
+from tools.support_evaluation.driver import continuation as completed_call_barrier
+from tools.support_evaluation.driver import instant, protocol_signature
 from tools.support_evaluation.evidence import canonical, fingerprint
 from tools.support_evaluation.export import (
     CaptureTransport,
@@ -89,18 +90,7 @@ def verify_runtime(
         )
     ):
         raise ValueError("S3_ACTUAL_RUNTIME_MISMATCH")
-    prior = release["prior_batch_exposure"]
-    if len({row["batch_account_id"] for row in prior}) != len(prior) or any(
-        row["held_cost_microyuan"]
-        or row["batch_frozen"]
-        or row["unknown_chat_calls"]
-        or row["known_cost_microyuan"] < 0
-        for row in prior
-    ):
-        raise ValueError("S3_PRIOR_BATCH_UNRESOLVED")
-    remaining = 5_000_000 - sum(
-        row["known_cost_microyuan"] + row["held_cost_microyuan"] for row in prior
-    )
+    remaining = stage_remaining(plan, release)
     control = json.loads(Path(settings["control_config"]).read_bytes())
     batch = [
         row
@@ -117,6 +107,27 @@ def verify_runtime(
                 != continuation["reviewed_sources"]["tools/support_recovery/" + name]
             ):
                 raise ValueError("S3_CONTINUATION_INSTALLED_TOOL_CHANGED")
+
+
+def stage_remaining(plan: dict[str, Any], release: dict[str, Any]) -> int:
+    """Retain historical holds and bind the current S5 cumulative authorization."""
+    prior = release["prior_batch_exposure"]
+    if len({row["batch_account_id"] for row in prior}) != len(prior) or any(
+        row["held_cost_microyuan"]
+        or row["batch_frozen"]
+        and not (plan["schema_version"] == 4 and row.get("execution_closed") is True)
+        or row["unknown_chat_calls"]
+        or row["known_cost_microyuan"] < 0
+        for row in prior
+    ):
+        raise ValueError("S3_PRIOR_BATCH_UNRESOLVED")
+    stage_cap = 28_000_000 if plan["schema_version"] == 4 else 5_000_000
+    if plan["schema_version"] == 4 and release.get("stage_cap_microyuan") != stage_cap:
+        raise ValueError("S5_STAGE_AUTHORIZATION_MISMATCH")
+    remaining = stage_cap - sum(
+        row["known_cost_microyuan"] + row["held_cost_microyuan"] for row in prior
+    )
+    return remaining
 
 
 class FailureCapture(CaptureTransport):
@@ -206,7 +217,9 @@ def committed_chat(evidence: dict[str, Any], call: dict[str, Any]) -> bool:
         return False
 
 
-def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
+def chat_barrier(
+    evidence: dict[str, Any], committed: bool = False, *, adjudication: bool = False
+) -> bool:
     """Inspect exported facts only; Go/PostgreSQL remain the permission authority."""
     calls = evidence["calls"]
     if calls["batch_frozen"] or calls["batch_stop_code"] is not None:
@@ -228,7 +241,15 @@ def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
             or call["http_status"] != 200
             or audit is None
             or audit["identity_state"] != "compatible"
-            or audit["mode_state"] != "nonthinking"
+            or audit["mode_state"]
+            not in (
+                {"thinking", "nonthinking"}
+                if adjudication and call["step_kind"] == "model_proposal"
+                else {"nonthinking"}
+            )
+            or adjudication
+            and audit.get("schema_version")
+            != (2 if call["step_kind"] == "model_proposal" else 1)
             or not audit["response_complete"]
             or audit["usage_evidence"] != "complete"
         ):
@@ -236,6 +257,24 @@ def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
         accepted = call["business_outcome"] == "accepted" and not call["error_code"]
         bound = committed_chat(evidence, call) if committed or not accepted else False
         if not accepted:
+            if (
+                adjudication
+                and not committed
+                and call["step_kind"]
+                in {"model_decision", "protocol_correction", "model_proposal"}
+                and call["business_outcome"] == "rejected"
+                and call["error_code"] == "MODEL_PROTOCOL_ERROR"
+                and (
+                    call["step_kind"] == "model_proposal"
+                    or evidence["run"].get("state") == "failed"
+                    and (evidence["run"].get("error") or {}).get("code")
+                    == "MODEL_PROTOCOL_ERROR"
+                    and completed_call_barrier(
+                        evidence, executor_version="linux-v2-adjudication-runtime-5"
+                    )
+                )
+            ):
+                continue
             if not (
                 bound
                 and call["step_kind"] == "model_decision"
@@ -253,6 +292,21 @@ def chat_barrier(evidence: dict[str, Any], committed: bool = False) -> bool:
         elif committed and not bound:
             return False
     return True
+
+
+def require_next_reservation(plan: dict[str, Any], used: int) -> None:
+    """A new V9 intention needs the full largest chat hold, not an average cost."""
+    if plan["schema_version"] != 4:
+        return
+    profile = plan["profile"]
+    pricing = profile["pricing"]
+    numerator = (
+        profile["max_input_tokens"] * pricing["input_miss_microyuan"]
+        + plan["definition"]["final_model"]["max_tokens"] * pricing["output_microyuan"]
+    )
+    full_hold = (numerator + pricing["denominator"] - 1) // pricing["denominator"]
+    if used + full_hold > plan["max_cost_microyuan"]:
+        raise ValueError("S5_INSUFFICIENT_FULL_RESERVATION")
 
 
 def children(parent: int, module: str) -> list[int]:
@@ -379,6 +433,14 @@ class Supervisor:
             "JOBFORGE_AGENT_GATEWAY": "127.0.0.1:8095",
             "JOBFORGE_AGENT_GRPC_TLS": "false",
         }
+        if self.settings.get("telemetry") is True:
+            for key in (
+                "JOBFORGE_OTEL_EXPORTER",
+                "OTEL_EXPORTER_OTLP_ENDPOINT",
+                "JOBFORGE_OTEL_SAMPLE_RATIO",
+            ):
+                if key in os.environ:
+                    environment[key] = os.environ[key]
         self.current = subprocess.Popen(
             [WORKER],
             env=environment,
@@ -549,6 +611,17 @@ def launch(
         stderr=subprocess.DEVNULL,
     )
     deadline = instant(plan["valid_until"])
+    adjudication = plan["schema_version"] == 4
+    used_cost = (
+        next(
+            account["used"]["cost_microyuan"]
+            for account in inspection["accounts"]
+            if account["scope"] == "batch"
+        )
+        if adjudication
+        else 0
+    )
+    signatures: list[Any] = []
 
     def check() -> None:
         if not instant(plan["valid_from"]) <= datetime.now(UTC) < deadline:
@@ -558,6 +631,7 @@ def launch(
         wait_proxy(proxy)
         for row in eligible:
             check()
+            require_next_reservation(plan, used_cost)
             archive = output / row["experiment"]
             archive.mkdir(mode=0o700)
             capture = CaptureTransport(archive)
@@ -660,7 +734,11 @@ def launch(
                         evidence, events = export_run(client, capture, row["run_id"])
                         atomic_json(archive / "closed-attempt.json", evidence)
                         atomic_json(archive / "closed-events.json", {"events": events})
-                        if not chat_barrier(evidence, committed=row["arm"] == "H0"):
+                        if not chat_barrier(
+                            evidence,
+                            committed=row["arm"] == "H0",
+                            adjudication=adjudication,
+                        ):
                             raise ValueError("S3_AUDIT_BARRIER_INCOMPLETE")
                         row["ready_at"] = datetime.now(UTC).isoformat()
                         if row["arm"] == "H0":
@@ -698,13 +776,58 @@ def launch(
                     if injected or row["boundary"] == "none"
                     else "boundary_not_reached"
                 )
+                quality_failure = bool(
+                    adjudication
+                    and evidence["run"]["state"] == "failed"
+                    and (evidence["run"].get("error") or {}).get("code")
+                    == "MODEL_PROTOCOL_ERROR"
+                    and completed_call_barrier(
+                        evidence, executor_version=plan["profile"]["executor_version"]
+                    )
+                )
+                if quality_failure:
+                    row["error_code"] = "MODEL_PROTOCOL_ERROR"
                 row["finished_at"] = datetime.now(UTC).isoformat()
                 save()
-                if not chat_barrier(evidence) or row["status"] != "finished":
+                if (
+                    not chat_barrier(evidence, adjudication=adjudication)
+                    or row["status"] != "finished"
+                    and not quality_failure
+                ):
                     raise ValueError("S3_CASE_INCOMPLETE")
+                if adjudication:
+                    from jobforge_agent.business import POLICY_BUNDLE_ALIASES
+
+                    bundles = [
+                        step["record"]["output"]["content"]
+                        for step in evidence["steps"]
+                        if step["record"]["kind"] == "read_policy_bundle"
+                    ]
+                    if len(bundles) != 1 or [
+                        match["chunk_id"] for match in bundles[0].get("matches", [])
+                    ] != list(POLICY_BUNDLE_ALIASES):
+                        raise ValueError("S5_POLICY_BUNDLE_INCOMPLETE")
+                    used_cost = current.budget.batch.used.cost_microyuan
+                    signatures.append(protocol_signature(dict(evidence, status="run")))
+                    if (
+                        len(signatures) >= 2
+                        and signatures[-1] is not None
+                        and signatures[-1] == signatures[-2]
+                    ) or any(
+                        sig is not None and signatures[:3].count(sig) >= 2
+                        for sig in signatures[:3]
+                    ):
+                        raise ValueError("S5_SYSTEMIC_PROTOCOL_FAILURE")
                 if (
                     evidence["run"]["state"] not in {"awaiting_approval", "succeeded"}
                     and row["arm"] != "H0"
+                    and not (
+                        adjudication
+                        and completed_call_barrier(
+                            evidence,
+                            executor_version=plan["profile"]["executor_version"],
+                        )
+                    )
                 ):
                     raise ValueError("S3_CASE_INCOMPLETE")
     except Exception as exc:
