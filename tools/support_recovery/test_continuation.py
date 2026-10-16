@@ -6,6 +6,7 @@ import copy
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -15,7 +16,7 @@ from jobforge_agent.runtime_input import input_hash
 
 from tools.support_evaluation.evidence import canonical, fingerprint
 from tools.support_evaluation.export import CaptureTransport, atomic_json
-from tools.support_recovery import continuation, driver
+from tools.support_recovery import continuation, driver, plan
 from tools.support_recovery.test_contract import frozen
 
 
@@ -131,6 +132,149 @@ def test_v9_final_audit_mode_and_known_protocol_failure_stay_distinct() -> None:
     call["provider_audit"]["schema_version"] = 2
     call["step_kind"] = "model_decision"
     assert not driver.chat_barrier(evidence, adjudication=True)
+
+
+@pytest.mark.parametrize("bad_identity", [False, True])
+def test_v9_launch_retains_unreached_format_failure_and_stops_systemic_repetition(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, bad_identity: bool
+) -> None:
+    """A paid audited correction failure continues once, without inventing a fault."""
+    from jobforge_agent.business import POLICY_BUNDLE_ALIASES
+
+    value = frozen()
+    value.update(schema_version=4, max_cost_microyuan=4_000_000, batch_key="batch")
+    value["definition"]["schema_version"] = 18
+    value["definition"]["program"]["prompt_version"] = "support-agent-prompt-v9"
+    value["profile"].update(
+        executor_version="linux-v2-adjudication-runtime-5",
+        profile_id="recovery",
+        profile_hash="a" * 64,
+    )
+    for row, spec in zip(
+        value["runs"], plan.V9_SPECS, strict=True
+    ):
+        row["boundary"] = spec[2]
+        row["binding"]["ticket_id"] = "ticket"
+    evidence = correction()
+    evidence["run"].update(state="failed", error={"code": "MODEL_PROTOCOL_ERROR"})
+    evidence["result"] = {"available": False}
+    original = evidence["calls"]["items"][0]
+    original["provider_audit"]["schema_version"] = 1
+    final = copy.deepcopy(original)
+    final.update(
+        physical_call_id="55555555-5555-4555-8555-555555555555",
+        step_kind="protocol_correction",
+    )
+    evidence["calls"]["items"].append(final)
+    evidence["steps"].insert(
+        0,
+        {
+            "record": {
+                "kind": "read_policy_bundle",
+                "output": {
+                    "content": {
+                        "matches": [
+                            {"chunk_id": alias} for alias in POLICY_BUNDLE_ALIASES
+                        ]
+                    }
+                },
+            }
+        },
+    )
+    if bad_identity:
+        final["provider_audit"]["identity_state"] = "incompatible"
+    submissions = []
+
+    class Client:
+        def __init__(self, *_: Any, **__: Any) -> None:
+            pass
+
+        def __enter__(self) -> Any:
+            return self
+
+        def __exit__(self, *_: Any) -> None:
+            pass
+
+        def submit(self, ticket: str, key: str, *_: Any, **__: Any) -> Any:
+            submissions.append(key)
+            self.run = SimpleNamespace(
+                run_id=evidence["run"]["run_id"],
+                profile_id="recovery",
+                profile_hash="a" * 64,
+                tenant_id="tenant-north",
+                ticket_id=ticket,
+                business_request_key=key,
+                budget_batch_id="batch",
+                state=SimpleNamespace(value="failed"),
+                budget=SimpleNamespace(
+                    batch=SimpleNamespace(
+                        id=value["batch_account_id"],
+                        frozen=False,
+                        limits=SimpleNamespace(cost_microyuan=4_000_000),
+                        used=SimpleNamespace(cost_microyuan=100),
+                    )
+                ),
+            )
+            return SimpleNamespace(run=self.run, reused=False)
+
+        def get(self, *_: Any) -> Any:
+            return self.run
+
+    class Proxy:
+        def __init__(self, *_: Any, **__: Any) -> None:
+            pass
+
+        def poll(self) -> None:
+            return None
+
+        def terminate(self) -> None:
+            pass
+
+        def wait(self, **_: Any) -> int:
+            return 0
+
+    class Supervisor:
+        def __init__(self, *_: Any) -> None:
+            self.current: Any = None
+
+        def start(self) -> None:
+            self.current = Proxy()
+
+        def stop(self) -> None:
+            self.current = None
+
+    monkeypatch.setattr(driver, "RunClient", Client)
+    monkeypatch.setattr(driver, "Supervisor", Supervisor)
+    monkeypatch.setattr(driver.subprocess, "Popen", Proxy)
+    monkeypatch.setattr(driver, "require_linux", lambda: None)
+    monkeypatch.setattr(driver, "wait_proxy", lambda _: None)
+    monkeypatch.setattr(driver, "require_next_reservation", lambda *_: None)
+    monkeypatch.setattr(
+        driver,
+        "inspect",
+        lambda *_: {"accounts": [{"scope": "batch", "used": {"cost_microyuan": 0}}]},
+    )
+    monkeypatch.setattr(driver, "export_run", lambda *_: (copy.deepcopy(evidence), []))
+    settings = {
+        "workers": [{"worker_id": w} for w in value["workers"]],
+        "barriers": str(tmp_path / "barriers"),
+        "upstream_gateway": "control:9093",
+        "control_origin": "http://control",
+        "driver_tokens": {"tenant-north": "synthetic"},
+    }
+    with pytest.raises(
+        ValueError,
+        match="S3_CASE_INCOMPLETE" if bad_identity else "S5_SYSTEMIC_PROTOCOL_FAILURE",
+    ):
+        driver.launch(value, settings, tmp_path / "out")
+    rows = json.loads((tmp_path / "out/rows.json").read_bytes())["runs"]
+    attempted = 1 if bad_identity else 2
+    assert len(submissions) == attempted
+    assert all(
+        r["status"] == "boundary_not_reached" and "fault" not in r
+        for r in rows[:attempted]
+    )
+    assert all(r["status"] == "unattempted" for r in rows[attempted:])
 
 
 @pytest.mark.parametrize(

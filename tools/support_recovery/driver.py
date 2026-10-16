@@ -115,9 +115,7 @@ def stage_remaining(plan: dict[str, Any], release: dict[str, Any]) -> int:
     if len({row["batch_account_id"] for row in prior}) != len(prior) or any(
         row["held_cost_microyuan"]
         or row["batch_frozen"]
-        and not (
-            plan["schema_version"] == 4 and row.get("execution_closed") is True
-        )
+        and not (plan["schema_version"] == 4 and row.get("execution_closed") is True)
         or row["unknown_chat_calls"]
         or row["known_cost_microyuan"] < 0
         for row in prior
@@ -262,9 +260,19 @@ def chat_barrier(
             if (
                 adjudication
                 and not committed
-                and call["step_kind"] == "model_proposal"
+                and call["step_kind"]
+                in {"model_decision", "protocol_correction", "model_proposal"}
                 and call["business_outcome"] == "rejected"
                 and call["error_code"] == "MODEL_PROTOCOL_ERROR"
+                and (
+                    call["step_kind"] == "model_proposal"
+                    or evidence["run"].get("state") == "failed"
+                    and (evidence["run"].get("error") or {}).get("code")
+                    == "MODEL_PROTOCOL_ERROR"
+                    and completed_call_barrier(
+                        evidence, executor_version="linux-v2-adjudication-runtime-5"
+                    )
+                )
             ):
                 continue
             if not (
@@ -768,11 +776,23 @@ def launch(
                     if injected or row["boundary"] == "none"
                     else "boundary_not_reached"
                 )
+                quality_failure = bool(
+                    adjudication
+                    and evidence["run"]["state"] == "failed"
+                    and (evidence["run"].get("error") or {}).get("code")
+                    == "MODEL_PROTOCOL_ERROR"
+                    and completed_call_barrier(
+                        evidence, executor_version=plan["profile"]["executor_version"]
+                    )
+                )
+                if quality_failure:
+                    row["error_code"] = "MODEL_PROTOCOL_ERROR"
                 row["finished_at"] = datetime.now(UTC).isoformat()
                 save()
                 if (
                     not chat_barrier(evidence, adjudication=adjudication)
                     or row["status"] != "finished"
+                    and not quality_failure
                 ):
                     raise ValueError("S3_CASE_INCOMPLETE")
                 if adjudication:
