@@ -10,6 +10,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/agent-worker ./cmd/agent-worker
 
 FROM python:3.12.14-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS package
 COPY python/pyproject.toml /package/pyproject.toml
+COPY python/LICENSE /package/LICENSE
 COPY python/jobforge_agent /package/jobforge_agent
 RUN python -m pip install --no-cache-dir hatchling==1.27.0 && python -m pip wheel --no-deps --no-build-isolation -w /wheels /package
 

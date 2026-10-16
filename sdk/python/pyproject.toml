@@ -1,10 +1,11 @@
 [project]
 name = "jobforge"
 version = "0.1.0"
-description = "Python SDK for JobForge distributed task orchestration platform"
+description = "Python SDK for JobForge durable Agent Runs and the legacy Job API"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "XJfyrh" }]
 dependencies = [
     "httpx>=0.27.0",
@@ -26,8 +27,13 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27.0,<2"]
 build-backend = "hatchling.build"
+
+[project.urls]
+Repository = "https://github.com/XJfyrh/JobForge"
+Documentation = "https://github.com/XJfyrh/JobForge/blob/main/sdk/python/README.md"
+Issues = "https://github.com/XJfyrh/JobForge/issues"
 
 [tool.ruff]
 line-length = 88
