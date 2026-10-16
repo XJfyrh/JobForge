@@ -21,6 +21,7 @@ WORKDIR /app
 COPY tools/requirements-lint.txt /tmp/requirements-lint.txt
 RUN python -m pip install --no-cache-dir -r /tmp/requirements-lint.txt hatchling==1.27.0
 COPY python/pyproject.toml /tmp/package/pyproject.toml
+COPY python/LICENSE /tmp/package/LICENSE
 COPY python/jobforge_agent /tmp/package/jobforge_agent
 RUN python -m pip install --no-cache-dir --no-deps --no-build-isolation /tmp/package
 ENV PYTHONDONTWRITEBYTECODE=1
