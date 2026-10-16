@@ -35,7 +35,7 @@ groups:
         annotations:
           summary: One account has at least 90 percent known plus held exposure
       - alert: JobForgeRunRecovered
-        expr: increase(jobforge_run_recoveries[5m]) > 0
+        expr: delta(jobforge_run_recoveries[5m]) > 0
         labels:
           severity: warning
         annotations:

@@ -9,23 +9,12 @@ from typing import Any
 from tools.support_evaluation.assemble import read, sha
 from tools.support_evaluation.evidence import Package
 from tools.support_evaluation.evidence import load_package as development_package
+from tools.support_evaluation.s5_policy import FORMAL_POLICY, POLICY
 from tools.support_s5.freeze import ROOT, blueprint, source_hashes, validate_blueprint
 from tools.support_s5.package import ARTIFACT_NAMES, DATASET_V3, DATASET_V4
 from tools.support_s5.package import load_package as reviewed_package
 
-POLICY = {
-    "case_count": 40,
-    "minimum_correct": 36,
-    "minimum_full_evidence": 38,
-    "batch_cap_microyuan": 4_000_000,
-    "stage_cap_microyuan": 28_000_000,
-    "full_hold_microyuan": {"investigation": 2_105_344, "final": 2_228_224},
-    "systemic_protocol": "two_consecutive_or_two_in_first_three",
-}
-SEEN_V3_POLICY = dict(
-    POLICY, case_count=20, minimum_correct=16, minimum_full_evidence=18
-)
-FORMAL_POLICY = dict(SEEN_V3_POLICY)
+SEEN_V3_POLICY = dict(FORMAL_POLICY)
 SEEN_V3_GUARDS = ("S5V3-004", "S5V3-018")
 SEEN_V3_MANIFEST_SHA256 = (
     "6e3eea7581b3f2ba4a273a10656f4b42dcdc2bc07dd76a8a4063a7e69283203f"
@@ -205,6 +194,7 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
     """Require a rebuilt clean source receipt, including the current audit fix."""
     source = read(Path(config["source"]))
     schema = source["definition"]["schema_version"]
+    frozen = None
     if config["schema_version"] in {2, 3}:
         definition = source["definition"]
         formal = config["schema_version"] == 3
@@ -247,6 +237,10 @@ def validate_sources(config: dict[str, Any]) -> dict[str, Any]:
                 frozen, definition["program"]["strategy"], blueprint(definition)
             )
     build = read(Path(config["build_receipt"]))
+    if config["schema_version"] == 3:
+        assert frozen is not None
+        if frozen.get("images") != build["images"]:
+            raise ValueError("FROZEN_IMAGES_CHANGED")
     if schema not in {16, 17, 18} or build["sources"] != source_hashes(schema):
         raise ValueError("BUILD_SOURCES_CHANGED")
     if (

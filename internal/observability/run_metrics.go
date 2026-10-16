@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,9 +27,13 @@ type runMetric struct {
 // RunCollector exports a read-only, bounded PG snapshot. Failure emits no
 // invented zeros; scrape_success distinguishes missing state from empty state.
 type RunCollector struct {
-	pool    *pgxpool.Pool
-	metrics map[string]runMetric
-	success *prometheus.Desc
+	pool      *pgxpool.Pool
+	metrics   map[string]runMetric
+	success   *prometheus.Desc
+	mu        sync.Mutex
+	refreshed time.Time
+	cached    []prometheus.Metric
+	available bool
 }
 
 // NewRunCollector constructs the finite v3 snapshot collector.
@@ -63,12 +68,31 @@ func (c *RunCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect emits only complete snapshots, with an explicit availability metric.
 func (c *RunCollector) Collect(ch chan<- prometheus.Metric) {
+	metrics, available := c.snapshot()
+	for _, metric := range metrics {
+		ch <- metric
+	}
+	value := float64(0)
+	if available {
+		value = 1
+	}
+	ch <- prometheus.MustNewConstMetric(c.success, prometheus.GaugeValue, value)
+}
+
+// Cache complete snapshots, including failures, to bound repeated scrape load.
+func (c *RunCollector) snapshot() ([]prometheus.Metric, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.refreshed.IsZero() && time.Since(c.refreshed) < 15*time.Second {
+		return c.cached, c.available
+	}
+	c.cached, c.available = nil, false
+	defer func() { c.refreshed = time.Now() }()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	rows, err := c.pool.Query(ctx, runSnapshotSQL)
 	if err != nil {
-		ch <- prometheus.MustNewConstMetric(c.success, prometheus.GaugeValue, 0)
-		return
+		return nil, false
 	}
 	defer rows.Close()
 	var metrics []prometheus.Metric
@@ -78,21 +102,26 @@ func (c *RunCollector) Collect(ch chan<- prometheus.Metric) {
 		if err = rows.Scan(&name, &first, &second, &value); err != nil {
 			break
 		}
-		item, exists := c.metrics[name]
-		if !exists {
-			err = errors.New("unknown metric")
+		metric, metricErr := c.snapshotMetric(name, first, second, value)
+		if metricErr != nil {
+			err = metricErr
 			break
 		}
-		metrics = append(metrics, prometheus.MustNewConstMetric(item.desc, prometheus.GaugeValue, value, []string{first, second}[:item.labels]...))
+		metrics = append(metrics, metric)
 	}
 	if err != nil || rows.Err() != nil {
-		ch <- prometheus.MustNewConstMetric(c.success, prometheus.GaugeValue, 0)
-		return
+		return nil, false
 	}
-	for _, metric := range metrics {
-		ch <- metric
+	c.cached, c.available = metrics, true
+	return metrics, true
+}
+
+func (c *RunCollector) snapshotMetric(name, first, second string, value float64) (prometheus.Metric, error) {
+	item, exists := c.metrics[name]
+	if !exists || item.labels < 0 || item.labels > 2 {
+		return nil, errors.New("invalid snapshot metric")
 	}
-	ch <- prometheus.MustNewConstMetric(c.success, prometheus.GaugeValue, 1)
+	return prometheus.NewConstMetric(item.desc, prometheus.GaugeValue, value, []string{first, second}[:item.labels]...)
 }
 
 // RunMetricsHandler keeps v3 metrics separate from historical Job metrics.

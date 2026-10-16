@@ -20,6 +20,8 @@ func TestManifestRejectsMixedDeploymentAndUntrustedFields(t *testing.T) {
 		"duplicate_root": strings.Replace(valid, `"schema_version":1`, `"schema_version":1,"schema_version":1`, 1),
 		"extra_root":     strings.Replace(valid, `"schema_version":1`, `"schema_version":1,"module":"elsewhere"`, 1),
 		"extra_profile":  strings.Replace(valid, `"adapter_id":`, `"endpoint":"http://untrusted","adapter_id":`, 1),
+		"null_prompt":    strings.Replace(valid, `"adapter_id":`, `"prompt_version":null,"adapter_id":`, 1),
+		"empty_prompt":   strings.Replace(valid, `"adapter_id":`, `"prompt_version":"","adapter_id":`, 1),
 		"null_profile":   strings.Replace(valid, `"profile-v1"`, `null`, 1),
 		"wrong_version":  strings.Replace(valid, runinput.ExecutorVersion, "old-runtime", 1),
 		"bool_version":   strings.Replace(valid, `"schema_version":1`, `"schema_version":true`, 1),

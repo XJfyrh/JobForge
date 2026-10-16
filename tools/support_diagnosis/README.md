@@ -10,7 +10,7 @@ Python 只读准备与评分，Go 串行调用真实模型。生产代码、历�
 
 以下是 schema 1 的原始准备过程，执行使用首段冻结的旧 runner。当前 runner 对旧实验只执行下述 schema 2 修订，不重新执行首段。
 
-1. 停止旧收费入口。`python -m tools.support_diagnosis.preflight --root ROOT --output PREFLIGHT` 刷新 20 库账本及官方模型、价格、余额。核对峰值费率后，同命令增加 `--confirm-tariff` 保存 receipt；此阶段没有 chat 调用。
+1. 停止旧收费入口。`python -m tools.support_diagnosis.preflight --root ROOT --output PREFLIGHT --inventory INVENTORY` 刷新 20 库账本及官方模型、价格、余额。`INVENTORY` 为 `{数据库名: {"container": "实际容器名", "user": "实际用户"}}` JSON，须覆盖全部原库；预检测量 PREFLIGHT 所在卷的空间。核对峰值费率后，同命令增加 `--confirm-tariff` 保存 receipt；此阶段没有 chat 调用。
 2. 构建 `go build -o RUNNER ./tools/support_diagnosis/runner`。创建专用 `jobforge_s5_diagnosis_...` 空数据库，设置 `JOBFORGE_DIAGNOSIS_DSN` 后执行 `RUNNER --init`。迁移只用于该诊断库，不加入生产迁移。
 3. 从 `diagnosis_database_identity` 读取 UUID。执行 `python -m tools.support_diagnosis.prepare --root ROOT --output EXPERIMENT --runner RUNNER --preflight PREFLIGHT --database-name DATABASE --database-id UUID`，冻结请求、名单、库身份和 runner hash。核对 source receipt 与原始 103 次请求重建结果。
 4. 对精确冻结包完成审查后，执行 `RUNNER --manifest EXPERIMENT/manifest.json --credentials PRIVATE_WORKER_JSON`。只接受固定官方 origin/path、模型及请求参数，不支持自动重试或更换数据库续费。

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from tools.support_evaluation.s5_policy import POLICY
+
 
 def stop_reasons(
     score: dict[str, Any],
@@ -20,22 +22,25 @@ def stop_reasons(
     ):
         reasons.append("CURRENT_LEDGER_NOT_CLOSED")
     exposure = sample["known"] + sample["held"]
-    if exposure > 4_000_000 or prior_cost + exposure > 28_000_000:
+    if (
+        exposure > POLICY["batch_cap_microyuan"]
+        or prior_cost + exposure > POLICY["stage_cap_microyuan"]
+    ):
         reasons.append("COST_CAP")
     if any(score["hard_failure_cases"].values()):
         reasons.append("HARD_SAFETY_FAILURE")
     if (
-        score["denominator"] != 40
-        or len(score["cases"]) != 40
-        or not 1 <= completed <= 40
+        score["denominator"] != POLICY["case_count"]
+        or len(score["cases"]) != POLICY["case_count"]
+        or not 1 <= completed <= POLICY["case_count"]
     ):
         return sorted(set(reasons + ["DENOMINATOR"]))
     if score["schema_version"] != 3:
         reasons.append("SCORE_VERSION")
-    remaining = 40 - completed
-    if score["correct_count"] + remaining < 36:
+    remaining = POLICY["case_count"] - completed
+    if score["correct_count"] + remaining < POLICY["minimum_correct"]:
         reasons.append("CORRECT_THRESHOLD_UNREACHABLE")
-    if score["full_case_evidence_count"] + remaining < 38:
+    if score["full_case_evidence_count"] + remaining < POLICY["minimum_full_evidence"]:
         reasons.append("EVIDENCE_REGRESSION_UNAVOIDABLE")
     for case in score["cases"][:completed]:
         if (

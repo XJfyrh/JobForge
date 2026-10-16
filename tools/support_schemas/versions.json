@@ -1,0 +1,513 @@
+{
+  "approval-v1": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/approval-v1/profile-schema.json",
+      "/title": "Single manual approval support profile definition",
+      "/description": "Closed ADR0026 schema 4, <=16384 UTF-8 bytes. linux-v2-approval-runtime-1 only; retains confirmed_uncommitted_v1 and original support-agent proposal/model strategy. Go checks all identities, hashes and origin syntax.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "action"
+      ],
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v1",
+      "/properties/resources/properties/dataset_id/const": "support-dev-2026-09-16-v2",
+      "/properties/schema_version/const": 4
+    },
+    "remove": [
+      "/properties/final_model",
+      "/properties/resources/properties/dataset_id/enum"
+    ],
+    "order": {},
+    "trailing": "\n"
+  },
+  "recovery-v1": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/recovery-v1/profile-schema.json",
+      "/title": "Confirmed-step recovery support profile definition",
+      "/description": "Closed ADR0025 schema 3 definition, complete non-null and at most 16384 UTF-8 bytes. Go additionally verifies observed_on >= 2026-09-17, equal model/price observation dates, all cross-field identities and index/price/profile hashes. Recovery requires linux-v2-recovery-runtime-1; artifact digests are checked by trusted preparation.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy",
+        "decision_schema",
+        "decision_schema_sha256",
+        "recovery_policy"
+      ],
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v1",
+      "/properties/resources/properties/dataset_id/const": "support-dev-2026-09-16-v2",
+      "/properties/schema_version/const": 3
+    },
+    "remove": [
+      "/properties/final_model",
+      "/properties/action",
+      "/properties/program/properties/approval_policy",
+      "/properties/resources/properties/dataset_id/enum"
+    ],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v1": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v1/profile-schema.json",
+      "/title": "S5 Agent profile definition",
+      "/description": "Closed ADR0027 schema 6. Retains schema 4 approval and confirmed_uncommitted_v1 recovery. Uses linux-v2-approval-runtime-1; Go enforces price/model observation dates >=2026-10-07 and source identities.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "action"
+      ],
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v1",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1"
+      ],
+      "/properties/schema_version/const": 6
+    },
+    "remove": [
+      "/properties/final_model"
+    ],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v2": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v2/profile-schema.json",
+      "/title": "S5 Agent profile definition (candidate v2)",
+      "/description": "Closed ADR0028 schema 7. Same model, price, limits and capabilities; explicit manifest2 source binding. Historical schemas1-6 remain unchanged.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "action"
+      ],
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v2",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2"
+      ],
+      "/properties/schema_version/const": 7
+    },
+    "remove": [
+      "/properties/final_model"
+    ],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v3": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v3/profile-schema.json",
+      "/title": "S5 Agent profile definition (candidate v3)",
+      "/description": "Closed ADR0030 schema 9. Explicit v3 candidate/dataset identity; historical profiles remain unchanged.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "action"
+      ],
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v3",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 9
+    },
+    "remove": [
+      "/properties/final_model"
+    ],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v4": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v4/profile-schema.json",
+      "/title": "S5 Agent profile definition (independent adjudication v4)",
+      "/description": "Closed ADR0033 schema 11. Investigation remains nonthinking; independent terminal model uses thinking/high and 16384 completion tokens. Temperature is retained as a canonical placeholder and omitted from terminal HTTP.",
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v4",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 11
+    },
+    "remove": [],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v5": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v5/profile-schema.json",
+      "/title": "S5 Agent profile definition (final-stage separation v5)",
+      "/description": "Closed ADR0034 schema 13. The final stage receives a self-contained adjudication request with no tool protocol and no tool budget; investigation remains nonthinking while the terminal model uses thinking/high and 16384 completion tokens. Temperature is retained as a canonical placeholder and omitted from terminal HTTP.",
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v5",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 13
+    },
+    "remove": [],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v6": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v6/profile-schema.json",
+      "/title": "S5 Agent profile definition (controlled policy supplement v6)",
+      "/description": "Closed ADR0036 schema 14. The first thinking adjudication may request one typed policy supplement; its Go-scheduled search must return every requested definition before independent final-only adjudication.",
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v6",
+      "/properties/program/properties/decision_schema/const": "support-agent-decision-v2",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 14
+    },
+    "remove": [],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v7": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v7/profile-schema.json",
+      "/title": "S5 Agent v7 status-policy prerequisite profile",
+      "/description": "Closed ADR0037 schema 15. Go requires actual P08.1 for informational_only or P08.2 for escalated before first thinking. The separate one-shot policy supplement remains available within the existing budget.",
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v7",
+      "/properties/program/properties/decision_schema/const": "support-agent-decision-v2",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 15
+    },
+    "remove": [],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-agent-v8": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-agent-v8/profile-schema.json",
+      "/title": "Support Agent v8 deployment profile",
+      "/description": "ADR0038 Agent: complete policy bundle before investigation and one final-only thinking call.",
+      "/properties/program/properties/prompt_version/const": "support-agent-prompt-v8",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 16
+    },
+    "remove": [],
+    "order": {},
+    "trailing": "\n\n"
+  },
+  "s5-agent-v9": {
+    "replace": {},
+    "remove": [],
+    "order": {},
+    "trailing": "\n"
+  },
+  "s5-fixed-v1": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-fixed-v1/profile-schema.json",
+      "/title": "S5 fixed-flow comparison profile definition",
+      "/description": "Closed ADR0027 schema 5. Existing support-fixed-v1 adapter, same 64KiB message/128KiB request input envelope as Agent; original read graph and one correction. Go enforces actual dates >=2026-10-07, price equality and source identities.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "/properties/program/properties/adapter/const": "support-fixed-v1",
+      "/properties/program/properties/prompt_version/const": "support-fixed-prompt-v1",
+      "/properties/program/properties/strategy/const": "support_fixed_v1",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1"
+      ],
+      "/properties/schema_version/const": 5
+    },
+    "remove": [
+      "/properties/final_model",
+      "/properties/action",
+      "/properties/model/properties/observed_on/format",
+      "/properties/price/properties/observed_on/format",
+      "/properties/program/properties/recovery_policy",
+      "/properties/program/properties/decision_schema",
+      "/properties/program/properties/approval_policy",
+      "/properties/program/properties/decision_schema_sha256"
+    ],
+    "order": {
+      "/properties/model/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/price/properties/observed_on": [
+        "type",
+        "pattern"
+      ]
+    },
+    "trailing": "\n"
+  },
+  "s5-fixed-v2": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-fixed-v2/profile-schema.json",
+      "/title": "S5 fixed-flow comparison profile definition (candidate v2)",
+      "/description": "Closed ADR0028 schema 8. Same model, price, limits and capabilities; explicit manifest2 source binding. Historical schemas1-6 remain unchanged.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "/properties/program/properties/adapter/const": "support-fixed-v1",
+      "/properties/program/properties/prompt_version/const": "support-fixed-prompt-v1",
+      "/properties/program/properties/strategy/const": "support_fixed_v1",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2"
+      ],
+      "/properties/schema_version/const": 8
+    },
+    "remove": [
+      "/properties/final_model",
+      "/properties/action",
+      "/properties/model/properties/observed_on/format",
+      "/properties/price/properties/observed_on/format",
+      "/properties/program/properties/recovery_policy",
+      "/properties/program/properties/decision_schema",
+      "/properties/program/properties/approval_policy",
+      "/properties/program/properties/decision_schema_sha256"
+    ],
+    "order": {
+      "/properties/model/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/price/properties/observed_on": [
+        "type",
+        "pattern"
+      ]
+    },
+    "trailing": "\n"
+  },
+  "s5-fixed-v3": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-fixed-v3/profile-schema.json",
+      "/title": "S5 Fixed profile definition (candidate v3)",
+      "/description": "Closed ADR0030 schema 10. Explicit v3 candidate/dataset identity; historical profiles remain unchanged.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "/properties/program/properties/adapter/const": "support-fixed-v1",
+      "/properties/program/properties/prompt_version/const": "support-fixed-prompt-v1",
+      "/properties/program/properties/strategy/const": "support_fixed_v1",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 10
+    },
+    "remove": [
+      "/properties/final_model",
+      "/properties/action",
+      "/properties/model/properties/observed_on/format",
+      "/properties/price/properties/observed_on/format",
+      "/properties/program/properties/recovery_policy",
+      "/properties/program/properties/decision_schema",
+      "/properties/program/properties/approval_policy",
+      "/properties/program/properties/decision_schema_sha256"
+    ],
+    "order": {
+      "/properties/model/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/price/properties/observed_on": [
+        "type",
+        "pattern"
+      ]
+    },
+    "trailing": "\n"
+  },
+  "s5-fixed-v4": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-fixed-v4/profile-schema.json",
+      "/title": "S5 Fixed profile definition (independent adjudication v4)",
+      "/description": "Closed ADR0033 schema 12. Investigation remains nonthinking; independent terminal model uses thinking/high and 16384 completion tokens. Temperature is retained as a canonical placeholder and omitted from terminal HTTP.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "final_model"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "/properties/program/properties/adapter/const": "support-fixed-v1",
+      "/properties/program/properties/prompt_version/const": "support-fixed-prompt-v1",
+      "/properties/program/properties/strategy/const": "support_fixed_v1",
+      "/properties/resources/properties/dataset_id/enum": [
+        "support-dev-2026-09-16-v2",
+        "support-s5-2026-10-07-v1",
+        "support-s5-2026-10-07-v2",
+        "support-s5-2026-10-08-v3"
+      ],
+      "/properties/schema_version/const": 12
+    },
+    "remove": [
+      "/properties/action",
+      "/properties/model/properties/observed_on/format",
+      "/properties/price/properties/observed_on/format",
+      "/properties/program/properties/recovery_policy",
+      "/properties/program/properties/decision_schema",
+      "/properties/program/properties/approval_policy",
+      "/properties/program/properties/decision_schema_sha256",
+      "/properties/final_model/properties/observed_on/format"
+    ],
+    "order": {
+      "/properties/model/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/price/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/final_model/properties/observed_on": [
+        "type",
+        "pattern"
+      ]
+    },
+    "trailing": "\n"
+  },
+  "s5-fixed-v5": {
+    "replace": {
+      "/$id": "https://jobforge.local/support/s5-fixed-v5/profile-schema.json",
+      "/title": "Support Fixed v2 deployment profile",
+      "/description": "ADR0038 Fixed: complete policy bundle before fixed fact reads and one final-only thinking call.",
+      "/required": [
+        "model",
+        "price",
+        "program",
+        "resources",
+        "schema_version",
+        "final_model"
+      ],
+      "/properties/program/required": [
+        "adapter",
+        "adapter_source_sha256",
+        "prompt_sha256",
+        "prompt_version",
+        "proposal_schema",
+        "proposal_schema_sha256",
+        "strategy"
+      ],
+      "/properties/program/properties/adapter/const": "support-fixed-v1",
+      "/properties/program/properties/prompt_version/const": "support-fixed-prompt-v2",
+      "/properties/program/properties/strategy/const": "support_fixed_v1",
+      "/properties/schema_version/const": 17
+    },
+    "remove": [
+      "/properties/action",
+      "/properties/model/properties/observed_on/format",
+      "/properties/price/properties/observed_on/format",
+      "/properties/program/properties/recovery_policy",
+      "/properties/program/properties/decision_schema",
+      "/properties/program/properties/approval_policy",
+      "/properties/program/properties/decision_schema_sha256",
+      "/properties/final_model/properties/observed_on/format"
+    ],
+    "order": {
+      "/properties/model/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/price/properties/observed_on": [
+        "type",
+        "pattern"
+      ],
+      "/properties/final_model/properties/observed_on": [
+        "type",
+        "pattern"
+      ]
+    },
+    "trailing": "\n\n"
+  }
+}

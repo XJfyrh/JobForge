@@ -29,7 +29,21 @@ RUNTIME = GO | {
     "image-contract",
 }
 FULL = set(CHECKS)
-RUNTIME_PATTERN = r"^TestRun(Executor|SupportExecutor|SupportS5|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor)"
+RUNTIME_PATTERN = r"^TestRun(Executor|SupportExecutor|SupportS5|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor|Adjudication|PolicyBundle|StatusPolicy|ContentCleanup)"
+# These require explicitly owned historical restores and original signed actions.
+MANUAL_RESTORE_TESTS = {
+    "TestRunS5RestoredBusinessReceiptReplay",
+    "TestRunS5RestoredDisabledSDKReplay",
+}
+GO_TEST_SKIP_PATTERN = (
+    RUNTIME_PATTERN + "|^(" + "|".join(sorted(MANUAL_RESTORE_TESTS)) + ")$"
+)
+CONTRACT_DOCS = {
+    "docs/agent-v3/s5-acceptance.md",
+    "tools/support_s5/README.md",
+    "tools/support_s5/host/README.md",
+    "tools/support_diagnosis/README.md",
+}
 SLOW_RECOVERY = {
     "TestRunRecoveryExecutorNaturalLoss",
     "TestRunRecoveryExecutorCommitBoundary",
@@ -45,7 +59,16 @@ def select_checks(paths: list[str]) -> list[str]:
     """Use conservative fallbacks; executable data is never classified by suffix."""
     selected: set[str] = set()
     for path in paths:
-        if path.startswith(("examples/", "api/", "proto/", "migrations/")):
+        if (
+            path in CONTRACT_DOCS
+            or (
+                path.startswith("api/support/")
+                and path.endswith("/profile-schema.json")
+            )
+            or path.startswith("tools/support_schemas/")
+        ):
+            selected.add("python-lint")
+        elif path.startswith(("examples/", "api/", "proto/", "migrations/")):
             selected |= RUNTIME
             if path.startswith("proto/"):
                 selected.add("proto-lint")

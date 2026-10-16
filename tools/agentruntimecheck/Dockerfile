@@ -56,6 +56,7 @@ COPY sdk/python/tests/run_approval_http_contract.py /src/sdk/python/tests/run_ap
 COPY tools/support_evaluation/launcher.py tools/support_evaluation/driver.py tools/support_evaluation/export.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_evaluation/assemble.py tools/support_evaluation/evidence.py tools/support_evaluation/validate_data.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/support_recovery /usr/local/lib/python3.12/site-packages/tools/support_recovery/
+COPY tools/support_evaluation/s5_policy.py /usr/local/lib/python3.12/site-packages/tools/support_evaluation/
 COPY tools/agentruntimecheck/recovery_supervisor_check.py /usr/local/lib/python3.12/site-packages/recovery_supervisor_check.py
 COPY migrations /src/migrations
 COPY api/executor /src/api/executor
@@ -71,4 +72,4 @@ WORKDIR /src/tests/integration
 USER 65532:65532
 ENV JOBFORGE_RUNEXECUTOR_INTEGRATION_TESTS=1
 ENV JOBFORGE_TEST_PYTHON=/usr/local/bin/python
-CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportS5|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor)", "-test.timeout=1500s"]
+CMD ["/app/integration.test", "-test.v", "-test.run=^TestRun(Executor|SupportExecutor|SupportS5|SupportAgentExecutor|SupportLauncher|ProviderAuditExecutor|Recovery|ApprovalExecutor|Adjudication|PolicyBundle|StatusPolicy|ContentCleanup)", "-test.timeout=1500s"]

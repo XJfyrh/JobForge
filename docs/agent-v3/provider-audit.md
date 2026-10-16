@@ -4,9 +4,11 @@
 
 ## 数据与权限
 
-support schema 1–10 固定 `provider_audit_policy=deepseek-audit-v1`；schema 11–13 固定 `deepseek-audit-v2`，均使用 `expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
+support schema 1–10 固定 `provider_audit_policy=deepseek-audit-v1`；schema 11–18 固定 `deepseek-audit-v2`，均使用 `expected_response_model=deepseek-flash`，executor_version 按[运行时版本表](runtime.md)选择。可信登记器将这些字段纳入不可变 profile definition/hash；manifest、Go Worker 和 Python 固定安装包必须匹配。旧 Worker 不能登记新 session 或取得新许可；升级前原调用的 usage-only 晚到结算仍遵守原身份和 30 日窗口。
 
 `deepseek-audit-v2` 的调查步骤仍使用 audit schema 1/nonthinking；只有原始步骤为 `model_proposal` 的终裁使用 audit schema 2，可观测 `thinking` 或空推理的 `nonthinking`。Go 本地判定、PG 持久判定与 IPC 都按原 profile/步骤选择，不能从响应反推权限。非空推理正文与显式零推理 token 矛盾时 usage 无效，保留 full hold 并停发；有效计量下的截断或无效最终 JSON 保留原费用，结束 Run 而非重发。reasoning token 属于 completion，不额外相加。[ADR-0033](../adr/0033-versioned-final-adjudication.md) 定义完整边界。
+
+[OpenAPI](../../api/run/v2/openapi.yaml) 同时允许 audit schema 1/2，`thinking` 必须配 schema 2；这是已有运行时行为的契约补齐，见 [ADR-0040](../adr/0040-s5-evidence-and-validation-consistency.md)。
 
 每次 chat 消费许可后，固定 adapter 在业务输出校验前冻结一份报告。它仅含安全的响应标识、model/fingerprint、完整响应摘要、精确计数和闭集状态；不保存输入输出正文、reasoning 内容、工具内容、错误正文、headers 或凭据。无完整响应不能生成完整摘要；没有保存任何报告的调用显示 `missing`，已保存的 unavailable 报告显示 `recorded`。缺失 reasoning 与显式零分别为 `absent/null` 和 `observed/0`。
 

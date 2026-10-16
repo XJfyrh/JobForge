@@ -127,6 +127,7 @@ S5登记与离线评分按[S5工具](../tools/support_s5/README.md)：开发40�
 | 改动范围 | 自动选择 |
 |---|---|
 | 普通说明 Markdown／README | 文档检查；PRD、ADR、政策语料不按普通说明处理 |
+| S5验收、S5/host/diagnosis README；support profile-schema.json | Python契约与生成一致性检查；schema JSON不启动数据库或镜像 |
 | 历史机器摘要 JSON | 文档及 Python 检查，不重跑模型 |
 | 离线评分／审批／S5工具 | Python及外部镜像来源检查；恢复工具另选联合层 |
 | Go业务、运行时Python、SDK、API、迁移、可执行数据 | Go build/vet/lint、全仓race、Python、业务pgvector、Linux联合层及镜像边界 |
@@ -135,9 +136,13 @@ S5登记与离线评分按[S5工具](../tools/support_s5/README.md)：开发40�
 | 观测配置与dashboard生成器 | Python、生成一致性、promtool配置及规则测试 |
 | PRD／ADR、依赖、CI／检查器、未知路径 | 全部免费检查 |
 
-这是一份保守的文件依赖映射，不靠标签或标题猜测风险。`go-test` 继续全仓 `-race -count=1`，不缓存真实数据库测试结果。新增路径未登记时先全跑，再明确归属。
+这是一份保守的文件依赖映射，不靠标签或标题猜测风险。`go-test` 继续全仓 `-race -count=1`，用同源 `GO_TEST_SKIP_PATTERN` 排除交给 Linux 分片的用例和显式人工恢复用例，不缓存真实数据库测试结果。新增路径未登记时先全跑，再明确归属。
 
 运行时联合套件分 `core`、`recovery`、`deadlines` 三组，在不同 runner、PostgreSQL／pgvector服务及容器文件系统中并行。由原测试名前缀自动收集，慢恢复与deadline组显式分配，新增匹配用例默认进入core；不改变自然30s lease、180s attempt或测试断言。生产／operator镜像检查拆成独立job，不再排在长故障测试之后。pip与固定运行时构建使用缓存。
+
+分片包含 Adjudication、PolicyBundle、StatusPolicy、ContentCleanup 家族，任何选中用例 SKIP 或没有 PASS 都失败。`MANUAL_RESTORE_TESTS` 显式列出两个 `TestRunS5Restored*`：它们要求独占历史恢复副本、原签名动作与专用开关，按生命周期恢复流程另验，未运行不计通过。
+
+16份部署 profile schema 由 `python -m tools.support_schemas.generate` 逐字节核验；只有显式 `--write` 才写产物。共享约束与版本差异在 `tools/support_schemas/`；Go严格解码、生产builder及全部dataset枚举通过后，由 `go test ./internal/run -run TestSupportDeploymentSchemas -update-support-schema-vectors` 更新向量。Python核对各schema原字节SHA-256与向量绑定，再按对应schema验证；改schema须重生Go向量，该向量路径会触发Go门禁。同源整理不改历史schema字节。
 
 `CI required` 检查计划和所有 job 结果：必要 job 缺失、失败、取消或意外跳过均失败；未选择的 job 允许 skipped。仓库合并规则应只要求这个稳定状态。首次迁移时，先让新 workflow 在默认分支存在，再配置该必需状态，避免主分支还没有相应检查时阻断合并。
 

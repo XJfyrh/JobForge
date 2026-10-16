@@ -40,13 +40,17 @@ type budgetRow struct {
 	ValidUntil time.Time
 }
 
-func readAccount(row pgx.Row) (budgetRow, error) {
-	var b budgetRow
+func accountTargets(b *budgetRow) []any {
 	targets := []any{&b.Account.ID, &b.Account.Scope, &b.Key, &b.ValidFrom, &b.ValidUntil, &b.Account.Frozen, &b.Account.BatchStopCode}
 	targets = append(targets, usageTargets(&b.Account.Limits)...)
 	targets = append(targets, usageTargets(&b.Account.Used)...)
 	targets = append(targets, &b.Account.KnownTokens, &b.Account.KnownCostMicroyuan, &b.Account.HeldTokens, &b.Account.HeldCostMicroyuan)
-	err := row.Scan(targets...)
+	return targets
+}
+
+func readAccount(row pgx.Row) (budgetRow, error) {
+	var b budgetRow
+	err := row.Scan(accountTargets(&b)...)
 	return b, err
 }
 

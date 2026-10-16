@@ -73,7 +73,7 @@ func ParseManifest(data []byte) (Manifest, error) {
 
 // Validate rejects mixed versions, missing identities, and duplicate profiles.
 func (m Manifest) Validate() error {
-	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || (m.ExecutorVersion != runinput.ExecutorVersion && m.ExecutorVersion != run.SupportFixedComparisonExecutorVersion && m.ExecutorVersion != run.SupportAgentExecutorVersion && m.ExecutorVersion != run.SupportRecoveryExecutorVersion && m.ExecutorVersion != run.SupportApprovalExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationV2ExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationV3ExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationV4ExecutorVersion && m.ExecutorVersion != run.SupportAdjudicationV5ExecutorVersion && m.ExecutorVersion != run.SupportFixedBundleExecutorVersion && m.ExecutorVersion != run.SupportFixedAdjudicationExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
+	if (m.SchemaVersion != 1 && m.SchemaVersion != 2) || !run.IsAuditedExecutor(m.ExecutorVersion) || len(m.Profiles) < 1 || len(m.Profiles) > 32 {
 		return run.ErrProfileUnavailable
 	}
 	seen := make(map[string]bool, len(m.Profiles))
@@ -87,7 +87,7 @@ func (m Manifest) Validate() error {
 			p.AdapterID == "support-agent-v1" && p.PromptVersion == run.SupportAgentPromptV9 && m.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion ||
 			p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportFixedPromptV2 && m.ExecutorVersion == run.SupportFixedBundleExecutorVersion ||
 			p.AdapterID == "support-fixed-v1" && p.PromptVersion == run.SupportPromptVersion && m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion
-		if (m.ExecutorVersion == run.SupportAdjudicationExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV2ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV3ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV4ExecutorVersion || m.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion || m.ExecutorVersion == run.SupportFixedBundleExecutorVersion || m.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion) && m.SchemaVersion != 2 {
+		if run.IsAdjudicationExecutor(m.ExecutorVersion) && m.SchemaVersion != 2 {
 			return run.ErrProfileUnavailable
 		}
 		if m.SchemaVersion == 1 && p.PromptVersion != "" || m.SchemaVersion == 2 && !validPrompt {

@@ -226,7 +226,7 @@ func (s *Store) BeginTool(ctx context.Context, principal string, req agentrun.Be
 				return err
 			}
 		}
-		if profile.PolicyBundleEnabled() {
+		if profile.Strategy != agentrun.SupportAgentStrategy && profile.PolicyBundleEnabled() {
 			checkpoint, err := loadCheckpoint(ctx, tx, r, a)
 			if err != nil {
 				return err
@@ -336,8 +336,9 @@ func (s *Store) ReserveCall(ctx context.Context, principal string, req agentrun.
 		if a.ActiveCallID != nil {
 			return agentrun.ErrCallConflict
 		}
-		if _, err := s.ledgerProfile(ctx, tx, r, true); err != nil {
-			return err
+		registered, ok := s.profiles[r.ProfileID]
+		if !ok || !registered.Executable || registered.Hash != profile.Hash {
+			return agentrun.ErrProfileUnavailable
 		}
 		if profile.Pricing.Hash != req.PriceHash {
 			return agentrun.ErrProfileUnavailable

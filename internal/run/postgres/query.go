@@ -154,12 +154,7 @@ func (s *Store) List(ctx context.Context, tenant string, filter agentrun.ListFil
 			next := base64.RawURLEncoding.EncodeToString(encoded)
 			page.NextCursor = &next
 		}
-		for i := range page.Items {
-			if err := fillBudget(ctx, tx, &page.Items[i]); err != nil {
-				return err
-			}
-		}
-		return nil
+		return fillPageBudgets(ctx, tx, tenant, page.Items)
 	})
 	return page, err
 }

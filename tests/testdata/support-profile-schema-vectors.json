@@ -1,0 +1,1401 @@
+{
+  "approval-v1": {
+    "schema_sha256": "7c001fa92a1bc9fdb13f9b36e1a0177c8e9b8692b1462feda3aab2b966203a09",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 4
+    }
+  },
+  "recovery-v1": {
+    "schema_sha256": "6a28d478daabbd12a36cc6481f08f8ac0a91459aa6a0be4913a1f415e86f6824",
+    "definition": {
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 3
+    }
+  },
+  "s5-agent-v1": {
+    "schema_sha256": "7b10f95f0d2720cd1bd919727e33679fcc0363e4bf33d10fb42dd256cc141316",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 6
+    }
+  },
+  "s5-agent-v2": {
+    "schema_sha256": "95cba1e2b711b65941a32151d021f9ff4ada9bb9fd82efc3fe04aef55bf2fda0",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v2",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 7
+    }
+  },
+  "s5-agent-v3": {
+    "schema_sha256": "a290b17c607541b79a8a6f4345f212775ee51fe105b50acc8c79ee1ebeb884be",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v3",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 9
+    }
+  },
+  "s5-agent-v4": {
+    "schema_sha256": "606ca1fb31f661345d967c21d6f844d5dade9140254d004435bb1e58d59db0ca",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v4",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 11
+    }
+  },
+  "s5-agent-v5": {
+    "schema_sha256": "55aaf6d458bf1807a472692c70e980369a2900a643fd566988dcc440acee54c4",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v5",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 13
+    }
+  },
+  "s5-agent-v6": {
+    "schema_sha256": "fb5374fd11802701095b473d1e85322bfd6adec5f19b18dfd74953863d736738",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v2",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v6",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 14
+    }
+  },
+  "s5-agent-v7": {
+    "schema_sha256": "dfb3b5306a22f71a20883cfbfee64bf6cd96b07f6bf401fa2a116f836fce2852",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v2",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v7",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 15
+    }
+  },
+  "s5-agent-v8": {
+    "schema_sha256": "aede7efb2772361f31aa455f9028251d879917d988a3a353d78f8ab9d3364409",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v8",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 16
+    }
+  },
+  "s5-agent-v9": {
+    "schema_sha256": "e986c19223a4c25b2686c0a38893b50652a4b4017e171f78c16a7b561f6ed57d",
+    "definition": {
+      "action": {
+        "key_id": "synthetic-key",
+        "operation": "apply_ticket_resolution",
+        "origin": "http://business:8092",
+        "public_key_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-agent-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "approval_policy": "ticket_resolution_v1",
+        "decision_schema": "support-agent-decision-v1",
+        "decision_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-agent-prompt-v9",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recovery_policy": "confirmed_uncommitted_v1",
+        "strategy": "support_agent_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 18
+    }
+  },
+  "s5-fixed-v1": {
+    "schema_sha256": "858306722050d42ea06b0954dfc658ad0b2af127341ce6c7d8b45361db3e91c7",
+    "definition": {
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-fixed-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-fixed-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "strategy": "support_fixed_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 5
+    }
+  },
+  "s5-fixed-v2": {
+    "schema_sha256": "5fd114c808e89b399285366e8ff788a92640c09f122eb55830cb2761745c3e85",
+    "definition": {
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-fixed-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-fixed-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "strategy": "support_fixed_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 8
+    }
+  },
+  "s5-fixed-v3": {
+    "schema_sha256": "5dbbb42dfd388e2b624a0ed37b0ed28a12b8367108e7cfb312eb347d66a201ae",
+    "definition": {
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-fixed-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-fixed-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "strategy": "support_fixed_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 10
+    }
+  },
+  "s5-fixed-v4": {
+    "schema_sha256": "9f121ee3b42a2a7cc30cbe19988179d9694943f630dfa58448035c04ec231304",
+    "definition": {
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-fixed-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-fixed-prompt-v1",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "strategy": "support_fixed_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 12
+    }
+  },
+  "s5-fixed-v5": {
+    "schema_sha256": "382cfe7cbd673f89d42deefc9106f28dbdfc988b5eea22e89a1464736ee580d1",
+    "definition": {
+      "final_model": {
+        "max_tokens": 16384,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "reasoning_effort": "high",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 1048576,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "enabled"
+      },
+      "model": {
+        "max_tokens": 1024,
+        "message_content_bytes": 65536,
+        "model_content_bytes": 16384,
+        "observed_on": "2026-10-16",
+        "observed_version": "DeepSeek-V4.1-Flash",
+        "origin": "https://api.deepseek.com",
+        "path": "/chat/completions",
+        "provider": "deepseek",
+        "request_body_bytes": 131072,
+        "request_model": "deepseek-flash",
+        "response_body_bytes": 65536,
+        "response_format": "json_object",
+        "stream": false,
+        "temperature": 0,
+        "thinking": "disabled"
+      },
+      "price": {
+        "currency": "CNY",
+        "denominator": 1000000,
+        "input_hit_microyuan": 40000,
+        "input_miss_microyuan": 2000000,
+        "observed_on": "2026-10-16",
+        "output_microyuan": 8000000,
+        "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "program": {
+        "adapter": "support-fixed-v1",
+        "adapter_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_version": "support-fixed-prompt-v2",
+        "proposal_schema": "support-proposal-v1",
+        "proposal_schema_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "strategy": "support_fixed_v1"
+      },
+      "resources": {
+        "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "dataset_id": "support-dev-2026-09-16-v2",
+        "index_profile": {
+          "chunker_version": "paragraph-v1",
+          "corpus_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "dimensions": 384,
+          "embedding_digest": "1b226e2802dbb772b5fc32a58f103ca1804ef7501331012de126ab22f67475ef",
+          "embedding_model": "all-minilm:22m",
+          "policy_version": "delivery-policy-dev-v2"
+        },
+        "index_profile_hash": "6145ff791c1fde33d464303e8d267d0381412550281936f805a303677dcebaf2",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "policy_version": "delivery-policy-dev-v2",
+        "runtime_manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "seed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tenants": [
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000001",
+            "policy_revision": 2,
+            "tenant_id": "tenant-north"
+          },
+          {
+            "index_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "index_id": "00000000-0000-4000-8000-000000000002",
+            "policy_revision": 2,
+            "tenant_id": "tenant-south"
+          }
+        ]
+      },
+      "schema_version": 17
+    }
+  }
+}

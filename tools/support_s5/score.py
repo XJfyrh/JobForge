@@ -24,6 +24,7 @@ from tools.support_evaluation.evidence import (
 from tools.support_evaluation.evidence import (
     load_package as development_package,
 )
+from tools.support_evaluation.s5_policy import POLICY, THRESHOLDS
 from tools.support_evaluation.score import CASE_FIELDS, ZERO_USAGE, evaluate_case
 from tools.support_evaluation.validate_data import parse_json, sha256
 from tools.support_s5.package import (
@@ -37,7 +38,6 @@ from tools.support_s5.package import (
 SCORER = "support-s5-quality-v1"
 # Pretty-printed comparison bindings can exceed the semantic 64 KiB ceiling.
 MAX_REGISTRATION_FILE = 128 * 1024
-THRESHOLDS = {"proposal_correct": 16, "full_case_evidence": 18, "denominator": 20}
 
 
 def receipt_audit(value: dict[str, Any]) -> tuple[int, int]:
@@ -150,7 +150,11 @@ def score_export(
         and digest(registration_hash),
         "REGISTRATION_BINDING",
     )
-    count = 20 if registered["dataset_version"] in DATASETS else 40
+    count = (
+        THRESHOLDS["denominator"]
+        if registered["dataset_version"] in DATASETS
+        else POLICY["case_count"]
+    )
     need(
         not seen_diagnostic or registered["dataset_version"] in SEEN_DATASETS,
         "SEEN_DIAGNOSTIC_SCOPE",
@@ -269,7 +273,7 @@ def score_export(
         "kind": "s5-seen-diagnostic"
         if seen_diagnostic
         else "s5-unseen-quality"
-        if count == 20
+        if count == THRESHOLDS["denominator"]
         else "s5-development-regression",
         "dataset_version": registered["dataset_version"],
         "registration_sha256": registration_hash,
@@ -284,10 +288,10 @@ def score_export(
         "proposal_audit_complete": complete,
         "duplicate_effect_scope": "original_receipt_reader_before_after_audit; approved_action_mechanisms_also_required",
         "thresholds_met": not seen_diagnostic
-        and count == 20
+        and count == THRESHOLDS["denominator"]
         and complete
-        and correct >= 16
-        and full >= 18
+        and correct >= THRESHOLDS["proposal_correct"]
+        and full >= THRESHOLDS["full_case_evidence"]
         and not any(hard.values()),
         "usage_total": verified_subtotal if usage_complete else None,
         "verified_usage_subtotal": verified_subtotal,

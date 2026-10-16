@@ -323,6 +323,15 @@ func SupportPriceHash(d SupportDefinition) (string, error) {
 
 // BuildSupportProfile creates the one first-batch capability, disabled by default.
 func BuildSupportProfile(id string, definition SupportDefinition) (Profile, error) {
+	p, err := supportProfileFields(id, definition)
+	if err != nil {
+		return Profile{}, err
+	}
+	p.Hash, err = SupportProfileHash(p)
+	return p, err
+}
+
+func supportProfileFields(id string, definition SupportDefinition) (Profile, error) {
 	raw, err := CanonicalSupportDefinition(definition)
 	if err != nil {
 		return Profile{}, err
@@ -337,100 +346,37 @@ func BuildSupportProfile(id string, definition SupportDefinition) (Profile, erro
 		MaxInputTokens: 1048576, MaxOutputTokens: 1024, FamilyTokenLimit: 12595200, FamilyCostMicroyuan: 5000000,
 		Pricing: Pricing{Hash: priceHash, Denominator: d.Denominator, InputMissMicroyuan: d.InputMissMicroyuan,
 			InputHitMicroyuan: d.InputHitMicroyuan, OutputMicroyuan: d.OutputMicroyuan}, Definition: raw}
-	if p.Strategy == SupportAgentStrategy {
-		p.ExecutorVersion = SupportAgentExecutorVersion
-	}
-	if definition.SchemaVersion == 3 {
-		p.ExecutorVersion = SupportRecoveryExecutorVersion
-	}
-	if definition.SchemaVersion == 4 || definition.SchemaVersion == 6 || definition.SchemaVersion == 7 || definition.SchemaVersion == 9 {
-		p.ExecutorVersion = SupportApprovalExecutorVersion
-	}
-	if definition.SchemaVersion == 5 || definition.SchemaVersion == 8 || definition.SchemaVersion == 10 {
-		p.ExecutorVersion = SupportFixedComparisonExecutorVersion
-	}
-	if definition.SchemaVersion == 11 || definition.SchemaVersion == 12 || definition.SchemaVersion == 13 || definition.SchemaVersion == 14 || definition.SchemaVersion == 15 || definition.SchemaVersion == 16 || definition.SchemaVersion == 17 || definition.SchemaVersion == 18 {
-		p.ExecutorVersion = SupportAdjudicationExecutorVersion
-		if definition.SchemaVersion == 12 {
-			p.ExecutorVersion = SupportFixedAdjudicationExecutorVersion
-		}
-		if definition.SchemaVersion == 13 {
-			p.ExecutorVersion = SupportAdjudicationV2ExecutorVersion
-		}
+	p.ExecutorVersion = supportExecutor(definition.SchemaVersion)
+	if IsAdjudicationExecutor(p.ExecutorVersion) {
 		p.ProviderAuditPolicy = ProviderAuditPolicyDeepSeekV2
 		p.MaxOutputTokens, p.FamilyTokenLimit = FinalAdjudicationMaxTokens, 12610560
-		if definition.SchemaVersion == 14 {
-			p.ExecutorVersion, p.FamilyTokenLimit = SupportAdjudicationV3ExecutorVersion, 12625920
-		}
-		if definition.SchemaVersion == 15 {
-			p.ExecutorVersion, p.FamilyTokenLimit = SupportAdjudicationV4ExecutorVersion, 12625920
-		}
-		if definition.SchemaVersion == 16 || definition.SchemaVersion == 18 {
-			p.ExecutorVersion = SupportAdjudicationV5ExecutorVersion
-		}
-		if definition.SchemaVersion == 17 {
-			p.ExecutorVersion = SupportFixedBundleExecutorVersion
+		if definition.SchemaVersion == 14 || definition.SchemaVersion == 15 {
+			p.FamilyTokenLimit = 12625920
 		}
 	}
-	p.Hash, err = SupportProfileHash(p)
-	return p, err
+	return p, nil
 }
 
 // SupportProfileHash validates duplicated facts before computing the entire frozen identity.
 func SupportProfileHash(p Profile) (string, error) {
 	d, err := DecodeSupportDefinition(p.Definition)
-	expectedExecutor := ProviderAuditExecutorVersion
-	if d.Program.Strategy == SupportAgentStrategy {
-		expectedExecutor = SupportAgentExecutorVersion
+	if err != nil {
+		return "", err
 	}
-	if d.SchemaVersion == 3 {
-		expectedExecutor = SupportRecoveryExecutorVersion
-	}
-	if d.SchemaVersion == 4 || d.SchemaVersion == 6 || d.SchemaVersion == 7 || d.SchemaVersion == 9 {
-		expectedExecutor = SupportApprovalExecutorVersion
-	}
-	if d.SchemaVersion == 5 || d.SchemaVersion == 8 || d.SchemaVersion == 10 {
-		expectedExecutor = SupportFixedComparisonExecutorVersion
-	}
-	policy, output, family := ProviderAuditPolicyDeepSeekV1, int64(1024), int64(12595200)
-	if d.SchemaVersion == 11 || d.SchemaVersion == 12 || d.SchemaVersion == 13 || d.SchemaVersion == 14 || d.SchemaVersion == 15 || d.SchemaVersion == 16 || d.SchemaVersion == 17 || d.SchemaVersion == 18 {
-		expectedExecutor = SupportAdjudicationExecutorVersion
-		if d.SchemaVersion == 12 {
-			expectedExecutor = SupportFixedAdjudicationExecutorVersion
-		}
-		if d.SchemaVersion == 13 {
-			expectedExecutor = SupportAdjudicationV2ExecutorVersion
-		}
-		policy, output, family = ProviderAuditPolicyDeepSeekV2, FinalAdjudicationMaxTokens, 12610560
-		if d.SchemaVersion == 14 {
-			expectedExecutor, family = SupportAdjudicationV3ExecutorVersion, 12625920
-		}
-		if d.SchemaVersion == 15 {
-			expectedExecutor, family = SupportAdjudicationV4ExecutorVersion, 12625920
-		}
-		if d.SchemaVersion == 16 || d.SchemaVersion == 18 {
-			expectedExecutor = SupportAdjudicationV5ExecutorVersion
-		}
-		if d.SchemaVersion == 17 {
-			expectedExecutor = SupportFixedBundleExecutorVersion
-		}
-	}
-	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != d.Program.Strategy ||
-		p.ExecutorVersion != expectedExecutor || p.ProviderAuditPolicy != policy ||
-		p.ExpectedResponseModel != "deepseek-flash" || p.MaxInputTokens != 1048576 || p.MaxOutputTokens != output ||
-		p.FamilyTokenLimit != family || p.FamilyCostMicroyuan != 5000000 {
+	expected, err := supportProfileFields(p.ID, d)
+	if err != nil || !ValidIdentifier(p.ID) || p.Strategy != expected.Strategy || p.ExecutorVersion != expected.ExecutorVersion ||
+		p.ProviderAuditPolicy != expected.ProviderAuditPolicy || p.ExpectedResponseModel != expected.ExpectedResponseModel ||
+		p.MaxInputTokens != expected.MaxInputTokens || p.MaxOutputTokens != expected.MaxOutputTokens ||
+		p.FamilyTokenLimit != expected.FamilyTokenLimit || p.FamilyCostMicroyuan != expected.FamilyCostMicroyuan {
 		return "", ErrProfileUnavailable
 	}
-	priceHash, _ := SupportPriceHash(d)
-	if p.Pricing != (Pricing{Hash: priceHash, Denominator: d.Price.Denominator, InputMissMicroyuan: d.Price.InputMissMicroyuan,
-		InputHitMicroyuan: d.Price.InputHitMicroyuan, OutputMicroyuan: d.Price.OutputMicroyuan}) {
+	if p.Pricing != expected.Pricing {
 		return "", ErrProfileUnavailable
 	}
-	canonical, _ := CanonicalSupportDefinition(d)
 	return Fingerprint("jobforge.run.support-profile.v1", "1", p.ID, p.Strategy, p.ExecutorVersion,
 		p.ProviderAuditPolicy, p.ExpectedResponseModel, decimal(p.MaxInputTokens), decimal(p.MaxOutputTokens),
 		decimal(p.FamilyTokenLimit), decimal(p.FamilyCostMicroyuan), p.Pricing.Hash, decimal(p.Pricing.Denominator),
-		decimal(p.Pricing.InputMissMicroyuan), decimal(p.Pricing.InputHitMicroyuan), decimal(p.Pricing.OutputMicroyuan), string(canonical)), nil
+		decimal(p.Pricing.InputMissMicroyuan), decimal(p.Pricing.InputHitMicroyuan), decimal(p.Pricing.OutputMicroyuan), string(expected.Definition)), nil
 }
 
 // ValidateSupportProfile applies only to the new audited support capability;

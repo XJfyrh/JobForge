@@ -84,7 +84,7 @@ func (c *Conversation) accept(f Frame, now int64) error {
 			Policy   string `json:"provider_audit_policy"`
 		}
 		if json.Unmarshal(f.Input, &selection) == nil && f.Binding.StepKind == "model_proposal" && selection.Policy == run.ProviderAuditPolicyDeepSeekV2 {
-			c.thinking = selection.Executor == run.SupportAdjudicationExecutorVersion || selection.Executor == run.SupportAdjudicationV2ExecutorVersion || selection.Executor == run.SupportAdjudicationV3ExecutorVersion || selection.Executor == run.SupportAdjudicationV4ExecutorVersion || selection.Executor == run.SupportAdjudicationV5ExecutorVersion || selection.Executor == run.SupportFixedAdjudicationExecutorVersion || selection.Executor == run.SupportFixedBundleExecutorVersion
+			c.thinking = run.IsAdjudicationExecutor(selection.Executor)
 		}
 		c.metering = MeteringReceiver{requestID: f.RequestID, binding: f.Binding, start: f.EmittedMonoMS, calls: map[string]*meteredCall{}}
 		return nil

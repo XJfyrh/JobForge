@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,7 +30,7 @@ func main() {
 		_, _ = fmt.Fprintln(os.Stdout, "diagnosis manifest and runner verified; no model calls")
 		return
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if *deadline != "" {
 		until, err := time.Parse(time.RFC3339Nano, *deadline)

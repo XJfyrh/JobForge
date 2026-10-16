@@ -208,7 +208,7 @@ func validStep(s identity) bool {
 
 func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 	policy := run.ProviderAuditPolicyDeepSeekV1
-	if i.ExecutorVersion == run.SupportAdjudicationExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV2ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV3ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV4ExecutorVersion || i.ExecutorVersion == run.SupportAdjudicationV5ExecutorVersion || i.ExecutorVersion == run.SupportFixedBundleExecutorVersion || i.ExecutorVersion == run.SupportFixedAdjudicationExecutorVersion {
+	if run.IsAdjudicationExecutor(i.ExecutorVersion) {
 		policy = run.ProviderAuditPolicyDeepSeekV2
 	}
 	if i.SchemaVersion != 1 || !ExecutorMatchesAdapter(i.ExecutorVersion, i.AdapterID) || !run.ValidIdentifier(i.AdapterID) ||
@@ -263,8 +263,5 @@ func validateProjection(p checkpoint, i input, b runprotocol.Binding) error {
 
 // ExecutorMatchesAdapter prevents mixed strategy/version deployments.
 func ExecutorMatchesAdapter(version, adapter string) bool {
-	if adapter == "support-agent-v1" {
-		return version == run.SupportAgentExecutorVersion || version == run.SupportRecoveryExecutorVersion || version == run.SupportApprovalExecutorVersion || version == run.SupportAdjudicationExecutorVersion || version == run.SupportAdjudicationV2ExecutorVersion || version == run.SupportAdjudicationV3ExecutorVersion || version == run.SupportAdjudicationV4ExecutorVersion || version == run.SupportAdjudicationV5ExecutorVersion
-	}
-	return version == ExecutorVersion || adapter == "support-fixed-v1" && (version == run.SupportFixedComparisonExecutorVersion || version == run.SupportFixedAdjudicationExecutorVersion || version == run.SupportFixedBundleExecutorVersion)
+	return run.ExecutorMatchesAdapter(version, adapter)
 }

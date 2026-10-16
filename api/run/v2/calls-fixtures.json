@@ -301,6 +301,83 @@
       }
     ]
   },
+  "thinking": {
+    "run_id": "33333333-3333-4333-8333-333333333333",
+    "captured_at": "2026-09-16T12:02:00Z",
+    "batch_frozen": false,
+    "batch_stop_code": null,
+    "items": [
+      {
+        "physical_call_id": "11111111-1111-4111-8111-111111111111",
+        "step_id": "22222222-2222-4222-8222-222222222222",
+        "step_kind": "model_proposal",
+        "attempt_no": 1,
+        "ordinal": 1,
+        "subcall": "chat",
+        "parameter_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "profile_id": "synthetic-audited-profile",
+        "profile_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "price_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "reserved_at": "2026-09-16T12:00:00Z",
+        "dispatch_expires_at": "2026-09-16T12:00:01Z",
+        "call_deadline": "2026-09-16T12:01:00Z",
+        "observed_at": "2026-09-16T12:00:00Z",
+        "report_recorded_at": "2026-09-16T12:00:00Z",
+        "settled_at": "2026-09-16T12:00:00Z",
+        "reserved": {
+          "input_tokens": 100,
+          "output_tokens": 50,
+          "total_tokens": 150,
+          "cost_microyuan": 1000
+        },
+        "known_tokens": 30,
+        "known_cost_microyuan": 200,
+        "held_tokens": 0,
+        "held_cost_microyuan": 0,
+        "usage_known": true,
+        "measurement_anomaly": false,
+        "report_hash": "77e1d4f38549c5935eaee4894fb93a06025ef415415f3710b400aa7617f363c6",
+        "audit_hash": "f642f2d61819eed7946f608bdb64fdff4efd61a019566c72fd51684188e57538",
+        "provider_audit": {
+          "schema_version": 2,
+          "provider": "deepseek",
+          "response_complete": true,
+          "http_status": 200,
+          "response_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "identity_state": "compatible",
+          "response_id": "synthetic-response",
+          "response_model": "deepseek-flash",
+          "system_fingerprint": "synthetic-fingerprint",
+          "created": 1789560000,
+          "usage_evidence": "complete",
+          "reasoning_state": "observed",
+          "reasoning_tokens": 4,
+          "mode_state": "thinking",
+          "audit_hash": "f642f2d61819eed7946f608bdb64fdff4efd61a019566c72fd51684188e57538"
+        },
+        "observed_usage": {
+          "input_tokens": 20,
+          "output_tokens": 10,
+          "cached_input_tokens": 5,
+          "receipt_hash": "2ec0f1edfc9a8d0d2190c85043e9c01e12806219d718b3d0e0629e346c459135",
+          "usage_hash": "f5c4c0dbcc45bd558a9d760bae14799f57d72443fe2e278870eb97d1d41e8d88"
+        },
+        "settled_usage": {
+          "input_tokens": 20,
+          "output_tokens": 10,
+          "cached_input_tokens": 5,
+          "receipt_hash": "2ec0f1edfc9a8d0d2190c85043e9c01e12806219d718b3d0e0629e346c459135",
+          "usage_hash": "f5c4c0dbcc45bd558a9d760bae14799f57d72443fe2e278870eb97d1d41e8d88"
+        },
+        "report_conflict": false,
+        "audit_status": "recorded",
+        "transport_outcome": "response",
+        "http_status": 200,
+        "error_code": "MODEL_PROTOCOL_ERROR",
+        "business_outcome": "rejected"
+      }
+    ]
+  },
   "unavailable": {
     "run_id": "33333333-3333-4333-8333-333333333333",
     "captured_at": "2026-09-16T12:02:00Z",
