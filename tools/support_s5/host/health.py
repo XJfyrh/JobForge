@@ -6,6 +6,8 @@ from typing import Any
 
 from jobforge_agent.business import POLICY_BUNDLE_ALIASES
 
+from tools.support_evaluation.driver import protocol_signature
+
 
 def quality_gate_applies(registration: dict[str, Any]) -> bool:
     """Derive Agent-only quality gates from the bound prepared registration."""
@@ -64,23 +66,6 @@ def money_reasons(
     ):
         reasons.append("INSUFFICIENT_FULL_RESERVATION")
     return reasons
-
-
-def protocol_signature(row: dict[str, Any]) -> Any:
-    """Classify only observed protocol rejection, without guessing its cause."""
-    if (
-        row["status"] != "run"
-        or (row["run"].get("error") or {}).get("code") != "MODEL_PROTOCOL_ERROR"
-    ):
-        return None
-    rejected = [
-        c
-        for c in row["calls"]["items"]
-        if c["subcall"] == "chat" and c["business_outcome"] == "rejected"
-    ]
-    return tuple((c["step_kind"], c["error_code"]) for c in rejected) or (
-        "unclassified_protocol_error",
-    )
 
 
 def stop_reasons(

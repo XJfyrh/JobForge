@@ -72,42 +72,80 @@ func TestProxyBoundaryUsesOriginalTupleAndSuccessfulCommitOnly(t *testing.T) {
 }
 
 func TestProxyF06ReturnsCommitAndBlocksOnlyTheExactNextPermit(t *testing.T) {
-	f, req, accepted := proxyFixture()
-	f.Boundary = "first_search_commit"
-	req.Step.Kind = agentv1.StepKind_STEP_KIND_SEARCH_POLICY
-	p := newProxyFixture()
-	if phase, _, _, _ := p.selectBoundary(f, req, accepted); phase != "" || p.armed[f.Experiment] == nil {
-		t.Fatal("F06 lost the original Commit ACK")
-	}
-	wrong := &agentv1.ReserveCallRequest{Execution: req.Execution, Step: proto.Clone(accepted.NextStep).(*agentv1.StepIdentity)}
-	wrong.Step.StepId = "another"
-	if execution, _ := p.beforePermit(f, wrong); execution != nil {
-		t.Fatal("wrong next step blocked as the fault")
-	}
-	for _, mode := range []string{"fence", "session", "snapshot", "kind"} {
-		wrong := &agentv1.ReserveCallRequest{Execution: proto.Clone(req.Execution).(*agentv1.ExecutionIdentity), Step: proto.Clone(accepted.NextStep).(*agentv1.StepIdentity)}
-		switch mode {
-		case "fence":
-			wrong.Execution.FencingToken++
-		case "session":
-			wrong.Execution.Session.SessionId = "44444444-4444-4444-8444-444444444444"
-		case "snapshot":
-			wrong.Step.SnapshotHash = strings.Repeat("f", 64)
-		case "kind":
-			wrong.Step.Kind = agentv1.StepKind_STEP_KIND_GET_DELIVERY
-		}
-		if execution, _ := p.beforePermit(f, wrong); execution != nil {
-			t.Fatalf("wrong %s matched original Commit authority", mode)
-		}
-	}
-	next := &agentv1.ReserveCallRequest{Execution: req.Execution, Step: accepted.NextStep}
-	if execution, _ := p.beforePermit(f, next); execution == nil {
-		t.Fatal("actual next permit not blocked")
+	for boundary, kind := range map[string]agentv1.StepKind{
+		"first_search_commit": agentv1.StepKind_STEP_KIND_SEARCH_POLICY,
+		"first_bundle_commit": agentv1.StepKind_STEP_KIND_READ_POLICY_BUNDLE,
+	} {
+		t.Run(boundary, func(t *testing.T) {
+			f, req, accepted := proxyFixture()
+			f.Boundary = boundary
+			req.Step.Kind = kind
+			p := newProxyFixture()
+			if phase, _, _, _ := p.selectBoundary(f, req, accepted); phase != "" || p.armed[f.Experiment] == nil {
+				t.Fatal("F06 lost the original Commit ACK")
+			}
+			wrong := &agentv1.ReserveCallRequest{Execution: req.Execution, Step: proto.Clone(accepted.NextStep).(*agentv1.StepIdentity)}
+			wrong.Step.StepId = "another"
+			if execution, _ := p.beforePermit(f, wrong); execution != nil {
+				t.Fatal("wrong next step blocked as the fault")
+			}
+			for _, mode := range []string{"fence", "session", "snapshot", "kind"} {
+				wrong := &agentv1.ReserveCallRequest{Execution: proto.Clone(req.Execution).(*agentv1.ExecutionIdentity), Step: proto.Clone(accepted.NextStep).(*agentv1.StepIdentity)}
+				switch mode {
+				case "fence":
+					wrong.Execution.FencingToken++
+				case "session":
+					wrong.Execution.Session.SessionId = "44444444-4444-4444-8444-444444444444"
+				case "snapshot":
+					wrong.Step.SnapshotHash = strings.Repeat("f", 64)
+				case "kind":
+					wrong.Step.Kind = agentv1.StepKind_STEP_KIND_GET_DELIVERY
+				}
+				if execution, _ := p.beforePermit(f, wrong); execution != nil {
+					t.Fatalf("wrong %s matched original Commit authority", mode)
+				}
+			}
+			next := &agentv1.ReserveCallRequest{Execution: req.Execution, Step: accepted.NextStep}
+			if execution, _ := p.beforePermit(f, next); execution == nil {
+				t.Fatal("actual next permit not blocked")
+			}
+		})
 	}
 }
 
 type upstreamFixture struct {
 	agentv1.UnimplementedAgentServiceServer
+}
+
+func TestProxyV9InvestigationBoundaryRequiresTheActualAcceptedMarker(t *testing.T) {
+	for _, mode := range []string{"complete", "proposal", "tool", "wrong_kind", "malformed", "uncommitted"} {
+		t.Run(mode, func(t *testing.T) {
+			f, req, response := proxyFixture()
+			f.Boundary = "investigation_complete_commit"
+			req.Step.Kind = agentv1.StepKind_STEP_KIND_MODEL_DECISION
+			req.ResultJson = []byte(`{"content":{"type":"investigation_complete"}}`)
+			switch mode {
+			case "proposal", "tool":
+				req.ResultJson = []byte(`{"content":{"type":"` + mode + `"}}`)
+			case "wrong_kind":
+				req.Step.Kind = agentv1.StepKind_STEP_KIND_MODEL_PROPOSAL
+			case "malformed":
+				req.ResultJson = []byte(`{"content":`)
+			case "uncommitted":
+				response.AcceptedStep = nil
+			}
+			p := newProxyFixture()
+			phase, _, _, _ := p.selectBoundary(f, req, response)
+			if (phase == "commit_ack_lost") != (mode == "complete") {
+				t.Fatalf("unexpected boundary selection for %s: %q", mode, phase)
+			}
+			if mode == "complete" {
+				if phase, _, _, _ := p.selectBoundary(f, req, response); phase != "" {
+					t.Fatal("accepted marker selected twice")
+				}
+			}
+		})
+	}
 }
 
 func (*upstreamFixture) CommitStep(ctx context.Context, req *agentv1.CommitStepRequest) (*agentv1.CommitStepResponse, error) {

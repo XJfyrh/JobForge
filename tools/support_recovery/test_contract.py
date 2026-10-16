@@ -81,6 +81,77 @@ def test_s5_plan_version_binds_new_prompt_and_saved_proposal_boundary(
             plan.validate(mixed, check_sources=False)
 
 
+def test_v9_plan_keeps_eleven_intentions_with_reachable_boundaries() -> None:
+    """Admit only the current frozen candidate and reject old search fault points."""
+    value = frozen()
+    value.update(schema_version=4, max_cost_microyuan=4_000_000)
+    value["definition"]["schema_version"] = 18
+    value["definition"]["program"]["prompt_version"] = "support-agent-prompt-v9"
+    value["profile"]["executor_version"] = "linux-v2-adjudication-runtime-5"
+    for row, spec in zip(value["runs"], plan.V9_SPECS, strict=True):
+        row["boundary"] = spec[2]
+    plan.validate(value, check_sources=False)
+    assert [(c, a, t) for c, a, _, t in plan.V9_SPECS] == [
+        (c, a, t) for c, a, _, t in plan.SPECS
+    ]
+    for key, wrong in (
+        ("prompt", "support-agent-prompt-v8"),
+        ("schema", 16),
+        ("executor", "linux-v2-adjudication-runtime-2"),
+        ("boundary", "first_search_commit"),
+    ):
+        invalid = copy.deepcopy(value)
+        if key == "prompt":
+            invalid["definition"]["program"]["prompt_version"] = wrong
+        elif key == "schema":
+            invalid["definition"]["schema_version"] = wrong
+        elif key == "executor":
+            invalid["profile"]["executor_version"] = wrong
+        else:
+            invalid["runs"][0]["boundary"] = wrong
+        with pytest.raises(
+            ValueError, match="S3_PLAN_CHANGED|S3_EXECUTION_LIST_CHANGED"
+        ):
+            plan.validate(invalid, check_sources=False)
+
+
+def test_v9_cumulative_authorization_and_full_next_reservation() -> None:
+    """The current ledger leaves5.005813CNY; no hold is replaced by average spend."""
+    value: dict[str, Any] = {"schema_version": 4}
+    prior = {
+        "batch_account_id": "old-batch",
+        "known_cost_microyuan": 22_994_187,
+        "held_cost_microyuan": 0,
+        "batch_frozen": False,
+        "unknown_chat_calls": 0,
+    }
+    release = {"stage_cap_microyuan": 28_000_000, "prior_batch_exposure": [prior]}
+    assert driver.stage_remaining(value, release) == 5_005_813
+    with pytest.raises(ValueError, match="S5_STAGE_AUTHORIZATION_MISMATCH"):
+        driver.stage_remaining(value, dict(release, stage_cap_microyuan=29_000_000))
+    with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+        driver.stage_remaining(
+            value,
+            dict(release, prior_batch_exposure=[dict(prior, held_cost_microyuan=1)]),
+        )
+    assert driver.stage_remaining({"schema_version": 3}, release) == -17_994_187
+    value.update(
+        max_cost_microyuan=4_000_000,
+        profile={
+            "max_input_tokens": 1_048_576,
+            "pricing": {
+                "input_miss_microyuan": 2_000_000,
+                "output_microyuan": 8_000_000,
+                "denominator": 1_000_000,
+            },
+        },
+        definition={"final_model": {"max_tokens": 16_384}},
+    )
+    driver.require_next_reservation(value, 1_771_776)
+    with pytest.raises(ValueError, match="S5_INSUFFICIENT_FULL_RESERVATION"):
+        driver.require_next_reservation(value, 1_771_777)
+
+
 def test_worker_signal_and_wait_times_keep_no_child_window_explicit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

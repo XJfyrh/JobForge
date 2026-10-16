@@ -27,6 +27,23 @@ KEYS = Path("/run/secrets/driver.json")
 CONTROL = "http://control:8093"
 
 
+def protocol_signature(row: dict[str, Any]) -> Any:
+    """Classify only observed protocol rejection, without guessing its cause."""
+    if (
+        row["status"] != "run"
+        or (row["run"].get("error") or {}).get("code") != "MODEL_PROTOCOL_ERROR"
+    ):
+        return None
+    rejected = [
+        c
+        for c in row["calls"]["items"]
+        if c["subcall"] == "chat" and c["business_outcome"] == "rejected"
+    ]
+    return tuple((c["step_kind"], c["error_code"]) for c in rejected) or (
+        "unclassified_protocol_error",
+    )
+
+
 class BatchStopped(RuntimeError):
     """The current invocation ends; export remains available."""
 

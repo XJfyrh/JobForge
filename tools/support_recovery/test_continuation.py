@@ -112,6 +112,27 @@ def test_committed_correction_is_accepted_but_uncommitted_rejected_is_not() -> N
     assert not driver.chat_barrier(evidence, committed=True)
 
 
+def test_v9_final_audit_mode_and_known_protocol_failure_stay_distinct() -> None:
+    """Thinking belongs only to the final; unknown billing still stops the list."""
+    evidence = correction()
+    evidence["steps"] = []
+    call = evidence["calls"]["items"][0]
+    call["step_kind"] = "model_proposal"
+    call["provider_audit"].update(schema_version=2, mode_state="thinking")
+    assert driver.chat_barrier(evidence, adjudication=True)
+    assert not driver.chat_barrier(evidence, committed=True, adjudication=True)
+    assert not driver.chat_barrier(evidence)
+    for field, value in (("usage_known", False), ("held_cost_microyuan", 1)):
+        broken = copy.deepcopy(evidence)
+        broken["calls"]["items"][0][field] = value
+        assert not driver.chat_barrier(broken, adjudication=True)
+    call["provider_audit"]["schema_version"] = 1
+    assert not driver.chat_barrier(evidence, adjudication=True)
+    call["provider_audit"]["schema_version"] = 2
+    call["step_kind"] = "model_decision"
+    assert not driver.chat_barrier(evidence, adjudication=True)
+
+
 @pytest.mark.parametrize(
     "wrong",
     [
