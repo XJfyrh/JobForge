@@ -1,6 +1,6 @@
 # ADR-0034：S5 终裁任务分离与条件枚举候选
 
-- 状态：Accepted（维护者 2026-10-12 批准方案与 ¥28 阶段上限；独立设计审查结论 `accept_with_conditions`，4 项 BLOCKING 全部处置完毕并复核；随本 PR 合并生效。**本候选尚未运行任何收费批次，无真实模型质量结果**）
+- 状态：Accepted（维护者 2026-10-12 批准方案与 ¥28 阶段上限；独立设计审查结论 `accept_with_conditions`，4 项 BLOCKING 全部处置完毕并复核。接受时本候选尚未运行收费批次；后续回放与开发结果见[v5 验证报告](../evidence/agent-v3-s5-v5-validation-2026-10-13.md)）
 - 日期：2026-10-12
 - 决策者：维护者（2026-10-12 批准本方案与 S5 阶段费用上限由 ¥20 提高至 ¥28）
 - 关联：[PR #61](https://github.com/XJfyrh/JobForge/pull/61)、[ADR-0030](0030-s5-policy-condition-candidate.md)、[ADR-0031](0031-s5-controlled-decision-diagnosis.md)、[ADR-0033](0033-versioned-final-adjudication.md)、[终裁开发验证](../evidence/agent-v3-s5-final-adjudication-2026-10-11.md)

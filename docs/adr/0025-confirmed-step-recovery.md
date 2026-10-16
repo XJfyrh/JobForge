@@ -1,6 +1,6 @@
 # ADR-0025：完整审计下的未提交步骤恢复
 
-- 状态：**Accepted（2026-10-04 独立方案审查通过，随本决策 PR 合并生效）**。
+- 状态：**Accepted（2026-10-04 独立方案审查通过，[PR #57](https://github.com/XJfyrh/JobForge/pull/57) 已合并）**。
 - 日期：2026-10-04（Asia/Shanghai）。
 - 决策者：维护者；实施会话编写草案，原规划会话负责方案审查与结果验收。
 - 关联：[PRD v0.17](../product/JobForge_PRD_v0.17.md)、[S3实施计划](../archive/plans/agent-v3-s3-recovery.md)、[ADR-0013](0013-durable-agent-run-and-step-commit.md)、[0017](0017-run-admission-and-call-ledger.md)、[0019](0019-executor-confirmation-and-exit-contract.md)、[0020](0020-provider-audit-and-batch-stop.md)、[0024](0024-bounded-support-agent.md)。

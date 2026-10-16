@@ -1,6 +1,6 @@
 # ADR-0041：业务工作台与部署处理方式
 
-- 日期：2026-10-16；状态：Accepted（随本 PR 合并生效）。
+- 日期：2026-10-16；状态：Accepted。
 - 增补 [PRD v0.19](../product/JobForge_PRD_v0.19.md) 与 [ADR-0027](0027-s5-observability-and-data-lifecycle.md) 的页面展示，不改变执行、审批、回执、费用与留存语义。
 
 ## 决策

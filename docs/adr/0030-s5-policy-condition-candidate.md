@@ -1,6 +1,6 @@
 # ADR-0030：S5 必要条件核对候选与重新验收
 
-- 日期：2026-10-08；状态：**Accepted，独立设计审查接受，随本PR合并生效**。
+- 日期：2026-10-08；状态：**Accepted，独立设计审查接受**。
 - 关联：[PR #61](https://github.com/XJfyrh/JobForge/pull/61)、[输入诊断](../evidence/agent-v3-s5-input-diagnosis-2026-10-08.md)。
 - 增补 ADR-0028 的候选版本与已见集记录；不改写历史候选、政策或结果。
 
