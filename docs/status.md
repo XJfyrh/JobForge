@@ -1,18 +1,14 @@
 # 当前状态与下一步
 
-2026-10-15完成[v9原已见V3完整20案回归](evidence/agent-v3-s5-v9-seen-v3-2026-10-15.md)：**工程执行完成，开发与已见守卫达标，S5总体验收待完成**。20案全部执行，正确/完整证据各19/20，硬失败0，独立批后审阅accepted。004/018及同候选开发DEV-020均正确、证据完整，调查和最终输入的可引用/定义闭合均通过；已见报告thresholds_met保持false，不替代未见验收。
+2026-10-16完成[V9未见正式V4配对](evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)：**工程主体已完成，正式模型质量达标，S5总体验收仍在推进**。Agent原20案正确18/20、完整案例证据18/20，达到原16/18门槛，四类硬失败0；Fixed原20案正确及完整证据各11/20，逐案配对胜8/平11/负1。Fixed作为对照，不套Agent候选门槛。正式候选在新20案创建前冻结，Agent批后独立审查accepted。
 
-唯一失败020的实际工单确为escalated、顶层行动/结论正确；模型额外附加preserve_escalated，但既有评分只在record_conclusion分支接受该主张，本例严重异常优先action=escalate。政策/来源齐全、协议和计量通过；这是残余质量失败，无重试、补样、gold或评分放宽。保留v9，接续V4准入、冻结自动守卫、干净镜像/新freeze；冻结后才创建并独立审查新未见20案。当前未创建新正式集。
+Fixed原批完成18案后因宿主监控timeout异常停止。维护者明确授权后，原未执行019/020在新窗口、新控制库各补跑一次且均正确；原18案未重跑，停止批次不重开，合并摘要保留逐案registration/评分来源。Agent残余006/011保留为质量失败，不重试、不补样、不改gold，不启动新候选。
 
-此前[完整开发对照](evidence/agent-v3-s5-v9-fixed-development-2026-10-15.md)Agent39/40、Fixed34/40，逐案配对胜6/平33/负1，完整基线已接受；Fixed不套Agent候选门槛。schema18/prompt-v9为5,751字节final提示，Fixed17/prompt-v2为4,945字节，各用原注册提示，模型/final参数、政策与资源额度相同。独立工程改动可单独交付，S5仍须满足正式质量及后续恢复/演示要求。
+正式结果闭账时46库累计714Runs/2,882chat，observed usage估算**¥22.994187**，原¥28剩余**¥5.005813**；held/unknown/在途/未结束attempt均0，所有付费与配套容器退出、锁释放。当前在原授权内准备V9原11项恢复费用对照，每批至多¥4，一次具体启动审查后自动执行；不重复等待逐批“继续”。费用是实际usage按冻结费率的估算，不是供应商已结算账单。
 
-本批20Runs/80chat/140实际HTTP，新增observed-usage估算¥1.593948。41库累计674Runs/2,782chat、**¥20.454773**，原¥28余量**¥7.545227**；held/unknown/在途/未结束attempt全0，原40库计数不变，业务未写入、receipts0、三容器退出且锁释放。批次/阶段known+held峰值¥3.717073/¥22.577898，未突破¥4/¥28。维护者持续授权原累计¥28内自主合理分配，每笔具体manifest仍一次独立启动审查，不重复等待逐批“可以”。
+正式40实际Run/220HTTP的OTLP关联全部通过，连同此前开发与已见回归累计140Run/790HTTP；Trace采集未新增模型调用。两行Linux fixture lint已修复并经独立复核；恢复工具新增明确的V9入口、真实故障边界、全历史费用核对与Trace接线。相关Python、代理race、类型和quick检查通过；一项Linux监督器测试在Windows跳过。旧head远程CI仅两处QF1001失败，其余所选检查通过；最新head CI待执行，不把旧结果记为通过。
 
-[共享工作流](../tools/support_s5/host/README.md)已实际完成20案自动检查，第10案自动继续，普通质量失败按原分母记录。来源缺陷在免费阶段修复：原V3 manifest/freeze字节钉住，case-map/runtime及资源摘要同包绑定。一次本地审查工具误输出8个测试HTTP凭据，原零调用准备封存；新身份仅替换同租户/权限的HTTP凭据，核对59容器、19个旧值匹配均Stopped/Pid0，无供应商/动作凭据泄露。历史原件和零调用库均保留。
-
-已见入口390项相关Python、mypy41文件、quick/docs通过；V4免费准入限定Agent18/Fixed17，旧schema不能接纳，新正式评分不能绕过freeze或使用seen模式，640项相关Python通过、4项Linux专用进程测试在Windows跳过未计通过，mypy两域、quick及Go路由race通过。原真实PG/AOF Redis race及Linux机制证明按风险复用，新镜像构建与冻结尚待完成；远程CI未运行。开发及本批累计100实际Run/570物理调用OTLP关联已独立核验。
-
-S5正式质量尚未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；已接受阶段仍为Agent v3 S4（[PR #60](https://github.com/XJfyrh/JobForge/pull/60)）。[原v8开发](evidence/agent-v3-s5-v8-development-2026-10-15.md)及其他历史失败/未尝试不改写，旧批不重开。当前开发通过不代表已完成正式冻结、新未见集、恢复对照或演示。
+S5剩余：原11项实模恢复费用/耗时对照、隔离Compose下实际方案与一次人工审批及唯一效果/故障恢复演示、最新head CI和最终结果审阅。演示准备到具体proposal后由维护者批准一次实际写入。当前[PR #61](https://github.com/XJfyrh/JobForge/pull/61)未合并；正式质量通过不代表S5整体已接受。完整开发Agent39/40、Fixed34/40及已见V3的19/20结果分别保留；其他历史失败和未执行不改写。
 
 | 阶段 | 已实现能力 | 实际验收 |
 |---|---|---|
@@ -21,7 +17,7 @@ S5正式质量尚未通过，[PR #61](https://github.com/XJfyrh/JobForge/pull/61
 | S2 | 由模型选择只读工具、累计来源、一次纠错 | [40 案真实验收](evidence/agent-v3-s2-delivery-2026-09-17.md)，业务 37/40，安全硬失败 0；另有真实响应截断注入 |
 | S3 | 复用已提交步骤、自然租约接管、未提交步骤有条件重做 | [固定 11 项真实验收](evidence/agent-v3-s3-cloud-2026-10-04.md)，5 个接管机制通过；8 个完整方案中 7 个业务通过，DEV-035-C 失败；3 个按计划取消的对照运行（H0） |
 | S4 | 人工审批、Go结论记录、独立动作许可、终态效果核对与回执优先retry | [固定 10 个源样本及 2 个后继](evidence/agent-v3-s4-cloud-2026-10-05.md)，原方案业务质量 10/10、机制 10/10，7 条唯一业务回执；真实层获独立接受 |
-| S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [免费机制](evidence/agent-v3-s5-free-2026-10-07.md)通过；[prompt-v3正式结果](evidence/agent-v3-s5-v3-real-2026-10-08.md)Agent正确12/20、完整证据15/20，Fixed为1/20、2/20；四类硬失败0，质量未通过，恢复/演示未执行 |
+| S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [免费机制](evidence/agent-v3-s5-free-2026-10-07.md)通过；[V9未见正式V4](evidence/agent-v3-s5-v9-formal-v4-2026-10-16.md)Agent正确18/20、完整证据18/20，Fixed各11/20；硬失败0，正式质量通过，恢复/实模演示及最终验收待完成 |
 
 任务页面支持审阅方案，批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
 

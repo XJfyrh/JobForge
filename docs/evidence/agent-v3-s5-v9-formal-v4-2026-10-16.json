@@ -1,0 +1,696 @@
+{
+  "schema_version": 1,
+  "kind": "actual-v9-formal-v4-paired-summary",
+  "as_of": "2026-10-16 formal Fixed completion before recovery",
+  "dataset_version": "support-s5-2026-10-15-v4",
+  "denominator": 20,
+  "source_commit": "b6328c1745d698b595228a1985a847d090d10e80",
+  "agent": {
+    "correct": 18,
+    "full_evidence": 18,
+    "quality_gate_passed": true,
+    "hard_failures": {
+      "unauthorized_access": 0,
+      "unapproved_write": 0,
+      "duplicate_business_effect": 0,
+      "budget_breach": 0
+    },
+    "usage": {
+      "known_tokens": 522811,
+      "known_cost_microyuan": 1573434,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 140,
+      "chat_calls": 80,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 0,
+      "profile_metadata_calls": 0,
+      "business_tool_calls": 60
+    }
+  },
+  "fixed": {
+    "correct": 11,
+    "full_evidence": 11,
+    "baseline_collection_complete": true,
+    "hard_failures": {
+      "unauthorized_access": 0,
+      "unapproved_write": 0,
+      "duplicate_business_effect": 0,
+      "budget_breach": 0
+    },
+    "usage": {
+      "known_tokens": 203400,
+      "known_cost_microyuan": 965980,
+      "held_tokens": 0,
+      "held_cost_microyuan": 0,
+      "physical_calls": 80,
+      "chat_calls": 20,
+      "unknown_chat_calls": 0,
+      "measurement_anomalies": 0,
+      "corrections": 0,
+      "query_embedding_calls": 0,
+      "profile_metadata_calls": 0,
+      "business_tool_calls": 60
+    },
+    "collection_origins": "original18 interrupted batch plus two explicitly authorized original unattempted cases; original stopped batch remains stopped",
+    "case_origins": {
+      "S5V4-001": "first18",
+      "S5V4-002": "first18",
+      "S5V4-003": "first18",
+      "S5V4-004": "first18",
+      "S5V4-005": "first18",
+      "S5V4-006": "first18",
+      "S5V4-007": "first18",
+      "S5V4-008": "first18",
+      "S5V4-009": "first18",
+      "S5V4-010": "first18",
+      "S5V4-011": "first18",
+      "S5V4-012": "first18",
+      "S5V4-013": "first18",
+      "S5V4-014": "first18",
+      "S5V4-015": "first18",
+      "S5V4-016": "first18",
+      "S5V4-017": "first18",
+      "S5V4-018": "first18",
+      "S5V4-019": "last2",
+      "S5V4-020": "last2"
+    }
+  },
+  "paired": {
+    "denominator": 20,
+    "outcomes": {
+      "win": 8,
+      "tie": 11,
+      "loss": 1
+    },
+    "cases": [
+      {
+        "case_id": "S5V4-001",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-002",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-003",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-004",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-005",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-006",
+        "agent_correct": false,
+        "fixed_correct": true,
+        "outcome": "loss"
+      },
+      {
+        "case_id": "S5V4-007",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-008",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-009",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-010",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-011",
+        "agent_correct": false,
+        "fixed_correct": false,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-012",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-013",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-014",
+        "agent_correct": true,
+        "fixed_correct": false,
+        "outcome": "win"
+      },
+      {
+        "case_id": "S5V4-015",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-016",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-017",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-018",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-019",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      },
+      {
+        "case_id": "S5V4-020",
+        "agent_correct": true,
+        "fixed_correct": true,
+        "outcome": "tie"
+      }
+    ],
+    "baseline_superiority_required": false,
+    "costs": {
+      "agent": {
+        "usage_total": {
+          "known_tokens": 522811,
+          "known_cost_microyuan": 1573434,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 80,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 60
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 522811,
+          "known_cost_microyuan": 1573434,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 140,
+          "chat_calls": 80,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 60
+        },
+        "usage_complete": true
+      },
+      "fixed": {
+        "usage_total": {
+          "known_tokens": 203400,
+          "known_cost_microyuan": 965980,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 80,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 60
+        },
+        "verified_usage_subtotal": {
+          "known_tokens": 203400,
+          "known_cost_microyuan": 965980,
+          "held_tokens": 0,
+          "held_cost_microyuan": 0,
+          "physical_calls": 80,
+          "chat_calls": 20,
+          "unknown_chat_calls": 0,
+          "measurement_anomalies": 0,
+          "corrections": 0,
+          "query_embedding_calls": 0,
+          "profile_metadata_calls": 0,
+          "business_tool_calls": 60
+        },
+        "usage_complete": true
+      }
+    }
+  },
+  "traces": {
+    "actual_runs": 40,
+    "actual_physical_calls": 220,
+    "all_associations_passed": true
+  },
+  "stage_ledger_at_formal_completion": {
+    "runs": 714,
+    "chat_calls": 2882,
+    "unknown_chat_calls": 0,
+    "inflight": 0,
+    "unfinished_attempts": 0,
+    "known": 22994187,
+    "held": 0
+  },
+  "remaining_stage_microyuan_at_formal_completion": 5005813,
+  "cost_basis": "observed_usage_tariff_estimate_not_settled_invoice",
+  "s5_overall_complete": false,
+  "sources": [
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\candidate-freeze.json",
+      "sha256": "605cf1d64961e32ce82d3298388629f72661a3e70ac3093e72c81a8f6ee03697"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\build-source-receipt.json",
+      "sha256": "b39da8ca308b604c819255db534b482322bae1992d8f2a1aa480a9104c6027b0"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\formal-package-v4\\manifest.json",
+      "sha256": "bd653493c5506f12b60d9486598c72c969468d8ef9a4fc14550863240da95a05"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\independent-data-review.json",
+      "sha256": "1ec0ef9c4e539cf9313837300a1ac5e09ffc46a65546e0f9269b0a4045459807"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\independent-post-agent-review.json",
+      "sha256": "8600556b2d659f97e908106cbe17fa48fe785a4a0449060fc6e952623b44c7ff"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\formal-agent-launch1\\score.json",
+      "sha256": "5066baa3543ddb7b4fcc789787b653f18aebb303255b46d8418890c2812545bf"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\formal-agent-launch1\\registration.json",
+      "sha256": "3416c7c8ee0cd4ac6e95658e33252675760cd0edf8817eba5c37899b4850561d"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\formal-fixed-launch1\\pause-snapshot\\score.json",
+      "sha256": "a094d88337478d5dc0be9283e7c1a53dd4b17885bd6d0e9068a98a5d3bd982b6"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\validation\\fixed-interrupted-independent-verification.json",
+      "sha256": "3d69de14efbb510b6124ac2b8fb26918e1f05ba64f7098efd5b8fa5467cf7448"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\completion-20261016\\combined-fixed-score.json",
+      "sha256": "6f6c71e3d11efffb1c18cf8e2d195606fb9883f474e87d7fb57f15bb05383a20"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\completion-20261016\\paired-agent-fixed.json",
+      "sha256": "b3597e19fc6e3e1ca1be9d3296e731ce8db5070791c62d60a23c7ceabada20f2"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\completion-20261016\\completion-result.json",
+      "sha256": "2ae81c46e4b6b81965b167856e9b4ec2b4715848aeedbae86a1fd0b896f80eb3"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\completion-20261016\\batch\\closed-ledger.json",
+      "sha256": "09cdd37d62f3797fb5d6b46c46ded2b32d84056307a67704691b9765fb9192d3"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\observability\\agent-post-batch\\summary.json",
+      "sha256": "4d7f04d594ad39d16832125df1a3b00facb6e5882a74ba2409bd76fd359f6602"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\observability\\fixed-original18-final\\summary.json",
+      "sha256": "e9223f1b9fb328f7c430cd871842cb15fd04f5fce34869ae3d482cce7339cc3c"
+    },
+    {
+      "path": "E:\\JobForgeEvidence\\s5-2026-10-07\\v9-formal-v4-20261015\\observability\\fixed-completion2-final\\summary.json",
+      "sha256": "811f7193192ee0880ed591c3b921c8749328ba59f5ae8f75accae561278a40a6"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "S5V4-001",
+      "agent": {
+        "run_id": "ada5f524-0d3c-4f25-9ec7-6471466fdc41",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "f5613184-6014-425f-bf4c-3fc2c37ae6a4",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-002",
+      "agent": {
+        "run_id": "ff414f84-b217-4391-b832-c0d6fdbfc9e0",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "77a2a927-c4eb-4b21-8077-6ebaa2de5444",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-003",
+      "agent": {
+        "run_id": "9cbfa9dc-940a-479e-b866-5033eefecbd3",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "f37e0fce-067b-4717-8730-f9d9f9319588",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-004",
+      "agent": {
+        "run_id": "32c0efe9-cc57-43bf-a87f-d1e30af25422",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "c63772dc-6c0c-48a3-9829-7a7537093c8f",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-005",
+      "agent": {
+        "run_id": "6de3d9a9-95ef-4f8a-b9ed-b64df17379a9",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "f61e62f8-6122-4a48-a9ce-67addd6b878f",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-006",
+      "agent": {
+        "run_id": "730a8a6f-2ffc-4b29-bede-301553ae97a7",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM",
+          "WRONG_ACTION",
+          "WRONG_CONCLUSION",
+          "WRONG_TARGET_TICKET_STATUS"
+        ]
+      },
+      "fixed": {
+        "run_id": "03697c3b-8c15-48a9-939e-7466bf6a044b",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-007",
+      "agent": {
+        "run_id": "ae852019-4c0b-4e9f-9ebf-a2454e562eb0",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "f2764c20-7acf-4fcd-9367-9062f86132a5",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-008",
+      "agent": {
+        "run_id": "b9176cff-455b-4519-ba76-aebd8a29ce23",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "195561c4-2d1f-438f-849e-bc08a2d39336",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-009",
+      "agent": {
+        "run_id": "82becee9-f8ec-4b89-b71a-a8f44d6e694f",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "43b9a26a-ca06-45bb-892e-372b4f90415e",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-010",
+      "agent": {
+        "run_id": "91eee421-4a8e-49a4-add2-1be2bdcf672d",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "649878b7-0c21-40d5-8d9c-cca52aca649c",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-011",
+      "agent": {
+        "run_id": "f2231025-7792-431d-a979-e5f8dd0aef1a",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNSUPPORTED_CLAIM",
+          "WRONG_REQUESTED_FIELDS"
+        ]
+      },
+      "fixed": {
+        "run_id": "b5c5480f-4741-4e85-b8a6-527743f24b64",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNSUPPORTED_CLAIM",
+          "WRONG_REQUESTED_FIELDS"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-012",
+      "agent": {
+        "run_id": "9fffdfba-9fb0-4487-90bd-4feb5d9993e3",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "8820fd08-2c86-4a34-ae33-964fee983d51",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-013",
+      "agent": {
+        "run_id": "45061912-0368-4ccb-9e4c-4d583153b749",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "fbaaf46b-9d33-408c-866d-82e3db38a2a7",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "REQUIRED_CLAIM_MISSING",
+          "UNSUPPORTED_CLAIM"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-014",
+      "agent": {
+        "run_id": "5be0ac0d-ac25-4eca-a837-4b9b3af21ce2",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "469d8998-bc40-43f6-96cd-36c163f1fa93",
+        "correct": false,
+        "full_case_evidence": false,
+        "errors": [
+          "UNSUPPORTED_CLAIM",
+          "WRONG_REQUESTED_FIELDS"
+        ]
+      }
+    },
+    {
+      "case_id": "S5V4-015",
+      "agent": {
+        "run_id": "31109aaa-545d-4c7f-bd7a-42a76c57da4a",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "0334dece-8214-467f-b428-f43c6b3f19fa",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-016",
+      "agent": {
+        "run_id": "b2a5586c-d5b1-4b41-9a49-4eed9bb80043",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "75eeb14e-833c-4de8-a8c3-b5bb94cd3a8b",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-017",
+      "agent": {
+        "run_id": "66a1f43c-3063-49d6-aa95-54352b738a3d",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "e0783815-a29d-4651-8460-7b115b7b1e57",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-018",
+      "agent": {
+        "run_id": "0220d3e0-524d-463e-add2-a7760dad83f7",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "caa70c6e-e507-440c-b093-c3a53bd8f4be",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-019",
+      "agent": {
+        "run_id": "cc3814ce-7e46-4574-8f0b-44d1b6122139",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "b71435c6-3c3b-4adc-98cc-dc22a66970fd",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    },
+    {
+      "case_id": "S5V4-020",
+      "agent": {
+        "run_id": "64f565a6-dd6d-44d4-b03b-6f45d6dafeae",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      },
+      "fixed": {
+        "run_id": "e8299330-74f0-4e30-8d2a-50042c982237",
+        "correct": true,
+        "full_case_evidence": true,
+        "errors": []
+      }
+    }
+  ]
+}
