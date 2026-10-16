@@ -185,7 +185,12 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				if req.URL.Path == "/api/embed" {
 					var query []string
-					if json.Unmarshal(body["input"], &query) != nil || len(query) != 1 || !(query[0] == "delivery timing" || query[0] == "late delivery action" || supplement && query[0] == "Missing related order delivery tracking event or vague complaint needing specific problem description clarification" || statusPolicy && query[0] == "Already informational_only ticket action none; already escalated preserve status no silent downgrade") {
+					if json.Unmarshal(body["input"], &query) != nil || len(query) != 1 {
+						f.reject(w)
+						return
+					}
+					allowedQuery := query[0] == "delivery timing" || query[0] == "late delivery action" || supplement && query[0] == "Missing related order delivery tracking event or vague complaint needing specific problem description clarification" || statusPolicy && query[0] == "Already informational_only ticket action none; already escalated preserve status no silent downgrade"
+					if !allowedQuery {
 						f.reject(w)
 						return
 					}
@@ -195,7 +200,8 @@ func TestRunSupportAgentExecutor(t *testing.T) {
 					return
 				}
 				thinking := adjudication && (n == len(decisions) || supplement && n == len(decisions)-1)
-				if req.Header.Get("Authorization") != "Bearer synthetic-provider-key" || n > len(decisions) || !((supplement || statusPolicy || bundle) && thinking || strings.Contains(string(body["messages"]), "previous_tools")) {
+				validMessages := (supplement || statusPolicy || bundle) && thinking || strings.Contains(string(body["messages"]), "previous_tools")
+				if req.Header.Get("Authorization") != "Bearer synthetic-provider-key" || n > len(decisions) || !validMessages {
 					f.reject(w)
 					return
 				}
