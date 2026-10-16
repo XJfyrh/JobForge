@@ -115,6 +115,9 @@ def stage_remaining(plan: dict[str, Any], release: dict[str, Any]) -> int:
     if len({row["batch_account_id"] for row in prior}) != len(prior) or any(
         row["held_cost_microyuan"]
         or row["batch_frozen"]
+        and not (
+            plan["schema_version"] == 4 and row.get("execution_closed") is True
+        )
         or row["unknown_chat_calls"]
         or row["known_cost_microyuan"] < 0
         for row in prior

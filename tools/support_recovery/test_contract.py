@@ -163,6 +163,21 @@ def test_v9_cumulative_authorization_and_full_next_reservation() -> None:
             dict(release, prior_batch_exposure=[dict(prior, held_cost_microyuan=1)]),
         )
     assert driver.stage_remaining({"schema_version": 3}, release) == -17_994_187
+    closed = dict(prior, batch_frozen=True, execution_closed=True)
+    assert driver.stage_remaining(
+        value, dict(release, prior_batch_exposure=[closed])
+    ) == 5_005_813
+    for changed in (
+        dict(closed, execution_closed=False),
+        dict(closed, unknown_chat_calls=1),
+        dict(closed, held_cost_microyuan=1),
+    ):
+        with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+            driver.stage_remaining(value, dict(release, prior_batch_exposure=[changed]))
+    with pytest.raises(ValueError, match="S3_PRIOR_BATCH_UNRESOLVED"):
+        driver.stage_remaining(
+            {"schema_version": 3}, dict(release, prior_batch_exposure=[closed])
+        )
     value.update(
         max_cost_microyuan=4_000_000,
         profile={
