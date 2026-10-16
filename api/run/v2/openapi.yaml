@@ -10,6 +10,50 @@ info:
 security:
 - BearerAuth: []
 paths:
+  /v2/ui-options:
+    get:
+      operationId: listUIOptions
+      summary: List deployment-configured processing choices for the current operator
+      description: |
+        ADR-0041. Operator only, scoped to the authenticated tenant; no query parameters.
+        Returns explicitly configured choices for enabled profiles. This metadata does not
+        enable execution, allocate budget or change POST /v2/runs admission. Empty by default.
+      responses:
+        '200':
+          description: Configured processing choices
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 512
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [name, profile_id, budget_batch_id]
+                      properties:
+                        name: {type: string, minLength: 1, maxLength: 160}
+                        profile_id: {type: string, minLength: 1, maxLength: 128}
+                        budget_batch_id: {type: string, minLength: 1, maxLength: 128}
+        '400':
+          description: INVALID_ARGUMENT
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+        '401':
+          description: UNAUTHORIZED
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorEnvelope'}
   /v2/identity:
     get:
       operationId: getIdentity

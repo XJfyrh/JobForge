@@ -40,19 +40,23 @@ type Identity struct {
 type identityKey struct{}
 
 type handler struct {
-	api  API
-	keys map[string]Identity
+	api       API
+	keys      map[string]Identity
+	uiOptions []UIOption
 }
 
 // NewRouter validates and copies credential configuration before serving.
 // A reader may query; an operator submits/cancels/retries/reconciles, and a
 // separately configured approver decides the original proposal. Worker and
 // budget-administration operations remain on their trusted boundaries.
-func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
+func NewRouter(api API, keys map[string]Identity, uiOptions ...UIOption) (http.Handler, error) {
 	if api == nil || len(keys) == 0 {
 		return nil, run.ErrInvalidArgument
 	}
 	h := &handler{api: api, keys: make(map[string]Identity, len(keys))}
+	if err := h.configureUIOptions(uiOptions); err != nil {
+		return nil, err
+	}
 	for key, identity := range keys {
 		if !validCredential(key) || !run.ValidIdentifier(identity.TenantID) ||
 			(identity.Role != "reader" && identity.Role != "operator" && identity.Role != "approver") ||
@@ -82,6 +86,7 @@ func NewRouter(api API, keys map[string]Identity) (http.Handler, error) {
 				ActorID  string `json:"actor_id"`
 			}{i.TenantID, i.Role, i.ActorID})
 		})
+		router.Get("/v2/ui-options", h.listUIOptions)
 		router.Post("/v2/runs", h.submit)
 		router.Get("/v2/runs", h.list)
 		router.Get("/v2/runs/{run_id}", h.get)

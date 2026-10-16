@@ -19,7 +19,7 @@ Fixed原批完成18案后因宿主监控timeout异常停止。维护者明确授
 | S4 | 人工审批、Go结论记录、独立动作许可、终态效果核对与回执优先retry | [固定 10 个源样本及 2 个后继](evidence/agent-v3-s4-cloud-2026-10-05.md)，原方案业务质量 10/10、机制 10/10，7 条唯一业务回执；真实层获独立接受 |
 | S5 | 同源页面、有限 OTLP span/link、低基数指标与面板、7日终态内容清理、双库停写恢复；独立公平对照 profile 与评分工具 | [最终结果](evidence/agent-v3-s5-closeout-2026-10-16.md)：正式Agent正确/完整证据18/20，Fixed各11/20；原11项恢复与一案实际人工审批/唯一业务回执恢复完成，工程能力与正式质量分别通过 |
 
-任务页面支持审阅方案，批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
+任务工作台采用统一的雾蓝灰背景、大标题与细线列表，支持已加载任务筛选、提交、事实来源、审批确认及独立结果核对；执行与账本技术详情移出业务页面。新建方式由部署 `ui_options` 绑定，未配置或停用时不提供可用的新建操作，见[页面与配置](agent-v3/operations.md#页面与身份)和 [ADR-0041](adr/0041-business-workbench-presentation.md)。批准后保存处理结论并更新工单标记，实际结果可查业务回执。角色和状态码见[审批指南](agent-v3/approval.md)。默认部署没有收费 profile；启用模型批次需登记不可变 profile、预算和独立凭据。旧 Job API/Ollama 示例使用[独立维护路径](legacy/README.md)。
 
 S5 的剩余范围和门槛见[验收矩阵](agent-v3/s5-acceptance.md)。免费机制通过不替代真实 DeepSeek 方案质量、恢复成本对照及正式20案验收。
 

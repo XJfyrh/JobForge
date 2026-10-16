@@ -42,6 +42,7 @@ type deployment struct {
 	ProfileCapacity int                `json:"profile_capacity"`
 	Budgets         []budgetConfig     `json:"budgets"`
 	Bindings        []budgetBinding    `json:"bindings"`
+	UIOptions       []httpapi.UIOption `json:"ui_options,omitempty"`
 }
 
 type workerConfig struct {
@@ -158,7 +159,7 @@ func command(ctx context.Context, args []string) error {
 		fmt.Println(`{"bootstrap":"complete"}`)
 		return nil
 	}
-	return serve(ctx, pool, store, options, config.Tenants)
+	return serve(ctx, pool, store, options, config.Tenants, executableUIOptions(config)...)
 }
 
 func readDeployment(path string) (deployment, error) {
@@ -179,7 +180,7 @@ func readDeployment(path string) (deployment, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&config) != nil || !exactDeploymentFields(data, config) || config.SchemaVersion != 1 || len(config.Tenants) == 0 || len(config.Tenants) > 128 ||
-		len(config.Profiles) > 128 || len(config.Workers) == 0 || len(config.Workers) > 128 || len(config.Budgets) > 512 || len(config.Bindings) > 512 {
+		len(config.Profiles) > 128 || len(config.Workers) == 0 || len(config.Workers) > 128 || len(config.Budgets) > 512 || len(config.Bindings) > 512 || len(config.UIOptions) > 512 {
 		return config, errors.New("invalid Run deployment schema")
 	}
 	for _, tenant := range config.Tenants {
@@ -218,7 +219,26 @@ func readDeployment(path string) (deployment, error) {
 			}
 		}
 	}
+	for _, option := range config.UIOptions {
+		if !slices.Contains(config.Tenants, option.TenantID) ||
+			!slices.ContainsFunc(config.Profiles, func(p agentrun.Profile) bool { return p.ID == option.ProfileID }) ||
+			!slices.ContainsFunc(config.Bindings, func(b budgetBinding) bool {
+				return b.TenantID == option.TenantID && b.BatchAccountID == option.BudgetBatchID
+			}) {
+			return config, errors.New("UI processing option is not bound to the configured tenant, profile and budget")
+		}
+	}
 	return config, nil
+}
+
+func executableUIOptions(config deployment) []httpapi.UIOption {
+	var options []httpapi.UIOption
+	for _, option := range config.UIOptions {
+		if slices.ContainsFunc(config.Profiles, func(p agentrun.Profile) bool { return p.ID == option.ProfileID && p.Executable }) {
+			options = append(options, option)
+		}
+	}
+	return options
 }
 
 // encoding/json accepts case-insensitive aliases and scalar nulls. Compare the
@@ -232,6 +252,12 @@ func exactDeploymentFields(data []byte, config deployment) bool {
 	var actual, expected any
 	if json.Unmarshal(data, &actual) != nil || json.Unmarshal(canonical, &expected) != nil {
 		return false
+	}
+	// Preserve old serialized deployments while accepting an explicit empty list.
+	if fields, ok := expected.(map[string]any); ok {
+		if _, exists := fields["ui_options"]; !exists {
+			fields["ui_options"] = []any{}
+		}
 	}
 	return deploymentShape(actual, expected)
 }
@@ -320,7 +346,7 @@ func loadCredentials(workers []agentrun.WorkerConfig, tenants []string) (credent
 	return result, nil
 }
 
-func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, options runpostgres.Options, tenants []string) error {
+func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, options runpostgres.Options, tenants []string, uiOptions ...httpapi.UIOption) error {
 	shutdownTracing, err := observability.SetupRunTracing(ctx, "jobforge-agent-control")
 	if err != nil {
 		return err
@@ -351,7 +377,7 @@ func serve(ctx context.Context, pool *pgxpool.Pool, store *runpostgres.Store, op
 	if err != nil {
 		return errors.New("run admission service unavailable")
 	}
-	router, err := httpapi.NewRouter(service, keys)
+	router, err := httpapi.NewRouter(service, keys, uiOptions...)
 	if err != nil {
 		return errors.New("invalid public Run identities")
 	}

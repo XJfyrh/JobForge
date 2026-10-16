@@ -16,7 +16,7 @@ func TestUIResourcesAndIdentityBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{"/ui/", "/ui/app.js", "/ui/style.css"} {
+	for _, path := range []string{"/ui/", "/ui/app.js", "/ui/view.mjs", "/ui/style.css", "/ui/assets/background.png", "/ui/assets/jobforge-ui.woff2", "/ui/assets/arrow-right.svg"} {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" ||
@@ -25,7 +25,7 @@ func TestUIResourcesAndIdentityBoundary(t *testing.T) {
 			t.Fatalf("unsafe static resource %s: %d", path, response.Code)
 		}
 	}
-	for _, path := range []string{"/ui/missing", "/ui/index.html?credential=secret", "/ui/../router.go"} {
+	for _, path := range []string{"/ui/missing", "/ui/index.html?credential=secret", "/ui/../router.go", "/ui/assets/NotoSansSC-OFL.txt", "/ui/assets/../app.js", "/ui/assets/jobforge-ui.woff2?secret=value"} {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusNotFound {

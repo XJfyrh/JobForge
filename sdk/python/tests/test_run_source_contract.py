@@ -105,10 +105,18 @@ def test_all_sdk_wire_fields_match_the_source_exactly() -> None:
 
 
 def test_source_exposes_only_registered_public_operations() -> None:
-    """S5 adds read-only identity without granting public execution authority."""
-    assert len(OPENAPI["paths"]) == 13
-    assert sum(len(path) for path in OPENAPI["paths"].values()) == 15
+    """Identity and UI choices add no execution or budget-administration route."""
+    assert len(OPENAPI["paths"]) == 14
+    assert sum(len(path) for path in OPENAPI["paths"].values()) == 16
     assert set(OPENAPI["paths"]["/v2/identity"]) == {"get"}
+    assert set(OPENAPI["paths"]["/v2/ui-options"]) == {"get"}
+    choice = OPENAPI["paths"]["/v2/ui-options"]["get"]
+    assert {"200", "400", "401", "403"} == set(choice["responses"])
+    item = choice["responses"]["200"]["content"]["application/json"]["schema"][
+        "properties"
+    ]["items"]["items"]
+    assert set(item["properties"]) == {"name", "profile_id", "budget_batch_id"}
+    assert item["additionalProperties"] is False
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/calls"]) == {"get"}
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/approval"]) == {"get", "post"}
     assert set(OPENAPI["paths"]["/v2/runs/{run_id}/reconcile"]) == {"post"}
